@@ -51,6 +51,62 @@ function censor(value: unknown, path: string[]): unknown {
   return REDACTED;
 }
 
+/** İç içe `cause` zincirinde en çok bu kadar düzey izlenir. */
+const MAX_CAUSE_DEPTH = 3;
+
+export interface SafeSerializedError {
+  readonly type: string;
+  readonly sqlState?: string;
+  readonly query?: string;
+  readonly stack?: string;
+  readonly cause?: SafeSerializedError;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/** Stack'ten mesaj satırları atılır; yalnızca `at ...` çerçeveleri kalır. */
+function framesOnly(stack: unknown): string | undefined {
+  if (typeof stack !== 'string') return undefined;
+  const frames = stack.split('\n').filter((line) => /^\s+at /.test(line));
+  return frames.length > 0 ? frames.join('\n') : undefined;
+}
+
+/**
+ * Güvenli hata serileştirici (NFR-66): hata mesajı, sorgu parametreleri (`params`) ve
+ * pg `detail` alanı kişisel veri (telefon, OTP, token) taşıyabildiği için hiç yazılmaz.
+ * Yalnızca hata adı, SQLSTATE, yer tutuculu SQL metni ve mesajsız stack kalır.
+ */
+export function serializeError(error: unknown, depth = 0): SafeSerializedError {
+  if (!isRecord(error)) return { type: typeof error };
+  const name = typeof error.name === 'string' ? error.name : 'Error';
+  const type =
+    typeof error.constructor === 'function' && error.constructor.name !== 'Object'
+      ? error.constructor.name
+      : name;
+  const code = error.code;
+  const sqlState = typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code) ? code : undefined;
+  const query = typeof error.query === 'string' ? error.query : undefined;
+  const stack = framesOnly(error.stack);
+  const cause =
+    depth < MAX_CAUSE_DEPTH && error.cause !== undefined
+      ? serializeError(error.cause, depth + 1)
+      : undefined;
+  return {
+    type,
+    ...(sqlState === undefined ? {} : { sqlState }),
+    ...(query === undefined ? {} : { query }),
+    ...(stack === undefined ? {} : { stack }),
+    ...(cause === undefined ? {} : { cause }),
+  };
+}
+
+const ERROR_SERIALIZERS = {
+  err: (error: unknown) => serializeError(error),
+  error: (error: unknown) => serializeError(error),
+};
+
 export function buildPinoOptions(config: Omit<LoggerConfig, 'stream'>): LoggerOptions {
   return {
     level: config.env.LOG_LEVEL,
@@ -63,6 +119,7 @@ export function buildPinoOptions(config: Omit<LoggerConfig, 'stream'>): LoggerOp
       paths: atAnyDepth([...SECRET_KEYS, ...PHONE_KEYS]),
       censor,
     },
+    serializers: ERROR_SERIALIZERS,
   };
 }
 
@@ -99,6 +156,7 @@ function buildPinoHttpOptions(config: LoggerConfig): PinoHttpOptions {
     customSuccessMessage: () => 'request completed',
     customErrorMessage: () => 'request failed',
     serializers: {
+      ...ERROR_SERIALIZERS,
       req: (req: { method?: string; url?: string }) => ({
         method: req.method,
         route: routeOf(req.url),

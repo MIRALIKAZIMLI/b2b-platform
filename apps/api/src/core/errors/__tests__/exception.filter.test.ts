@@ -105,10 +105,14 @@ describe('Global hata filtresi', () => {
       requestId: response.headers['x-request-id'],
     });
     expect(response.text).not.toContain('gizli-ic-ayrinti');
-    // Ayrıntı yalnızca logda, aynı requestId ile.
+    // Ayrıntı (hata tipi ve stack) yalnızca logda, aynı requestId ile. Hata mesajı
+    // kişisel veri taşıyabildiği için logda da yazılmaz (güvenli serileştirici).
     const errorLog = logs.lines().find((line) => line.level === 'error');
     expect(errorLog?.requestId).toBe(response.headers['x-request-id']);
-    expect(JSON.stringify(errorLog)).toContain('gizli-ic-ayrinti');
+    const err = errorLog?.err as Record<string, unknown>;
+    expect(err.type).toBe('Error');
+    expect(String(err.stack)).toContain('ErrorsTestController.boom');
+    expect(JSON.stringify(errorLog)).not.toContain('gizli-ic-ayrinti');
   });
 
   it('F1.2-AC1: bilinmeyen yol → 404 NOT_FOUND, Error gövdesi', async () => {

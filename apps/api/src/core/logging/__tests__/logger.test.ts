@@ -1,5 +1,6 @@
 import { Controller, Post } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { DrizzleQueryError } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import pino from 'pino';
 import request from 'supertest';
@@ -93,6 +94,57 @@ describe('Logger redaksiyonu', () => {
     expect(String(line?.time)).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     expect(line).not.toHaveProperty('pid');
     expect(line).not.toHaveProperty('hostname');
+  });
+});
+
+describe('Güvenli hata serileştirici', () => {
+  const OTP = '483920';
+
+  function dbError(): DrizzleQueryError {
+    const pgError = Object.assign(
+      new Error(`duplicate key value violates unique constraint (phone)=(${PHONE})`),
+      {
+        name: 'error',
+        code: '23505',
+        detail: `Key (phone_e164)=(${PHONE}) already exists.`,
+      },
+    );
+    return new DrizzleQueryError(
+      'insert into "otp_codes" ("phone_e164", "code") values ($1, $2)',
+      [PHONE, OTP],
+      pgError,
+    );
+  }
+
+  it('F1.2-AC2: telefon ve kod içeren DrizzleQueryError loglanınca ikisi de çıktıda yok', () => {
+    const { logger, capture } = captureLogger();
+
+    logger.error({ err: dbError() }, 'unexpected error');
+
+    const text = capture.text();
+    expect(text).not.toContain(PHONE);
+    expect(text).not.toContain('994501234567');
+    expect(text).not.toContain(OTP);
+    expect(text).not.toContain('already exists');
+    expect(text).not.toContain('Failed query');
+  });
+
+  it('yalnızca hata adı, SQLSTATE, yer tutuculu SQL ve mesajsız stack yazılır', () => {
+    const { logger, capture } = captureLogger();
+
+    logger.error({ err: dbError() }, 'unexpected error');
+
+    const [line] = capture.lines();
+    const err = line?.err as Record<string, unknown>;
+    expect(err.type).toBe('DrizzleQueryError');
+    expect(err.query).toBe('insert into "otp_codes" ("phone_e164", "code") values ($1, $2)');
+    expect(err).not.toHaveProperty('message');
+    expect(err).not.toHaveProperty('params');
+    expect(String(err.stack)).toMatch(/^\s+at /);
+    const cause = err.cause as Record<string, unknown>;
+    expect(cause.sqlState).toBe('23505');
+    expect(cause).not.toHaveProperty('detail');
+    expect(cause).not.toHaveProperty('message');
   });
 });
 
