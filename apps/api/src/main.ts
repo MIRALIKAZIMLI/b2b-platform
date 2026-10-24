@@ -1,22 +1,10 @@
 import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import type { NestFastifyApplication } from '@nestjs/platform-fastify';
-import { Logger } from 'nestjs-pino';
-import { AppModule } from './app.module';
+import { bootstrapApi } from './app.bootstrap';
+import { runMain } from './core/bootstrap/run-main';
 import { loadServerEnv } from './core/config/load-env';
-import { createFastifyAdapter } from './core/request-id.middleware';
 
-async function bootstrap(): Promise<void> {
-  // Geçersiz ortamla başlamaz: çıkış kodu 1, mesajda yalnızca değişken adı.
-  const env = loadServerEnv(process.env);
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule.register(env),
-    createFastifyAdapter(),
-    { bufferLogs: true },
-  );
-  app.useLogger(app.get(Logger));
-  app.enableShutdownHooks();
-  await app.listen({ port: env.PORT, host: '0.0.0.0' });
-}
-
-void bootstrap();
+// Geçersiz ortamla başlamaz: çıkış kodu 1, mesajda yalnızca değişken adı (loadServerEnv).
+// Diğer açılış hataları güvenli loglanır, çıkış kodu 1 (runMain).
+void runMain('api', async () => {
+  await bootstrapApi(loadServerEnv(process.env));
+});

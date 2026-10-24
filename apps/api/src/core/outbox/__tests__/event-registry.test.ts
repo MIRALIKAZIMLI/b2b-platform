@@ -50,7 +50,8 @@ describe('outbox olay kaydı', () => {
   it('D3: yük alanları yalnızca kimlik, kod veya sayıdır', () => {
     for (const [type, definition] of Object.entries(OUTBOX_EVENTS)) {
       for (const [field, kind] of Object.entries(definition.fields)) {
-        const allowed = Array.isArray(kind) || PAYLOAD_FIELD_KINDS.includes(kind as never);
+        const allowed =
+          Array.isArray(kind) || (PAYLOAD_FIELD_KINDS as readonly unknown[]).includes(kind);
         expect(allowed, `${type}.${field}`).toBe(true);
       }
     }

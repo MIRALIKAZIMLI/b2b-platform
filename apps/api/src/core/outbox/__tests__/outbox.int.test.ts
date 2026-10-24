@@ -4,7 +4,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { Queue } from 'bullmq';
 import { sql } from 'drizzle-orm';
 import type { Redis } from 'ioredis';
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { connectAsAppUser } from '../../../../test/db-clients';
 import { PG_INSUFFICIENT_PRIVILEGE, pgErrorCode, queryAsOwner } from '../../../../test/isolation';
 import { createBullConnection } from '../../../infrastructure/queue';
@@ -14,7 +14,6 @@ import type { OutboxEventInput } from '../outbox.writer';
 import { OutboxWriter } from '../outbox.writer';
 import {
   OutboxDispatcher,
-  type OutboxLog,
   type OutboxSettingKey,
   type OutboxSettingsPort,
 } from '../outbox.dispatcher';
@@ -43,12 +42,10 @@ function fakeSettings(values: Partial<Record<OutboxSettingKey, number>> = {}): O
   return { get: (key) => Promise.resolve(values[key] ?? defaults[key]) };
 }
 
-function fakeLog(): OutboxLog & {
-  info: ReturnType<typeof vi.fn>;
-  warn: ReturnType<typeof vi.fn>;
-  error: ReturnType<typeof vi.fn>;
-} {
-  return { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+type LogFn = (obj: object, msg: string) => void;
+
+function fakeLog(): { info: Mock<LogFn>; warn: Mock<LogFn>; error: Mock<LogFn> } {
+  return { info: vi.fn<LogFn>(), warn: vi.fn<LogFn>(), error: vi.fn<LogFn>() };
 }
 
 /** Eklenen işleri sırayla kaydeden, istenirse hata veren sahte kuyruk. */
@@ -317,12 +314,25 @@ describe('Outbox (entegrasyon: PostgreSQL + Redis)', () => {
     const queues = new RecordingQueues();
     queues.ready = false;
     const log = fakeLog();
-    const result = await new OutboxDispatcher(fakeSettings(), queues, clock, log).dispatchOnce();
+    const dispatcher = new OutboxDispatcher(fakeSettings(), queues, clock, log);
+
+    // Açılışta bağlantı henüz kurulmamış olabilir: ilk tur uyarı vermez, ikincisi verir.
+    const result = await dispatcher.dispatchOnce();
+    expect(log.warn).not.toHaveBeenCalled();
+    await dispatcher.dispatchOnce();
     const [row] = await eventRows();
 
     expect(result).toMatchObject({ claimed: 0, dispatched: 0, stopped: 'queue_unavailable' });
     expect(row).toMatchObject({ attempts: 0, processed_at: null });
-    expect(log.warn).toHaveBeenCalled();
+    expect(log.warn).toHaveBeenCalledTimes(1);
+    expect(log.warn.mock.calls[0]?.[0]).toMatchObject({ event: 'outbox.queue_unavailable' });
+
+    // Bağlantı hazır olduktan sonra kopma hemen uyarı verir.
+    queues.ready = true;
+    await dispatcher.dispatchOnce();
+    queues.ready = false;
+    await dispatcher.dispatchOnce();
+    expect(log.warn).toHaveBeenCalledTimes(2);
   });
 
   it('K7: ekleme sırasında bağlantı koparsa attempts artmaz', async () => {

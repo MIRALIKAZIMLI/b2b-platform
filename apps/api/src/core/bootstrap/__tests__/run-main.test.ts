@@ -127,7 +127,11 @@ describe('runMain (açılış hatası)', () => {
     });
 
     afterEach(async () => {
-      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+      await new Promise<void>((resolve) =>
+        blocker.close(() => {
+          resolve();
+        }),
+      );
     });
 
     it('K8 (duman): port doluyken api açılmaz; hata güvenli loglanır, çıkış 1', async () => {

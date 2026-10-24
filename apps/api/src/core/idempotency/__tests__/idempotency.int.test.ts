@@ -22,6 +22,11 @@ import { withSystemTx } from '../../db';
 import { DomainError } from '../../errors/domain-error';
 import type { RequestUser } from '../../request-user';
 
+interface ErrorJson {
+  readonly code?: string;
+  readonly details?: unknown;
+}
+
 const counters = { created: 0, accepted: 0, failed: 0, slow: 0 };
 
 interface Deferred {
@@ -171,7 +176,7 @@ describe('İdempotens (entegrasyon: PostgreSQL + Redis)', () => {
     const res = await post('items', key).send({ name: 'b' });
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('IDEMPOTENCY_CONFLICT');
+    expect((res.body as ErrorJson).code).toBe('IDEMPOTENCY_CONFLICT');
     expect(counters.created).toBe(1);
   });
 
@@ -181,7 +186,7 @@ describe('İdempotens (entegrasyon: PostgreSQL + Redis)', () => {
     const res = await post('items', key).set('X-Business-Id', randomUUID()).send({ name: 'a' });
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('IDEMPOTENCY_CONFLICT');
+    expect((res.body as ErrorJson).code).toBe('IDEMPOTENCY_CONFLICT');
     expect(counters.created).toBe(1);
   });
 
@@ -250,8 +255,8 @@ describe('İdempotens (entegrasyon: PostgreSQL + Redis)', () => {
     const retry = await post('slow', key).send({});
 
     expect(concurrent.status).toBe(409);
-    expect(concurrent.body.code).toBe('IDEMPOTENCY_CONFLICT');
-    expect(concurrent.body.details).toEqual({ reason: 'in_progress' });
+    expect((concurrent.body as ErrorJson).code).toBe('IDEMPOTENCY_CONFLICT');
+    expect((concurrent.body as ErrorJson).details).toEqual({ reason: 'in_progress' });
     expect(first.status).toBe(201);
     expect(retry.status).toBe(201);
     expect(retry.body).toEqual(first.body);

@@ -15,6 +15,13 @@
       "when": 1792856931788,
       "tag": "0001_settings_search_path",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792858590150,
+      "tag": "0002_idempotency_outbox",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestApp } from '../../../../test/http-app';
 import type { RequestUser } from '../../request-user';
 
+interface ErrorJson {
+  readonly code?: string;
+  readonly details?: unknown;
+}
+
 const calls = { post: 0, get: 0 };
 
 @Injectable()
@@ -71,8 +76,8 @@ describe('IdempotencyInterceptor (birim, veritabanısız)', () => {
       .send({});
 
     expect(res.status).toBe(422);
-    expect(res.body.code).toBe('VALIDATION_FAILED');
-    expect(Object.keys(res.body.details as object)).toEqual(['Idempotency-Key']);
+    expect((res.body as ErrorJson).code).toBe('VALIDATION_FAILED');
+    expect(Object.keys((res.body as ErrorJson).details as object)).toEqual(['Idempotency-Key']);
     expect(calls.post).toBe(0);
   });
 
@@ -84,7 +89,7 @@ describe('IdempotencyInterceptor (birim, veritabanısız)', () => {
       .send({});
 
     expect(res.status).toBe(422);
-    expect(res.body.code).toBe('VALIDATION_FAILED');
+    expect((res.body as ErrorJson).code).toBe('VALIDATION_FAILED');
     expect(calls.post).toBe(0);
   });
 

@@ -1,35 +1,28 @@
 import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { Logger, PinoLogger } from 'nestjs-pino';
+import { PinoLogger } from 'nestjs-pino';
+import { runMain } from './core/bootstrap/run-main';
 import { loadServerEnv } from './core/config/load-env';
-import { WorkerModule } from './worker.module';
+import { bootstrapWorker } from './worker.bootstrap';
 
-// setInterval için izin verilen en büyük gecikme (Node.js sınırı).
-const MAX_TIMER_DELAY_MS = 2_147_483_647;
-
-async function bootstrap(): Promise<void> {
-  // Geçersiz ortamla başlamaz: çıkış kodu 1, mesajda yalnızca değişken adı.
-  const env = loadServerEnv(process.env);
-  const app = await NestFactory.createApplicationContext(WorkerModule.register(env), {
-    bufferLogs: true,
-  });
-  app.useLogger(app.get(Logger));
+// Geçersiz ortamla başlamaz: çıkış kodu 1, mesajda yalnızca değişken adı (loadServerEnv).
+// Diğer açılış hataları güvenli loglanır, çıkış kodu 1 (runMain).
+void runMain('worker', async () => {
+  const app = await bootstrapWorker(loadServerEnv(process.env));
   const logger = await app.resolve(PinoLogger);
   logger.setContext('Worker');
 
-  // Henüz iş kuyruğu yok (BullMQ F1.2b'de gelir). O zamana kadar süreç
-  // bu zamanlayıcıyla açık tutulur ve SIGTERM/SIGINT ile düzgün kapanır.
-  const keepAlive = setInterval(() => undefined, MAX_TIMER_DELAY_MS);
-
+  // SIGTERM/SIGINT: önce dağıtıcı durur (o anki tur biter), sonra kuyruklar ve Redis kapanır.
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
     logger.info({ event: 'worker.stopping', signal }, 'worker kapanıyor');
-    clearInterval(keepAlive);
-    await app.close();
+    try {
+      await app.close();
+    } catch (error) {
+      logger.error({ event: 'worker.stop_failed', err: error }, 'worker düzgün kapanamadı');
+      process.exitCode = 1;
+    }
   };
   process.once('SIGTERM', (signal) => void shutdown(signal));
   process.once('SIGINT', (signal) => void shutdown(signal));
 
-  logger.info({ event: 'worker.started' }, 'worker başladı (iş tanımı yok)');
-}
-
-void bootstrap();
+  logger.info({ event: 'worker.started' }, 'worker başladı (outbox dağıtıcısı)');
+});
