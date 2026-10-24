@@ -86,7 +86,8 @@ const CATALOG_QUERY = `
          c.relrowsecurity as row_security,
          c.relforcerowsecurity as force_row_security,
          (select count(*)::int from pg_policy p where p.polrelid = c.oid) as policy_count,
-         has_table_privilege('app_user', c.oid, 'SELECT') as app_user_can_select
+         -- Kolon düzeyindeki GRANT'ları da yakalar (has_table_privilege yakalamaz).
+         has_any_column_privilege('app_user', c.oid, 'SELECT') as app_user_can_select
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
    where c.relkind in ('r', 'p')
