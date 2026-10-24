@@ -160,6 +160,20 @@ describe('check-rls', () => {
     ]);
   });
 
+  it("F1.1-AC6: app_user'ın kolon düzeyinde SELECT izni olan S tablosu → hata", async () => {
+    const schema = await schemaWith(`
+      create table $s.s_items (id uuid primary key, secret text);
+      comment on table $s.s_items is 'rls:S';
+      grant select (id) on $s.s_items to app_user;
+    `);
+
+    const result = await checkRls(client, { schemas: [schema] });
+
+    expect(problemsMentioning(result, 'app_user')).toEqual([
+      { table: `${schema}.s_items`, mentioned: true },
+    ]);
+  });
+
   it('F1.1-AC6: varsayılan kapsam sistem şemalarını ve drizzle şemasını denetlemez', async () => {
     const result = await checkRls(client, {});
 
