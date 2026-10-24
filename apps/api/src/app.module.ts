@@ -11,6 +11,8 @@ import type { DestinationStream } from 'pino';
 import { CoreModule } from './core/core.module';
 import { GlobalExceptionFilter } from './core/errors/exception.filter';
 import { HealthModule } from './core/health/health.module';
+import { IdempotencyModule } from './core/idempotency';
+import { OutboxModule } from './core/outbox';
 import { RequestIdMiddleware } from './core/request-id.middleware';
 import { RedisModule } from './infrastructure/redis';
 import { SettingsModule } from './modules/settings';
@@ -34,6 +36,8 @@ export class AppModule implements NestModule {
         RedisModule.forRoot({ url: env.REDIS_URL }),
         HealthModule,
         SettingsModule,
+        IdempotencyModule,
+        OutboxModule,
       ],
       providers: [{ provide: APP_FILTER, useClass: GlobalExceptionFilter }],
     };

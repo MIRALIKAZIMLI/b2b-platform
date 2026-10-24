@@ -77,8 +77,10 @@ export const SETTING_DEFINITIONS = {
   'mobile.min_version.android': versionSetting('0.0.0'),
   'system.maintenance': boolSetting(false),
   'idempotency.ttl_hours': intSetting(24, 1, 168),
+  'idempotency.lock_seconds': intSetting(60, 5, 600),
   'outbox.max_attempts': intSetting(10, 1, 100),
   'outbox.poll_interval_ms': intSetting(1000, 100, 60_000),
+  'outbox.batch_size': intSetting(100, 1, 1000),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
 } as const satisfies Record<string, SettingDefinition<unknown>>;
 

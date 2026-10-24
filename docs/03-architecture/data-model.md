@@ -142,9 +142,11 @@ Sütun listesinde `id`, `created_at`, `updated_at` her tabloda vardır ve tekrar
 | key | text | PK (key, user_id) | İstemcinin `Idempotency-Key` başlığı |
 | user_id | uuid | not null | |
 | endpoint | text | not null | |
-| status_code | int | not null | |
-| response_body | jsonb | not null | |
-| expires_at | timestamptz | not null | 24 saat |
+| request_hash | text | not null | Yöntem + yol + sorgu dizesi + `X-Business-Id` + kanonik JSON gövdenin SHA-256 özeti; aynı anahtar farklı istekle gelirse `IDEMPOTENCY_CONFLICT` (F1.2b) |
+| status_code | int | null | null = istek işleniyor (kilit); yalnızca 2xx yanıt saklanır |
+| response_body | jsonb | null | null = istek işleniyor |
+| locked_until | timestamptz | null | İşlenen isteğin kilidi (`idempotency.lock_seconds`); geçince kayıt sahipsiz sayılır, yeni istek işlenir |
+| expires_at | timestamptz | not null | `idempotency.ttl_hours` (varsayılan 24 saat); süresi dolan anahtar yeni istek sayılır |
 
 #### `audit_logs` (S, yalnızca ekleme)
 

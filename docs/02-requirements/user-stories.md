@@ -258,8 +258,10 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `mobile.min_version.ios`, `mobile.min_version.android` | `0.0.0` (ilk yayında ilk yayın sürümü yazılır, US-060) | sürüm metni (`X.Y.Z`) | — | — |
 | `system.maintenance` | `false` (RB-08, RB-13) | evet/hayır | — | — |
 | `idempotency.ttl_hours` | 24 | tamsayı | 1 | 168 |
+| `idempotency.lock_seconds` | 60 | tamsayı | 5 | 600 |
 | `outbox.max_attempts` | 10 ([integrations.md](../03-architecture/integrations.md) §8) | tamsayı | 1 | 100 |
 | `outbox.poll_interval_ms` | 1000 | tamsayı | 100 | 60000 |
+| `outbox.batch_size` | 100 | tamsayı | 1 | 1000 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
 | `feature.*` | Özellik bayrakları; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §6 | evet/hayır | — | — |
 
