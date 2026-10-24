@@ -1,6 +1,8 @@
 pnpm-lock.yaml
 dist/
 coverage/
+.next/
+.expo/
 docs/
 README.md
 AGENTS.md

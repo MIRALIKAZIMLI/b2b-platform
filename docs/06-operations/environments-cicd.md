@@ -63,6 +63,13 @@ flowchart LR
 | `deps-audit` | `pnpm audit --audit-level=high` | Yüksek / kritik açık |
 | `build` | Tüm uygulamaların derlenmesi | Derleme hatası |
 
+**Bağımlılık taraması istisnaları.** Yüksek/kritik bir açık için istisna yalnızca şu üç koşul birlikte sağlanırsa verilir: düzeltilmiş sürüm yok veya düzeltme kırıcı; açık yalnızca geliştirme aracında çalışıyor (production paketine veya sunucuya girmiyor); platform sahibi onayladı. İstisna kök `package.json` → `pnpm.auditConfig.ignoreGhsas` içine GHSA kimliğiyle yazılır ve aşağıdaki tabloya eklenir. Her istisna, gözden geçirme tarihinde veya ilgili paket yükseltildiğinde yeniden değerlendirilir.
+
+| GHSA | Paket (yol) | Neden | Onay | Gözden geçirme |
+| --- | --- | --- | --- | --- |
+| GHSA-86w9-cpqp-85rv | node-forge 1.4.0 (`expo` → `@expo/cli`) | Düzeltilmiş sürüm yok; yalnızca geliştirici bilgisayarındaki Expo CLI | Platform sahibi, 2026-10-24 (F0.3b) | Expo SDK yükseltmesinde veya 2027-01-31 |
+| GHSA-mrhx-c7xc-m3w5 | zod 3.25.76 (`expo` → `@expo/cli`) | Düzeltme yalnızca zod 4'te; @expo/cli zod 3 istiyor; yalnızca Expo CLI | Platform sahibi, 2026-10-24 (F0.3b) | Expo SDK yükseltmesinde veya 2027-01-31 |
+
 Hedef süre: < 10 dakika (NFR-83). Bağımlılık önbelleği kullanılır.
 
 ## 4. CD hattı
