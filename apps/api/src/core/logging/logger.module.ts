@@ -33,10 +33,14 @@ const SECRET_KEYS = [
   'refreshToken',
   'password',
   'secret',
+  // 🔒 person_data (data-model §5, F1.7)
+  'contact_name',
+  'contactName',
+  'email',
 ];
 
-/** Değeri maskelenerek yazılan alanlar. */
-const PHONE_KEYS = ['phone', 'phone_e164', 'phoneE164'];
+/** Değeri maskelenerek yazılan alanlar (🔒 person_data.personal_phone dahil, F1.7). */
+const PHONE_KEYS = ['phone', 'phone_e164', 'phoneE164', 'personal_phone', 'personalPhone'];
 
 /** Alan, en çok üç düzey iç içe nesnede yakalanır (`a`, `*.a`, `*.*.a`). */
 function atAnyDepth(keys: readonly string[]): string[] {

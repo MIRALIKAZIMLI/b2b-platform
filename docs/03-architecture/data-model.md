@@ -38,6 +38,7 @@ Her istek işleminin başında uygulama `SET LOCAL app.business_id = '<uuid>'` �
 
 - `withSystemTx` yalnızca bağlamsız sistem okumaları (ayar, worker) içindir; kiracı verisi göremez: `app.business_id`, `app.user_id` ve `app.is_platform` boştur, T/P/U tablolarında 0 satır döner. S tablolarına yalnızca `SECURITY DEFINER` fonksiyonlarla erişir (F1.4a).
 - Platform bağlamı (`app.is_platform = true`) `orders`, `order_items`, `ledger_entries`, `payments`, `price_lists`, `price_list_items`, `customer_prices` tablolarında **yazma** iznine sahip değildir (US-016 AC5).
+- T tablolarında kiracı politikasının yanında ayrı bir platform politikası bulunur: `current_setting('app.is_platform', true) = 'true'` iken USING ve WITH CHECK (c4-component §7; `withPlatformTx` `app.business_id`'yi boş bıraktığı için kiracı politikası platforma 0 satır gösterir). İlk uygulama F1.7 (`businesses` grubu). US-016 AC5 listesindeki tablolara bu politika **asla** eklenmez.
 - Alıcı, satıcının ürün ve fiyat tablolarını yalnızca **aktif bağlantı** varsa okuyabilir: bu sorgular `catalog` modülünün `buyer_visible_products(buyer_id)` fonksiyonu üzerinden yapılır ve fonksiyon aktif bağlantıyı kontrol eder.
 
 ## 2. ERD — Kimlik, işletme, erişim, bağlantı
@@ -303,6 +304,8 @@ G tablolarının hepsinde `created_at`, `updated_at` (§1). RLS: `SELECT USING (
 
 #### `businesses` (T kendisi; D başkaları için)
 
+RLS: `rls:T,D`; kiracı politikası `id = app.business_id`, platform politikası (§1.1). Başka kiracının dizin okuması (D) F2 dizin adımındaki `SECURITY DEFINER` fonksiyonuyla gelir. `buyer_profiles` ve `business_privacy` da `rls:T,D`; bu bölümdeki diğer T tabloları `rls:T`. Kimlikler (`id`) uygulamada UUIDv7 (`IdGenerator`, F1 faz spesifikasyonu S5 = A).
+
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
 | legal_name | text | not null | Ünvan |
@@ -325,9 +328,11 @@ G tablolarının hepsinde `created_at`, `updated_at` (§1). RLS: `SELECT USING (
 | data_consent_at | timestamptz | null | |
 | profile_completeness | smallint | 0–100 | |
 
-İndeks: `(region_id) WHERE status = 'active'`.
+İndeks: `(region_id) WHERE status = 'active'`. `voen` biçimi veritabanında da `CHECK (voen ~ '^[0-9]{9}[12]$')`.
 
-#### `business_capabilities`
+Alan koruması (F1.7): `status`, `verified_at`, `verified_by`, `created_via` yalnızca platform bağlamında değişir. `BEFORE INSERT OR UPDATE` tetikleyicisi `businesses_guard_platform_columns` (SECURITY DEFINER değil; `SET search_path = pg_catalog, public, pg_temp`, `REVOKE ALL FROM PUBLIC`): kiracı bağlamında INSERT yalnızca `status = active`, `created_via = self_signup` ve doğrulama alanları boşken; UPDATE bu dört alanı değiştiremez. İhlal `42501`. Not: `dormant` geçişleri (state-machines §9) geldikleri adımda platform bağlamı veya ayrı bir fonksiyon gerektirir.
+
+#### `business_capabilities` (T)
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
@@ -337,7 +342,7 @@ G tablolarının hepsinde `created_at`, `updated_at` (§1). RLS: `SELECT USING (
 | approved_by | uuid | null | |
 | approved_at | timestamptz | null | |
 
-Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabilir (K1). MVP'de bir işletmenin yalnızca bir yeteneği olur; ikinci yetenek ekleme uç noktası özellik bayrağıyla kapalıdır (D20).
+Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabilir (K1). RLS ile uygulanır (F1.7): kiracı kendi satırlarını okur ve yalnızca INSERT yapabilir — `buyer` + `approved` (perakendeci kaydı) veya `seller` + `pending`, `approved_by`/`approved_at` boş. Kiracıya UPDATE/DELETE politikası yoktur (0 satır); `approved` ↔ `suspended` geçişleri (`buyer` dahil) yalnızca platform politikasıyla. İhlal `42501`. MVP'de bir işletmenin yalnızca bir yeteneği olur; ikinci yetenek ekleme uç noktası özellik bayrağıyla kapalıdır (D20).
 
 #### `seller_profiles` (T)
 
@@ -350,7 +355,7 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | require_delivery_photo | boolean | default false | |
 | low_stock_display_threshold | numeric(14,3) | default 5 | US-039 AC6 |
 | default_price_list_id | uuid | FK price_lists | |
-| default_warehouse_id | uuid | FK warehouses | |
+| default_warehouse_id | uuid | FK warehouses | Bileşik FK `(business_id, default_warehouse_id)` → `warehouses(business_id, id)`: yalnızca kendi deposu (FK kontrolü RLS'e bakmaz) |
 
 #### `service_areas` (T) — `seller_id uuid`, `region_id uuid`; PK `(seller_id, region_id)`
 
@@ -398,7 +403,7 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | approval_threshold | numeric(14,2) | null | `above_amount` için zorunlu |
 | status | text | `active` / `inactive` | |
 
-#### `warehouses` (T) — `business_id`, `name`, `address_line`, `is_default bool`, `status (active/inactive)`
+#### `warehouses` (T) — `business_id`, `name`, `address_line`, `is_default bool`, `status (active/inactive)`; benzersiz `(business_id, id)` (bileşik FK hedefi); işletme başına tek `is_default` (kısmi benzersiz indeks)
 
 #### `seller_applications` (G — yalnızca platform okur)
 
@@ -414,7 +419,7 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | reviewed_by | uuid | null | |
 | business_id | uuid | null | Onayda oluşan işletme |
 
-#### `activity_types` (G) — `name jsonb`, `is_active bool`, `sort_order int`
+#### `activity_types` (G) — `name jsonb`, `is_active bool`, `sort_order int`. `id` `default gen_random_uuid()` (G tablosu istisnası, `regions` gibi; S5). Seed boştur; liste platform sahibinden gelir.
 
 ### 4.5 `access`
 

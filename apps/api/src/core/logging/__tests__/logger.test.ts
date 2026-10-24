@@ -59,6 +59,30 @@ describe('Logger redaksiyonu', () => {
     expect(line?.user).toEqual({ phoneE164: MASKED, profile: { phone: MASKED } });
   });
 
+  it('F1.7: person_data alanları (contact_name, personal_phone, email) logda yok', () => {
+    const { logger, capture } = captureLogger();
+
+    logger.info(
+      {
+        contact_name: 'Əli Məmmədov',
+        personal_phone: PHONE,
+        email: 'ali@example.az',
+        person: { contactName: 'Əli Məmmədov', personalPhone: PHONE },
+      },
+      'kişisel veri',
+    );
+
+    const text = capture.text();
+    expect(text).not.toContain('Məmmədov');
+    expect(text).not.toContain('ali@example.az');
+    expect(text).not.toContain(PHONE);
+    const [line] = capture.lines();
+    expect(line?.contact_name).toBe('[REDACTED]');
+    expect(line?.email).toBe('[REDACTED]');
+    expect(line?.personal_phone).toBe(MASKED);
+    expect(line?.person).toEqual({ contactName: '[REDACTED]', personalPhone: MASKED });
+  });
+
   it('F1.2-AC2: code, token, authorization ve diğer gizli alanlar redakte', () => {
     const { logger, capture } = captureLogger();
     const secrets = {
