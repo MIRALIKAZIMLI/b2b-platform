@@ -90,6 +90,7 @@ M1 çıkış ölçütü (roadmap.md): mock SMS ile web ve mobilde giriş; izinde
 | R11 | Mobil E2E (Maestro, Android) ve Expo push için hesap/cihaz gerekir. | F1.14 | F1.14'ten önce: Android emülatör veya telefon + Expo hesabı hazır. |
 | R12 | İdempotens yanıtı handler işleminden ayrı yazılıyor: handler commit olur ama yanıt kaydı başarısız olursa, kilit `idempotency.lock_seconds` sonra düşer ve yeniden deneme ikinci kayıt açabilir. | F1.2b → F2.3 / F4 | İlk gerçek oluşturma ucunda (F2.3 / F4) yanıt kaydı handler'ın işlemine alınacak. |
 | R13 | Kimliksiz uçlarda (`POST /api/v1/buyers/register`, SF-02) `Idempotency-Key` F1.2b'de yok sayılır (`idempotency_keys.user_id` not null). | F1.2b → F2.3 | F2.3 kartında kimliksiz uç için idempotens kapsamı (ör. telefon/cihaz) kararlaştırılacak. |
+| R14 | Güncel aboneliği olmayan işletmede hak kontrolü reddeder (`ENTITLEMENT_LIMIT_REACHED`, F1.4b kararı). Abonelik atanmazsa işletme limitli hiçbir işlemi yapamaz. | F1.4b → F2.1 / F2.3 | F2.1 (admin toptancı açılışı) toptancıya `pilot` planı, F2.3 (perakendeci kaydı) perakendeciye `buyer_free` planı aboneliğini aynı işlemde açar. |
 
 ## 4. Açık sorular (belgede yok — karar platform sahibinin)
 
