@@ -1,0 +1,2387 @@
+openapi: 3.1.0
+info:
+  title: B2B Toptan–Perakende Platformu API
+  version: 1.0.0
+  description: |
+    MVP API sözleşmesi. Bu dosya tek doğru kaynaktır; web ve mobil istemci tipleri
+    bu dosyadan üretilir (packages/api-client).
+
+    Genel kurallar:
+    - Tüm uç noktalar /api/v1 altındadır. Kırıcı değişiklik yalnızca /api/v2 ile (NFR-85).
+    - Kiracıya bağlı uç noktalar `X-Business-Id` başlığı ister; değer, kullanıcının aktif
+      üyeliği olan bir işletme olmalıdır.
+    - Para tutarları string ondalık olarak döner ("1234.50") ve her zaman para birimiyle birlikte.
+    - Zamanlar ISO 8601, UTC ("2026-10-24T08:00:00Z"). Gösterim istemcinin işidir.
+    - Liste uç noktaları imleç (cursor) sayfalaması kullanır: `?cursor=&limit=` (limit en fazla 100,
+      varsayılan 20).
+    - "Oluştur" ve durum değiştiren POST uç noktaları `Idempotency-Key` başlığını kabul eder
+      (24 saat geçerli).
+    - Hata yanıtı her zaman `Error` şemasıdır.
+    - `Accept-Language` (az, ru, tr, en) hata mesajı ve içerik dilini belirler; yoksa kullanıcının
+      tercih ettiği dil kullanılır.
+servers:
+  - url: https://api.example.az
+    description: Production (alan adı F0.4'te belirlenecek)
+  - url: https://api.staging.example.az
+    description: Staging
+security:
+  - bearerAuth: []
+tags:
+  - name: auth
+  - name: me
+  - name: business
+  - name: team
+  - name: directory
+  - name: connections
+  - name: catalog
+  - name: pricing
+  - name: inventory
+  - name: cart
+  - name: orders
+  - name: delivery
+  - name: ledger
+  - name: documents
+  - name: imports
+  - name: files
+  - name: notifications
+  - name: dashboard
+  - name: system
+  - name: admin
+  - name: dev
+
+paths:
+  # ---------------------------------------------------------------- auth
+  /api/v1/auth/otp/request:
+    post:
+      tags: [auth]
+      summary: OTP kodu iste (US-001)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, purpose]
+              properties:
+                phone: { $ref: '#/components/schemas/PhoneE164' }
+                purpose: { type: string, enum: [login, register, invitation] }
+      responses:
+        '202':
+          description: Kod gönderildi
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [challengeId, expiresAt]
+                properties:
+                  challengeId: { type: string, format: uuid }
+                  expiresAt: { type: string, format: date-time }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/auth/otp/verify:
+    post:
+      tags: [auth]
+      summary: OTP kodunu doğrula ve oturum aç (US-001)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challengeId, code]
+              properties:
+                challengeId: { type: string, format: uuid }
+                code: { type: string, pattern: '^[0-9]{6}$' }
+                device: { $ref: '#/components/schemas/DeviceInfo' }
+      responses:
+        '200':
+          description: Doğrulandı
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '423': { $ref: '#/components/responses/Error' }
+  /api/v1/auth/totp/verify:
+    post:
+      tags: [auth]
+      summary: TOTP ikinci adımı (US-002)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pendingToken, code]
+              properties:
+                pendingToken: { type: string }
+                code: { type: string }
+      responses:
+        '200':
+          description: Doğrulandı
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResult' }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/auth/totp/setup:
+    post:
+      tags: [auth]
+      summary: TOTP kurulumu başlat / tamamla (US-002)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirmCode: { type: string, description: Boşsa kurulum başlatılır }
+      responses:
+        '200':
+          description: Kurulum bilgisi veya kurtarma kodları
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  otpauthUri: { type: string }
+                  recoveryCodes: { type: array, items: { type: string } }
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Erişim anahtarını yenile (yenileme anahtarı döndürülür)
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string, description: Mobil. Web'de httpOnly cookie kullanılır. }
+      responses:
+        '200':
+          description: Yeni anahtarlar
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Bu oturumdan çıkış
+      responses:
+        '204': { description: Çıkış yapıldı }
+  /api/v1/auth/sessions:
+    get:
+      tags: [auth]
+      summary: Açık oturumlarım (US-004)
+      responses:
+        '200':
+          description: Oturumlar
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Session' }
+  /api/v1/auth/sessions/{id}:
+    delete:
+      tags: [auth]
+      summary: Bir oturumu kapat (US-004)
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '204': { description: Kapatıldı }
+
+  # ---------------------------------------------------------------- me
+  /api/v1/me:
+    get:
+      tags: [me]
+      summary: Kullanıcı, üyelikler ve aktif işletmedeki izinler
+      parameters: [ { $ref: '#/components/parameters/BusinessIdOptional' } ]
+      responses:
+        '200':
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+    patch:
+      tags: [me]
+      summary: Ad, dil, saat dilimi güncelle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName: { type: string, maxLength: 120 }
+                preferredLanguage: { $ref: '#/components/schemas/LanguageCode' }
+                timezone: { type: string, examples: [Asia/Baku] }
+      responses:
+        '200': { description: Güncellendi }
+
+  # ---------------------------------------------------------------- business
+  /api/v1/buyers/register:
+    post:
+      tags: [business]
+      summary: Perakendeci self-servis kaydı (US-005)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fullName, legalName, activityTypeId, regionId, consentVersion]
+              properties:
+                fullName: { type: string, maxLength: 120 }
+                legalName: { type: string, maxLength: 200 }
+                activityTypeId: { type: string, format: uuid }
+                regionId: { type: string, format: uuid }
+                consentVersion: { type: string }
+                preferredLanguage: { $ref: '#/components/schemas/LanguageCode' }
+      responses:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  businessId: { type: string, format: uuid }
+                  profileCompleteness: { type: integer }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/seller-applications:
+    post:
+      tags: [business]
+      summary: Toptancı başvuru formu (US-008)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [legalName, voen, contactName, phone, regionId]
+              properties:
+                legalName: { type: string }
+                voen: { $ref: '#/components/schemas/Voen' }
+                contactName: { type: string }
+                phone: { $ref: '#/components/schemas/PhoneE164' }
+                regionId: { type: string, format: uuid }
+                categoryNote: { type: string, maxLength: 500 }
+      responses:
+        '201': { description: Başvuru alındı }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/business:
+    get:
+      tags: [business]
+      summary: Aktif işletmenin profili
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: İşletme
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Business' }
+    patch:
+      tags: [business]
+      summary: İşletme profilini güncelle (VÖEN dahil, US-006)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BusinessUpdate' }
+      responses:
+        '200': { description: Güncellendi }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/business/privacy:
+    get:
+      tags: [business]
+      summary: Görünürlük ayarları (US-007)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Ayarlar
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Privacy' }
+    put:
+      tags: [business]
+      summary: Görünürlük ayarlarını güncelle (US-007)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Privacy' }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/branches:
+    get:
+      tags: [business]
+      summary: Şubeler
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Branch' } }
+    post:
+      tags: [business]
+      summary: Şube oluştur (US-010)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BranchInput' }
+      responses:
+        '201': { description: Oluşturuldu }
+  /api/v1/branches/{id}:
+    patch:
+      tags: [business]
+      summary: Şube güncelle / pasifleştir
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BranchInput' }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/warehouses:
+    get:
+      tags: [business]
+      summary: Depolar
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [business]
+      summary: Depo oluştur (US-011)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                addressLine: { type: string }
+      responses:
+        '201': { description: Oluşturuldu }
+        '403': { $ref: '#/components/responses/Error' }
+
+  # ---------------------------------------------------------------- team
+  /api/v1/team/members:
+    get:
+      tags: [team]
+      summary: Üyeler
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/team/members/{id}:
+    patch:
+      tags: [team]
+      summary: Üyenin rolünü / kapsamını değiştir veya çıkar (US-013)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roleId: { type: string, format: uuid }
+                branchId: { type: [string, 'null'], format: uuid }
+                warehouseId: { type: [string, 'null'], format: uuid }
+                regionIds: { type: array, items: { type: string, format: uuid } }
+                status: { type: string, enum: [active, removed] }
+      responses:
+        '200': { description: Güncellendi }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/team/invitations:
+    post:
+      tags: [team]
+      summary: Kullanıcı davet et (US-013)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, jobTitleId, roleId]
+              properties:
+                phone: { $ref: '#/components/schemas/PhoneE164' }
+                jobTitleId: { type: string, format: uuid }
+                roleId: { type: string, format: uuid }
+                branchId: { type: string, format: uuid }
+                warehouseId: { type: string, format: uuid }
+      responses:
+        '201': { description: Davet gönderildi }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/v1/team/invitations/accept:
+    post:
+      tags: [team]
+      summary: Daveti kabul et (OTP ile giriş yapmış kullanıcı)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200': { description: Üyelik aktif }
+  /api/v1/team/roles:
+    get:
+      tags: [team]
+      summary: İşletme rolleri ve kullanılabilir şablonlar
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [team]
+      summary: Şablondan özel rol oluştur (US-014)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, name, permissions]
+              properties:
+                templateId: { type: string, format: uuid }
+                name: { $ref: '#/components/schemas/LocalizedText' }
+                permissions:
+                  type: array
+                  items: { $ref: '#/components/schemas/RolePermission' }
+      responses:
+        '201': { description: Oluşturuldu }
+
+  # ---------------------------------------------------------------- directory
+  /api/v1/directory/buyers:
+    get:
+      tags: [directory]
+      summary: Perakendeci dizini (US-019, US-020) — yalnızca seller
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: phone, in: query, description: Tam E.164 eşleşme, schema: { $ref: '#/components/schemas/PhoneE164' } }
+        - { name: voen, in: query, description: Tam eşleşme, schema: { $ref: '#/components/schemas/Voen' } }
+        - { name: regionId, in: query, schema: { type: array, items: { type: string, format: uuid } } }
+        - { name: activityTypeId, in: query, schema: { type: string, format: uuid } }
+        - { name: verified, in: query, schema: { type: boolean } }
+        - { name: history, in: query, schema: { type: string, enum: [never, rejected, cancelled, cooldown_over, pending, active] } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { name: limit, in: query, schema: { type: integer, maximum: 20, default: 20 } }
+      responses:
+        '200':
+          description: Sonuçlar (yalnızca görünür alanlar)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/DirectoryBuyer' } }
+                  nextCursor: { type: [string, 'null'] }
+        '429': { $ref: '#/components/responses/Error' }
+
+  # ---------------------------------------------------------------- connections
+  /api/v1/connection-requests:
+    post:
+      tags: [connections]
+      summary: Bağlantı isteği gönder (US-021)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buyerId]
+              properties:
+                buyerId: { type: string, format: uuid }
+                message: { type: string, maxLength: 500 }
+                proposedPaymentTermDays: { type: integer, minimum: 0, maximum: 180 }
+      responses:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConnectionRequest' }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/connection-requests/outgoing:
+    get:
+      tags: [connections]
+      summary: Gönderilen istekler (seller)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }, { name: status, in: query, schema: { type: string } } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/connection-requests/incoming:
+    get:
+      tags: [connections]
+      summary: Gelen istekler (buyer) — satıcı profil özetiyle (US-023)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/connection-requests/{id}/accept:
+    post:
+      tags: [connections]
+      summary: İsteği kabul et (US-023)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Bağlantı oluştu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Connection' }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/connection-requests/{id}/reject:
+    post:
+      tags: [connections]
+      summary: İsteği reddet (US-023)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Reddedildi }
+  /api/v1/connection-requests/{id}/withdraw:
+    post:
+      tags: [connections]
+      summary: İsteği geri çek (US-022)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Geri çekildi }
+  /api/v1/connections:
+    get:
+      tags: [connections]
+      summary: Bağlantılarım (seller veya buyer bakışı)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: status, in: query, schema: { type: string, enum: [active, cancelled] } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/connections/{id}/terms:
+    patch:
+      tags: [connections]
+      summary: Bağlantı koşulları (US-024) — yalnızca seller
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConnectionTerms' }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/connections/{id}/cancel:
+    post:
+      tags: [connections]
+      summary: Bağlantıyı iptal et (US-025)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, confirm]
+              properties:
+                reason: { type: string, enum: [no_longer_working, payment_issue, quality_issue, other] }
+                note: { type: string, maxLength: 500 }
+                confirm: { type: boolean, const: true }
+      responses:
+        '200':
+          description: İptal edildi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cancelledOrders: { type: integer }
+  /api/v1/blocks:
+    get:
+      tags: [connections]
+      summary: Engellenen toptancılar (buyer)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [connections]
+      summary: Toptancıyı engelle (US-023)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sellerId]
+              properties:
+                sellerId: { type: string, format: uuid }
+      responses:
+        '201': { description: Engellendi }
+  /api/v1/blocks/{sellerId}:
+    delete:
+      tags: [connections]
+      summary: Engeli kaldır
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: sellerId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        '204': { description: Kaldırıldı }
+
+  # ---------------------------------------------------------------- catalog
+  /api/v1/catalog/units:
+    get:
+      tags: [catalog]
+      summary: Birim kataloğu
+      responses:
+        '200': { description: Liste }
+  /api/v1/catalog/categories:
+    get:
+      tags: [catalog]
+      summary: Kategori ağacı
+      responses:
+        '200': { description: Liste }
+  /api/v1/catalog/brands:
+    get:
+      tags: [catalog]
+      summary: Markalar
+      parameters: [ { name: q, in: query, schema: { type: string } } ]
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [catalog]
+      summary: Marka talebi (US-029 AC2)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '201': { description: Talep oluştu }
+  /api/v1/catalog/activity-types:
+    get:
+      tags: [catalog]
+      summary: Faaliyet alanları
+      security: []
+      responses:
+        '200': { description: Liste }
+  /api/v1/catalog/regions:
+    get:
+      tags: [catalog]
+      summary: Şehir / rayon listesi
+      security: []
+      parameters: [ { name: country, in: query, schema: { type: string, default: AZ } } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/products:
+    get:
+      tags: [catalog]
+      summary: Kendi ürünlerim (seller)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: q, in: query, schema: { type: string } }, { name: status, in: query, schema: { type: string } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [catalog]
+      summary: Ürün oluştur (US-030)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductInput' }
+      responses:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/products/{id}:
+    get:
+      tags: [catalog]
+      summary: Ürün detayı (seller)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Ürün
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+    patch:
+      tags: [catalog]
+      summary: Ürün güncelle / yayınla / arşivle
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductInput' }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/browse/products:
+    get:
+      tags: [catalog]
+      summary: Perakendecinin ürün listesi — yalnızca aktif bağlantılar (US-032, US-033)
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { name: branchId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: gtin, in: query, schema: { type: string } }
+        - { name: sellerId, in: query, schema: { type: array, items: { type: string, format: uuid } } }
+        - { name: categoryId, in: query, schema: { type: string, format: uuid } }
+        - { name: brandId, in: query, schema: { type: string, format: uuid } }
+        - { name: priceMin, in: query, schema: { type: string } }
+        - { name: priceMax, in: query, schema: { type: string } }
+        - { name: inStock, in: query, schema: { type: boolean } }
+        - { name: isNew, in: query, schema: { type: boolean } }
+        - { name: purchasedBefore, in: query, schema: { type: boolean } }
+        - { name: favorites, in: query, schema: { type: boolean } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Ürünler, alıcıya uygulanacak fiyatla
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/BrowseProduct' } }
+                  nextCursor: { type: [string, 'null'] }
+  /api/v1/favorites/{productId}:
+    put:
+      tags: [catalog]
+      summary: Favorilere ekle (US-045)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: productId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        '204': { description: Eklendi }
+    delete:
+      tags: [catalog]
+      summary: Favorilerden çıkar
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: productId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        '204': { description: Çıkarıldı }
+
+  # ---------------------------------------------------------------- pricing
+  /api/v1/price-lists:
+    get:
+      tags: [pricing]
+      summary: Fiyat listeleri
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [pricing]
+      summary: Fiyat listesi oluştur (US-034)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PriceListInput' }
+      responses:
+        '201': { description: Oluşturuldu }
+  /api/v1/price-lists/{id}/items:
+    put:
+      tags: [pricing]
+      summary: Liste fiyatlarını toplu ayarla (geçerlilik tarihiyle)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                validFrom: { type: string, format: date-time }
+                items:
+                  type: array
+                  maxItems: 1000
+                  items:
+                    type: object
+                    required: [packagingId, unitPrice]
+                    properties:
+                      packagingId: { type: string, format: uuid }
+                      unitPrice: { $ref: '#/components/schemas/Decimal' }
+      responses:
+        '200': { description: Kaydedildi }
+  /api/v1/customer-prices:
+    get:
+      tags: [pricing]
+      summary: Müşteri / şube fiyatları
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: buyerId, in: query, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        '200': { description: Liste }
+    put:
+      tags: [pricing]
+      summary: Müşteri / şube fiyatı ayarla (US-035, US-036)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buyerId, items]
+              properties:
+                buyerId: { type: string, format: uuid }
+                branchId: { type: [string, 'null'], format: uuid }
+                validFrom: { type: string, format: date-time }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [packagingId, unitPrice]
+                    properties:
+                      packagingId: { type: string, format: uuid }
+                      unitPrice: { $ref: '#/components/schemas/Decimal' }
+      responses:
+        '200': { description: Kaydedildi }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/v1/branch-discounts:
+    get:
+      tags: [pricing]
+      summary: Şube indirimleri
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: buyerId, in: query, schema: { type: string, format: uuid } } ]
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [pricing]
+      summary: Şube indirimi oluştur (US-036)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BranchDiscountInput' }
+      responses:
+        '201': { description: Oluşturuldu }
+  /api/v1/tier-prices:
+    put:
+      tags: [pricing]
+      summary: Kademeli fiyat ayarla (US-037)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [packagingId, tiers]
+              properties:
+                packagingId: { type: string, format: uuid }
+                tiers:
+                  type: array
+                  items:
+                    type: object
+                    required: [minQty, discountPercent]
+                    properties:
+                      minQty: { $ref: '#/components/schemas/Decimal' }
+                      discountPercent: { $ref: '#/components/schemas/Decimal' }
+      responses:
+        '200': { description: Kaydedildi }
+  /api/v1/prices/explain:
+    get:
+      tags: [pricing]
+      summary: Bir alıcı için fiyatın kaynağını göster (US-034 AC5)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: buyerId, in: query, required: true, schema: { type: string, format: uuid } }, { name: branchId, in: query, schema: { type: string, format: uuid } }, { name: packagingId, in: query, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        '200':
+          description: Çözümleme adımları
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResolvedPrice' }
+
+  # ---------------------------------------------------------------- inventory
+  /api/v1/stock:
+    get:
+      tags: [inventory]
+      summary: Stok (seller)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: warehouseId, in: query, schema: { type: string, format: uuid } }, { name: low, in: query, schema: { type: boolean } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/stock/movements:
+    post:
+      tags: [inventory]
+      summary: Mal girişi veya sayım düzeltmesi (US-039)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [warehouseId, variantId, type, qty]
+              properties:
+                warehouseId: { type: string, format: uuid }
+                variantId: { type: string, format: uuid }
+                type: { type: string, enum: [receipt, adjustment] }
+                qty: { $ref: '#/components/schemas/Decimal' }
+                lotNo: { type: string }
+                expiryDate: { type: string, format: date }
+                note: { type: string }
+      responses:
+        '201': { description: Kaydedildi }
+  /api/v1/variants/{id}/availability:
+    put:
+      tags: [inventory]
+      summary: Var / yok işaretle (US-038)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isAvailable]
+              properties:
+                isAvailable: { type: boolean }
+      responses:
+        '200': { description: Güncellendi }
+
+  # ---------------------------------------------------------------- cart
+  /api/v1/cart:
+    get:
+      tags: [cart]
+      summary: Şube sepeti (US-040)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: branchId, in: query, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        '200':
+          description: Satıcıya göre gruplu sepet, güncel fiyatlarla
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+  /api/v1/cart/items:
+    put:
+      tags: [cart]
+      summary: Kalem ekle / miktar güncelle (0 = sil)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [branchId, packagingId, qty]
+              properties:
+                branchId: { type: string, format: uuid }
+                packagingId: { type: string, format: uuid }
+                qty: { $ref: '#/components/schemas/Decimal' }
+      responses:
+        '200':
+          description: Güncel sepet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/cart/submit:
+    post:
+      tags: [cart]
+      summary: Sepeti gönder veya onaya gönder (US-041, US-042)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [branchId]
+              properties:
+                branchId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Onay gerekmedi; siparişler oluştu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubmitResult' }
+        '202':
+          description: Şube onayı bekleniyor
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/cart/approve:
+    post:
+      tags: [cart]
+      summary: Şube admini onaylar ve gönderir (US-041)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [branchId]
+              properties:
+                branchId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Siparişler oluştu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubmitResult' }
+  /api/v1/cart/return:
+    post:
+      tags: [cart]
+      summary: Şube admini sepeti geri gönderir (US-041 AC3)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [branchId, note]
+              properties:
+                branchId: { type: string, format: uuid }
+                note: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: Geri gönderildi }
+
+  # ---------------------------------------------------------------- orders
+  /api/v1/orders:
+    get:
+      tags: [orders]
+      summary: Siparişler (seller veya buyer bakışı)
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { name: status, in: query, schema: { type: array, items: { $ref: '#/components/schemas/OrderStatus' } } }
+        - { name: branchId, in: query, schema: { type: string, format: uuid } }
+        - { name: counterpartyId, in: query, schema: { type: string, format: uuid } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { description: Liste }
+  /api/v1/orders/{id}:
+    get:
+      tags: [orders]
+      summary: Sipariş detayı
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Sipariş
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/v1/orders/{id}/approve:
+    post:
+      tags: [orders]
+      summary: Tam veya kısmi onay (US-043)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lines:
+                  type: array
+                  description: Boşsa tüm satırlar istenen miktarla onaylanır
+                  items:
+                    type: object
+                    required: [itemId, qtyApproved]
+                    properties:
+                      itemId: { type: string, format: uuid }
+                      qtyApproved: { $ref: '#/components/schemas/Decimal' }
+                      reason: { type: string }
+                      lotNo: { type: string }
+                      expiryDate: { type: string, format: date }
+      responses:
+        '200': { description: Onaylandı }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/orders/{id}/reject:
+    post:
+      tags: [orders]
+      summary: Reddet (US-043)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: Reddedildi }
+  /api/v1/orders/{id}/cancel:
+    post:
+      tags: [orders]
+      summary: İptal (buyer yalnızca submitted; seller approved/preparing)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: İptal edildi }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/orders/{id}/prepare:
+    post:
+      tags: [orders]
+      summary: Hazırlanıyor (US-043 AC5)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/orders/{id}/confirm-delivery:
+    post:
+      tags: [orders]
+      summary: Perakendeci teslimi onaylar (US-048)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '200': { description: Teslim kesinleşti }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/orders/{id}/dispute:
+    post:
+      tags: [orders]
+      summary: Perakendeci itiraz eder (US-048)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, description]
+              properties:
+                type: { type: string, enum: [missing, damaged, not_received] }
+                description: "{ type: string, maxLength: 1000 }"
+                fileId: { type: string, format: uuid }
+      responses:
+        '201': { description: İtiraz açıldı }
+  /api/v1/orders/{id}/resolve-dispute:
+    post:
+      tags: [orders]
+      summary: Toptancı itirazı çözer (US-048 AC4)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, note]
+              properties:
+                decision: { type: string, enum: [accept, reject] }
+                note: { type: string, maxLength: 1000 }
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    required: [itemId, qtyDelivered]
+                    properties:
+                      itemId: { type: string, format: uuid }
+                      qtyDelivered: { $ref: '#/components/schemas/Decimal' }
+      responses:
+        '200': { description: Çözüldü }
+  /api/v1/orders/{id}/document:
+    post:
+      tags: [documents]
+      summary: Sipariş belgesi PDF üret / getir (US-044)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Hazır; süreli indirme bağlantısı
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentRef' }
+        '202': { description: Üretiliyor; tekrar sorgulayın }
+  /api/v1/orders/{id}/einvoice-number:
+    put:
+      tags: [orders]
+      summary: e-qaimə numarasını elle gir (US-053 AC2)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [einvoiceNumber]
+              properties:
+                einvoiceNumber: { type: string, maxLength: 50 }
+      responses:
+        '200': { description: Kaydedildi }
+  /api/v1/orders/{id}/reorder:
+    post:
+      tags: [orders]
+      summary: Tekrar sipariş — kalemleri sepete ekler (US-045)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Eklenen ve eklenemeyen kalemler }
+
+  # ---------------------------------------------------------------- delivery
+  /api/v1/orders/{id}/delivery:
+    post:
+      tags: [delivery]
+      summary: Kargocu ata veya dış kargoya ver (US-046, US-049)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [provider, courierMembershipId]
+                  properties:
+                    provider: { const: own_courier }
+                    courierMembershipId: { type: string, format: uuid }
+                - type: object
+                  required: [provider, carrierName, trackingNo]
+                  properties:
+                    provider: { const: manual_carrier }
+                    carrierName: { type: string }
+                    trackingNo: { type: string }
+      responses:
+        '201': { description: Teslimat oluştu }
+  /api/v1/deliveries/mine:
+    get:
+      tags: [delivery]
+      summary: Kargocunun teslimatları (US-046 AC3)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: status, in: query, schema: { type: string } } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/deliveries/{id}/depart:
+    post:
+      tags: [delivery]
+      summary: Yola çıktım
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/deliveries/{id}/delivered:
+    post:
+      tags: [delivery]
+      summary: Teslim ettim (US-047)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoFileId: { type: string, format: uuid }
+                lat: { type: number }
+                lng: { type: number }
+                deliveredAt: { type: string, format: date-time, description: Çevrimdışı gönderimde istemci zamanı }
+                cashCollected:
+                  type: object
+                  properties:
+                    amount: { $ref: '#/components/schemas/Decimal' }
+                    currency: { $ref: '#/components/schemas/CurrencyCode' }
+      responses:
+        '200': { description: Onay bekliyor }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/deliveries/{id}/failed:
+    post:
+      tags: [delivery]
+      summary: Teslim edilemedi (US-047 AC4)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, enum: [closed, not_reachable, refused, address_wrong, other] }
+                lat: { type: number }
+                lng: { type: number }
+      responses:
+        '200': { description: Kaydedildi }
+
+  # ---------------------------------------------------------------- ledger
+  /api/v1/ledger/balances:
+    get:
+      tags: [ledger]
+      summary: Karşı taraf bazında bakiyeler (US-050)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: Bakiyeler (para birimine göre)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Balance' } }
+                  nextCursor: { type: [string, 'null'] }
+  /api/v1/ledger/entries:
+    get:
+      tags: [ledger]
+      summary: Bir karşı tarafla cari hareketleri
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: counterpartyId, in: query, required: true, schema: { type: string, format: uuid } }, { name: currency, in: query, schema: { $ref: '#/components/schemas/CurrencyCode' } }, { name: from, in: query, schema: { type: string, format: date } }, { name: to, in: query, schema: { type: string, format: date } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Hareketler }
+  /api/v1/payments:
+    post:
+      tags: [ledger]
+      summary: Tahsilat gir (US-051) — yalnızca seller
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buyerId, amount, currency, method, receivedAt]
+              properties:
+                buyerId: { type: string, format: uuid }
+                amount: { $ref: '#/components/schemas/Decimal' }
+                currency: { $ref: '#/components/schemas/CurrencyCode' }
+                method: { type: string, enum: [cash, bank_transfer, card] }
+                receivedAt: { type: string, format: date-time }
+                note: { type: string }
+      responses:
+        '201': { description: Kaydedildi (posted veya pending_review) }
+  /api/v1/payments/{id}/review:
+    post:
+      tags: [ledger]
+      summary: Temsilci tahsilatını onayla / reddet (US-051 AC4)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [post, reject] }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/courier-cash:
+    get:
+      tags: [ledger]
+      summary: Kargocularda bekleyen nakit (US-051 AC2)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/courier-cash/{id}/hand-over:
+    post:
+      tags: [ledger]
+      summary: Nakit teslim alındı (US-051 AC3)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Kapandı }
+  /api/v1/statements:
+    post:
+      tags: [documents]
+      summary: Ekstre PDF iste (US-052)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [counterpartyId, from, to]
+              properties:
+                counterpartyId: { type: string, format: uuid }
+                from: { type: string, format: date }
+                to: { type: string, format: date }
+      responses:
+        '202':
+          description: Üretiliyor
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentRef' }
+  /api/v1/documents/{id}:
+    get:
+      tags: [documents]
+      summary: Belge durumu ve süreli indirme bağlantısı
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Belge
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentRef' }
+  /api/v1/exports/einvoice:
+    post:
+      tags: [documents]
+      summary: e-qaimə uyumlu .xlsx dışa aktarma (US-053)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, to]
+              properties:
+                from: { type: string, format: date }
+                to: { type: string, format: date }
+      responses:
+        '202':
+          description: Üretiliyor
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentRef' }
+        '403': { $ref: '#/components/responses/Error' }
+
+  # ---------------------------------------------------------------- imports & files
+  /api/v1/imports:
+    post:
+      tags: [imports]
+      summary: Excel içe aktarma başlat (US-031)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, fileId]
+              properties:
+                type: { type: string, enum: [products, customer_prices, stock] }
+                fileId: { type: string, format: uuid }
+      responses:
+        '202':
+          description: İş oluştu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportJob' }
+  /api/v1/imports/template:
+    get:
+      tags: [imports]
+      summary: Şablon .xlsx indirme bağlantısı
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: type, in: query, required: true, schema: { type: string, enum: [products, customer_prices, stock] } } ]
+      responses:
+        '200': { description: Süreli bağlantı }
+  /api/v1/imports/{id}:
+    get:
+      tags: [imports]
+      summary: İş durumu ve önizleme
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: İş
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportJob' }
+  /api/v1/imports/{id}/apply:
+    post:
+      tags: [imports]
+      summary: Önizlemeyi uygula
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '202': { description: Uygulanıyor }
+  /api/v1/files/upload-url:
+    post:
+      tags: [files]
+      summary: Süreli imzalı yükleme URL'si (SF-09)
+      parameters: [ { $ref: '#/components/parameters/BusinessIdOptional' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purpose, contentType, sizeBytes]
+              properties:
+                purpose: { type: string, enum: [product_image, logo, delivery_photo, dispute_photo, import] }
+                contentType: { type: string }
+                sizeBytes: { type: integer }
+      responses:
+        '200':
+          description: URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fileId: { type: string, format: uuid }
+                  uploadUrl: { type: string, format: uri }
+                  headers: { type: object, additionalProperties: { type: string } }
+                  expiresAt: { type: string, format: date-time }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/files/{id}/complete:
+    post:
+      tags: [files]
+      summary: Yüklemeyi tamamla ve doğrula
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Hazır }
+        '422': { $ref: '#/components/responses/Error' }
+
+  # ---------------------------------------------------------------- notifications
+  /api/v1/notifications:
+    get:
+      tags: [notifications]
+      summary: Uygulama içi bildirimler
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/notifications/read:
+    post:
+      tags: [notifications]
+      summary: Okundu işaretle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids: { type: array, items: { type: string, format: uuid } }
+                all: { type: boolean }
+      responses:
+        '204': { description: Güncellendi }
+  /api/v1/notifications/preferences:
+    put:
+      tags: [notifications]
+      summary: Bildirim tercihleri (US-054 AC2)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: { type: boolean }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/push-tokens:
+    post:
+      tags: [notifications]
+      summary: Cihaz push anahtarını kaydet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, platform]
+              properties:
+                token: { type: string }
+                platform: { type: string, enum: [ios, android] }
+      responses:
+        '204': { description: Kaydedildi }
+
+  # ---------------------------------------------------------------- dashboard & system
+  /api/v1/dashboard:
+    get:
+      tags: [dashboard]
+      summary: Rol bazlı dashboard kartları (US-056)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: range, in: query, schema: { type: string, enum: [today, week, month, custom], default: today } }, { name: from, in: query, schema: { type: string, format: date } }, { name: to, in: query, schema: { type: string, format: date } } ]
+      responses:
+        '200':
+          description: Kartlar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards: { type: array, items: { $ref: '#/components/schemas/DashboardCard' } }
+  /api/v1/i18n/{lang}:
+    get:
+      tags: [system]
+      summary: Arayüz çevirileri (önbelleklenebilir, ETag)
+      security: []
+      parameters: [ { name: lang, in: path, required: true, schema: { $ref: '#/components/schemas/LanguageCode' } } ]
+      responses:
+        '200': { description: Anahtar → metin }
+  /api/app-config:
+    get:
+      tags: [system]
+      summary: Mobil minimum sürüm ve genel ayarlar (US-060) — sürümsüz uç nokta
+      security: []
+      parameters: [ { name: platform, in: query, required: true, schema: { type: string, enum: [ios, android] } }, { name: version, in: query, required: true, schema: { type: string } } ]
+      responses:
+        '200':
+          description: Yapılandırma
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  minVersion: { type: string }
+                  recommendedVersion: { type: string }
+                  updateRequired: { type: boolean }
+                  storeUrl: { type: string, format: uri }
+                  maintenance: { type: boolean }
+  /api/health:
+    get:
+      tags: [system]
+      summary: Sağlık kontrolü (veritabanı ve Redis)
+      security: []
+      responses:
+        '200': { description: Sağlıklı }
+        '503': { description: Bağımlılık erişilemiyor }
+
+  # ---------------------------------------------------------------- admin (platform)
+  /api/v1/admin/sellers:
+    get:
+      tags: [admin]
+      summary: Toptancılar
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [admin]
+      summary: Toptancı aç (US-009)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [legalName, voen, regionId, ownerPhone, ownerName, planId, currency, timezone]
+              properties:
+                legalName: { type: string }
+                voen: { $ref: '#/components/schemas/Voen' }
+                regionId: { type: string, format: uuid }
+                addressLine: { type: string }
+                ownerPhone: { $ref: '#/components/schemas/PhoneE164' }
+                ownerName: { type: string }
+                planId: { type: string, format: uuid }
+                serviceAreaRegionIds: { type: array, items: { type: string, format: uuid } }
+                currency: { $ref: '#/components/schemas/CurrencyCode' }
+                timezone: { type: string }
+                applicationId: { type: string, format: uuid }
+      responses:
+        '201': { description: Oluşturuldu; aktivasyon SMS'i gönderildi }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/seller-applications:
+    get:
+      tags: [admin]
+      summary: Toptancı başvuruları
+      responses:
+        '200': { description: Liste }
+  /api/v1/admin/seller-applications/{id}/reject:
+    post:
+      tags: [admin]
+      summary: Başvuruyu reddet
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Reddedildi }
+  /api/v1/admin/buyers:
+    get:
+      tags: [admin]
+      summary: "Perakendeciler (filtre: moderasyon bekleyen, bağlantısız aşama, askıda)"
+      parameters: [ { name: filter, in: query, schema: { type: string, enum: [all, voen_pending, dormant, suspended] } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Liste }
+  /api/v1/admin/buyers/{id}/verify:
+    post:
+      tags: [admin]
+      summary: VÖEN doğrula / reddet (US-015)
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [verify, reject] }
+                reason: { type: string }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/admin/businesses/{id}/status:
+    post:
+      tags: [admin]
+      summary: Askıya al / kaldır / arşivle (US-016)
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, reason]
+              properties:
+                action: { type: string, enum: [suspend, unsuspend, archive] }
+                reason: { type: string }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/admin/buyers/merge:
+    post:
+      tags: [admin]
+      summary: Mükerrer perakendecileri birleştir (US-016 AC4)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceId, targetId, reason]
+              properties:
+                sourceId: { type: string, format: uuid }
+                targetId: { type: string, format: uuid }
+                reason: { type: string }
+      responses:
+        '200': { description: Birleştirildi }
+  /api/v1/admin/settings:
+    get:
+      tags: [admin]
+      summary: Ayarlar (kapsam ile)
+      parameters: [ { name: scope, in: query, schema: { type: string, enum: [platform, plan, business] } }, { name: scopeId, in: query, schema: { type: string, format: uuid } } ]
+      responses:
+        '200': { description: Ayarlar }
+    put:
+      tags: [admin]
+      summary: Ayar güncelle (US-017)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scope, key, value]
+              properties:
+                scope: { type: string, enum: [platform, plan, business] }
+                scopeId: { type: [string, 'null'], format: uuid }
+                key: { type: string }
+                value: {}
+      responses:
+        '200': { description: Güncellendi }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/plans:
+    get:
+      tags: [admin]
+      summary: Planlar
+      responses:
+        '200': { description: Liste }
+    post:
+      tags: [admin]
+      summary: Plan oluştur (US-055)
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanInput' }
+      responses:
+        '201': { description: Oluşturuldu }
+  /api/v1/admin/subscriptions/{businessId}:
+    put:
+      tags: [admin]
+      summary: Abonelik ata / ödeme işaretle / istisna (US-055)
+      parameters: [ { name: businessId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planId: { type: string, format: uuid }
+                markPaid: { type: boolean }
+                paymentNote: { type: string }
+                overrides: { type: object, additionalProperties: {} }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/admin/catalog/{kind}:
+    post:
+      tags: [admin]
+      summary: Genel katalog kaydı oluştur (units, categories, brands, activity-types, regions, job-titles, role-templates)
+      parameters: [ { name: kind, in: path, required: true, schema: { type: string, enum: [units, categories, brands, activity-types, regions, job-titles, role-templates] } } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '201': { description: Oluşturuldu }
+  /api/v1/admin/catalog/{kind}/{id}:
+    patch:
+      tags: [admin]
+      summary: Genel katalog kaydı güncelle / pasifleştir
+      parameters: [ { name: kind, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/admin/translations:
+    get:
+      tags: [admin]
+      summary: Arayüz çevirileri ve eksik anahtar raporu
+      parameters: [ { name: missing, in: query, schema: { type: boolean } } ]
+      responses:
+        '200': { description: Liste }
+    put:
+      tags: [admin]
+      summary: Çeviri güncelle (US-058)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, lang, value]
+              properties:
+                key: { type: string }
+                lang: { $ref: '#/components/schemas/LanguageCode' }
+                value: { type: string }
+      responses:
+        '200': { description: Güncellendi }
+  /api/v1/admin/impersonations:
+    post:
+      tags: [admin]
+      summary: Salt-okunur kullanıcı taklidi başlat (US-018)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetUserId, targetBusinessId, reason]
+              properties:
+                targetUserId: { type: string, format: uuid }
+                targetBusinessId: { type: string, format: uuid }
+                reason: { type: string, minLength: 10 }
+      responses:
+        '201': { description: Taklit oturumu anahtarları }
+  /api/v1/audit-logs:
+    get:
+      tags: [admin]
+      summary: Audit log (işletme admini kendi işletmesi; platform tümü) (US-057)
+      parameters: [ { $ref: '#/components/parameters/BusinessIdOptional' }, { name: action, in: query, schema: { type: string } }, { name: from, in: query, schema: { type: string, format: date-time } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200': { description: Liste }
+
+  # ---------------------------------------------------------------- dev only
+  /api/v1/dev/sms-outbox:
+    get:
+      tags: [dev]
+      summary: Mock SMS kutusu — yalnızca development ve staging (NFR-96). Production'da 404.
+      security: []
+      parameters: [ { name: phone, in: query, schema: { $ref: '#/components/schemas/PhoneE164' } } ]
+      responses:
+        '200': { description: Son 50 mesaj }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    BusinessId:
+      name: X-Business-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    BusinessIdOptional:
+      name: X-Business-Id
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, minLength: 16, maxLength: 64 }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+  responses:
+    Error:
+      description: Hata
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code: { $ref: '#/components/schemas/ErrorCode' }
+        message: { type: string, description: Accept-Language dilinde }
+        requestId: { type: string }
+        details:
+          type: object
+          description: "Örn. alan hataları { field: [mesaj] }, retryAfter, available"
+          additionalProperties: {}
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_FAILED
+        - UNAUTHENTICATED
+        - PERMISSION_DENIED
+        - CAPABILITY_REQUIRED
+        - NOT_FOUND
+        - INVALID_STATE_TRANSITION
+        - IDEMPOTENCY_CONFLICT
+        - RATE_LIMITED
+        - CONFIRMATION_REQUIRED
+        - OTP_RATE_LIMITED
+        - OTP_INVALID
+        - OTP_EXPIRED
+        - OTP_LOCKED
+        - SMS_UNAVAILABLE
+        - TOTP_REQUIRED
+        - TOTP_INVALID
+        - REFRESH_TOKEN_REUSED
+        - USER_DISABLED
+        - BUSINESS_SUSPENDED
+        - SUBSCRIPTION_READ_ONLY
+        - ENTITLEMENT_LIMIT_REACHED
+        - VOEN_INVALID
+        - VOEN_ALREADY_REGISTERED
+        - VOEN_REQUIRED
+        - LAST_ADMIN_PROTECTED
+        - CONNECTION_ALREADY_ACTIVE
+        - CONNECTION_REQUEST_ALREADY_PENDING
+        - CONNECTION_REQUEST_EXPIRED
+        - CONNECTION_BLOCKED
+        - CONNECTION_COOLDOWN_ACTIVE
+        - CONNECTION_DAILY_QUOTA_EXCEEDED
+        - CONNECTION_NOT_ACTIVE
+        - PRICE_NOT_AVAILABLE
+        - QTY_NOT_MULTIPLE
+        - BELOW_MIN_ORDER_QTY
+        - BELOW_MIN_ORDER_AMOUNT
+        - VARIANT_UNAVAILABLE
+        - CURRENCY_MISMATCH
+        - STOCK_INSUFFICIENT
+        - ORDER_QTY_INCREASE_NOT_ALLOWED
+        - ORDER_EMPTY_USE_REJECT
+        - DELIVERY_PHOTO_REQUIRED
+        - DELIVERY_TIMESTAMP_TOO_OLD
+        - FILE_INVALID
+        - IMPORT_TOO_MANY_ROWS
+        - SETTING_OUT_OF_RANGE
+        - INTERNAL_ERROR
+    PhoneE164:
+      type: string
+      pattern: '^\+[1-9][0-9]{7,14}$'
+      examples: ['+994501234567']
+    Voen:
+      type: string
+      pattern: '^[0-9]{9}[12]$'
+    LanguageCode:
+      type: string
+      enum: [az, ru, tr, en]
+    CurrencyCode:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      examples: [AZN]
+    Decimal:
+      type: string
+      pattern: '^-?[0-9]+(\.[0-9]{1,4})?$'
+      examples: ['12.50']
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { $ref: '#/components/schemas/Decimal' }
+        currency: { $ref: '#/components/schemas/CurrencyCode' }
+    LocalizedText:
+      type: object
+      properties:
+        az: { type: string }
+        ru: { type: string }
+        tr: { type: string }
+        en: { type: string }
+      minProperties: 1
+    DeviceInfo:
+      type: object
+      properties:
+        type: { type: string, enum: [web, ios, android] }
+        name: { type: string }
+        appVersion: { type: string }
+    TokenPair:
+      type: object
+      required: [accessToken, expiresIn]
+      properties:
+        accessToken: { type: string }
+        expiresIn: { type: integer, description: saniye (900) }
+        refreshToken: { type: string, description: Yalnızca mobil; web'de cookie }
+    AuthResult:
+      allOf:
+        - $ref: '#/components/schemas/TokenPair'
+        - type: object
+          properties:
+            nextStep: { type: string, enum: [none, register, totp, totp_setup] }
+            pendingToken: { type: string, description: nextStep = totp ise }
+            memberships:
+              type: array
+              items: { $ref: '#/components/schemas/MembershipSummary' }
+    Session:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        deviceType: { type: string }
+        deviceName: { type: string }
+        city: { type: string }
+        lastUsedAt: { type: string, format: date-time }
+        current: { type: boolean }
+    MembershipSummary:
+      type: object
+      properties:
+        businessId: { type: string, format: uuid }
+        businessName: { type: string }
+        capability: { type: string, enum: [seller, buyer] }
+        roleName: { type: string }
+    Me:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        phone: { $ref: '#/components/schemas/PhoneE164' }
+        preferredLanguage: { $ref: '#/components/schemas/LanguageCode' }
+        timezone: { type: [string, 'null'] }
+        platformRole: { type: [string, 'null'] }
+        memberships: { type: array, items: { $ref: '#/components/schemas/MembershipSummary' } }
+        activeBusiness:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            capability: { type: string }
+            timezone: { type: string }
+            currency: { $ref: '#/components/schemas/CurrencyCode' }
+            permissions:
+              type: array
+              items: { $ref: '#/components/schemas/RolePermission' }
+            subscriptionStatus: { type: string }
+    RolePermission:
+      type: object
+      required: [code, scope]
+      properties:
+        code: { type: string, examples: [orders.approve] }
+        scope: { type: string, enum: [all, branch, warehouse, assigned] }
+    Business:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        legalName: { type: string }
+        voen: { type: [string, 'null'] }
+        legalType: { type: [string, 'null'] }
+        regionId: { type: string, format: uuid }
+        addressLine: { type: [string, 'null'] }
+        businessPhone: { type: [string, 'null'] }
+        logoUrl: { type: [string, 'null'] }
+        status: { type: string }
+        verified: { type: boolean }
+        profileCompleteness: { type: integer }
+        timezone: { type: string }
+        currency: { $ref: '#/components/schemas/CurrencyCode' }
+    BusinessUpdate:
+      type: object
+      properties:
+        legalName: { type: string }
+        voen: { $ref: '#/components/schemas/Voen' }
+        regionId: { type: string, format: uuid }
+        addressLine: { type: string }
+        businessPhone: { type: string }
+        logoFileId: { type: string, format: uuid }
+        contactName: { type: string }
+        personalPhone: { $ref: '#/components/schemas/PhoneE164' }
+        email: { type: string, format: email }
+    Privacy:
+      type: object
+      properties:
+        listedInDirectory: { type: boolean }
+        showLogo: { type: boolean }
+        showAddress: { type: boolean }
+        showBusinessPhone: { type: boolean }
+        showVoen: { type: boolean }
+        showContactName: { type: boolean }
+        showPersonalContact: { type: boolean }
+    Branch:
+      allOf:
+        - $ref: '#/components/schemas/BranchInput'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+    BranchInput:
+      type: object
+      required: [name, regionId, addressLine]
+      properties:
+        name: { type: string }
+        regionId: { type: string, format: uuid }
+        addressLine: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        approvalRule: { type: string, enum: [every_order, above_amount, none] }
+        approvalThreshold: { $ref: '#/components/schemas/Decimal' }
+        status: { type: string, enum: [active, inactive] }
+    DirectoryBuyer:
+      type: object
+      description: Yalnızca görünürlük ayarına göre açık alanlar dolu döner. Diğer bağlantılar asla dönmez.
+      required: [id, legalName, activityType, region]
+      properties:
+        id: { type: string, format: uuid }
+        legalName: { type: string }
+        activityType: { type: string }
+        region: { type: string }
+        verified: { type: boolean }
+        logoUrl: { type: [string, 'null'] }
+        addressLine: { type: [string, 'null'] }
+        businessPhone: { type: [string, 'null'] }
+        voen: { type: [string, 'null'] }
+        contactName: { type: [string, 'null'] }
+        relation:
+          type: object
+          description: Bu satıcıyla ilişki durumu
+          properties:
+            status: { type: string, enum: [none, pending, active, rejected, cancelled, blocked] }
+            cooldownUntil: { type: [string, 'null'], format: date-time }
+            canRequest: { type: boolean }
+    ConnectionRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sellerId: { type: string, format: uuid }
+        buyerId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, accepted, rejected, expired, withdrawn] }
+        message: { type: [string, 'null'] }
+        proposedPaymentTermDays: { type: [integer, 'null'] }
+        expiresAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    Connection:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sellerId: { type: string, format: uuid }
+        buyerId: { type: string, format: uuid }
+        counterpartyName: { type: string }
+        status: { type: string, enum: [active, cancelled] }
+        terms: { $ref: '#/components/schemas/ConnectionTerms' }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: [string, 'null'], format: date-time }
+        endedBySide: { type: [string, 'null'] }
+    ConnectionTerms:
+      type: object
+      properties:
+        priceListId: { type: [string, 'null'], format: uuid }
+        branchPricingEnabled: { type: boolean }
+        creditLimit: { type: [string, 'null'] }
+        paymentTermDays: { type: integer, minimum: 0, maximum: 180 }
+        salesRepMembershipId: { type: [string, 'null'], format: uuid }
+    Packaging:
+      type: object
+      required: [level, unitCode, baseQty]
+      properties:
+        id: { type: string, format: uuid }
+        level: { type: string, enum: [unit, inner, case, pallet] }
+        unitCode: { type: string, examples: [XCT] }
+        baseQty: { $ref: '#/components/schemas/Decimal' }
+        gtin: { type: [string, 'null'] }
+        isSalesUnit: { type: boolean }
+        minOrderQty: { $ref: '#/components/schemas/Decimal' }
+        orderMultiple: { $ref: '#/components/schemas/Decimal' }
+        weightG: { type: [integer, 'null'] }
+    Variant:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        attributes: { type: object, additionalProperties: {} }
+        gtin: { type: [string, 'null'] }
+        isAvailable: { type: boolean }
+        packaging: { type: array, items: { $ref: '#/components/schemas/Packaging' } }
+    ProductInput:
+      type: object
+      required: [sku, name, categoryId, baseUnitCode, variants]
+      properties:
+        sku: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        description: "{ $ref: '#/components/schemas/LocalizedText' }"
+        categoryId: { type: string, format: uuid }
+        brandId: { type: [string, 'null'], format: uuid }
+        baseUnitCode: { type: string }
+        hasExpiry: { type: boolean }
+        shelfLifeMonths: { type: [integer, 'null'] }
+        status: { type: string, enum: [draft, active, archived] }
+        imageFileIds: { type: array, maxItems: 8, items: { type: string, format: uuid } }
+        variants: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Variant' } }
+        visibility:
+          type: object
+          properties:
+            priceListIds: { type: array, items: { type: string, format: uuid } }
+            regionIds: { type: array, items: { type: string, format: uuid } }
+    Product:
+      allOf:
+        - $ref: '#/components/schemas/ProductInput'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            images: { type: array, items: { type: object, properties: { thumb: { type: string }, medium: { type: string }, large: { type: string } } } }
+    BrowseProduct:
+      type: object
+      properties:
+        productId: { type: string, format: uuid }
+        variantId: { type: string, format: uuid }
+        packagingId: { type: string, format: uuid }
+        sellerId: { type: string, format: uuid }
+        sellerName: { type: string }
+        name: { type: string, description: İstek dilinde (geri dönüşlü) }
+        brand: { type: [string, 'null'] }
+        imageUrl: { type: [string, 'null'] }
+        salesUnit: { type: string }
+        baseQtyPerUnit: { $ref: '#/components/schemas/Decimal' }
+        minOrderQty: { $ref: '#/components/schemas/Decimal' }
+        orderMultiple: { $ref: '#/components/schemas/Decimal' }
+        price: { $ref: '#/components/schemas/ResolvedPrice' }
+        stock:
+          type: object
+          properties:
+            state: { type: string, enum: [untracked, in_stock, low, out_of_stock] }
+            lowQty: { type: [string, 'null'] }
+        isFavorite: { type: boolean }
+    ResolvedPrice:
+      type: object
+      properties:
+        unitPrice: { $ref: '#/components/schemas/Money' }
+        source: { type: string, enum: [branch_price, customer_price, price_list, default_list, none] }
+        tierDiscountPercent: { $ref: '#/components/schemas/Decimal' }
+        branchDiscountPercent: { $ref: '#/components/schemas/Decimal' }
+        finalUnitPrice: { $ref: '#/components/schemas/Money' }
+        vatIncluded: { type: boolean }
+        vatRate: { $ref: '#/components/schemas/Decimal' }
+    PriceListInput:
+      type: object
+      required: [name, currency, vatIncluded, vatRate]
+      properties:
+        name: { type: string }
+        currency: { $ref: '#/components/schemas/CurrencyCode' }
+        vatIncluded: { type: boolean }
+        vatRate: { $ref: '#/components/schemas/Decimal' }
+        isDefault: { type: boolean }
+    BranchDiscountInput:
+      type: object
+      required: [buyerId, branchId, target, percent]
+      properties:
+        buyerId: { type: string, format: uuid }
+        branchId: { type: string, format: uuid }
+        target: { type: string, enum: [all, brand, category] }
+        brandId: { type: string, format: uuid }
+        categoryId: { type: string, format: uuid }
+        percent: { $ref: '#/components/schemas/Decimal' }
+        validFrom: { type: string, format: date-time }
+        validTo: { type: [string, 'null'], format: date-time }
+    Cart:
+      type: object
+      properties:
+        branchId: { type: string, format: uuid }
+        status: { type: string, enum: [open, pending_approval] }
+        approvalRequired: { type: boolean }
+        groups:
+          type: array
+          items:
+            type: object
+            properties:
+              sellerId: { type: string, format: uuid }
+              sellerName: { type: string }
+              connectionActive: { type: boolean }
+              subtotal: { $ref: '#/components/schemas/Money' }
+              minOrderAmount: { oneOf: [ { $ref: '#/components/schemas/Money' }, { type: 'null' } ] }
+              belowMinimum: { type: boolean }
+              creditLimitWarning: { type: boolean }
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    packagingId: { type: string, format: uuid }
+                    name: { type: string }
+                    qty: { $ref: '#/components/schemas/Decimal' }
+                    price: { $ref: '#/components/schemas/ResolvedPrice' }
+                    lineTotal: { $ref: '#/components/schemas/Money' }
+                    priceChanged: { type: boolean }
+                    addedBy: { type: string }
+    SubmitResult:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              number: { type: string }
+              sellerId: { type: string, format: uuid }
+              total: { $ref: '#/components/schemas/Money' }
+        skippedGroups:
+          type: array
+          items:
+            type: object
+            properties:
+              sellerId: { type: string, format: uuid }
+              reason: { $ref: '#/components/schemas/ErrorCode' }
+    OrderStatus:
+      type: string
+      enum: [submitted, approved, rejected, cancelled, preparing, ready_to_ship, shipped, delivered_pending_confirmation, disputed, delivered]
+    Order:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string }
+        sellerId: { type: string, format: uuid }
+        sellerName: { type: string }
+        buyerId: { type: string, format: uuid }
+        buyerName: { type: string }
+        branchId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        currency: { $ref: '#/components/schemas/CurrencyCode' }
+        subtotal: { $ref: '#/components/schemas/Decimal' }
+        discountTotal: { $ref: '#/components/schemas/Decimal' }
+        vatTotal: { $ref: '#/components/schemas/Decimal' }
+        total: { $ref: '#/components/schemas/Decimal' }
+        paymentTermDays: { type: integer }
+        submittedAt: { type: string, format: date-time }
+        approvedAt: { type: [string, 'null'], format: date-time }
+        deliveredAt: { type: [string, 'null'], format: date-time }
+        autoConfirmAt: { type: [string, 'null'], format: date-time }
+        autoConfirmed: { type: boolean }
+        deliverySnapshot: { type: object, additionalProperties: {} }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              unitCode: { type: string }
+              qtyOrdered: { $ref: '#/components/schemas/Decimal' }
+              qtyApproved: { type: [string, 'null'] }
+              unitPrice: { $ref: '#/components/schemas/Decimal' }
+              priceSource: { type: string }
+              tierDiscountPercent: { $ref: '#/components/schemas/Decimal' }
+              branchDiscountPercent: { $ref: '#/components/schemas/Decimal' }
+              lineTotal: { $ref: '#/components/schemas/Decimal' }
+              lotNo: { type: [string, 'null'] }
+              expiryDate: { type: [string, 'null'], format: date }
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              from: { type: [string, 'null'] }
+              to: { type: string }
+              at: { type: string, format: date-time }
+              actor: { type: string }
+              note: { type: [string, 'null'] }
+    Balance:
+      type: object
+      properties:
+        counterpartyId: { type: string, format: uuid }
+        counterpartyName: { type: string }
+        connectionStatus: { type: string, enum: [active, cancelled] }
+        currency: { $ref: '#/components/schemas/CurrencyCode' }
+        balance: { $ref: '#/components/schemas/Decimal' }
+        overdue: { $ref: '#/components/schemas/Decimal' }
+        dueNext7Days: { $ref: '#/components/schemas/Decimal' }
+    DocumentRef:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [pending, ready, failed] }
+        downloadUrl: { type: [string, 'null'], format: uri, description: 5 dk geçerli }
+    ImportJob:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string }
+        status: { type: string, enum: [uploaded, validating, preview_ready, applying, done, failed] }
+        stats:
+          type: object
+          properties:
+            insert: { type: integer }
+            update: { type: integer }
+            error: { type: integer }
+        errorReportUrl: { type: [string, 'null'], format: uri }
+    DashboardCard:
+      type: object
+      properties:
+        key: { type: string, examples: [orders_pending_approval] }
+        title: { type: string }
+        value: { type: string }
+        unit: { type: [string, 'null'] }
+        compareValue: { type: [string, 'null'] }
+        link: { type: string, description: İstemci yönlendirme yolu ve filtre }
+    PlanInput:
+      type: object
+      required: [code, name, capability, price, currency, period, entitlements]
+      properties:
+        code: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        capability: { type: string, enum: [seller, buyer] }
+        price: { $ref: '#/components/schemas/Decimal' }
+        currency: { $ref: '#/components/schemas/CurrencyCode' }
+        period: { type: string, enum: [month, year] }
+        entitlements: { type: object, additionalProperties: {} }
