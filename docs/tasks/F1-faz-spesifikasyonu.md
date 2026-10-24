@@ -28,7 +28,7 @@ F0.1, F0.2 (görüşme, atölye) ve F0.4 (AWS/Cloudflare) F1'i **engellemez**; p
 | F1.1 | Veritabanı bağlantısı, `withTenantTx` / `withPlatformTx`, DB rolleri, izolasyon test yardımcısı, `check-rls` | L | F0.3 | **Zorunlu** (kiracı bağlamı) | **F1.1a** (bağlantı + roller + tx yardımcıları + testler) · **F1.1b** (`check-rls` betiği + CI adımı) — kartlar hazır |
 | F1.2 | Hata modeli, istek kimliği, log (redakte), idempotens, outbox + dağıtıcı, `Clock`, `money`, `env.ts` | L | F1.1 | Önerilir (log redaksiyonu, idempotens) | F1.2a (hata + log + request-id + Clock + money + env) · F1.2b (idempotens + outbox + worker dağıtıcı) |
 | F1.3 | Diller, çeviriler, para birimleri, ülkeler, bölgeler + seed + uç noktalar | M | F1.1 | Gerekmez | — |
-| F1.4 | `SettingsService` + `EntitlementService` (çözümleme, önbellek, seed) | M | F1.1 | Önerilir (plan limitleri) | — |
+| F1.4 | `SettingsService` + `EntitlementService` (çözümleme, önbellek, seed) | M | F1.1 | Önerilir (plan limitleri) | **F1.4a** (`settings` + `SettingsService`, S erişim kalıbı) · **F1.4b** (planlar, abonelik, `EntitlementService`) — `subscriptions` → `businesses` FK'sı yüzünden F1.7'den sonra |
 | F1.5 | Kimlik: OTP (mock SMS), oturum, yenileme anahtarı döndürme | L | F1.2 | **Zorunlu** (kimlik) | F1.5a (OTP + mock SMS + `dev_sms_outbox` + açılış kontrolü) · F1.5b (oturum, yenileme anahtarı, cihazlar, `/me` temel) |
 | F1.6 | TOTP, kurtarma kodları, `platform_staff` | M | F1.5 | **Zorunlu** (kimlik) | — |
 | F1.7 | İşletme çekirdek tabloları + RLS + VÖEN doğrulayıcı | M | F1.1 | **Zorunlu** (RLS'li ilk gerçek tablolar) | — |
@@ -36,31 +36,40 @@ F0.1, F0.2 (görüşme, atölye) ve F0.4 (AWS/Cloudflare) F1'i **engellemez**; p
 | F1.9 | Audit log yazıcısı (yalnızca ekleme) | S | F1.2 | Önerilir | — |
 | F1.10 | Dosya yükleme (R2/MinIO, imzalı URL) | M | F1.8 | Önerilir (özel dosya erişimi) | — |
 | F1.11 | Push bildirim altyapısı (mock + Expo) | M | F1.2, F1.3 | Gerekmez | — |
-| F1.12 | `packages/api-client` üretimi + CI sözleşme kontrolü | S | F0.3 | Gerekmez | — |
-| F1.13 | Web iskeleti: giriş, dil, işletme seçici, izinden menü | L | F1.8, F1.12 | Gerekmez (arayüz; güvenlik backend'de) | Gerekirse F1.13a (giriş + oturum) · F1.13b (kabuk, menü, seçiciler) |
-| F1.14 | Mobil iskeleti: giriş, dil, menü, minimum sürüm, push kaydı | L | F1.8, F1.11, F1.12 | Gerekmez | Gerekirse F1.14a (giriş + güvenli depo) · F1.14b (menü, app-config, push) |
+| F1.12 | `packages/api-client` üretimi + CI sözleşme kontrolü | S | F1.8b | Gerekmez | — (uygulama şeması controller'lar yazıldıktan sonra anlamlı) |
+| F1.13 | Web iskeleti: giriş, dil, işletme seçici, izinden menü | L | F1.8, F1.12 | F1.13a için **Zorunlu** (web cookie oturumu) | **F1.13a** (giriş + oturum cookie'si + dil) · **F1.13b** (kabuk, menü, seçiciler, E2E-01) |
+| F1.14 | Mobil iskeleti: giriş, dil, menü, minimum sürüm, push kaydı | L | F1.8, F1.11, F1.12 | F1.14a için **Zorunlu** (oturum) | **F1.14a** (giriş + güvenli depo + dil) · **F1.14b** (menü, app-config, push, Maestro) |
 
 "Müfettiş Zorunlu" dayanağı: `coding-guidelines.md` §10.4 ve `definition-of-done.md` §5 — kimlik, yetki, kiracı bağlamı, fiyat, stok, cari kodu değişirse Müfettiş incelemesi şart. "Önerilir" Mimar önerisidir, belgede zorunlu değildir.
 
-## 2. Önerilen sıra (tek geliştirici için düz liste)
+## 2. Önerilen sıra ve kartlar (güncel — 2026-10-24)
 
-Bağımlılıkları bozmadan, tek kişinin sırayla yapacağı düzen:
+Tek geliştirici için düz liste. **Risk yüksek** = RLS, kimlik/yetki, para/sipariş. **Plan incelemesi gerekli** ise Usta kodu yazmadan planı Mimar'a getirir; karar `/mnt/project-files/f1-plan/reviews/<ID>-plan-karari.md`.
 
-1. F0.3a → F0.3b (ön koşul)
-2. **F1.1a → F1.1b**
-3. F1.12 (yalnızca F0.3'e bağlı; erken kurmak sözleşme kontrolünü baştan açar)
-4. F1.2a → F1.2b
-5. F1.4
-6. F1.3
-7. F1.7
-8. F1.9
-9. F1.5a → F1.5b
-10. F1.6
-11. F1.8a → F1.8b
-12. F1.11
-13. F1.10
-14. F1.13
-15. F1.14
+| # | Kart | Risk | Plan incelemesi | Bağımlılık |
+| --- | --- | --- | --- | --- |
+| — | F0.3a → F0.3b, F1.1a → F1.1b | — | — | bitti |
+| 1 | [F1.2a](F1.2a.md) hata, log, request-id, Clock, money, env | yüksek | gerekli | F1.1b |
+| 2 | [F1.4a](F1.4a.md) `settings` + `SettingsService` | yüksek | gerekli | F1.2a |
+| 3 | [F1.2b](F1.2b.md) idempotens + outbox | yüksek | gerekli | F1.2a, F1.4a |
+| 4 | [F1.3](F1.3.md) dil, çeviri, para birimi, ülke, bölge (ilk G) | yüksek | gerekli | F1.2a, F1.4a |
+| 5 | [F1.7](F1.7.md) işletme tabloları + VÖEN | yüksek | gerekli | F1.3 |
+| 6 | [F1.4b](F1.4b.md) plan, abonelik, `EntitlementService` | yüksek | gerekli | F1.4a, F1.7 |
+| 7 | [F1.9](F1.9.md) audit log yazıcısı | normal | gerekmez | F1.2a, F1.4a |
+| 8 | [F1.5a](F1.5a.md) kullanıcılar, OTP, mock SMS | yüksek | gerekli | F1.2b, F1.3, F1.4a, F1.9 |
+| 9 | [F1.5b](F1.5b.md) oturum, JWT, yenileme | yüksek | gerekli | F1.5a |
+| 10 | [F1.6](F1.6.md) TOTP, platform ekibi | yüksek | gerekli | F1.5b |
+| 11 | [F1.8a](F1.8a.md) izinler, roller, üyelikler | yüksek | gerekli | F1.5b, F1.6, F1.7 |
+| 12 | [F1.8b](F1.8b.md) `TenantContext`, `PermissionGuard`, `/me` | yüksek | gerekli | F1.8a |
+| 13 | [F1.12](F1.12.md) api-client + sözleşme kontrolü | normal | gerekmez | F1.8b |
+| 14 | [F1.11](F1.11.md) push + uygulama içi bildirim | yüksek | gerekli | F1.2b, F1.3, F1.8b |
+| 15 | [F1.10](F1.10.md) dosya yükleme (**S9 kararı önce**) | yüksek | gerekli | F1.8b, F1.4a |
+| 16 | [F1.13a](F1.13a.md) web giriş, oturum, dil | yüksek | gerekli | F1.8b, F1.12 |
+| 17 | [F1.13b](F1.13b.md) web kabuğu, menü, E2E-01 | normal | gerekmez | F1.13a |
+| 18 | [F1.14a](F1.14a.md) mobil giriş, güvenli depo, dil | yüksek | gerekli | F1.8b, F1.12 |
+| 19 | [F1.14b](F1.14b.md) mobil kabuk, app-config, push, Maestro | normal | gerekmez | F1.14a, F1.11 |
+
+Sıra değişikliğinin gerekçesi: `settings` (F1.4a) idempotens/outbox ayarlarından önce gerekir; `subscriptions` → `businesses` FK'sı F1.4b'yi F1.7'nin arkasına iter; F1.5a kilit kaydını audit'e yazdığı için F1.9 öne alındı; F1.12'nin "uygulamanın ürettiği şema" kontrolü ancak controller'lar ve dekoratörler (F1.8b) varken anlamlı.
 
 M1 çıkış ölçütü (roadmap.md): mock SMS ile web ve mobilde giriş; izinden oluşan menü; izolasyon test paketi yeşil; outbox → push uçtan uca; 3 dilde çeviri.
 
@@ -102,3 +111,31 @@ M1 çıkış ölçütü (roadmap.md): mock SMS ile web ve mobilde giriş; izinde
 4. **Rol değişikliği (2026-10-24, platform sahibi):** Usta artık Antigravity Agent paneli değil, Antigravity içindeki **Claude Code eklentisi** (Pro). Müfettiş aynı eklentide ayrı yeni sohbet. Bu, `docs/05-planning/risk-register.md` RISK-05 önleminiyle çelişiyor. RISK-05 satırının "Önlem" hücresi şu metinle değiştirilmeli:
 
    `Usta ve Müfettiş Claude Code (Pro) ile; Usta ve Müfettiş ayrı sohbetler; küçük görev kartları (a/b bölme); plan modunda başlama; limit takvimine göre gün planı; limit sık dolarsa Usta işi için Antigravity Agent paneli yedek seçenek`
+
+## 6. Ortak kurallar (her kart için geçerli)
+
+Kartlar bu bölüme "§6" diye atıf yapar. Bir kart bu kurallardan sapacaksa planda gerekçe yazılır.
+
+1. **Sınıf yorumu:** Her yeni tablo aynı migration'da `COMMENT ON TABLE <tablo> IS 'rls:<sınıf>'` taşır (T, P, G, U, S, D; `check-rls` regex'i `^rls:[TPGUSD](,[TPGUSD])*$`). Yorumsuz tablo `check-rls`'te hata.
+2. **Açık GRANT:** `ALTER DEFAULT PRIVILEGES` yok. Her migration, `app_user` ve `readonly` için gereken yetkiyi tablo tablo açıkça verir; dizi (sequence) varsa `USAGE` da.
+3. **T / P:** `ENABLE` + `FORCE ROW LEVEL SECURITY`; politika `<kolon> = nullif(current_setting('app.business_id', true), '')::uuid`; bağlam yoksa 0 satır. Erişim yalnızca `withTenantTx`.
+4. **U:** aynı kalıp, `user_id = nullif(current_setting('app.user_id', true), '')::uuid`.
+5. **G:** RLS açık; `SELECT USING (true)`; yazma politikaları yalnızca `current_setting('app.is_platform', true) = 'true'` iken (F1.3'te kurulur, `check-rls` G kuralı F1.3'te eklenir).
+6. **S:** `app_user`'ın tabloya doğrudan `SELECT` yetkisi yok (yalnızca kartta yazıyorsa `INSERT`). Okuma/yazma `migrator` sahipli `SECURITY DEFINER` fonksiyonlarla: `SET search_path = pg_catalog, public`, `REVOKE ALL ... FROM PUBLIC`, `GRANT EXECUTE ... TO app_user` (F1.4a'da kurulur).
+7. **Materialized view:** İlk materialized view hangi adımda gelirse, aynı PR'da `check-rls`'e kural eklenir (`relkind = 'm'`). Materialized view RLS desteklemez → ya `app_user`'a hiç yetki verilmez, ya erişim `SECURITY DEFINER` fonksiyonla ve işletme filtresiyle yapılır.
+8. **Roller dosyası:** `0000_roles.sql` migration klasöründen çıkarılıp `apps/api/db/bootstrap/roles.sql`'e taşınır (F1.2a'nın ilk işi; ilk `drizzle-kit generate` F1.4a'da). Şifre hiçbir dosyada yok; `pnpm db:bootstrap` ortamdan okur.
+9. **Bağlantı havuzu:** `pool.on('error')` dinleyicisi (F1.2a); boşta kopan bağlantı süreci düşürmez, loglanır.
+10. **FK'sız bırakılan sütunlar** (bağımlılık döngüsü yüzünden) ve FK'nın ekleneceği adım:
+
+| Sütun | FK hedefi | Eklendiği adım |
+| --- | --- | --- |
+| `settings.updated_by` | `users` | F1.5a |
+| `businesses.verified_by` | `users` | F1.5a |
+| `business_capabilities.approved_by` | `users` | F1.5a |
+| `entitlement_overrides.created_by` | `users` | F1.5a |
+| `businesses.logo_file_id` | `files` | F1.10 |
+| `businesses.default_price_list_id` | `price_lists` | F3 |
+
+11. **Sabit değer yok:** Kartın getirdiği her süre, sınır ve eşik önce `user-stories.md` US-017 tablosuna, aynı PR'da `packages/shared/src/settings.ts`'e eklenir.
+12. **Testler:** İzolasyon testleri `app_user` ile bağlanır ve kurulumda `current_user = 'app_user'` olduğunu doğrular; test adı AC kimliğiyle başlar.
+
