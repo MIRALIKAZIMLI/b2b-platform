@@ -32,6 +32,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | HTTP adaptörü | Fastify (NestJS üzerinden) | 5.x |
 | NestJS zorunlu peer bağımlılıkları | `reflect-metadata`, `rxjs` | 0.2.x, 7.x |
 | Veritabanı sürücüsü | `pg` (node-postgres) | 8.x |
+| `pg` TypeScript tipleri | `@types/pg` | `pg` ile aynı (8.x); platform sahibi onayı F1.1a, 2026-10-24 |
 | ORM ve migration | `drizzle-orm`, `drizzle-kit` | Güncel kararlı |
 | Doğrulama ve DTO | `zod` | 4.x |
 | OpenAPI üretimi | `@nestjs/swagger` + Zod → OpenAPI dönüştürücüsü | — |
@@ -163,6 +164,17 @@ Web ve mobil aynı React sürümünü kullanır: Expo SDK 58 `react` 19.3.0'ı s
 | `pnpm audit` istisnaları | GHSA-86w9-cpqp-85rv, GHSA-mrhx-c7xc-m3w5 | `@expo/cli` üzerinden; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §3 |
 
 Eklenmeyenler (ayrı karar): `@next/eslint-plugin-next`, `eslint-plugin-react-hooks` (listede yok), `react-native-web` (mobil web hedefi yok), `expo-status-bar`.
+
+## 7.3 Kurulu sürümler (F1.1a, 2026-10-24)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `pg` | 8.23.1 | api |
+| `@types/pg` | 8.23.1 | api (dev); `drizzle-orm` peer bağımlılığı |
+| `drizzle-orm` | 0.45.4 | api; npm `latest` (1.0 henüz rc) |
+| `drizzle-kit` | 0.31.11 | api (dev); migration üretimi |
+| `zod` | 4.6.7 | shared (`env.ts`) |
+| `@testcontainers/postgresql` | 12.2.1 | api (dev); yerelde test veritabanı (Docker gerekir) |
 
 ## 8. Kullanılmayacak teknolojiler
 

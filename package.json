@@ -12,7 +12,11 @@
     "format": "prettier --write .",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "test": "pnpm -r test && vitest run",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "test:integration": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api test:integration",
+    "test:isolation": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api test:isolation",
+    "db:bootstrap": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api db:bootstrap",
+    "db:migrate": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api db:migrate"
   },
   "pnpm": {
     "overrides": {

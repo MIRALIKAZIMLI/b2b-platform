@@ -30,10 +30,12 @@ Ayrıntı: `docs/07-ai-development/coding-guidelines.md` §1
 ```bash
 pnpm install
 docker compose -f infra/docker-compose.dev.yml up -d   # PostgreSQL, Redis, Meilisearch, MinIO
+pnpm db:bootstrap    # roller (app_user, migrator, readonly); yalnızca local, bir kez
 pnpm db:migrate && pnpm db:seed
 pnpm dev               # api + worker + web
 pnpm --filter mobile start
 pnpm lint && pnpm typecheck && pnpm test
+pnpm test:integration # gerçek PostgreSQL (yerelde Docker / Testcontainers)
 pnpm test:isolation    # kiracı izolasyonu
 pnpm generate:api      # openapi.yaml → packages/api-client
 ```

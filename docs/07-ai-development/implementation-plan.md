@@ -83,6 +83,8 @@ Onayımı bekle.
 - **Kabul:** `withTenantTx` işlemi açar, `SET LOCAL app.business_id` ve `app.user_id` ayarlar; bağlam olmadan sorgu RLS'li tabloda 0 satır döner; `app_user` tablo sahibi değildir; örnek bir test tablosunda iki kiracı birbirini göremez; `check-rls` RLS'siz kiracı tablosunda başarısız olur.
 - **Test:** `pnpm --filter api test core/db`.
 
+> **Bölündü (Mimar, 2026-10-24):** F1.1a — bağlantı, roller, `withTenantTx`/`withPlatformTx`, test yardımcıları, AC1–AC5 (AC5: `withPlatformTx`). F1.1b — `scripts/check-rls.ts` + CI `check-rls` adımı, AC6. Kartlar: `docs/tasks/F1.1a.md`, `docs/tasks/F1.1b.md`.
+
 ### F1.2 — Hata modeli, log, idempotens, outbox
 
 - **Amaç:** Ortak altyapı servisleri.

@@ -3,7 +3,11 @@ import { sql } from 'drizzle-orm';
 import { Client } from 'pg';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { inject } from 'vitest';
-import { createTenantPair, createTestTenantTable, testTenantItems } from '../../../../test/isolation';
+import {
+  createTenantPair,
+  createTestTenantTable,
+  testTenantItems,
+} from '../../../../test/isolation';
 import { getDb } from '../client';
 import { type Tx, withPlatformTx, withTenantTx } from '../index';
 
@@ -14,7 +18,7 @@ interface Settings {
 }
 
 async function readSettings(tx: Pick<Tx, 'execute'>): Promise<Settings> {
-  const result = await tx.execute<Record<string, unknown>>(sql`
+  const result = await tx.execute(sql`
     select current_setting('app.business_id', true) as business_id,
            current_setting('app.user_id', true) as user_id,
            current_setting('app.is_platform', true) as is_platform
@@ -84,7 +88,9 @@ describe('withTenantTx / withPlatformTx', () => {
   });
 
   it('F1.1-AC1: geçersiz businessId ile işlem açılmaz', async () => {
-    await expect(withTenantTx({ businessId: '', userId: null }, () => Promise.resolve(1))).rejects.toThrow();
+    await expect(
+      withTenantTx({ businessId: '', userId: null }, () => Promise.resolve(1)),
+    ).rejects.toThrow();
     await expect(
       withTenantTx({ businessId: 'abc', userId: null }, () => Promise.resolve(1)),
     ).rejects.toThrow();
@@ -95,7 +101,9 @@ describe('withTenantTx / withPlatformTx', () => {
 
   it('F1.1-AC2: bağlamsız sorgu 0 satır döner', async () => {
     await withTenantTx(pair.a, (tx) =>
-      tx.insert(testTenantItems).values({ id: randomUUID(), businessId: pair.a.businessId, name: 'a' }),
+      tx
+        .insert(testTenantItems)
+        .values({ id: randomUUID(), businessId: pair.a.businessId, name: 'a' }),
     );
 
     const pooled = await getDb().execute<{ count: string }>(

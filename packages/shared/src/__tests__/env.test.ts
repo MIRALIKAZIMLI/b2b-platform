@@ -6,7 +6,10 @@ const MIGRATOR_URL = 'postgresql://migrator:secret-mig@127.0.0.1:5432/b2b';
 
 describe('env: veritabanı değişkenleri', () => {
   it('geçerli değerler okunur, DB_POOL_MAX varsayılanı 10', () => {
-    expect(parseDbEnv({ DATABASE_URL: APP_URL })).toEqual({ DATABASE_URL: APP_URL, DB_POOL_MAX: 10 });
+    expect(parseDbEnv({ DATABASE_URL: APP_URL })).toEqual({
+      DATABASE_URL: APP_URL,
+      DB_POOL_MAX: 10,
+    });
     expect(parseDbEnv({ DATABASE_URL: APP_URL, DB_POOL_MAX: '4' }).DB_POOL_MAX).toBe(4);
     expect(parseMigratorEnv({ DATABASE_MIGRATOR_URL: MIGRATOR_URL })).toEqual({
       DATABASE_MIGRATOR_URL: MIGRATOR_URL,
