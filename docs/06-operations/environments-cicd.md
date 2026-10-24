@@ -58,7 +58,7 @@ flowchart LR
 | `typecheck` | `tsc --noEmit` tüm paketlerde | Herhangi bir hata |
 | `secrets` | Gizli bilgi taraması (gitleaks) | Herhangi bir bulgu |
 | `unit` | Vitest birim testleri | Başarısız test |
-| `integration` | Vitest + Supertest; PostgreSQL 16 ve Redis 7 servis container'ları; migration'lar sıfırdan uygulanır | Başarısız test; kapsam eşiği (NFR-80/81) altı; RLS'siz kiracı tablosu |
+| `integration` | Vitest + Supertest; PostgreSQL 16 ve Redis 7 servis container'ları; sıra: `db:bootstrap` → `db:migrate` (sıfırdan) → `check-rls` → `test:integration`. Rol şifreleri her çalıştırmada rastgele üretilir ve loglarda maskelenir | Başarısız test; kapsam eşiği (NFR-80/81) altı; `check-rls` hatası (RLS sınıfı yorumu eksik tablo, RLS'siz kiracı tablosu) |
 | `contract` | API'den OpenAPI üret → `docs/03-architecture/api/openapi.yaml` ile karşılaştır; kırıcı değişiklik denetimi | Fark var veya `/api/v1`'de kırıcı değişiklik |
 | `deps-audit` | `pnpm audit --audit-level=high` | Yüksek / kritik açık |
 | `build` | Tüm uygulamaların derlenmesi | Derleme hatası |

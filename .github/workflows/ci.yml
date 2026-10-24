@@ -75,7 +75,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
-  # Migration'lar sıfırdan + entegrasyon/izolasyon testleri (F1.1a). check-rls adımı F1.1b'de.
+  # Sıra: db:bootstrap → db:migrate → check-rls (F1.1b) → entegrasyon/izolasyon testleri (F1.1a).
   integration:
     name: integration
     runs-on: ubuntu-24.04
@@ -110,6 +110,29 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # F1.1b: migration'lar servis veritabanına (b2b_test) sıfırdan uygulanır ve check-rls
+      # RLS sınıfı/politikası eksik tabloda işi kırar. Rol şifreleri her çalıştırmada rastgele
+      # üretilir ve GITHUB_ENV'e yazılmadan önce maskelenir; hiçbir adım adres/şifre yazdırmaz.
+      - name: Rol şifreleri (rastgele, maskeli)
+        run: |
+          APP_PW="$(openssl rand -hex 24)"
+          MIGRATOR_PW="$(openssl rand -hex 24)"
+          echo "::add-mask::$APP_PW"
+          echo "::add-mask::$MIGRATOR_PW"
+          {
+            echo "DATABASE_URL=postgres://app_user:$APP_PW@127.0.0.1:5432/b2b_test"
+            echo "DATABASE_MIGRATOR_URL=postgres://migrator:$MIGRATOR_PW@127.0.0.1:5432/b2b_test"
+          } >> "$GITHUB_ENV"
+      - name: db:bootstrap
+        run: pnpm db:bootstrap
+        env:
+          APP_ENV: test
+          POSTGRES_USER: b2b
+          POSTGRES_PASSWORD: b2b_ci_password
+      - name: db:migrate
+        run: pnpm db:migrate
+      - name: check-rls
+        run: pnpm check-rls
       - run: pnpm test:integration
 
   # İskelet: içi F1.12'de dolar (üretilen OpenAPI = docs/03-architecture/api/openapi.yaml).

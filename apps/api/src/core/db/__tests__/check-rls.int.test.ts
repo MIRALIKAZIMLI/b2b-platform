@@ -5,7 +5,15 @@ import { randomBytes } from 'node:crypto';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { inject } from 'vitest';
-import { checkRls } from '../check-rls';
+import { checkRls, type CheckRlsResult } from '../check-rls';
+
+/** Her sorunlu tablo ve gerekçesinin beklenen ifadeyi içerip içermediği. */
+function problemsMentioning(
+  result: CheckRlsResult,
+  needle: string,
+): { table: string; mentioned: boolean }[] {
+  return result.problems.map((p) => ({ table: p.table, mentioned: p.reason.includes(needle) }));
+}
 
 const POLICY = `using (business_id = nullif(current_setting('app.business_id', true), '')::uuid)
   with check (business_id = nullif(current_setting('app.business_id', true), '')::uuid)`;
@@ -54,8 +62,8 @@ describe('check-rls', () => {
     const result = await checkRls(client, { schemas: [schema] });
 
     expect(result.checked).toBe(1);
-    expect(result.problems).toEqual([
-      expect.objectContaining({ table: `${schema}.items`, reason: expect.stringContaining('RLS') }),
+    expect(problemsMentioning(result, 'RLS')).toEqual([
+      { table: `${schema}.items`, mentioned: true },
     ]);
   });
 
@@ -67,11 +75,8 @@ describe('check-rls', () => {
 
     const result = await checkRls(client, { schemas: [schema] });
 
-    expect(result.problems).toEqual([
-      expect.objectContaining({
-        table: `${schema}.items`,
-        reason: expect.stringContaining('FORCE'),
-      }),
+    expect(problemsMentioning(result, 'FORCE')).toEqual([
+      { table: `${schema}.items`, mentioned: true },
     ]);
   });
 
@@ -83,11 +88,8 @@ describe('check-rls', () => {
 
     const result = await checkRls(client, { schemas: [schema] });
 
-    expect(result.problems).toEqual([
-      expect.objectContaining({
-        table: `${schema}.items`,
-        reason: expect.stringContaining('politika'),
-      }),
+    expect(problemsMentioning(result, 'politika')).toEqual([
+      { table: `${schema}.items`, mentioned: true },
     ]);
   });
 
@@ -139,11 +141,8 @@ describe('check-rls', () => {
 
     const result = await checkRls(client, { schemas: [schema] });
 
-    expect(result.problems).toEqual([
-      expect.objectContaining({
-        table: `${schema}.parted`,
-        reason: expect.stringContaining('RLS'),
-      }),
+    expect(problemsMentioning(result, 'RLS')).toEqual([
+      { table: `${schema}.parted`, mentioned: true },
     ]);
   });
 
@@ -156,11 +155,8 @@ describe('check-rls', () => {
 
     const result = await checkRls(client, { schemas: [schema] });
 
-    expect(result.problems).toEqual([
-      expect.objectContaining({
-        table: `${schema}.s_items`,
-        reason: expect.stringContaining('app_user'),
-      }),
+    expect(problemsMentioning(result, 'app_user')).toEqual([
+      { table: `${schema}.s_items`, mentioned: true },
     ]);
   });
 
