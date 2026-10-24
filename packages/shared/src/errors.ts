@@ -1,0 +1,61 @@
+// Hata kodları (coding-guidelines §6). Liste docs/03-architecture/api/openapi.yaml
+// `components.schemas.ErrorCode` ile birebir aynıdır, sıra dahil (test: errors.test.ts).
+// Yeni kod önce openapi.yaml'a, sonra buraya eklenir.
+
+export const ERROR_CODES = [
+  'VALIDATION_FAILED',
+  'UNAUTHENTICATED',
+  'PERMISSION_DENIED',
+  'CAPABILITY_REQUIRED',
+  'NOT_FOUND',
+  'INVALID_STATE_TRANSITION',
+  'IDEMPOTENCY_CONFLICT',
+  'RATE_LIMITED',
+  'CONFIRMATION_REQUIRED',
+  'OTP_RATE_LIMITED',
+  'OTP_INVALID',
+  'OTP_EXPIRED',
+  'OTP_LOCKED',
+  'SMS_UNAVAILABLE',
+  'TOTP_REQUIRED',
+  'TOTP_INVALID',
+  'REFRESH_TOKEN_REUSED',
+  'USER_DISABLED',
+  'BUSINESS_SUSPENDED',
+  'SUBSCRIPTION_READ_ONLY',
+  'ENTITLEMENT_LIMIT_REACHED',
+  'VOEN_INVALID',
+  'VOEN_ALREADY_REGISTERED',
+  'VOEN_REQUIRED',
+  'LAST_ADMIN_PROTECTED',
+  'CONNECTION_ALREADY_ACTIVE',
+  'CONNECTION_REQUEST_ALREADY_PENDING',
+  'CONNECTION_REQUEST_EXPIRED',
+  'CONNECTION_BLOCKED',
+  'CONNECTION_COOLDOWN_ACTIVE',
+  'CONNECTION_DAILY_QUOTA_EXCEEDED',
+  'CONNECTION_NOT_ACTIVE',
+  'PRICE_NOT_AVAILABLE',
+  'QTY_NOT_MULTIPLE',
+  'BELOW_MIN_ORDER_QTY',
+  'BELOW_MIN_ORDER_AMOUNT',
+  'VARIANT_UNAVAILABLE',
+  'CURRENCY_MISMATCH',
+  'STOCK_INSUFFICIENT',
+  'ORDER_QTY_INCREASE_NOT_ALLOWED',
+  'ORDER_EMPTY_USE_REJECT',
+  'DELIVERY_PHOTO_REQUIRED',
+  'DELIVERY_TIMESTAMP_TOO_OLD',
+  'FILE_INVALID',
+  'IMPORT_TOO_MANY_ROWS',
+  'SETTING_OUT_OF_RANGE',
+  'INTERNAL_ERROR',
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+const ERROR_CODE_SET: ReadonlySet<string> = new Set(ERROR_CODES);
+
+export function isErrorCode(value: unknown): value is ErrorCode {
+  return typeof value === 'string' && ERROR_CODE_SET.has(value);
+}

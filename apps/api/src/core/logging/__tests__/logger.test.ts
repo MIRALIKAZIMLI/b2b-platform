@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Controller, Post } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import pino from 'pino';
@@ -25,7 +25,7 @@ class LoggingTestController {
   constructor(@InjectPinoLogger('LoggingTestController') private readonly logger: PinoLogger) {}
 
   @Post()
-  create(@Body() _body: unknown): { ok: true } {
+  create(): { ok: true } {
     this.logger.info({ event: 'test.created' }, 'kayıt oluşturuldu');
     return { ok: true };
   }
@@ -117,6 +117,7 @@ describe('HTTP istek logu', () => {
       .post('/test-logging?phone=%2B994501234567')
       .set('Authorization', 'Bearer header-jwt-secret')
       .set('Cookie', 'sid=header-cookie-secret')
+      .set('X-Request-Id', 'log-test-req-0001')
       .send({ code: 'body-otp-999111', phone: PHONE, password: 'body-pw-secret' });
 
     expect(response.status).toBe(201);
@@ -134,8 +135,9 @@ describe('HTTP istek logu', () => {
   });
 
   it('erişim logunda requestId, method, route, status, durationMs var', () => {
+    // İstek içindeki log ve erişim logu, yanıttaki X-Request-Id ile aynı kimliği taşır.
     const requestId = logs.lines().find((line) => line.event === 'test.created')?.requestId;
-    expect(typeof requestId).toBe('string');
+    expect(requestId).toBe('log-test-req-0001');
 
     const access = logs.lines().find((line) => line.status === 201);
     expect(access).toMatchObject({

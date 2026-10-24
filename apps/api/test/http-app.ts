@@ -3,10 +3,11 @@
 import 'reflect-metadata';
 import { Writable } from 'node:stream';
 import type { Type } from '@nestjs/common';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import type { ServerEnv } from '@b2b/shared';
 import { AppModule } from '../src/app.module';
+import { createFastifyAdapter } from '../src/core/request-id.middleware';
 import { TEST_SERVER_ENV } from './env';
 
 /** Log satırlarını bellekte toplayan akış. */
@@ -42,7 +43,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<NestF
     imports: [AppModule.register(env, options.logStream ? { logStream: options.logStream } : {})],
     controllers: options.controllers ?? [],
   }).compile();
-  const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+  const app = moduleRef.createNestApplication<NestFastifyApplication>(createFastifyAdapter());
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
   return app;
