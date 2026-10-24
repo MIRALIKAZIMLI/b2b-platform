@@ -2,8 +2,11 @@
 // tablonun RLS sınıfını tablo yorumundan (`COMMENT ON TABLE ... IS 'rls:T'`) okur ve
 // sınıfa göre kontrol eder (data-model §1.1, §6).
 //   T, P, U : RLS açık, FORCE açık, en az bir politika
+//   G       : RLS açık, FORCE açık, en az bir yazma politikası; her yazma politikası (INSERT,
+//             UPDATE, DELETE, FOR ALL) gereken her ifadede `app.is_platform` koşulunu taşır
+//             (F1.3, Mimar düzeltmesi D1). USING (true) yalnızca FOR SELECT'te kabul.
 //   S       : app_user'ın doğrudan SELECT izni yok
-//   G, D    : bu adımda ek kontrol yok
+//   D       : ek kontrol yok
 // Yorumu olmayan veya biçimi yanlış tablo da hatadır.
 // Yalnızca sistem kataloğunu okur; tablo verisine dokunmaz. Adres ve şifre yazdırmaz.
 
@@ -18,6 +21,17 @@ const RLS_REQUIRED: ReadonlySet<RlsClass> = new Set<RlsClass>(['T', 'P', 'U']);
 /** Denetlenmeyen şemalar (sistem ve Drizzle'ın migration kayıt şeması). */
 const EXCLUDED_SCHEMAS = ['pg_catalog', 'information_schema', 'pg_toast', 'drizzle'];
 
+/** pg_policy.polcmd: r = SELECT, a = INSERT, w = UPDATE, d = DELETE, * = ALL. */
+export type PolicyCommand = 'r' | 'a' | 'w' | 'd' | '*';
+
+export interface RlsPolicyInfo {
+  readonly cmd: PolicyCommand;
+  /** USING ifadesi (pg_get_expr); yoksa null. */
+  readonly using: string | null;
+  /** WITH CHECK ifadesi (pg_get_expr); yoksa null. */
+  readonly withCheck: string | null;
+}
+
 export interface RlsTableInfo {
   /** `şema.tablo` */
   readonly table: string;
@@ -25,6 +39,7 @@ export interface RlsTableInfo {
   readonly rowSecurity: boolean;
   readonly forceRowSecurity: boolean;
   readonly policyCount: number;
+  readonly policies: readonly RlsPolicyInfo[];
   readonly appUserCanSelect: boolean;
 }
 
@@ -52,6 +67,47 @@ export function parseRlsComment(comment: string | null): RlsClass[] | undefined 
   return comment.slice('rls:'.length).split(',') as RlsClass[];
 }
 
+const PLATFORM_SETTING = 'app.is_platform';
+
+const COMMAND_NAMES: Record<PolicyCommand, string> = {
+  r: 'SELECT',
+  a: 'INSERT',
+  w: 'UPDATE',
+  d: 'DELETE',
+  '*': 'ALL',
+};
+
+/** Yazma politikasının taşıması gereken ifadeler (PostgreSQL'in kabul ettikleri). */
+const REQUIRED_EXPRESSIONS: Record<Exclude<PolicyCommand, 'r'>, ('using' | 'withCheck')[]> = {
+  a: ['withCheck'],
+  w: ['using', 'withCheck'],
+  d: ['using'],
+  '*': ['using', 'withCheck'],
+};
+
+const EXPRESSION_NAMES = { using: 'USING', withCheck: 'WITH CHECK' } as const;
+
+/** G sınıfı: herkes okur, yalnızca platform bağlamı yazar (F1.3). */
+function evaluateGlobalPolicies(policies: readonly RlsPolicyInfo[]): string[] {
+  const writes = policies.filter((p) => p.cmd !== 'r');
+  if (writes.length === 0) {
+    return [`G sınıfı tabloda ${PLATFORM_SETTING} koşullu yazma politikası yok`];
+  }
+  const reasons: string[] = [];
+  for (const policy of writes) {
+    if (policy.cmd === 'r') continue;
+    for (const field of REQUIRED_EXPRESSIONS[policy.cmd]) {
+      const expression = policy[field];
+      if (!expression?.includes(PLATFORM_SETTING)) {
+        reasons.push(
+          `${COMMAND_NAMES[policy.cmd]} politikasının ${EXPRESSION_NAMES[field]} ifadesi ${PLATFORM_SETTING} koşulu taşımıyor`,
+        );
+      }
+    }
+  }
+  return reasons;
+}
+
 /** Bir tablonun sorunlarını döndürür; boş dizi = sorun yok. */
 export function evaluateRlsTable(info: RlsTableInfo): string[] {
   const classes = parseRlsComment(info.comment);
@@ -59,11 +115,13 @@ export function evaluateRlsTable(info: RlsTableInfo): string[] {
     return ["RLS sınıfı yok veya geçersiz (beklenen tablo yorumu: 'rls:<T|P|G|U|S|D>[,...]')"];
   }
   const reasons: string[] = [];
-  if (classes.some((c) => RLS_REQUIRED.has(c))) {
+  const tenantScoped = classes.some((c) => RLS_REQUIRED.has(c));
+  if (tenantScoped || classes.includes('G')) {
     if (!info.rowSecurity) reasons.push('RLS kapalı (ENABLE ROW LEVEL SECURITY yok)');
     if (!info.forceRowSecurity) reasons.push('FORCE ROW LEVEL SECURITY yok');
-    if (info.policyCount === 0) reasons.push('RLS politikası yok');
   }
+  if (tenantScoped && info.policyCount === 0) reasons.push('RLS politikası yok');
+  if (classes.includes('G')) reasons.push(...evaluateGlobalPolicies(info.policies));
   if (classes.includes('S') && info.appUserCanSelect) {
     reasons.push("S sınıfı tabloda app_user'ın SELECT izni var");
   }
@@ -76,6 +134,7 @@ interface CatalogRow {
   row_security: boolean;
   force_row_security: boolean;
   policy_count: number;
+  policies: { cmd: PolicyCommand; using: string | null; with_check: string | null }[];
   app_user_can_select: boolean;
 }
 
@@ -86,6 +145,11 @@ const CATALOG_QUERY = `
          c.relrowsecurity as row_security,
          c.relforcerowsecurity as force_row_security,
          (select count(*)::int from pg_policy p where p.polrelid = c.oid) as policy_count,
+         (select coalesce(json_agg(json_build_object(
+                   'cmd', p.polcmd,
+                   'using', pg_get_expr(p.polqual, p.polrelid),
+                   'with_check', pg_get_expr(p.polwithcheck, p.polrelid)) order by p.polname), '[]')
+            from pg_policy p where p.polrelid = c.oid) as policies,
          -- Kolon düzeyindeki GRANT'ları da yakalar (has_table_privilege yakalamaz).
          has_any_column_privilege('app_user', c.oid, 'SELECT') as app_user_can_select
     from pg_class c
@@ -123,6 +187,7 @@ export async function readRlsTables(
     rowSecurity: row.row_security,
     forceRowSecurity: row.force_row_security,
     policyCount: row.policy_count,
+    policies: row.policies.map((p) => ({ cmd: p.cmd, using: p.using, withCheck: p.with_check })),
     appUserCanSelect: row.app_user_can_select,
   }));
 }

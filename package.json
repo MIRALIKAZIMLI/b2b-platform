@@ -18,6 +18,7 @@
     "test:isolation": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api test:isolation",
     "db:bootstrap": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api db:bootstrap",
     "db:migrate": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api db:migrate",
+    "db:seed": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api db:seed",
     "check-rls": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api check-rls"
   },
   "pnpm": {

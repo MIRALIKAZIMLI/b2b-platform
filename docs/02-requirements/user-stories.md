@@ -263,6 +263,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `outbox.poll_interval_ms` | 1000 | tamsayı | 100 | 60000 |
 | `outbox.batch_size` | 100 | tamsayı | 1 | 1000 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
+| `i18n.cache_ttl_seconds` | 60 (çeviri ve dil önbelleğinin süreç içi ömrü, F1.3) | tamsayı | 1 | 300 |
 | `feature.*` | Özellik bayrakları; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §6 | evet/hayır | — | — |
 
 Çapraz kural (aynı kapsamdaki geçerli değerlerle): `dormant.reminder_days` elemanlarının hepsi < `dormant.warning_day` < `dormant.deactivate_day` < `dormant.delete_day`. İhlal `SETTING_OUT_OF_RANGE`.
@@ -719,7 +720,7 @@ Bir toptancı admini olarak mevcut Excel listemi içe aktarmak istiyorum; böyle
 
 **Persona:** tüm kullanıcılar · **Özellik:** F-49 · **Öncelik:** Must
 
-- **AC1:** Given bir tutar, When gösterilir, Then para biriminin sembolü ve ondalık hanesiyle kullanıcının diline uygun biçimlenir (ör. `1 234,50 ₼`).
+- **AC1:** Given bir tutar, When gösterilir, Then para biriminin sembolü ve ondalık hanesiyle kullanıcının diline uygun biçimlenir (ör. ru `1 234,50 ₼`; her dil CLDR kuralıyla, `Intl.NumberFormat`).
 - **AC2:** Given bir zaman, When gösterilir, Then kullanıcının saat diliminde (yoksa işletmenin, yoksa ülkenin) gösterilir.
 - **AC3:** Given bir sipariş, When oluşur, Then tek para biriminde olur; farklı para birimli fiyat listelerinden kalemler aynı siparişte birleşmez.
 

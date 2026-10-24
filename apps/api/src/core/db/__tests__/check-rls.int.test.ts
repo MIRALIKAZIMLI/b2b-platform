@@ -5,7 +5,15 @@ import { randomBytes } from 'node:crypto';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { inject } from 'vitest';
-import { checkRls, type CheckRlsResult } from '../check-rls';
+import { checkRls, type CheckRlsResult, evaluateRlsTable, readRlsTables } from '../check-rls';
+
+const I18N_TABLES = [
+  'public.languages',
+  'public.ui_translations',
+  'public.currencies',
+  'public.countries',
+  'public.regions',
+];
 
 /** Her sorunlu tablo ve gerekçesinin beklenen ifadeyi içerip içermediği. */
 function problemsMentioning(
@@ -14,6 +22,8 @@ function problemsMentioning(
 ): { table: string; mentioned: boolean }[] {
   return result.problems.map((p) => ({ table: p.table, mentioned: p.reason.includes(needle) }));
 }
+
+const PLATFORM = `current_setting('app.is_platform', true) = 'true'`;
 
 const POLICY = `using (business_id = nullif(current_setting('app.business_id', true), '')::uuid)
   with check (business_id = nullif(current_setting('app.business_id', true), '')::uuid)`;
@@ -41,6 +51,21 @@ describe('check-rls', () => {
     await client.query(`create schema ${schema}`);
     await client.query(sqlText.replaceAll('$s', schema));
     return schema;
+  }
+
+  /** F1.3 G kalıbı; `extra` ile politika eklenir veya çıkarılır. */
+  function globalTable(name: string, extra = ''): string {
+    return `
+      create table $s.${name} (id uuid primary key);
+      alter table $s.${name} enable row level security;
+      alter table $s.${name} force row level security;
+      create policy ${name}_read on $s.${name} for select using (true);
+      create policy ${name}_insert on $s.${name} for insert with check (${PLATFORM});
+      create policy ${name}_update on $s.${name} for update using (${PLATFORM}) with check (${PLATFORM});
+      create policy ${name}_delete on $s.${name} for delete using (${PLATFORM});
+      comment on table $s.${name} is 'rls:G';
+      ${extra}
+    `;
   }
 
   function tenantTable(name: string, comment: string): string {
@@ -114,8 +139,7 @@ describe('check-rls', () => {
       ${tenantTable('p_items', 'rls:P')}
       ${tenantTable('u_items', 'rls:U')}
       ${tenantTable('td_items', 'rls:T,D')}
-      create table $s.g_items (id uuid primary key);
-      comment on table $s.g_items is 'rls:G';
+      ${globalTable('g_items')}
       create table $s.s_items (id uuid primary key);
       comment on table $s.s_items is 'rls:S';
       create table $s.d_items (id uuid primary key);
@@ -179,6 +203,89 @@ describe('check-rls', () => {
 
     for (const problem of result.problems) {
       expect(problem.table).not.toMatch(/^(pg_catalog|information_schema|pg_toast|drizzle)\./);
+    }
+  });
+
+  it('F1.3-AC7: yazma politikası olmayan G tablosu → hata', async () => {
+    const schema = await schemaWith(`
+      create table $s.g_items (id uuid primary key);
+      alter table $s.g_items enable row level security;
+      alter table $s.g_items force row level security;
+      create policy g_items_read on $s.g_items for select using (true);
+      comment on table $s.g_items is 'rls:G';
+    `);
+
+    const result = await checkRls(client, { schemas: [schema] });
+
+    expect(problemsMentioning(result, 'yazma politikası')).toEqual([
+      { table: `${schema}.g_items`, mentioned: true },
+    ]);
+  });
+
+  it("F1.3-AC7: RLS'siz G tablosu → hata", async () => {
+    const schema = await schemaWith(`
+      create table $s.g_items (id uuid primary key);
+      comment on table $s.g_items is 'rls:G';
+    `);
+
+    const result = await checkRls(client, { schemas: [schema] });
+
+    expect(problemsMentioning(result, 'RLS')).toEqual([
+      { table: `${schema}.g_items`, mentioned: true },
+    ]);
+  });
+
+  it('F1.3-AC7: FOR ALL USING (true) politikası olan G tablosu → hata', async () => {
+    const schema = await schemaWith(
+      globalTable('g_items', 'create policy g_items_all on $s.g_items for all using (true);'),
+    );
+
+    const result = await checkRls(client, { schemas: [schema] });
+
+    expect(problemsMentioning(result, 'app.is_platform')).toEqual([
+      { table: `${schema}.g_items`, mentioned: true },
+    ]);
+  });
+
+  it("F1.3-AC7: korumasız veya WITH CHECK'siz UPDATE politikası olan G tablosu → hata", async () => {
+    const schema = await schemaWith(`
+      ${globalTable('open_update', 'create policy open_update_w2 on $s.open_update for update using (true) with check (true);')}
+      ${globalTable(
+        'no_check',
+        `drop policy no_check_update on $s.no_check;
+        create policy no_check_update on $s.no_check for update using (${PLATFORM});`,
+      )}
+    `);
+
+    const result = await checkRls(client, { schemas: [schema] });
+
+    expect(result.problems.map((p) => p.table).sort()).toEqual([
+      `${schema}.no_check`,
+      `${schema}.open_update`,
+    ]);
+    expect(result.problems.find((p) => p.table.endsWith('no_check'))?.reason).toContain(
+      'WITH CHECK',
+    );
+  });
+
+  it('F1.3-AC7: doğru G tablosu → başarılı', async () => {
+    const schema = await schemaWith(globalTable('g_items'));
+
+    const result = await checkRls(client, { schemas: [schema] });
+
+    expect(result).toEqual({ checked: 1, problems: [] });
+  });
+
+  it('F1.3-AC7: migration sonrası i18n G tabloları denetimden geçer', async () => {
+    const tables = await readRlsTables(client, { schemas: ['public'] });
+    const i18n = tables.filter((t) => I18N_TABLES.includes(t.table));
+
+    expect(i18n.map((t) => t.table).sort()).toEqual([...I18N_TABLES].sort());
+    for (const info of i18n) {
+      expect({ table: info.table, problems: evaluateRlsTable(info) }).toEqual({
+        table: info.table,
+        problems: [],
+      });
     }
   });
 });

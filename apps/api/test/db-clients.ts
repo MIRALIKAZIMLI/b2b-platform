@@ -9,3 +9,10 @@ export async function connectAsAppUser(): Promise<Client> {
   await client.connect();
   return client;
 }
+
+/** Tablo sahibi `migrator` olarak yeni bir bağlantı açar (seed testleri; DATABASE_MIGRATOR_URL). */
+export async function connectAsMigrator(): Promise<Client> {
+  const client = new Client({ connectionString: process.env.DATABASE_MIGRATOR_URL });
+  await client.connect();
+  return client;
+}

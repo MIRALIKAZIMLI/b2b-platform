@@ -43,7 +43,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | TOTP | `otplib` | 12.x |
 | Telefon doğrulama | `libphonenumber-js` | 1.x |
 | Para hesabı | `decimal.js` | 10.x |
-| Tarih / saat dilimi | `date-fns` + `@date-fns/tz` | 4.x |
+| Tarih / saat dilimi | `date-fns` + `@date-fns/tz` | 4.x (`@date-fns/tz` 1.x) |
 | Log | `pino`, `nestjs-pino` | 9.x |
 | `nestjs-pino` zorunlu peer bağımlılığı | `pino-http` | 10.x; platform sahibi onayı F1.2a, 2026-10-24 |
 | Hata izleme | `@sentry/node` | Güncel |
@@ -198,6 +198,13 @@ Eklenmeyenler: `pino-pretty` (listede yok), `unplugin-swc` / `@swc/core` (Nest b
 | `ioredis` | 5.11.1 | api (`infrastructure/redis`; ayar önbelleği, F1.2b'de BullMQ) |
 
 Eklenmeyenler: `@testcontainers/redis` (Redis entegrasyon testi docker compose / CI servisiyle ve rastgele anahtar önekiyle çalışır).
+
+## 7.6 Kurulu sürümler (F1.3, 2026-10-24)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `date-fns` | 4.4.0 | shared (`format.ts`, tarih biçimi ve yerel ayarlar az/ru/tr) |
+| `@date-fns/tz` | 1.5.0 | shared (`TZDate`, saat dilimi); paketin kendi ana sürümü 1.x, `date-fns` 4.x ile uyumlu; Mimar onayı F1.3 |
 
 ## 8. Kullanılmayacak teknolojiler
 

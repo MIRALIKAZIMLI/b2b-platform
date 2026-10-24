@@ -15,6 +15,7 @@ import { IdempotencyModule } from './core/idempotency';
 import { OutboxModule } from './core/outbox';
 import { RequestIdMiddleware } from './core/request-id.middleware';
 import { RedisModule } from './infrastructure/redis';
+import { I18nModule } from './modules/i18n';
 import { SettingsModule } from './modules/settings';
 
 export interface AppModuleOptions {
@@ -36,6 +37,7 @@ export class AppModule implements NestModule {
         RedisModule.forRoot({ url: env.REDIS_URL }),
         HealthModule,
         SettingsModule,
+        I18nModule,
         IdempotencyModule,
         OutboxModule,
       ],
