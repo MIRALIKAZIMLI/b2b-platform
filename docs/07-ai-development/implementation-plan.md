@@ -81,7 +81,7 @@ Onayımı bekle.
 - **Belgeler:** [ADR-0003](../04-decisions/adr-0003-tenant-isolation-with-rls.md), [ADR-0005](../04-decisions/adr-0005-drizzle-orm.md), [data-model.md](../03-architecture/data-model.md) §1, §6.
 - **Dosyalar:** `api/core/db/{client.ts, with-tenant-tx.ts, with-platform-tx.ts}`, `apps/api/drizzle.config.ts`, `apps/api/drizzle/0000_roles.sql` (`app_user`, `migrator`, `readonly`), `apps/api/test/{db.ts, isolation.ts}` (iki kiracı oluşturan yardımcı), `scripts/check-rls.ts` (T/P/U tablolarında RLS kontrolü), CI'ya `check-rls` adımı.
 - **Kabul:** `withTenantTx` işlemi açar, `SET LOCAL app.business_id` ve `app.user_id` ayarlar; bağlam olmadan sorgu RLS'li tabloda 0 satır döner; `app_user` tablo sahibi değildir; örnek bir test tablosunda iki kiracı birbirini göremez; `check-rls` RLS'siz kiracı tablosunda başarısız olur.
-- **Test:** `pnpm --filter api test core/db`.
+- **Test:** `pnpm test:integration` (entegrasyon + izolasyon, gerçek PostgreSQL) · `pnpm test:isolation` (yalnızca `*.isolation.test.ts`).
 
 > **Bölündü (Mimar, 2026-10-24):** F1.1a — bağlantı, roller, `withTenantTx`/`withPlatformTx`, test yardımcıları, AC1–AC5 (AC5: `withPlatformTx`). F1.1b — `scripts/check-rls.ts` + CI `check-rls` adımı, AC6. Kartlar: `docs/tasks/F1.1a.md`, `docs/tasks/F1.1b.md`.
 

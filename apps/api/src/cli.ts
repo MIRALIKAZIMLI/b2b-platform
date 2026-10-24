@@ -5,8 +5,7 @@
 // Adres ve şifreler ekrana yazılmaz.
 import { parseDbEnv, parseMigratorEnv } from '@b2b/shared';
 import { bootstrapRoles, runMigrations, withCredentials } from './core/db/admin';
-
-const BOOTSTRAP_ENVS = new Set(['local', 'test']);
+import { assertBootstrapAllowed } from './core/db/bootstrap-env';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -17,10 +16,7 @@ function requireEnv(name: string): string {
 }
 
 async function dbBootstrap(): Promise<void> {
-  const appEnv = process.env.APP_ENV ?? 'local';
-  if (!BOOTSTRAP_ENVS.has(appEnv)) {
-    throw new Error(`db:bootstrap yalnızca local ve test ortamında çalışır (APP_ENV=${appEnv})`);
-  }
+  assertBootstrapAllowed(process.env);
   const { DATABASE_URL } = parseDbEnv(process.env);
   const { DATABASE_MIGRATOR_URL } = parseMigratorEnv(process.env);
   // Süper kullanıcı: docker compose'un POSTGRES_USER / POSTGRES_PASSWORD değerleri;

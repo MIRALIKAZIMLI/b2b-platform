@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --parallel --filter @b2b/api --filter @b2b/web dev",
-    "lint": "eslint . && prettier --check .",
+    "lint": "pnpm --filter @b2b/shared build && eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "test": "pnpm -r test && vitest run",
