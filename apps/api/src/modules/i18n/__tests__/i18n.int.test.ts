@@ -4,9 +4,9 @@
 import { randomUUID } from 'node:crypto';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { sql } from 'drizzle-orm';
-import { Client } from 'pg';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { connectAsMigrator } from '../../../../test/db-clients';
 import { createTestApp } from '../../../../test/http-app';
 import { Clock, FixedClock } from '../../../core/clock';
 import { withPlatformTx } from '../../../core/db';
@@ -27,8 +27,7 @@ describe('i18n uç noktaları', () => {
   const clock = new FixedClock(new Date('2026-10-24T08:00:00Z'));
 
   beforeAll(async () => {
-    const owner = new Client({ connectionString: inject('migratorUrl') });
-    await owner.connect();
+    const owner = await connectAsMigrator();
     try {
       await seedI18n(owner);
     } finally {
@@ -187,7 +186,13 @@ describe('GET /api/v1/catalog/regions', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([
-      { id: cityId, countryCode: country, parentId: null, type: 'city', name: { az: 'Bakı', ru: 'Баку' } },
+      {
+        id: cityId,
+        countryCode: country,
+        parentId: null,
+        type: 'city',
+        name: { az: 'Bakı', ru: 'Баку' },
+      },
       {
         id: districtId,
         countryCode: country,

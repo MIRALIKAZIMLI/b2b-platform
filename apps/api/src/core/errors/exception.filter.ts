@@ -4,13 +4,23 @@
 // - ZodError → 422 VALIDATION_FAILED, details: { alan: [mesaj] }
 // - Nest HttpException ve Fastify hataları (bozuk JSON, bilinmeyen yol) → en yakın kod
 // - Diğer her şey → 500 INTERNAL_ERROR; ayrıntı yalnızca logda.
+// `message`: `errors.<CODE>` çevirisinin Accept-Language dilindeki değeri (F1.3, ErrorMessageResolver);
+// çözücü yoksa veya hata verirse kodun kendisi.
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException } from '@nestjs/common';
+import {
+  type ArgumentsHost,
+  Catch,
+  type ExceptionFilter,
+  HttpException,
+  Inject,
+  Optional,
+} from '@nestjs/common';
 import type { ErrorCode } from '@b2b/shared';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { ZodError } from 'zod';
 import { ensureRequestId } from '../request-id.middleware';
 import { DomainError, type ErrorDetails } from './domain-error';
+import { ERROR_MESSAGE_RESOLVER, type ErrorMessageResolver } from './error-message.port';
 import { httpStatusOf } from './http-map';
 
 // Fastify istek/yanıt nesnelerinden kullanılan kısım (fastify doğrudan bağımlılık değil).
@@ -94,9 +104,14 @@ export function classifyError(error: unknown): Classified {
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  constructor(@InjectPinoLogger(GlobalExceptionFilter.name) private readonly logger: PinoLogger) {}
+  constructor(
+    @InjectPinoLogger(GlobalExceptionFilter.name) private readonly logger: PinoLogger,
+    @Optional()
+    @Inject(ERROR_MESSAGE_RESOLVER)
+    private readonly messages: ErrorMessageResolver | null = null,
+  ) {}
 
-  catch(error: unknown, host: ArgumentsHost): void {
+  async catch(error: unknown, host: ArgumentsHost): Promise<void> {
     const http = host.switchToHttp();
     const request = http.getRequest<HttpRequest>();
     const reply = http.getResponse<HttpReply>();
@@ -109,11 +124,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const body: ErrorBody = {
       code,
-      // TODO(F1.3): Accept-Language diline göre çeviri anahtarından gelecek.
-      message: code,
+      message: await this.messageFor(code, request.raw.headers['accept-language']),
       requestId,
       ...(details === undefined ? {} : { details }),
     };
     reply.status(httpStatusOf(code)).send(body);
+  }
+
+  private async messageFor(code: ErrorCode, acceptLanguage: string | undefined): Promise<string> {
+    if (this.messages === null) return code;
+    try {
+      return await this.messages.resolve(code, acceptLanguage);
+    } catch (resolveError: unknown) {
+      // Çözücü hata atmamalı; atarsa yanıt yine döner. Hata mesajı adres içerebilir, yazılmaz.
+      const name = resolveError instanceof Error ? resolveError.name : 'unknown';
+      this.logger.warn(`errors.message_fallback: hata mesajı çevrilemedi (${name})`);
+      return code;
+    }
   }
 }

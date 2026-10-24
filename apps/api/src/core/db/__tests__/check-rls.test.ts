@@ -93,7 +93,9 @@ describe('evaluateRlsTable — G sınıfı (F1.3)', () => {
   it('F1.3-AC7: doğru G kalıbı → başarılı', () => {
     expect(evaluateRlsTable(gTable(G_POLICIES))).toEqual([]);
     // Tek FOR ALL yazma politikası da kabul (USING ve WITH CHECK platform koşullu).
-    expect(evaluateRlsTable(gTable([policy('r', 'true', null), policy('*', PLATFORM, PLATFORM)]))).toEqual([]);
+    expect(
+      evaluateRlsTable(gTable([policy('r', 'true', null), policy('*', PLATFORM, PLATFORM)])),
+    ).toEqual([]);
   });
 
   it('F1.3-AC7: yazma politikası olmayan G tablosu → hata', () => {
@@ -101,7 +103,7 @@ describe('evaluateRlsTable — G sınıfı (F1.3)', () => {
     expect(problems.join(' ')).toContain('yazma politikası');
   });
 
-  it("F1.3-AC7: RLS veya FORCE kapalı G tablosu → hata", () => {
+  it('F1.3-AC7: RLS veya FORCE kapalı G tablosu → hata', () => {
     expect(evaluateRlsTable(gTable(G_POLICIES, { rowSecurity: false }))).not.toEqual([]);
     expect(evaluateRlsTable(gTable(G_POLICIES, { forceRowSecurity: false }))).not.toEqual([]);
   });
@@ -111,7 +113,7 @@ describe('evaluateRlsTable — G sınıfı (F1.3)', () => {
     expect(problems.join(' ')).toContain('app.is_platform');
   });
 
-  it("F1.3-AC7: platform koşulsuz UPDATE politikası → hata", () => {
+  it('F1.3-AC7: platform koşulsuz UPDATE politikası → hata', () => {
     expect(evaluateRlsTable(gTable([...G_POLICIES, policy('w', 'true', 'true')]))).not.toEqual([]);
   });
 

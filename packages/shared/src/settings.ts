@@ -82,6 +82,7 @@ export const SETTING_DEFINITIONS = {
   'outbox.poll_interval_ms': intSetting(1000, 100, 60_000),
   'outbox.batch_size': intSetting(100, 1, 1000),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
+  'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
 } as const satisfies Record<string, SettingDefinition<unknown>>;
 
 type Definitions = typeof SETTING_DEFINITIONS;

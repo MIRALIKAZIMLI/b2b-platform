@@ -7,3 +7,4 @@
 - F1.2a: hata modeli, istek kimliği, log, Clock, para, env
 - F1.4a: ayarlar servisi
 - F1.2b: idempotens ve outbox
+- F1.3: diller, çeviriler, para birimleri, bölgeler

@@ -250,8 +250,11 @@ describe('check-rls', () => {
   it("F1.3-AC7: korumasız veya WITH CHECK'siz UPDATE politikası olan G tablosu → hata", async () => {
     const schema = await schemaWith(`
       ${globalTable('open_update', 'create policy open_update_w2 on $s.open_update for update using (true) with check (true);')}
-      ${globalTable('no_check', `drop policy no_check_update on $s.no_check;
-        create policy no_check_update on $s.no_check for update using (${PLATFORM});`)}
+      ${globalTable(
+        'no_check',
+        `drop policy no_check_update on $s.no_check;
+        create policy no_check_update on $s.no_check for update using (${PLATFORM});`,
+      )}
     `);
 
     const result = await checkRls(client, { schemas: [schema] });

@@ -3,18 +3,17 @@
 import { randomUUID } from 'node:crypto';
 import { ERROR_CODES } from '@b2b/shared';
 import { sql } from 'drizzle-orm';
-import { Client } from 'pg';
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { connectAsMigrator } from '../../../../test/db-clients';
 import { withPlatformTx, withSystemTx } from '../../../core/db';
 import { ERROR_MESSAGES } from '../seed/error-messages';
 import { seedI18n } from '../seed/i18n.seed';
 
 describe('i18n seed', () => {
-  let owner: Client;
+  let owner: Awaited<ReturnType<typeof connectAsMigrator>>;
 
   beforeAll(async () => {
-    owner = new Client({ connectionString: inject('migratorUrl') });
-    await owner.connect();
+    owner = await connectAsMigrator();
   });
 
   afterAll(async () => {
@@ -114,12 +113,14 @@ describe('i18n seed', () => {
     await seedI18n(owner);
 
     const regions = await withSystemTx((tx) =>
-      tx.execute<{ n: number }>(sql`select count(*)::int as n from regions where country_code = 'AZ'`),
+      tx.execute<{ n: number }>(
+        sql`select count(*)::int as n from regions where country_code = 'AZ'`,
+      ),
     );
     expect(regions.rows).toEqual([{ n: 0 }]);
   });
 
-  it("F1.3: seed bağlantıda platform ayarını bırakmaz (set_config işlem içinde)", async () => {
+  it('F1.3: seed bağlantıda platform ayarını bırakmaz (set_config işlem içinde)', async () => {
     await seedI18n(owner);
 
     const setting = await owner.query<{ value: string | null }>(

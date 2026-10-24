@@ -1,5 +1,5 @@
 // Beklenen değerler Node'un Intl (CLDR) çıktısıyla sabitlendi (Mimar kararı F1.3, US-059 AC1).
-//   = bölünmez boşluk.
+// Tutar beklentilerindeki u00a0 kaçışı bölünmez boşluktur (CLDR çıktısı).
 import { describe, expect, it } from 'vitest';
 import {
   type CurrencyFormat,
@@ -24,21 +24,17 @@ describe('formatMoney (shared/format.ts)', () => {
   });
 
   it('US-059 AC1: para biriminin hanesi kadar ondalık, yarım yukarı (sıfırdan uzağa)', () => {
-    expect(formatMoney({ amount: '1234.505', currency: 'AZN' }, 'az', AZN)).toBe(
-      '1.234,51 ₼',
-    );
+    expect(formatMoney({ amount: '1234.505', currency: 'AZN' }, 'az', AZN)).toBe('1.234,51 ₼');
     expect(formatMoney({ amount: '-0.125', currency: 'AZN' }, 'ru', AZN)).toBe('-0,13 ₼');
   });
 
-  it('US-059 AC1: tutar number\'a çevrilmez (1.005 kayan noktada 1,00 olurdu)', () => {
+  it("US-059 AC1: tutar number'a çevrilmez (1.005 kayan noktada 1,00 olurdu)", () => {
     expect(formatMoney({ amount: '1.005', currency: 'AZN' }, 'az', AZN)).toBe('1,01 ₼');
   });
 
   it('US-059 AC1: sembol ve hane currencies tablosundan gelir', () => {
     const kwd: CurrencyFormat = { code: 'KWD', symbol: 'KD', decimals: 3 };
-    expect(formatMoney({ amount: '1234.5', currency: 'KWD' }, 'az', kwd)).toBe(
-      '1.234,500 KD',
-    );
+    expect(formatMoney({ amount: '1234.5', currency: 'KWD' }, 'az', kwd)).toBe('1.234,500 KD');
   });
 
   it('US-059 AC1: Decimal şemasına uymayan tutar veya uyuşmayan para birimi reddedilir', () => {
@@ -48,9 +44,7 @@ describe('formatMoney (shared/format.ts)', () => {
   });
 
   it('US-059 AC1: bilinmeyen dil varsayılan dille (az) biçimlenir', () => {
-    expect(formatMoney({ amount: '1234.50', currency: 'AZN' }, 'xx', AZN)).toBe(
-      '1.234,50 ₼',
-    );
+    expect(formatMoney({ amount: '1234.50', currency: 'AZN' }, 'xx', AZN)).toBe('1.234,50 ₼');
   });
 });
 

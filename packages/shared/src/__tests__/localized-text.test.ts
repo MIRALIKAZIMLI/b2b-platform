@@ -25,7 +25,7 @@ describe('LocalizedText (shared/localized-text.ts)', () => {
     expect(pickLocalizedText({ en: 'Flour' }, 'ru')).toBe('Flour');
   });
 
-  it('US-058 AC3: işletme varsayılan dili verilirse az\'dan önce denenir (ADR-0007)', () => {
+  it("US-058 AC3: işletme varsayılan dili verilirse az'dan önce denenir (ADR-0007)", () => {
     expect(pickLocalizedText({ az: 'Un', ru: 'Мука' }, 'tr', { businessDefault: 'ru' })).toBe(
       'Мука',
     );

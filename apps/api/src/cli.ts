@@ -2,13 +2,15 @@
 //   node dist/cli.js db:bootstrap   rolleri hazırlar (yalnızca local / test ortamı)
 //   node dist/cli.js db:migrate     migration'ları migrator rolüyle uygular
 //   node dist/cli.js check-rls      tabloların RLS sınıfını denetler; sorun varsa çıkış kodu 1
-// Kökten: pnpm db:bootstrap · pnpm db:migrate · pnpm check-rls
+//   node dist/cli.js db:seed        başlangıç verisini migrator rolüyle yükler (idempotent)
+// Kökten: pnpm db:bootstrap · pnpm db:migrate · pnpm db:seed · pnpm check-rls
 // Adres ve şifreler ekrana yazılmaz.
 import { parseDbEnv, parseMigratorEnv } from '@b2b/shared';
 import { Client } from 'pg';
 import { bootstrapRoles, runMigrations, withCredentials } from './core/db/admin';
 import { checkRls } from './core/db/check-rls';
 import { assertBootstrapAllowed } from './core/db/bootstrap-env';
+import { seedI18n } from './modules/i18n';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -38,6 +40,19 @@ async function dbMigrate(): Promise<void> {
   process.stdout.write('db:migrate tamamlandı.\n');
 }
 
+async function dbSeed(): Promise<void> {
+  const { DATABASE_MIGRATOR_URL } = parseMigratorEnv(process.env);
+  const client = new Client({ connectionString: DATABASE_MIGRATOR_URL });
+  await client.connect();
+  try {
+    const i18n = await seedI18n(client);
+    process.stdout.write(`db:seed tamamlandı: i18n ${String(i18n.inserted)} yeni satır.
+`);
+  } finally {
+    await client.end();
+  }
+}
+
 async function checkRlsCommand(): Promise<void> {
   const { DATABASE_MIGRATOR_URL } = parseMigratorEnv(process.env);
   const client = new Client({ connectionString: DATABASE_MIGRATOR_URL });
@@ -63,6 +78,7 @@ async function checkRlsCommand(): Promise<void> {
 const COMMANDS: Record<string, () => Promise<void>> = {
   'db:bootstrap': dbBootstrap,
   'db:migrate': dbMigrate,
+  'db:seed': dbSeed,
   'check-rls': checkRlsCommand,
 };
 
