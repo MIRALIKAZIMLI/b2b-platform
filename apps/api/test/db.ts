@@ -14,10 +14,13 @@ declare module 'vitest' {
   export interface ProvidedContext {
     databaseUrl: string;
     migratorUrl: string;
+    redisUrl: string;
   }
 }
 
 const POSTGRES_IMAGE = 'postgres:16.15-alpine';
+/** Yerelde docker compose Redis'i (infra/docker-compose.dev.yml); CI REDIS_URL verir. */
+const LOCAL_REDIS_URL = 'redis://127.0.0.1:6379';
 
 let container: StartedPostgreSqlContainer | undefined;
 let adminUrl: string | undefined;
@@ -84,6 +87,11 @@ export async function setup(project: TestProject): Promise<void> {
 
   project.provide('databaseUrl', databaseUrl);
   project.provide('migratorUrl', migratorUrl);
+  const redisUrl = process.env.REDIS_URL;
+  project.provide(
+    'redisUrl',
+    redisUrl === undefined || redisUrl === '' ? LOCAL_REDIS_URL : redisUrl,
+  );
 }
 
 export async function teardown(): Promise<void> {
