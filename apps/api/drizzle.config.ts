@@ -1,6 +1,7 @@
 // Drizzle Kit yapılandırması (migration üretimi: `pnpm --filter @b2b/api exec drizzle-kit generate`).
 // Migration'ları uygulamak için `pnpm db:migrate` kullanılır (src/cli.ts, migrator rolü).
-// Not: drizzle/0000_roles.sql bilinçli olarak meta/_journal.json'da yoktur (db:bootstrap çalıştırır).
+// Not: roller migration değildir; db/bootstrap/roles.sql dosyasını `pnpm db:bootstrap` çalıştırır.
+// drizzle/ klasöründe yalnızca Drizzle Kit'in ürettiği migration'lar bulunur.
 import { existsSync } from 'node:fs';
 import { defineConfig } from 'drizzle-kit';
 

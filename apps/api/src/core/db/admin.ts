@@ -7,9 +7,12 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Client, Pool } from 'pg';
 
-/** apps/api/drizzle (src/core/db ve dist/core/db için aynı göreli yol). */
-export const MIGRATIONS_FOLDER = join(__dirname, '..', '..', '..', 'drizzle');
-const ROLES_SQL_FILE = join(MIGRATIONS_FOLDER, '0000_roles.sql');
+/** apps/api (src/core/db ve dist/core/db için aynı göreli yol). */
+const API_ROOT = join(__dirname, '..', '..', '..');
+/** apps/api/drizzle: yalnızca Drizzle migration'ları (meta/_journal.json). */
+export const MIGRATIONS_FOLDER = join(API_ROOT, 'drizzle');
+/** Rol dosyası migration değildir; migration klasörünün dışında durur (F1.2a). */
+const ROLES_SQL_FILE = join(API_ROOT, 'db', 'bootstrap', 'roles.sql');
 
 export interface Credentials {
   readonly user?: string;
@@ -53,7 +56,7 @@ export interface BootstrapInput {
 }
 
 /**
- * Rolleri oluşturur (0000_roles.sql) ve app_user / migrator için LOGIN + şifre atar.
+ * Rolleri oluşturur (db/bootstrap/roles.sql) ve app_user / migrator için LOGIN + şifre atar.
  * Adreslerdeki kullanıcı adları beklenen rol adları değilse hiçbir şey yapmadan durur.
  */
 export async function bootstrapRoles(input: BootstrapInput): Promise<void> {
