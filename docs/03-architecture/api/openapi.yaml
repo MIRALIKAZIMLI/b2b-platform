@@ -665,11 +665,20 @@ paths:
   /api/v1/catalog/regions:
     get:
       tags: [catalog]
-      summary: Şehir / rayon listesi
+      summary: Şehir / rayon listesi (F1.3)
       security: []
-      parameters: [ { name: country, in: query, schema: { type: string, default: AZ } } ]
+      parameters:
+        - name: country
+          in: query
+          description: ISO 3166-1 alfa-2 ülke kodu. Bilinmeyen ülke boş liste döner.
+          schema: { type: string, pattern: '^[A-Z]{2}$', default: AZ }
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste (önce şehirler, sonra rayonlar; az adına göre)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Region' } }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/products:
     get:
       tags: [catalog]
@@ -1554,11 +1563,40 @@ paths:
   /api/v1/i18n/{lang}:
     get:
       tags: [system]
-      summary: Arayüz çevirileri (önbelleklenebilir, ETag)
+      summary: Arayüz çevirileri (önbelleklenebilir, ETag; US-058, F1.3)
+      description: |
+        Dilin bütün arayüz anahtarları. Dilde eksik olan anahtar varsayılan dilin (az) değeriyle
+        gelir (US-058 AC3). Yanıt `Cache-Control: no-cache` taşır: istemci önbelleğini her
+        kullanımda `If-None-Match` ile doğrular; değişiklik yoksa `304`.
       security: []
-      parameters: [ { name: lang, in: path, required: true, schema: { $ref: '#/components/schemas/LanguageCode' } } ]
+      parameters:
+        - name: lang
+          in: path
+          required: true
+          description: |
+            Dil kodu. `languages` tablosunda olmayan (ör. `xx`) veya pasif (`is_active = false`)
+            dil `404 NOT_FOUND` döner; bu yüzden şema enum değildir.
+          schema: { type: string, examples: [az, ru, tr] }
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
       responses:
-        '200': { description: Anahtar → metin }
+        '200':
+          description: Anahtar → metin sözlüğü
+          headers:
+            ETag: { description: Sözlüğün sürüm özeti (güçlü ETag), schema: { type: string } }
+            Cache-Control: { schema: { type: string, examples: [no-cache] } }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: { type: string }
+        '304':
+          description: İstemcideki sürüm güncel (gövde yok)
+          headers:
+            ETag: { schema: { type: string } }
+        '404': { $ref: '#/components/responses/Error' }
   /api/app-config:
     get:
       tags: [system]
@@ -1949,6 +1987,15 @@ components:
       properties:
         amount: { $ref: '#/components/schemas/Decimal' }
         currency: { $ref: '#/components/schemas/CurrencyCode' }
+    Region:
+      type: object
+      required: [id, countryCode, parentId, type, name]
+      properties:
+        id: { type: string, format: uuid }
+        countryCode: { type: string, pattern: '^[A-Z]{2}$', examples: [AZ] }
+        parentId: { type: [string, 'null'], format: uuid, description: Rayonun bağlı olduğu şehir }
+        type: { type: string, enum: [city, district] }
+        name: { $ref: '#/components/schemas/LocalizedText' }
     LocalizedText:
       type: object
       properties:

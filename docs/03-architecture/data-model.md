@@ -261,20 +261,31 @@ SECURITY DEFINER fonksiyonlarda search_path her zaman `pg_catalog, public, pg_te
 
 #### `languages` (G) — `code char(2) PK`, `name text`, `is_active bool`, `is_default bool`, `sort_order int`, `direction text (ltr/rtl)`
 
+Tek varsayılan dil: `is_default` üzerinde kısmi benzersiz indeks (`WHERE is_default`). `direction` CHECK `ltr`/`rtl`.
+
 #### `ui_translations` (G) — `key text`, `lang char(2)`, `value text`; PK `(key, lang)`
+
+`lang` FK `languages(code)`. Anahtar adı coding-guidelines §2 (`<alan>.<ekran>.<öğe>`); hata mesajları `errors.<ErrorCode>` (F1.3).
 
 #### `currencies` (G) — `code char(3) PK`, `symbol text`, `decimals smallint`, `is_active bool`
 
+`decimals` CHECK `0–4`.
+
 #### `countries` (G) — `code char(2) PK`, `name jsonb`, `default_currency char(3)`, `default_timezone text`, `phone_prefix text`
+
+`default_currency` FK `currencies(code)`. `default_timezone` IANA adı (ör. `Asia/Baku`).
 
 #### `regions` (G)
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| country_code | char(2) | FK | |
+| id | uuid | PK, `default gen_random_uuid()` | Geçici istisna (UUIDv7 kuralı, `settings.id` gibi; açık soru S5). Satırları admin ekranı veya SQL ile girer. |
+| country_code | char(2) | FK countries | |
 | parent_id | uuid | null, FK regions | Şehir → rayon |
 | type | text | `city` / `district` | |
 | name | jsonb | not null | |
+
+G tablolarının hepsinde `created_at`, `updated_at` (§1). RLS: `SELECT USING (true)`; `INSERT` (WITH CHECK), `UPDATE` (USING ve WITH CHECK), `DELETE` (USING) politikaları yalnızca `current_setting('app.is_platform', true) = 'true'` iken. `app_user`: SELECT, INSERT, UPDATE, DELETE (yazma RLS ile sınırlanır); `readonly`: SELECT (F1.3).
 
 #### `files` (T: `owner_business_id`)
 
