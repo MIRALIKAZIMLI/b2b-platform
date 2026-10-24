@@ -13,7 +13,8 @@ const usedCodes = new Set<string>();
 
 /** Gerçek kodlarla (az, AZN, AZ…) ve birbiriyle çakışmayan rastgele kod (`Q` + harfler). */
 function testCode(length: number): string {
-  const letters = 'ABCDEFGHIJKLMNOPRSTUVWXYZ';
+  // Z yok: i18n.int.test.ts aynı veritabanında QZ / QZQ kodlarını kullanır.
+  const letters = 'ABCDEFGHIJKLMNOPRSTUVWXY';
   for (;;) {
     let code = 'Q';
     for (const byte of randomBytes(length - 1)) code += letters[byte % letters.length] ?? 'Q';
@@ -92,15 +93,12 @@ describe('G sınıfı RLS (i18n tabloları)', () => {
     });
   });
 
-  it.each(INSERT_CASES)(
-    'F1.3-AC6: kiracı bağlamında $table insert → 42501',
-    async ({ insert }) => {
-      const attempt = withTenantTx(tenant, (tx) => tx.execute(insert()));
-      await expect(attempt).rejects.toSatisfy(
-        (error: unknown) => pgErrorCode(error) === PG_INSUFFICIENT_PRIVILEGE,
-      );
-    },
-  );
+  it.each(INSERT_CASES)('F1.3-AC6: kiracı bağlamında $table insert → 42501', async ({ insert }) => {
+    const attempt = withTenantTx(tenant, (tx) => tx.execute(insert()));
+    await expect(attempt).rejects.toSatisfy(
+      (error: unknown) => pgErrorCode(error) === PG_INSUFFICIENT_PRIVILEGE,
+    );
+  });
 
   it.each(INSERT_CASES)(
     'F1.3-AC6: bağlamsız (sistem) $table insert → 42501',
@@ -152,7 +150,9 @@ describe('G sınıfı RLS (i18n tabloları)', () => {
   it('F1.3-AC6: platform dışı DELETE 0 satır; platformda çalışır', async () => {
     const key = `test.rls.delete.${randomUUID()}`;
     await withPlatformTx(platform, (tx) =>
-      tx.execute(sql`insert into ui_translations (key, lang, value) values (${key}, ${language}, 'x')`),
+      tx.execute(
+        sql`insert into ui_translations (key, lang, value) values (${key}, ${language}, 'x')`,
+      ),
     );
     const remove = sql`delete from ui_translations where key = ${key}`;
 
