@@ -1,0 +1,53 @@
+# <ID> — <kısa başlık>
+
+| Alan | Değer |
+| --- | --- |
+| Adım | `<ID>` (`docs/07-ai-development/implementation-plan.md`) |
+| Dal | `feature/<ID>-<kısa-ad>` |
+| PR başlığı | `<ID> <kısa açıklama>` |
+| Bağımlılık | <bitmiş olması gereken adımlar> |
+| Müfettiş | Zorunlu / Önerilir / Gerekmez — <gerekçe> |
+| Tahmin | S / M / L |
+
+## Amaç
+
+<Bir-iki cümle: bu adım bitince ne çalışıyor olacak.>
+
+## Okunacak belgeler
+
+- `AGENTS.md`
+- <implementation-plan.md "Belgeler" satırındaki dosyalar, bölüm numarasıyla>
+
+## Yapılacaklar (dosyalar)
+
+<implementation-plan.md "Dosyalar" satırı; kısaltmalar açık yazılmış hâliyle.>
+
+## Kapsam dışı (dokunma)
+
+- <bu adımda yazılmayacak şeyler; hangi adıma ait olduğu>
+
+## Kabul kriterleri ve testler
+
+Her satır en az bir test. Test adı AC kimliğiyle başlar.
+
+| AC | Kriter | Beklenen test (ad + tür) |
+| --- | --- | --- |
+| <ID>-AC1 | ... | `<ID>-AC1 ...` (birim / entegrasyon / izolasyon) |
+
+## Kararlar (bu kart için verilmiş)
+
+- <Mimar oturumunda verilen ve belgeye işlenen kararlar; yoksa "—">
+
+## Emin olunmayan noktalar
+
+- <Usta plan aşamasında bunlar için soru sormalı; uydurmamalı>
+
+## Doğrulama komutu
+
+```bash
+<implementation-plan.md "Test" satırı>
+```
+
+## Bitti tanımı
+
+`docs/07-ai-development/definition-of-done.md` maddelerinin tamamı + PR açıklamasında AC → test listesi + `CHANGELOG.md` satırı.
