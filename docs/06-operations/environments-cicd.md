@@ -112,6 +112,7 @@ flowchart TB
 | Değişken | Örnek / not |
 | --- | --- |
 | `APP_ENV` | `local` / `test` / `staging` / `production` |
+| `PORT` | API dinleme portu; varsayılan `3000` |
 | `DATABASE_URL` | `app_user` rolüyle; TLS zorunlu (local hariç) |
 | `DATABASE_MIGRATOR_URL` | Yalnızca migration adımında |
 | `REDIS_URL` | — |

@@ -3,3 +3,9 @@
 !.env.example
 node_modules/
 .DS_Store
+
+# Derleme ve test çıktıları
+dist/
+coverage/
+*.tsbuildinfo
+.pnpm-store/

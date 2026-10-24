@@ -1,0 +1,23 @@
+{
+  "name": "@b2b/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint.config.mjs",
+    "./prettier": "./prettier.config.mjs",
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/node.json": "./tsconfig/node.json"
+  },
+  "dependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-boundaries": "7.3.0",
+    "typescript-eslint": "8.72.0"
+  },
+  "peerDependencies": {
+    "eslint": "10.13.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3"
+  }
+}

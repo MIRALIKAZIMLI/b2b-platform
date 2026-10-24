@@ -1,0 +1,60 @@
+# Yerel geliştirme servisleri. Kullanım:
+#   docker compose -f infra/docker-compose.dev.yml up -d
+# Varsayılan değerler .env.example ile aynı sahte değerlerdir; .env olmadan çalışır.
+# Bir değeri (ör. dolu bir port) değiştirmek için kök .env dosyasını açıkça ver:
+#   docker compose --env-file .env -f infra/docker-compose.dev.yml up -d
+# Portlar yalnızca 127.0.0.1 adresine açılır.
+# MinIO (yerel R2 karşılığı) eklenmedi: açık Docker imajı yok. Bkz. docs/07-ai-development/tech-stack.md §6.
+
+name: b2b-dev
+
+services:
+  postgres:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-b2b}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-b2b_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-b2b}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4.11-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.55.0
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-local_meili_master_key_change_me}
+      MEILI_NO_ANALYTICS: 'true'
+    ports:
+      - '127.0.0.1:${MEILI_PORT:-7700}:7700'
+    volumes:
+      - meili-data:/meili_data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:7700/health || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:
+  meili-data:

@@ -1,0 +1,7 @@
+{
+  "extends": "@b2b/config/tsconfig/node.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["scripts/**/*.mts", "vitest.config.mts"]
+}
