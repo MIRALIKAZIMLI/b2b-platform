@@ -36,7 +36,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | ORM ve migration | `drizzle-orm`, `drizzle-kit` | Güncel kararlı |
 | Doğrulama ve DTO | `zod` | 4.x |
 | OpenAPI üretimi | `@nestjs/swagger` + Zod → OpenAPI dönüştürücüsü | — |
-| Kuyruk | `bullmq`, `@nestjs/bullmq` | 5.x |
+| Kuyruk | `bullmq` 5.x, `@nestjs/bullmq` 11.x (Nest ana sürümünü izler) | F1.2b: `bullmq` 5.81.5, `@nestjs/bullmq` 11.0.5 |
 | Redis istemcisi | `ioredis` | 5.x |
 | Arama istemcisi | `meilisearch` | Sunucu sürümüyle uyumlu |
 | JWT | `jose` | 6.x |

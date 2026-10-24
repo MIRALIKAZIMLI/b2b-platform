@@ -88,6 +88,8 @@ M1 çıkış ölçütü (roadmap.md): mock SMS ile web ve mobilde giriş; izinde
 | R9 | `/api/v1/me` iki kez yazılır (F1.5 temel, F1.8 izinlerle). | F1.5, F1.8 | F1.8 kartında "`/me` genişletilir, kırıcı değişiklik yok" maddesi. |
 | R10 | `X-Business-Id` başlığına güvenilir. | F1.8 | Üyelik doğrulaması zorunlu; izolasyon testleri. |
 | R11 | Mobil E2E (Maestro, Android) ve Expo push için hesap/cihaz gerekir. | F1.14 | F1.14'ten önce: Android emülatör veya telefon + Expo hesabı hazır. |
+| R12 | İdempotens yanıtı handler işleminden ayrı yazılıyor: handler commit olur ama yanıt kaydı başarısız olursa, kilit `idempotency.lock_seconds` sonra düşer ve yeniden deneme ikinci kayıt açabilir. | F1.2b → F2.3 / F4 | İlk gerçek oluşturma ucunda (F2.3 / F4) yanıt kaydı handler'ın işlemine alınacak. |
+| R13 | Kimliksiz uçlarda (`POST /api/v1/buyers/register`, SF-02) `Idempotency-Key` F1.2b'de yok sayılır (`idempotency_keys.user_id` not null). | F1.2b → F2.3 | F2.3 kartında kimliksiz uç için idempotens kapsamı (ör. telefon/cihaz) kararlaştırılacak. |
 
 ## 4. Açık sorular (belgede yok — karar platform sahibinin)
 

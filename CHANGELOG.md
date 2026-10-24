@@ -6,3 +6,4 @@
 - F1.1b: check-rls betiği ve CI adımı
 - F1.2a: hata modeli, istek kimliği, log, Clock, para, env
 - F1.4a: ayarlar servisi
+- F1.2b: idempotens ve outbox

@@ -84,7 +84,7 @@ sequenceDiagram
 
 | Hata senaryosu | Davranış |
 | --- | --- |
-| Aynı istek iki kez (zayıf ağ) | `Idempotency-Key` aynı yanıtı döner; ikinci işletme oluşmaz |
+| Aynı istek iki kez (zayıf ağ) | `Idempotency-Key` aynı yanıtı döner; ikinci işletme oluşmaz. İkinci eşzamanlı istek `409 IDEMPOTENCY_CONFLICT` (`details.reason: in_progress`) alır; yeniden denemede ilk yanıtı alır |
 | VÖEN formatı hatalı | `422 VOEN_INVALID` |
 | VÖEN başka bir alıcı işletmede kayıtlı | `409 VOEN_ALREADY_REGISTERED` |
 | Zorunlu alan eksik | `422 VALIDATION_FAILED` + alan listesi |
@@ -178,7 +178,7 @@ sequenceDiagram
 | Onay sırasında fiyat değişti | Fiyat onay anında yeniden hesaplanır; yanıtta `priceChanged: true` olan satırlar işaretlenir. 📌 VARSAYIM: Fiyat değişikliği gönderimi engellemez, yalnızca bildirilir (şube admini zaten son ekranı görmüştür) |
 | Bir grubun bağlantısı gönderimden önce iptal edildi | O grup `skippedGroups`'ta `CONNECTION_NOT_ACTIVE` ile döner; diğerleri oluşur |
 | Alıcının VÖEN'i yok | Tüm gönderim `422 VOEN_REQUIRED` ile reddedilir |
-| Şube admini aynı anda iki kez onaylar | `Idempotency-Key` + sepet satır kilidi; ikinci istek aynı yanıtı alır |
+| Şube admini aynı anda iki kez onaylar | `Idempotency-Key` + sepet satır kilidi; ikinci eşzamanlı istek `409 IDEMPOTENCY_CONFLICT` (`details.reason: in_progress`) alır; yeniden denemede ilk yanıtı alır |
 | 5'ten fazla satıcı veya 100'den fazla kalem | Desteklenir; NFR-12 hedefi yalnızca bu sınıra kadar geçerlidir |
 
 ## SF-05 — Toptancı sipariş onayı ve stok rezervasyonu (US-043, US-039)
