@@ -1,11 +1,14 @@
 import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { TEST_SERVER_ENV } from '../../../../test/env';
 import { createTestApp, LogCapture } from '../../../../test/http-app';
 import { Clock } from '../../clock';
+import { closeDb } from '../../db/client';
 import { DomainError } from '../domain-error';
+import { ERROR_MESSAGE_RESOLVER, type ErrorMessageResolver } from '../error-message.port';
 
 const createSchema = z.object({ name: z.string().min(1), qty: z.number().int() }).strict();
 
@@ -145,6 +148,73 @@ describe('Bağımlılık enjeksiyonu', () => {
       expect(response.body).toEqual({ ok: true });
     } finally {
       await app.close();
+    }
+  });
+});
+
+describe('Hata mesajı dili (F1.3)', () => {
+  it('F1.3-AC8: message, çözücünün Accept-Language için döndürdüğü metindir', async () => {
+    const calls: [string, string | undefined][] = [];
+    const resolver: ErrorMessageResolver = {
+      resolve: (code, acceptLanguage) => {
+        calls.push([code, acceptLanguage]);
+        return Promise.resolve(`[${acceptLanguage ?? '-'}] ${code}`);
+      },
+    };
+    const app = await createTestApp({
+      controllers: [ErrorsTestController],
+      overrides: [{ provide: ERROR_MESSAGE_RESOLVER, useValue: resolver }],
+    });
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/test-errors/domain-no-details')
+        .set('Accept-Language', 'ru');
+
+      expect(response.status).toBe(404);
+      expect((response.body as { message: string }).message).toBe('[ru] NOT_FOUND');
+      expect(calls).toEqual([['NOT_FOUND', 'ru']]);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('F1.3-AC8 (D3): çözücü hata atsa bile Error gövdesi döner, message = kod', async () => {
+    const resolver: ErrorMessageResolver = {
+      resolve: () => Promise.reject(new Error('beklenmeyen')),
+    };
+    const app = await createTestApp({
+      controllers: [ErrorsTestController],
+      overrides: [{ provide: ERROR_MESSAGE_RESOLVER, useValue: resolver }],
+    });
+    try {
+      const response = await request(app.getHttpServer()).get('/test-errors/domain');
+
+      expect(response.status).toBe(403);
+      expect((response.body as { message: string }).message).toBe('CONNECTION_NOT_ACTIVE');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('F1.3-AC8 (D3): veritabanına ulaşılamıyorsa hata yanıtı yine döner, message = kod', async () => {
+    // Birim testi uygulaması gerçek I18nModule ile açılır; veritabanı adresi erişilemez.
+    vi.stubEnv('DATABASE_URL', TEST_SERVER_ENV.DATABASE_URL);
+    const app = await createTestApp({ controllers: [ErrorsTestController] });
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/test-errors/domain-no-details')
+        .set('Accept-Language', 'ru');
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        code: 'NOT_FOUND',
+        message: 'NOT_FOUND',
+        requestId: response.headers['x-request-id'],
+      });
+    } finally {
+      await app.close();
+      await closeDb();
+      vi.unstubAllEnvs();
     }
   });
 });
