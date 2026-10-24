@@ -60,7 +60,10 @@ describe('saat dilimi zinciri (shared/format.ts)', () => {
   it('US-059 AC2: kullanıcının saat dilimi varsa o kullanılır', () => {
     const chain = { user: 'Europe/London', business: 'Europe/Istanbul', country: 'Asia/Baku' };
     expect(resolveTimeZone(chain)).toBe('Europe/London');
-    expect(formatDateTime(AT, 'az', chain)).toBe('24.10.2026, 09:05');
+    // date-fns yerel ayarları: az ve ru saati sıfırsız (`H:mm`), tr sıfırlı (`HH:mm`) verir.
+    expect(formatDateTime(AT, 'az', chain)).toBe('24.10.2026, 9:05');
+    expect(formatDateTime(AT, 'ru', chain)).toBe('24.10.2026, 9:05');
+    expect(formatDateTime(AT, 'tr', chain)).toBe('24.10.2026, 09:05');
   });
 
   it('US-059 AC2: kullanıcınınki yoksa işletmenin saat dilimi', () => {
