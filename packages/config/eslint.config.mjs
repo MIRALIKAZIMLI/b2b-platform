@@ -87,6 +87,31 @@ export default tseslint.config(
     },
   },
 
+  // Veritabanına tek kapı (coding-guidelines §3.7): core/db dışından yalnızca core/db/index.ts.
+  {
+    files: ['apps/api/src/**/*.ts'],
+    ignores: ['apps/api/src/core/db/**', 'apps/api/src/cli.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: 'core/db/(?!index$).+',
+              message:
+                'Veritabanına yalnızca core/db (index.ts) üzerinden, withTenantTx / withPlatformTx ile erişilir (coding-guidelines §3.7).',
+            },
+            {
+              group: ['pg', 'drizzle-orm/node-postgres', 'drizzle-orm/node-postgres/*'],
+              message:
+                'Veritabanı istemcisi yalnızca core/db içinde kurulur; withTenantTx / withPlatformTx kullan.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // JavaScript yapılandırma dosyalarında tip bilgisi kuralları kapalı.
   {
     files: ['**/*.mjs', '**/*.js'],

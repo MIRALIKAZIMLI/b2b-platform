@@ -11,20 +11,30 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "start:worker": "node dist/worker.main.js",
-    "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "typecheck": "pnpm --filter @b2b/shared build && tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "test:isolation": "vitest run --config vitest.integration.config.mts isolation",
+    "db:bootstrap": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js db:bootstrap",
+    "db:migrate": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js db:migrate"
   },
   "dependencies": {
+    "@b2b/shared": "workspace:*",
     "@nestjs/common": "11.2.8",
     "@nestjs/core": "11.2.8",
     "@nestjs/platform-fastify": "11.2.8",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
   "devDependencies": {
     "@b2b/config": "workspace:*",
     "@nestjs/testing": "11.2.8",
+    "@testcontainers/postgresql": "12.2.1",
+    "@types/pg": "8.23.1",
     "@types/supertest": "7.2.1",
+    "drizzle-kit": "0.31.11",
     "supertest": "7.3.1"
   }
 }

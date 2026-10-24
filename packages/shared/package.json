@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "@b2b/config": "workspace:*"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
   }
 }

@@ -122,6 +122,8 @@ flowchart TB
 | `PORT` | API dinleme portu; varsayılan `3000` |
 | `DATABASE_URL` | `app_user` rolüyle; TLS zorunlu (local hariç) |
 | `DATABASE_MIGRATOR_URL` | Yalnızca migration adımında |
+| `DB_POOL_MAX` | API/worker bağlantı havuzu üst sınırı; varsayılan `10` |
+| `TEST_DATABASE_ADMIN_URL` | Yalnızca CI testleri; süper kullanıcı, test veritabanını hazırlar |
 | `REDIS_URL` | — |
 | `MEILI_URL`, `MEILI_MASTER_KEY` | — |
 | `JWT_SIGNING_KEY`, `JWT_KEY_ID` | Ortam başına ayrı; döndürme için iki anahtar desteklenir |

@@ -75,7 +75,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
-  # İskelet: içi F1.1a'da dolar (migration'lar sıfırdan + entegrasyon/izolasyon testleri).
+  # Migration'lar sıfırdan + entegrasyon/izolasyon testleri (F1.1a). check-rls adımı F1.1b'de.
   integration:
     name: integration
     runs-on: ubuntu-24.04
@@ -97,9 +97,20 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Servis container'ının süper kullanıcısı (yalnızca CI). test/db.ts her çalıştırmada
+      # boş bir test veritabanı açar, rolleri rastgele şifreyle hazırlar, migration'ları
+      # migrator ile uygular ve testleri app_user ile çalıştırır.
+      TEST_DATABASE_ADMIN_URL: postgres://b2b:b2b_ci_password@127.0.0.1:5432/b2b_test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: echo "integration işi iskelet; F1.1a'da doldurulacak."
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:integration
 
   # İskelet: içi F1.12'de dolar (üretilen OpenAPI = docs/03-architecture/api/openapi.yaml).
   contract:
