@@ -16,7 +16,8 @@
     "test:integration": "vitest run --config vitest.integration.config.mts",
     "test:isolation": "vitest run --config vitest.integration.config.mts isolation",
     "db:bootstrap": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js db:bootstrap",
-    "db:migrate": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js db:migrate"
+    "db:migrate": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js db:migrate",
+    "check-rls": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js check-rls"
   },
   "dependencies": {
     "@b2b/shared": "workspace:*",

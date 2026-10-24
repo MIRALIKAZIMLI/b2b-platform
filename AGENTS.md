@@ -32,6 +32,7 @@ pnpm install
 docker compose -f infra/docker-compose.dev.yml up -d   # PostgreSQL, Redis, Meilisearch, MinIO
 pnpm db:bootstrap    # roller (app_user, migrator, readonly); yalnızca local, bir kez
 pnpm db:migrate && pnpm db:seed
+pnpm check-rls        # tablo RLS sınıfı ve politikası denetimi (CI'da da çalışır)
 pnpm dev               # api + worker + web
 pnpm --filter mobile start
 pnpm lint && pnpm typecheck && pnpm test

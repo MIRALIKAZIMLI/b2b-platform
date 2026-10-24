@@ -1,10 +1,13 @@
 // Komut satırı işleri. Kullanım (apps/api içinden, derlendikten sonra):
 //   node dist/cli.js db:bootstrap   rolleri hazırlar (yalnızca local / test ortamı)
 //   node dist/cli.js db:migrate     migration'ları migrator rolüyle uygular
-// Kökten: pnpm db:bootstrap · pnpm db:migrate
+//   node dist/cli.js check-rls      tabloların RLS sınıfını denetler; sorun varsa çıkış kodu 1
+// Kökten: pnpm db:bootstrap · pnpm db:migrate · pnpm check-rls
 // Adres ve şifreler ekrana yazılmaz.
 import { parseDbEnv, parseMigratorEnv } from '@b2b/shared';
+import { Client } from 'pg';
 import { bootstrapRoles, runMigrations, withCredentials } from './core/db/admin';
+import { checkRls } from './core/db/check-rls';
 import { assertBootstrapAllowed } from './core/db/bootstrap-env';
 
 function requireEnv(name: string): string {
@@ -35,9 +38,32 @@ async function dbMigrate(): Promise<void> {
   process.stdout.write('db:migrate tamamlandı.\n');
 }
 
+async function checkRlsCommand(): Promise<void> {
+  const { DATABASE_MIGRATOR_URL } = parseMigratorEnv(process.env);
+  const client = new Client({ connectionString: DATABASE_MIGRATOR_URL });
+  await client.connect();
+  try {
+    const result = await checkRls(client);
+    if (result.problems.length > 0) {
+      for (const problem of result.problems) {
+        process.stderr.write(`check-rls: ${problem.table}: ${problem.reason}\n`);
+      }
+      throw new Error(
+        `check-rls: ${String(result.checked)} tablodan ${String(result.problems.length)} tanesinde sorun var`,
+      );
+    }
+    process.stdout.write(
+      `check-rls tamamlandı: ${String(result.checked)} tablo denetlendi, sorun yok.\n`,
+    );
+  } finally {
+    await client.end();
+  }
+}
+
 const COMMANDS: Record<string, () => Promise<void>> = {
   'db:bootstrap': dbBootstrap,
   'db:migrate': dbMigrate,
+  'check-rls': checkRlsCommand,
 };
 
 async function main(): Promise<void> {
