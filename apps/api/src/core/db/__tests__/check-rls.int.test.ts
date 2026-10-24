@@ -15,6 +15,20 @@ const I18N_TABLES = [
   'public.regions',
 ];
 
+/** F1.7 tabloları ve beklenen sınıf yorumu (data-model §4.4). */
+const F17_TABLES: Record<string, string> = {
+  'public.activity_types': 'rls:G',
+  'public.branches': 'rls:T',
+  'public.business_capabilities': 'rls:T',
+  'public.business_privacy': 'rls:T,D',
+  'public.businesses': 'rls:T,D',
+  'public.buyer_profiles': 'rls:T,D',
+  'public.person_data': 'rls:T',
+  'public.seller_profiles': 'rls:T',
+  'public.service_areas': 'rls:T',
+  'public.warehouses': 'rls:T',
+};
+
 /** Her sorunlu tablo ve gerekçesinin beklenen ifadeyi içerip içermediği. */
 function problemsMentioning(
   result: CheckRlsResult,
@@ -287,5 +301,15 @@ describe('check-rls', () => {
         problems: [],
       });
     }
+  });
+  it('F1.7-AC1: check-rls temiz; F1.7 tablolarının sınıf yorumu doğru', async () => {
+    const result = await checkRls(client, { schemas: ['public'] });
+    expect(result.problems).toEqual([]);
+
+    const tables = await readRlsTables(client, { schemas: ['public'] });
+    const f17 = Object.fromEntries(
+      tables.filter((t) => t.table in F17_TABLES).map((t) => [t.table, t.comment]),
+    );
+    expect(f17).toEqual(F17_TABLES);
   });
 });
