@@ -12,6 +12,8 @@ import { CoreModule } from './core/core.module';
 import { GlobalExceptionFilter } from './core/errors/exception.filter';
 import { HealthModule } from './core/health/health.module';
 import { RequestIdMiddleware } from './core/request-id.middleware';
+import { RedisModule } from './infrastructure/redis';
+import { SettingsModule } from './modules/settings';
 
 export interface AppModuleOptions {
   /** Testler için: loglar bu akışa yazılır. */
@@ -29,7 +31,9 @@ export class AppModule implements NestModule {
           env,
           ...(options.logStream === undefined ? {} : { stream: options.logStream }),
         }),
+        RedisModule.forRoot({ url: env.REDIS_URL }),
         HealthModule,
+        SettingsModule,
       ],
       providers: [{ provide: APP_FILTER, useClass: GlobalExceptionFilter }],
     };

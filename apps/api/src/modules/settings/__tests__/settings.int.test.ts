@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import { Client } from 'pg';
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
-import { PG_INSUFFICIENT_PRIVILEGE, pgErrorCode } from '../../../../test/isolation';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { PG_INSUFFICIENT_PRIVILEGE, pgErrorCode, queryAsOwner } from '../../../../test/isolation';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
 import { withPlatformTx, withSystemTx, withTenantTx } from '../../../core/db';
 import { DomainError } from '../../../core/errors/domain-error';
@@ -15,18 +14,12 @@ async function readRowAsOwner(
   key: string,
   businessId: string | null,
 ): Promise<{ value: unknown; updated_by: string | null } | undefined> {
-  const client = new Client({ connectionString: inject('migratorUrl') });
-  await client.connect();
-  try {
-    const result = await client.query<{ value: unknown; updated_by: string | null }>(
-      `select value, updated_by from settings
-        where key = $1 and scope_id is not distinct from $2::uuid`,
-      [key, businessId],
-    );
-    return result.rows[0];
-  } finally {
-    await client.end();
-  }
+  const rows = await queryAsOwner<{ value: unknown; updated_by: string | null }>(
+    `select value, updated_by from settings
+      where key = $1 and scope_id is not distinct from $2::uuid`,
+    [key, businessId],
+  );
+  return rows[0];
 }
 
 async function errorOf(promise: Promise<unknown>): Promise<unknown> {
