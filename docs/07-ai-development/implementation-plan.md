@@ -53,6 +53,8 @@ Onayımı bekle.
 - **Kabul:** `pnpm install && pnpm lint && pnpm typecheck && pnpm test` yerelde ve CI'da yeşil; `docker compose -f infra/docker-compose.dev.yml up -d` sonrası `/api/health` 200; web ve mobil (Expo Go) açılıyor; paket sürümleri sabit; tech-stack.md sürüm tablosu güncel.
 - **Test:** CI yeşil; elle: üç uygulamanın açılması.
 
+> **Bölündü (Mimar, 2026-10-24):** F0.3a — monorepo, `packages/config`, `packages/shared`, `apps/api` (health), Docker Compose, CI, PR şablonu. F0.3b — `apps/web` (Next.js boş sayfa), `apps/mobile` (Expo boş ekran). Kartlar: `docs/tasks/F0.3a.md`, `docs/tasks/F0.3b.md`.
+
 ### F0.4 — Bulut hesapları ve staging
 
 - **Amaç:** AWS, Cloudflare ve R2'yi hazırlamak; gerçek fiyatları bütçeyle karşılaştırmak.
