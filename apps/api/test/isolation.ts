@@ -52,6 +52,21 @@ export async function createTestTenantTable(migratorUrl: string): Promise<void> 
   }
 }
 
+/** Tablo sahibi `migrator` ile sorgu çalıştırır (yalnızca testte doğrulama için; RLS/izin dışı). */
+export async function queryAsOwner<Row extends Record<string, unknown>>(
+  text: string,
+  params: unknown[] = [],
+): Promise<Row[]> {
+  const client = new Client({ connectionString: process.env.DATABASE_MIGRATOR_URL });
+  await client.connect();
+  try {
+    const result = await client.query<Row>(text, params);
+    return result.rows;
+  } finally {
+    await client.end();
+  }
+}
+
 /** Hata zincirinde (Drizzle hatayı `cause` ile sarar) PostgreSQL hata kodunu bulur. */
 export function pgErrorCode(error: unknown): string | undefined {
   let current: unknown = error;

@@ -191,6 +191,14 @@ Eklenmeyenler (ayrı karar): `@next/eslint-plugin-next`, `eslint-plugin-react-ho
 
 Eklenmeyenler: `pino-pretty` (listede yok), `unplugin-swc` / `@swc/core` (Nest bağımlılıkları `@Inject()` ile açık yazılır).
 
+## 7.5 Kurulu sürümler (F1.4a, 2026-10-24)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `ioredis` | 5.11.1 | api (`infrastructure/redis`; ayar önbelleği, F1.2b'de BullMQ) |
+
+Eklenmeyenler: `@testcontainers/redis` (Redis entegrasyon testi docker compose / CI servisiyle ve rastgele anahtar önekiyle çalışır).
+
 ## 8. Kullanılmayacak teknolojiler
 
 | Kullanılmaz | Yerine | Neden |

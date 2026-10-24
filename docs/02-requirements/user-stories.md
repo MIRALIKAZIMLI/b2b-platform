@@ -237,27 +237,33 @@ Bir platform admini olarak süreleri, kotaları ve politikaları kod değiştirm
 - **AC2:** Given ayar değişikliği, When kaydedilir, Then audit loga eski ve yeni değer yazılır.
 - **AC3:** Given bekleme süresi ayarı, When 7 günden küçük bir değer girilir, Then reddedilir.
 
-Varsayılan değerler:
+Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages/shared/src/settings.ts`). Sınır dışı veya yanlış tipte değer `SETTING_OUT_OF_RANGE` ile reddedilir.
 
-| Anahtar | Varsayılan |
-| --- | --- |
-| `connection.request_ttl_days` | 14 |
-| `connection.cooldown_after_reject_days` | 30 |
-| `connection.cooldown_after_buyer_cancel_days` | 30 |
-| `connection.daily_request_quota` | 20 |
-| `connection.block_rate_alert_pct` | 10 |
-| `delivery.auto_confirm_hours` | 48 |
-| `delivery.location_mismatch_meters` | 300 |
-| `dormant.reminder_days` | 7, 30 |
-| `dormant.warning_day` | 90 |
-| `dormant.deactivate_day` | 120 |
-| `dormant.delete_day` | 180 |
-| `onboarding.seller_mode` | `manual` |
-| `sms.daily_cap` | 500 |
-| `sms.allowed_country_codes` | `["+994"]` |
-| `mobile.min_version.ios`, `mobile.min_version.android` | İlk yayın sürümü (US-060) |
-| `system.maintenance` | `false` (RB-08, RB-13) |
-| `feature.*` | Özellik bayrakları; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §6 |
+| Anahtar | Varsayılan | Tip | Alt sınır | Üst sınır |
+| --- | --- | --- | --- | --- |
+| `connection.request_ttl_days` | 14 | tamsayı | 1 | 90 |
+| `connection.cooldown_after_reject_days` | 30 | tamsayı | 7 | 365 |
+| `connection.cooldown_after_buyer_cancel_days` | 30 | tamsayı | 7 | 365 |
+| `connection.daily_request_quota` | 20 | tamsayı | 1 | 1000 |
+| `connection.block_rate_alert_pct` | 10 | tamsayı | 1 | 100 |
+| `delivery.auto_confirm_hours` | 48 | tamsayı | 1 | 720 |
+| `delivery.location_mismatch_meters` | 300 | tamsayı | 10 | 10000 |
+| `dormant.reminder_days` | 7, 30 | tamsayı listesi (artan, 1–5 eleman) | 1 | 3650 |
+| `dormant.warning_day` | 90 | tamsayı | 1 | 3650 |
+| `dormant.deactivate_day` | 120 | tamsayı | 1 | 3650 |
+| `dormant.delete_day` | 180 | tamsayı | 1 | 3650 |
+| `onboarding.seller_mode` | `manual` | seçenek: `manual` | — | — |
+| `sms.daily_cap` | 500 | tamsayı | 0 | 100000 |
+| `sms.allowed_country_codes` | `["+994"]` | ülke kodu listesi (`+` ve 1–4 rakam, 1–20 eleman) | — | — |
+| `mobile.min_version.ios`, `mobile.min_version.android` | `0.0.0` (ilk yayında ilk yayın sürümü yazılır, US-060) | sürüm metni (`X.Y.Z`) | — | — |
+| `system.maintenance` | `false` (RB-08, RB-13) | evet/hayır | — | — |
+| `idempotency.ttl_hours` | 24 | tamsayı | 1 | 168 |
+| `outbox.max_attempts` | 10 ([integrations.md](../03-architecture/integrations.md) §8) | tamsayı | 1 | 100 |
+| `outbox.poll_interval_ms` | 1000 | tamsayı | 100 | 60000 |
+| `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
+| `feature.*` | Özellik bayrakları; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §6 | evet/hayır | — | — |
+
+Çapraz kural (aynı kapsamdaki geçerli değerlerle): `dormant.reminder_days` elemanlarının hepsi < `dormant.warning_day` < `dormant.deactivate_day` < `dormant.delete_day`. İhlal `SETTING_OUT_OF_RANGE`.
 
 ### US-018 — Loglu kullanıcı taklidi
 

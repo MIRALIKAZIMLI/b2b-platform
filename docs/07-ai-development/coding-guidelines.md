@@ -82,7 +82,7 @@ b2b-platform/
 4. Servis iş kurallarını uygular; veritabanına yalnızca kendi repository'si üzerinden erişir.
 5. Repository yalnızca kendi modülünün tablolarına sorgu yazar.
 6. **ZORUNLU:** Her controller metodu ya `@RequirePermission('<kod>')` ya da `@Public()` dekoratörü taşır (özel lint kuralı).
-7. **ZORUNLU:** Veritabanı erişimi yalnızca `withTenantTx(ctx, fn)` (kiracı bağlamı) veya `withPlatformTx(ctx, fn)` (yalnızca `platform-admin`) üzerinden. Doğrudan `db` nesnesi modüllerden içe aktarılamaz.
+7. **ZORUNLU:** Veritabanı erişimi yalnızca `withTenantTx(ctx, fn)` (kiracı bağlamı) veya `withPlatformTx(ctx, fn)` (yalnızca `platform-admin`) üzerinden. Doğrudan `db` nesnesi modüllerden içe aktarılamaz. `withSystemTx` yalnızca bağlamsız sistem okumaları (ayar, worker) içindir; kiracı verisi göremez.
 8. Aynı işlemde olması gereken yan etkiler (ör. teslim onayı + cari kaydı), işlem nesnesi (`tx`) parametre olarak geçirilerek doğrudan servis çağrısıyla yapılır. Ertelenebilir yan etkiler outbox olayıdır (ADR-0010).
 9. Durum değişiklikleri yalnızca ilgili `*StateMachine` sınıfı üzerinden; durum alanına doğrudan yazmak yasaktır.
 10. Saat için `Clock` servisi kullanılır (`new Date()` yerine) — testlerde zaman kontrol edilebilir.
