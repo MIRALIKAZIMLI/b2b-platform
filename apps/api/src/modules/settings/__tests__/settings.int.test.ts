@@ -175,4 +175,21 @@ describe('SettingsService (entegrasyon: PostgreSQL + Redis)', () => {
       { proname: 'settings_put', owner: 'migrator', public_exec: false, definer: true },
     ]);
   });
+
+  it('F1.4-AC5: SECURITY DEFINER fonksiyonlarda search_path pg_temp ile biter', async () => {
+    const result = await withSystemTx((tx) =>
+      tx.execute<{ proname: string; proconfig: string[] | null }>(sql`
+        select p.proname, p.proconfig
+          from pg_proc p
+         where p.proname in ('settings_get', 'settings_put')
+         order by p.proname
+      `),
+    );
+
+    expect(result.rows.map((row) => row.proname)).toEqual(['settings_get', 'settings_put']);
+    for (const row of result.rows) {
+      const searchPath = (row.proconfig ?? []).find((entry) => entry.startsWith('search_path='));
+      expect(searchPath, row.proname).toBe('search_path=pg_catalog, public, pg_temp');
+    }
+  });
 });

@@ -255,6 +255,8 @@ Erişim (S sınıfı, F1.4a): `app_user`'ın tabloda hiçbir izni yoktur. `migra
 - `settings_get(p_key text, p_business_id uuid)` → `(scope, value)` satırları: platform satırı ve (`p_business_id` verildiyse) işletme satırı. İşletme satırı yalnızca `p_business_id = app.business_id` iken veya platform bağlamında döner.
 - `settings_put(p_scope text, p_scope_id uuid, p_key text, p_value jsonb)`: yalnızca platform bağlamında (`app.is_platform = 'true'`); `updated_by` = `app.user_id`. Değer doğrulaması uygulamada (`SettingsService`).
 
+SECURITY DEFINER fonksiyonlarda search_path her zaman `pg_catalog, public, pg_temp` ile (pg_temp en sonda) sabitlenir.
+
 #### `languages` (G) — `code char(2) PK`, `name text`, `is_active bool`, `is_default bool`, `sort_order int`, `direction text (ltr/rtl)`
 
 #### `ui_translations` (G) — `key text`, `lang char(2)`, `value text`; PK `(key, lang)`
