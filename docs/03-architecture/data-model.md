@@ -36,6 +36,7 @@ Her istek işleminin başında uygulama `SET LOCAL app.business_id = '<uuid>'` �
 
 **Ek RLS kuralları:**
 
+- `withSystemTx` yalnızca bağlamsız sistem okumaları (ayar, worker) içindir; kiracı verisi göremez: `app.business_id`, `app.user_id` ve `app.is_platform` boştur, T/P/U tablolarında 0 satır döner. S tablolarına yalnızca `SECURITY DEFINER` fonksiyonlarla erişir (F1.4a).
 - Platform bağlamı (`app.is_platform = true`) `orders`, `order_items`, `ledger_entries`, `payments`, `price_lists`, `price_list_items`, `customer_prices` tablolarında **yazma** iznine sahip değildir (US-016 AC5).
 - Alıcı, satıcının ürün ve fiyat tablolarını yalnızca **aktif bağlantı** varsa okuyabilir: bu sorgular `catalog` modülünün `buyer_visible_products(buyer_id)` fonksiyonu üzerinden yapılır ve fonksiyon aktif bağlantıyı kontrol eder.
 
@@ -239,13 +240,20 @@ Production'da tablo boş kalır; production'da mock sağlayıcıyla uygulama ba�
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| scope | text | `platform` / `plan` / `business` | |
-| scope_id | uuid | null (platform için) | |
+| id | uuid | PK, `default gen_random_uuid()` | Satırı yalnızca `settings_put` fonksiyonu yazar; kimlik veritabanında üretilir |
+| scope | text | `platform` / `plan` / `business` (CHECK) | |
+| scope_id | uuid | null (platform için); plan ve işletme için not null (CHECK) | |
 | key | text | not null | ör. `connection.cooldown_after_reject_days` |
 | value | jsonb | not null | |
-| updated_by | uuid | FK users | |
+| updated_by | uuid | FK users (F1.5a'da eklenir) | `settings_put` fonksiyonu `app.user_id`'den yazar |
+| created_at, updated_at | timestamptz | not null default now() | |
 
 Benzersiz: `(scope, coalesce(scope_id, '00000000-0000-0000-0000-000000000000'), key)`. Anahtar listesi: [user-stories.md](../02-requirements/user-stories.md) US-017.
+
+Erişim (S sınıfı, F1.4a): `app_user`'ın tabloda hiçbir izni yoktur. `migrator` sahipli `SECURITY DEFINER` fonksiyonlar:
+
+- `settings_get(p_key text, p_business_id uuid)` → `(scope, value)` satırları: platform satırı ve (`p_business_id` verildiyse) işletme satırı. İşletme satırı yalnızca `p_business_id = app.business_id` iken veya platform bağlamında döner.
+- `settings_put(p_scope text, p_scope_id uuid, p_key text, p_value jsonb)`: yalnızca platform bağlamında (`app.is_platform = 'true'`); `updated_by` = `app.user_id`. Değer doğrulaması uygulamada (`SettingsService`).
 
 #### `languages` (G) — `code char(2) PK`, `name text`, `is_active bool`, `is_default bool`, `sort_order int`, `direction text (ltr/rtl)`
 
