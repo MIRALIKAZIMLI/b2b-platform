@@ -93,6 +93,8 @@ Onayımı bekle.
 - **Kabul:** Hata yanıtı `Error` şemasında ve `requestId` içerir; logda telefon maskeli, `code`/`token` alanları redakte; aynı `Idempotency-Key` ile ikinci istek aynı yanıtı döner; outbox olayı yalnızca işlem commit olursa dağıtılır; geçersiz ortam değişkeniyle uygulama başlamaz.
 - **Test:** Birim + entegrasyon (`core/**`).
 
+> **Bölündü (Mimar, 2026-10-24):** F1.2a — hata modeli, `http-map`, istek kimliği, log (redakte), `Clock`, `money`, `env.ts`; `0000_roles.sql` → `db/bootstrap/roles.sql`. F1.2b — idempotens (`idempotency_keys`) + outbox + worker dağıtıcısı (F1.4a'dan sonra). Kartlar: `docs/tasks/F1.2a.md`, `docs/tasks/F1.2b.md`.
+
 ### F1.3 — Diller, çeviriler, para birimleri, bölgeler
 
 - **Amaç:** Çok dilli ve bölgesel altyapı.
@@ -109,6 +111,8 @@ Onayımı bekle.
 - **Kabul:** Çözümleme işletme → plan → platform; sınır dışı değer `SETTING_OUT_OF_RANGE`; önbellek değişiklikte temizlenir; `EntitlementService.check` limit aşımında `ENTITLEMENT_LIMIT_REACHED`.
 - **Test:** Birim (çözümleme tablosu) + entegrasyon.
 
+> **Bölündü (Mimar, 2026-10-24):** F1.4a — `settings` (S) + `SettingsService`, Redis önbellek, S tablosu erişim kalıbı (`SECURITY DEFINER`). F1.4b — `plans`, `plan_entitlements`, `subscriptions`, `entitlement_overrides`, `EntitlementService`, plan katmanı (F1.7'den sonra; `businesses` FK'sı). Kartlar: `docs/tasks/F1.4a.md`, `docs/tasks/F1.4b.md`.
+
 ### F1.5 — Kimlik: OTP, oturum, yenileme anahtarı
 
 - **Amaç:** Telefon ve OTP ile giriş; mock SMS.
@@ -116,6 +120,8 @@ Onayımı bekle.
 - **Dosyalar:** `m/identity/*` (`users`, `otp_challenges`, `user_sessions`), `api/core/ports/sms-sender.ts`, `api/infrastructure/sms/mock-sms-sender.ts` (+ `dev_sms_outbox`), açılış kontrolü (production + mock = başlamaz), `/api/v1/auth/*` uçları, `/api/v1/dev/sms-outbox` (yalnızca dev/staging modülü), `/api/v1/me` (temel).
 - **Kabul:** US-001 AC1–AC6; US-004 AC1–AC3; yenileme anahtarının yeniden kullanımı aileyi iptal eder; SMS günlük üst sınırı (`sms.daily_cap`) ve `+994` kuralı.
 - **Test:** Entegrasyon (tüm AC'ler) + açılış testi.
+
+> **Bölündü (Mimar, 2026-10-24):** F1.5a — `users`, `otp_challenges`, mock SMS + `dev_sms_outbox`, `otp/request`, OTP doğrulama servisi, production açılış kontrolü. F1.5b — `user_sessions`, JWT, `otp/verify`, yenileme rotasyonu, çıkış, cihazlar, `/me` temel. Kartlar: `docs/tasks/F1.5a.md`, `docs/tasks/F1.5b.md`.
 
 ### F1.6 — TOTP ve platform ekibi
 
@@ -140,6 +146,8 @@ Onayımı bekle.
 - **Dosyalar:** `shared/permissions.ts` (tüm izin kodları), `m/access/*` (`permissions`, `role_templates`, `role_template_permissions`, `job_titles`, `roles`, `role_permissions`, `memberships`, `membership_regions`, `invitations`), `api/core/tenant-context.ts` (`X-Business-Id` doğrulama), `m/access/permission.guard.ts`, `@RequirePermission`, `@Public`, özel lint kuralı (dekoratörsüz controller metodu), seed (unvanlar ve şablonlar: rapor rol tablolarındaki roller), `/api/v1/me` izinlerle.
 - **Kabul:** Üyelik dışı `X-Business-Id` → 403; izinsiz uç nokta → 403 `PERMISSION_DENIED`; yanlış yetenek → 403 `CAPABILITY_REQUIRED`; son admin koruması (trigger) `LAST_ADMIN_PROTECTED`; izin önbelleği rol değişikliğinde temizlenir.
 - **Test:** Entegrasyon + lint kuralı testi.
+
+> **Bölündü (Mimar, 2026-10-24):** F1.8a — `permissions.ts`, izin/rol şablonu/rol/üyelik tabloları, seed, son admin trigger'ı. F1.8b — `TenantContext`, `PermissionGuard`, `@RequirePermission`/`@Public`, lint kuralı, izin önbelleği, `/me` izinlerle. Kartlar: `docs/tasks/F1.8a.md`, `docs/tasks/F1.8b.md`.
 
 ### F1.9 — Audit log yazıcısı
 
@@ -181,6 +189,8 @@ Onayımı bekle.
 - **Kabul:** Mock SMS koduyla giriş; işletme değiştirince menü değişir; izin olmayan menü öğesi görünmez; az/ru/tr geçişi.
 - **Test:** Playwright E2E-01.
 
+> **Bölündü (Mimar, 2026-10-24):** F1.13a — giriş, oturum (yenileme anahtarı httpOnly cookie, TM-21), dil altyapısı. F1.13b — kabuk: işletme seçici, izinden menü, rol düzenleri, E2E-01. Kartlar: `docs/tasks/F1.13a.md`, `docs/tasks/F1.13b.md`.
+
 ### F1.14 — Mobil iskeleti
 
 - **Amaç:** Giriş, dil, menü, minimum sürüm, push kaydı.
@@ -188,6 +198,10 @@ Onayımı bekle.
 - **Dosyalar:** `mob/app/(auth)/*`, `mob/src/lib/{api.ts, session.ts (secure-store), i18n.ts, push.ts}`, `mob/src/features/shell/*`, `GET /api/app-config` (backend, `m/app-config/*`).
 - **Kabul:** Giriş; yenileme anahtarı güvenli depoda; minimum sürüm altında güncelleme ekranı; push anahtarı kaydedilir.
 - **Test:** Maestro E2E-01 (Android).
+
+> **Bölündü (Mimar, 2026-10-24):** F1.14a — giriş, güvenli depoda oturum (`expo-secure-store`), dil altyapısı. F1.14b — menü, `GET /api/app-config` ve minimum sürüm, push kaydı, Maestro E2E-01. Kartlar: `docs/tasks/F1.14a.md`, `docs/tasks/F1.14b.md`.
+
+> **F1 uygulama sırası** (bağımlılıklara göre değişti): `docs/tasks/F1-faz-spesifikasyonu.md` §2. Ortak kurallar: aynı belge §6.
 
 ---
 
