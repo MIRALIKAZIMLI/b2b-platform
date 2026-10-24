@@ -57,6 +57,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | Amaç | Paket | Sürüm hedefi |
 | --- | --- | --- |
 | Framework | `next`, `react`, `react-dom` | Next.js güncel kararlı ana sürüm (App Router), React 19 |
+| React tipleri | `@types/react`, `@types/react-dom` | React ile aynı (19.x) |
 | Sunucu durumu | `@tanstack/react-query` | 5.x |
 | Formlar | `react-hook-form` + `@hookform/resolvers` (Zod) | 7.x |
 | Stil | `tailwindcss` | 4.x |
@@ -71,6 +72,8 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | --- | --- | --- |
 | Framework | `expo`, `react-native` | Güncel Expo SDK |
 | Yönlendirme | `expo-router` | Expo SDK ile |
+| `expo-router` zorunlu peer bağımlılıkları | `react-native-screens`, `react-native-safe-area-context`, `expo-linking`, `expo-constants`, `@expo/metro-runtime` | Expo SDK ile (`bundledNativeModules.json`) |
+| React tipleri | `@types/react` | React ile aynı (19.x) |
 | Sunucu durumu | `@tanstack/react-query` | 5.x |
 | Formlar | `react-hook-form` + Zod | 7.x |
 | Çok dillilik | `i18next`, `react-i18next` | Güncel |
@@ -142,6 +145,24 @@ Kesin sürümler `package.json` dosyalarında sabittir; bu tablo onların özeti
 | MinIO imajı | — | Eklenmedi, bkz. §6 |
 | gitleaks (CI) | `ghcr.io/gitleaks/gitleaks:v8.30.1` | |
 | GitHub Actions | `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0, `pnpm/action-setup` v6.1.0 | Commit SHA ile sabit |
+
+## 7.2 Kurulu sürümler (F0.3b, 2026-10-24)
+
+Web ve mobil aynı React sürümünü kullanır: Expo SDK 58 `react` 19.3.0'ı sabitler (npm `latest` 19.3.1), web de 19.3.0'da tutulur.
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `next` | 16.4.3 | App Router, Turbopack; `next lint` 16'da kaldırıldı, lint kökteki ESLint ile |
+| `react`, `react-dom` | 19.3.0 | Expo SDK 58 ile aynı |
+| `@types/react`, `@types/react-dom` | 19.3.0 / 19.3.0 | |
+| `expo` | 58.0.19 | SDK 58; Expo Go SDK 58 |
+| `react-native` | 0.88.0 | Expo SDK 58 `bundledNativeModules.json` |
+| `expo-router` | 58.0.26 | |
+| `expo-linking` / `expo-constants` / `@expo/metro-runtime` | 58.0.14 / 58.0.13 / 58.0.15 | `expo-router` peer |
+| `react-native-screens` / `react-native-safe-area-context` | 4.30.0 / 5.10.1 | `expo-router` peer |
+| `pnpm audit` istisnaları | GHSA-86w9-cpqp-85rv, GHSA-mrhx-c7xc-m3w5 | `@expo/cli` üzerinden; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §3 |
+
+Eklenmeyenler (ayrı karar): `@next/eslint-plugin-next`, `eslint-plugin-react-hooks` (listede yok), `react-native-web` (mobil web hedefi yok), `expo-status-bar`.
 
 ## 8. Kullanılmayacak teknolojiler
 

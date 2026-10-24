@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "B2B",
+    "slug": "b2b-platform",
+    "scheme": "b2b",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router"]
+  }
+}

@@ -8,7 +8,16 @@ const TS_FILES = ['**/*.ts', '**/*.mts', '**/*.tsx'];
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'docs/**'],
+    ignores: [
+      '**/dist/**',
+      '**/coverage/**',
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/.expo/**',
+      '**/next-env.d.ts',
+      '**/expo-env.d.ts',
+      'docs/**',
+    ],
   },
 
   eslint.configs.recommended,

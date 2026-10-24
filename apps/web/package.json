@@ -1,0 +1,23 @@
+{
+  "name": "@b2b/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "typecheck": "next typegen && tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@b2b/config": "workspace:*",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extends": ["expo/tsconfig.base", "@b2b/config/tsconfig/react.json"],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "preserve"
+  },
+  "include": ["app/**/*.ts", "app/**/*.tsx", "src/**/*.ts", "src/**/*.tsx"]
+}
