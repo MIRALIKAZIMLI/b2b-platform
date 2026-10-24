@@ -3,6 +3,8 @@
 | Alan | Değer |
 | --- | --- |
 | Adım | `<ID>` (`docs/07-ai-development/implementation-plan.md`) |
+| Risk | yüksek / normal — yüksek: RLS, kimlik/yetki, para/sipariş |
+| Plan incelemesi | gerekli / gerekmez — gerekliyse Usta planı Mimar'a getirir, onaysız kod yazmaz |
 | Dal | `feature/<ID>-<kısa-ad>` |
 | PR başlığı | `<ID> <kısa açıklama>` |
 | Bağımlılık | <bitmiş olması gereken adımlar> |
