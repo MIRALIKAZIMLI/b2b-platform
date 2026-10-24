@@ -8,5 +8,11 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.tsx'],
     environment: 'node',
+    // Kapsam raporu: pnpm test:coverage (eşik F1.5a'da).
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      reporter: ['text-summary', 'text'],
+    },
   },
 });

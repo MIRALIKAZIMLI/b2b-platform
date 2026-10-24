@@ -120,11 +120,12 @@ flowchart TB
 | --- | --- |
 | `APP_ENV` | `local` / `test` / `staging` / `production` |
 | `PORT` | API dinleme portu; varsayılan `3000` |
+| `LOG_LEVEL` | `fatal` / `error` / `warn` / `info` / `debug` / `trace` / `silent`; varsayılan `info` |
 | `DATABASE_URL` | `app_user` rolüyle; TLS zorunlu (local hariç) |
 | `DATABASE_MIGRATOR_URL` | Yalnızca migration adımında |
 | `DB_POOL_MAX` | API/worker bağlantı havuzu üst sınırı; varsayılan `10` |
 | `TEST_DATABASE_ADMIN_URL` | Yalnızca CI testleri; süper kullanıcı, test veritabanını hazırlar |
-| `REDIS_URL` | — |
+| `REDIS_URL` | `redis://` veya `rediss://`; api ve worker için zorunlu (F1.2a) |
 | `MEILI_URL`, `MEILI_MASTER_KEY` | — |
 | `JWT_SIGNING_KEY`, `JWT_KEY_ID` | Ortam başına ayrı; döndürme için iki anahtar desteklenir |
 | `TOTP_ENCRYPTION_KEY` | 32 bayt |

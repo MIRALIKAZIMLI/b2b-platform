@@ -11,7 +11,8 @@
     "lint": "pnpm --filter @b2b/shared build && eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
-    "test": "pnpm -r test && vitest run",
+    "test": "pnpm --filter @b2b/shared build && pnpm -r test && vitest run",
+    "test:coverage": "pnpm --filter @b2b/shared build && pnpm -r --filter @b2b/api --filter @b2b/shared --filter @b2b/web test --coverage",
     "build": "pnpm -r build",
     "test:integration": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api test:integration",
     "test:isolation": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api test:isolation",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@b2b/config": "workspace:*",
     "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "4.1.12",
     "eslint": "10.13.0",
     "prettier": "3.9.10",
     "typescript": "5.9.3",

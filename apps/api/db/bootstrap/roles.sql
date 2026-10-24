@@ -1,6 +1,6 @@
 -- Veritabanı rolleri (docs/03-architecture/infrastructure.md "Veritabanı rolleri").
--- Bu dosya Drizzle migration listesine (meta/_journal.json) GİRMEZ: rolleri migrator
--- oluşturamaz. `pnpm db:bootstrap` bu dosyayı süper kullanıcıyla çalıştırır, ardından
+-- Bu dosya bir migration DEĞİLDİR, bu yüzden apps/api/drizzle/ klasörünün dışındadır:
+-- rolleri migrator oluşturamaz. `pnpm db:bootstrap` bu dosyayı süper kullanıcıyla çalıştırır, ardından
 -- app_user ve migrator için LOGIN ve şifreyi ortam değişkenlerinden atar (F1.1a K2).
 -- Şifre içermez. Tekrar çalıştırılabilir.
 --

@@ -45,6 +45,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | Para hesabı | `decimal.js` | 10.x |
 | Tarih / saat dilimi | `date-fns` + `@date-fns/tz` | 4.x |
 | Log | `pino`, `nestjs-pino` | 9.x |
+| `nestjs-pino` zorunlu peer bağımlılığı | `pino-http` | 10.x; platform sahibi onayı F1.2a, 2026-10-24 |
 | Hata izleme | `@sentry/node` | Güncel |
 | Dosya (R2, S3 uyumlu) | `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` | 3.x |
 | Görsel küçültme | `sharp` | Güncel |
@@ -110,6 +111,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | Amaç | Araç |
 | --- | --- |
 | Birim ve entegrasyon testi | `vitest`, `supertest`, `@types/supertest`, `@nestjs/testing` (Nest test modülü) |
+| Kapsam ölçümü | `@vitest/coverage-v8` (`vitest` ile aynı sürüm); `pnpm test:coverage`, CI'da rapor yazdırılır, eşik F1.5a'da. Platform sahibi onayı F1.2a, 2026-10-24 |
 | Test veritabanı | CI servis container'ları; yerelde `@testcontainers/postgresql` |
 | Web uçtan uca | `@playwright/test` |
 | Mobil uçtan uca | Maestro |
@@ -175,6 +177,19 @@ Eklenmeyenler (ayrı karar): `@next/eslint-plugin-next`, `eslint-plugin-react-ho
 | `drizzle-kit` | 0.31.11 | api (dev); migration üretimi |
 | `zod` | 4.6.7 | shared (`env.ts`) |
 | `@testcontainers/postgresql` | 12.2.1 | api (dev); yerelde test veritabanı (Docker gerekir) |
+
+## 7.4 Kurulu sürümler (F1.2a, 2026-10-24)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `decimal.js` | 10.6.0 | api (`core/money.ts`) |
+| `pino` | 9.14.0 | api; `fastify` kendi içinde `pino` 10.x getirir, uygulama logu 9.x |
+| `nestjs-pino` | 4.6.1 | api |
+| `pino-http` | 10.5.0 | api; `nestjs-pino` zorunlu peer |
+| `zod` | 4.6.7 | api (hata filtresi `ZodError`); shared ile aynı sürüm |
+| `@vitest/coverage-v8` | 4.1.12 | kök (dev) |
+
+Eklenmeyenler: `pino-pretty` (listede yok), `unplugin-swc` / `@swc/core` (Nest bağımlılıkları `@Inject()` ile açık yazılır).
 
 ## 8. Kullanılmayacak teknolojiler
 

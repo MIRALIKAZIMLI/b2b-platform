@@ -1,13 +1,22 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import type { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
-import { readPort } from './core/config/port';
+import { loadServerEnv } from './core/config/load-env';
+import { createFastifyAdapter } from './core/request-id.middleware';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+  // Geçersiz ortamla başlamaz: çıkış kodu 1, mesajda yalnızca değişken adı.
+  const env = loadServerEnv(process.env);
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule.register(env),
+    createFastifyAdapter(),
+    { bufferLogs: true },
+  );
+  app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
-  await app.listen({ port: readPort(process.env), host: '0.0.0.0' });
+  await app.listen({ port: env.PORT, host: '0.0.0.0' });
 }
 
 void bootstrap();

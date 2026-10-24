@@ -79,7 +79,7 @@ Onayımı bekle.
 
 - **Amaç:** Tüm modüllerin kullanacağı güvenli veritabanı erişimi.
 - **Belgeler:** [ADR-0003](../04-decisions/adr-0003-tenant-isolation-with-rls.md), [ADR-0005](../04-decisions/adr-0005-drizzle-orm.md), [data-model.md](../03-architecture/data-model.md) §1, §6.
-- **Dosyalar:** `api/core/db/{client.ts, with-tenant-tx.ts, with-platform-tx.ts}`, `apps/api/drizzle.config.ts`, `apps/api/drizzle/0000_roles.sql` (`app_user`, `migrator`, `readonly`), `apps/api/test/{db.ts, isolation.ts}` (iki kiracı oluşturan yardımcı), `apps/api/src/core/db/check-rls.ts` + `cli.ts check-rls` komutu (T/P/U tablolarında RLS kontrolü; Mimar kararı, F1.1b), CI'ya `check-rls` adımı.
+- **Dosyalar:** `api/core/db/{client.ts, with-tenant-tx.ts, with-platform-tx.ts}`, `apps/api/drizzle.config.ts`, `apps/api/db/bootstrap/roles.sql` (`app_user`, `migrator`, `readonly`; F1.2a'da `drizzle/0000_roles.sql` yerinden migration klasörü dışına taşındı), `apps/api/test/{db.ts, isolation.ts}` (iki kiracı oluşturan yardımcı), `apps/api/src/core/db/check-rls.ts` + `cli.ts check-rls` komutu (T/P/U tablolarında RLS kontrolü; Mimar kararı, F1.1b), CI'ya `check-rls` adımı.
 - **Kabul:** `withTenantTx` işlemi açar, `SET LOCAL app.business_id` ve `app.user_id` ayarlar; bağlam olmadan sorgu RLS'li tabloda 0 satır döner; `app_user` tablo sahibi değildir; örnek bir test tablosunda iki kiracı birbirini göremez; `check-rls` RLS'siz kiracı tablosunda başarısız olur.
 - **Test:** `pnpm test:integration` (entegrasyon + izolasyon, gerçek PostgreSQL) · `pnpm test:isolation` (yalnızca `*.isolation.test.ts`).
 

@@ -111,7 +111,7 @@ b2b-platform/
 ## 6. Hata yönetimi
 
 1. İş kuralı ihlalleri `DomainError(code, details?)` fırlatır; `code` her zaman `packages/shared` içindeki `ErrorCode` listesindendir. Yeni kod eklenirse `openapi.yaml` `ErrorCode` listesi de güncellenir.
-2. Global hata filtresi `DomainError`'ı HTTP durumuna eşler (tablo `core/errors/http-map.ts`) ve `Error` şemasında döner; mesaj `Accept-Language` dilinde çeviri anahtarından gelir.
+2. Global hata filtresi `DomainError`'ı HTTP durumuna eşler (tablo `core/errors/http-map.ts`) ve `Error` şemasında döner; mesaj `Accept-Language` dilinde çeviri anahtarından gelir. Kod → HTTP durum eşlemesinin tek kaynağı `core/errors/http-map.ts`'tir; belgelerde geçen her `<durum> <KOD>` ifadesi bu tabloyla aynı olmalıdır (test ile denetlenir).
 3. Beklenmeyen hatalar `500 INTERNAL_ERROR` + `requestId` döner; ayrıntı yalnızca logda ve Sentry'de.
 4. Hata yutulmaz (`catch {}` yasak). Yeniden deneme yalnızca adaptörlerde ve worker işlerinde, [integrations.md](../03-architecture/integrations.md) §8'e göre.
 
