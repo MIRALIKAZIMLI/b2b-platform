@@ -10,6 +10,9 @@ import { Client } from 'pg';
 import { bootstrapRoles, runMigrations, withCredentials } from './core/db/admin';
 import { checkRls } from './core/db/check-rls';
 import { assertBootstrapAllowed } from './core/db/bootstrap-env';
+import { SystemClock } from './core/clock';
+import { UuidV7IdGenerator } from './core/id-generator';
+import { seedBilling } from './modules/billing';
 import { seedI18n } from './modules/i18n';
 
 function requireEnv(name: string): string {
@@ -46,8 +49,12 @@ async function dbSeed(): Promise<void> {
   await client.connect();
   try {
     const i18n = await seedI18n(client);
-    process.stdout.write(`db:seed tamamlandı: i18n ${String(i18n.inserted)} yeni satır.
-`);
+    const ids = new UuidV7IdGenerator(new SystemClock());
+    const billing = await seedBilling(client, () => ids.next());
+    process.stdout.write(
+      `db:seed tamamlandı: i18n ${String(i18n.inserted)}, billing ${String(billing.inserted)} yeni satır.
+`,
+    );
   } finally {
     await client.end();
   }

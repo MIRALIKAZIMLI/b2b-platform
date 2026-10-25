@@ -46,7 +46,9 @@ export class BillingRepository implements EntitlementRepositoryPort {
     const override = await tx
       .select({ value: entitlementOverrides.value })
       .from(entitlementOverrides)
-      .where(and(eq(entitlementOverrides.businessId, businessId), eq(entitlementOverrides.key, key)));
+      .where(
+        and(eq(entitlementOverrides.businessId, businessId), eq(entitlementOverrides.key, key)),
+      );
     const plan = await tx
       .select({ value: planEntitlements.value })
       .from(subscriptions)

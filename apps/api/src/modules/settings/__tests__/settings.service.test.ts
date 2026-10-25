@@ -103,7 +103,13 @@ describe('SettingsService (birim)', () => {
     }[] = [
       { name: 'hiç satır yok → kod varsayılanı', subscribed: true, expected: 20 },
       { name: 'yalnızca platform', platform: 25, subscribed: true, expected: 25 },
-      { name: 'plan değeri platformu ezer', platform: 25, plan: 30, subscribed: true, expected: 30 },
+      {
+        name: 'plan değeri platformu ezer',
+        platform: 25,
+        plan: 30,
+        subscribed: true,
+        expected: 30,
+      },
       { name: 'yalnızca plan', plan: 30, subscribed: true, expected: 30 },
       {
         name: 'işletme değeri planı ezer',
@@ -278,7 +284,12 @@ describe('SettingsService (birim)', () => {
 
   it('F1.4-AC2: plan kapsamında da sınır dışı değer → SETTING_OUT_OF_RANGE', async () => {
     const code = await domainErrorCode(
-      service.set('connection.cooldown_after_reject_days', 6, { scope: 'plan', planId: randomUUID() }, actor),
+      service.set(
+        'connection.cooldown_after_reject_days',
+        6,
+        { scope: 'plan', planId: randomUUID() },
+        actor,
+      ),
     );
 
     expect(code).toBe('SETTING_OUT_OF_RANGE');

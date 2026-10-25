@@ -19,11 +19,7 @@ export interface SettingsRedis {
 /** `settings:<scope>:<id>:<key>`; platform kapsamında id yerine `-`. */
 export function settingsCacheKey(key: SettingKey, target: SettingTarget): string {
   const id =
-    target.scope === 'business'
-      ? target.businessId
-      : target.scope === 'plan'
-        ? target.planId
-        : '-';
+    target.scope === 'business' ? target.businessId : target.scope === 'plan' ? target.planId : '-';
   return `settings:${target.scope}:${id}:${key}`;
 }
 

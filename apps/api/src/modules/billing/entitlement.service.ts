@@ -36,12 +36,7 @@ export class EntitlementService {
    * `delta` kadar artış hakkı aşacaksa `ENTITLEMENT_LIMIT_REACHED` fırlatır. `tx` verilirse
    * değer ve kullanım çağıranın işleminde okunur (kaydı ekleyen işlemle aynı olması önerilir).
    */
-  async check(
-    key: LimitEntitlementKey,
-    businessId: string,
-    delta = 1,
-    tx?: Tx,
-  ): Promise<void> {
+  async check(key: LimitEntitlementKey, businessId: string, delta = 1, tx?: Tx): Promise<void> {
     if (!Number.isInteger(delta) || delta < 1) {
       throw new TypeError('delta pozitif tamsayı olmalı');
     }

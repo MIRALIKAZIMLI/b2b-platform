@@ -135,7 +135,13 @@ describe('SettingsCache', () => {
     const lookup = await cache.getLayers('sms.daily_cap', businessId);
 
     await cache.invalidate('sms.daily_cap', { scope: 'plan', planId: randomUUID() });
-    await cache.setLayers('sms.daily_cap', businessId, { platform: 1, plan: 2 }, 60, lookup.planVersion);
+    await cache.setLayers(
+      'sms.daily_cap',
+      businessId,
+      { platform: 1, plan: 2 },
+      60,
+      lookup.planVersion,
+    );
 
     expect((await cache.getLayers('sms.daily_cap', businessId)).layers).toBeUndefined();
   });

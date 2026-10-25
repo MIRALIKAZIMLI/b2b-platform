@@ -58,9 +58,7 @@ export function parseEntitlementValue<K extends EntitlementKey>(
   key: K,
   raw: unknown,
 ): ParseEntitlementResult<K> {
-  const schema: z.ZodType<unknown> = isLimitEntitlementKey(key) ? limitSchema : featureSchema;
+  const schema: z.ZodType = isLimitEntitlementKey(key) ? limitSchema : featureSchema;
   const result = schema.safeParse(raw);
-  return result.success
-    ? { ok: true, value: result.data as EntitlementValue<K> }
-    : { ok: false };
+  return result.success ? { ok: true, value: result.data as EntitlementValue<K> } : { ok: false };
 }
