@@ -11,7 +11,8 @@ import { Clock } from '../../core/clock';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
 import { SettingsService } from '../settings';
-import type { DeviceType } from './identity.schema';
+import type { DeviceType, PlatformRole } from './identity.schema';
+import { TotpRepository } from './totp/totp.repository';
 import { OtpService } from './otp.service';
 import { type ActiveSession, SessionRepository } from './session.repository';
 import { TokenService } from './token.service';
@@ -43,7 +44,8 @@ export type AuthResult =
       readonly memberships: readonly never[];
     }
   | {
-      readonly nextStep: 'register';
+      /** register: kayıt (F2.3); totp / totp_setup: ikinci adım (F1.6, US-002 AC1). */
+      readonly nextStep: 'register' | 'totp' | 'totp_setup';
       readonly pendingToken: string;
       readonly memberships: readonly never[];
     };
@@ -70,14 +72,15 @@ export interface SessionView {
   readonly current: boolean;
 }
 
-/** openapi `Me` (temel alanlar; `platformRole` F1.6/F2, üyelikler F1.8b). */
+/** openapi `Me` (temel alanlar; üyelikler F1.8b). */
 export interface MeView {
   readonly id: string;
   readonly fullName: string;
   readonly phone: string;
   readonly preferredLanguage: string | null;
   readonly timezone: string | null;
-  readonly platformRole: null;
+  readonly platformRole: PlatformRole | null;
+  readonly totpEnabled: boolean;
   readonly memberships: readonly never[];
 }
 
@@ -116,6 +119,8 @@ export class SessionService {
     @Inject(AuditService) private readonly audit: AuditRecorder,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
+    @Inject(TotpRepository)
+    private readonly totp: Pick<TotpRepository, 'platformRole' | 'isEnabled'>,
   ) {}
 
   /** POST /auth/otp/verify (SF-01). */
@@ -134,21 +139,37 @@ export class SessionService {
     if (user.status !== 'active') {
       throw new DomainError('USER_DISABLED');
     }
+    // Platform rolü: erişim anahtarı yalnızca TOTP doğrulandıktan sonra (US-002 AC1, NFR-46).
+    if ((await this.totp.platformRole(user.id)) !== undefined) {
+      const nextStep = (await this.totp.isEnabled(user.id)) ? 'totp' : 'totp_setup';
+      return {
+        nextStep,
+        pendingToken: await this.tokens.signPendingTotp(user.id),
+        memberships: [],
+      };
+    }
+    return await this.openSession(user.id, input.device);
+  }
 
+  /**
+   * Oturum açar (yeni aile, yenileme anahtarı, last_login_at) ve anahtar çiftini döner. Çağıran
+   * kullanıcının kimliğini doğrulamış olmalı (OTP; platform rolünde ayrıca TOTP).
+   */
+  async openSession(userId: string, device?: DeviceInput): Promise<AuthResult> {
     const sessionId = this.ids.next();
     const refreshToken = newRefreshToken();
     const now = this.clock.now();
     await this.sessions.open({
       id: sessionId,
-      userId: user.id,
+      userId,
       familyId: this.ids.next(),
       refreshTokenHash: hashRefreshToken(refreshToken),
-      deviceType: input.device?.type ?? DEFAULT_DEVICE_TYPE,
-      deviceName: input.device?.name ?? null,
+      deviceType: device?.type ?? DEFAULT_DEVICE_TYPE,
+      deviceName: device?.name ?? null,
       now,
       expiresAt: await this.refreshExpiry(now),
     });
-    const access = await this.tokens.signAccess({ userId: user.id, sessionId });
+    const access = await this.tokens.signAccess({ userId, sessionId });
     return {
       nextStep: 'none',
       accessToken: access.token,
@@ -237,7 +258,8 @@ export class SessionService {
       phone: user.phoneE164,
       preferredLanguage: user.preferredLanguage,
       timezone: user.timezone,
-      platformRole: null,
+      platformRole: (await this.totp.platformRole(user.id)) ?? null,
+      totpEnabled: await this.totp.isEnabled(user.id),
       memberships: [],
     };
   }

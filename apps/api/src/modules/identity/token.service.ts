@@ -4,6 +4,8 @@
 //   JWT'ye konmaz (her istekte doğrulanır, F1.8b).
 // - Kayıt anahtarı (`pendingToken`): `typ = pending`, `purpose = register`, `phone`. Erişim anahtarı
 //   olarak kabul edilmez.
+// - TOTP ön oturumu (F1.6): `typ = pending`, `purpose = totp`, `sub` (kullanıcı). Yalnızca
+//   /auth/totp/* uçlarında geçerli; erişim anahtarı olarak kabul edilmez.
 // - Zaman Clock'tan (`iat`, `exp`, doğrulamada `currentDate`). Anahtarlar loglanmaz.
 import { Inject, Injectable } from '@nestjs/common';
 import type { SettingKey, SettingValue } from '@b2b/shared';
@@ -42,6 +44,12 @@ const pendingPayloadSchema = z.object({
   typ: z.literal('pending'),
   purpose: z.literal('register'),
   phone: z.string().regex(/^\+[1-9][0-9]{7,14}$/),
+});
+
+const pendingTotpPayloadSchema = z.object({
+  typ: z.literal('pending'),
+  purpose: z.literal('totp'),
+  sub: z.uuid(),
 });
 
 function encode(secret: string): Uint8Array {
@@ -92,6 +100,19 @@ export class TokenService {
     const payload = accessPayloadSchema.safeParse(await this.verify(token));
     if (!payload.success) throw new DomainError('UNAUTHENTICATED');
     return { userId: payload.data.sub, sessionId: payload.data.sid };
+  }
+
+  /** TOTP ön oturumu (nextStep = totp / totp_setup); ömür erişim anahtarıyla aynı (F1.6). */
+  async signPendingTotp(userId: string): Promise<string> {
+    const minutes = await this.settings.get('auth.access_token_minutes');
+    return await this.sign({ typ: 'pending', purpose: 'totp' }, minutes * MINUTE_SECONDS, userId);
+  }
+
+  /** TOTP ön oturumunu doğrular; kullanıcı kimliği döner. */
+  async verifyPendingTotp(token: string): Promise<string> {
+    const payload = pendingTotpPayloadSchema.safeParse(await this.verify(token));
+    if (!payload.success) throw new DomainError('UNAUTHENTICATED');
+    return payload.data.sub;
   }
 
   /** Kayıt anahtarını doğrular (F2.3 kullanır); telefon döner. */

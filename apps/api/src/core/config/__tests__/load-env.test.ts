@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { loadApiEnv, loadServerEnv, type EnvExitIo } from '../load-env';
 
@@ -78,6 +79,7 @@ describe('loadApiEnv (api açılışı, F1.5a)', () => {
     OTP_HASH_KEY: 'otp-hash-secret-value-0123456789abcdef',
     JWT_SIGNING_KEY: 'jwt-signing-secret-value-0123456789abcdef',
     JWT_KEY_ID: 'k1',
+    TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   };
 
   function runApiAndCatch(env: Record<string, string | undefined>, io: EnvExitIo): ExitCalled {

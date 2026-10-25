@@ -218,6 +218,12 @@ Eklenmeyenler: `@testcontainers/redis` (Redis entegrasyon testi docker compose /
 | --- | --- | --- |
 | `jose` | 6.2.13 | api (`modules/identity/token.service.ts`, JWT HS256 imza ve doğrulama); Mimar onayı F1.5b |
 
+## 7.9 Kurulu sürümler (F1.6, 2026-10-25)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `otplib` | 12.0.1 | api (`modules/identity/totp/`, TOTP üretme ve doğrulama); listedeki 12.x sürümü (13.x mevcut, liste değişmedi); Mimar onayı F1.6 |
+
 ## 8. Kullanılmayacak teknolojiler
 
 | Kullanılmaz | Yerine | Neden |

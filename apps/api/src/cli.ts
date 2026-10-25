@@ -5,7 +5,7 @@
 //   node dist/cli.js db:seed        başlangıç verisini migrator rolüyle yükler (idempotent)
 // Kökten: pnpm db:bootstrap · pnpm db:migrate · pnpm db:seed · pnpm check-rls
 // Adres ve şifreler ekrana yazılmaz.
-import { parseDbEnv, parseMigratorEnv } from '@b2b/shared';
+import { parseDbEnv, parseMigratorEnv, parseSeedEnv } from '@b2b/shared';
 import { Client } from 'pg';
 import { bootstrapRoles, runMigrations, withCredentials } from './core/db/admin';
 import { checkRls } from './core/db/check-rls';
@@ -14,6 +14,7 @@ import { SystemClock } from './core/clock';
 import { UuidV7IdGenerator } from './core/id-generator';
 import { seedBilling } from './modules/billing';
 import { seedI18n } from './modules/i18n';
+import { seedSuperAdmin } from './modules/identity';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -51,8 +52,14 @@ async function dbSeed(): Promise<void> {
     const i18n = await seedI18n(client);
     const ids = new UuidV7IdGenerator(new SystemClock());
     const billing = await seedBilling(client, () => ids.next());
+    const { SUPER_ADMIN_PHONE } = parseSeedEnv(process.env);
+    const admin = await seedSuperAdmin(client, SUPER_ADMIN_PHONE, () => ids.next());
+    const adminNote =
+      admin.status === 'skipped'
+        ? 'süper admin atlandı (SUPER_ADMIN_PHONE yok)'
+        : `süper admin hazır (yeni kullanıcı: ${admin.userCreated ? 'evet' : 'hayır'})`;
     process.stdout.write(
-      `db:seed tamamlandı: i18n ${String(i18n.inserted)}, billing ${String(billing.inserted)} yeni satır.
+      `db:seed tamamlandı: i18n ${String(i18n.inserted)}, billing ${String(billing.inserted)} yeni satır; ${adminNote}.
 `,
     );
   } finally {

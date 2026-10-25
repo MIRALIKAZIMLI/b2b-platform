@@ -2,6 +2,8 @@
 export interface IdentityConfig {
   /** OTP_HASH_KEY (env şeması en az 32 karakter ister). */
   readonly otpHashKey: string;
+  /** TOTP_ENCRYPTION_KEY çözülmüş hâli (32 bayt, AES-256-GCM; F1.6). */
+  readonly totpEncryptionKey: Buffer;
   /** Erişim anahtarı imzası (F1.5b): güncel anahtar imzalar, öncekisi yalnızca doğrular. */
   readonly jwt: {
     readonly current: JwtKey;

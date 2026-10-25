@@ -1,5 +1,6 @@
 // Birim testleri için sahte api ortamı. Bu adreslere hiçbir zaman bağlanılmaz.
 // OTP_HASH_KEY yalnızca test değeridir; gerçek ortamda her ortamın kendi rastgele anahtarı vardır.
+import { randomBytes } from 'node:crypto';
 import { type ApiEnv, parseApiEnv } from '@b2b/shared';
 
 export const TEST_SERVER_ENV: ApiEnv = parseApiEnv({
@@ -11,4 +12,6 @@ export const TEST_SERVER_ENV: ApiEnv = parseApiEnv({
   OTP_HASH_KEY: 'test-only-otp-hash-key-0123456789abcdef',
   JWT_SIGNING_KEY: 'test-only-jwt-signing-key-0123456789abcdef',
   JWT_KEY_ID: 'test-k1',
+  // Her çalıştırmada rastgele (depoda anahtar gibi görünen değer yok).
+  TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
 });

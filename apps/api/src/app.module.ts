@@ -53,6 +53,7 @@ export class AppModule implements NestModule {
         BillingModule,
         IdentityModule.forRoot({
           otpHashKey: env.OTP_HASH_KEY,
+          totpEncryptionKey: Buffer.from(env.TOTP_ENCRYPTION_KEY, 'base64'),
           jwt: {
             current: { id: env.JWT_KEY_ID, secret: env.JWT_SIGNING_KEY },
             ...(env.JWT_PREVIOUS_KEY_ID === undefined || env.JWT_PREVIOUS_SIGNING_KEY === undefined
