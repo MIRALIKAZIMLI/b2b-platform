@@ -271,5 +271,7 @@ export const branches = pgTable(
       sql`${table.approvalRule} <> 'above_amount' or ${table.approvalThreshold} is not null`,
     ),
     check('branches_status_check', sql`${table.status} in ('active', 'inactive')`),
+    // F1.8a: memberships / invitations bileşik FK'sının hedefi (şube aynı işletmeden olmalı).
+    unique('branches_business_id_id_uq').on(table.businessId, table.id),
   ],
 );

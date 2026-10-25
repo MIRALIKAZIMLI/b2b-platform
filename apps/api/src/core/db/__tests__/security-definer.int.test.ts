@@ -20,6 +20,7 @@ const EXPECTED_FUNCTIONS = [
   'idempotency_reserve',
   'identity_record_login',
   'identity_user_by_phone',
+  'list_my_memberships',
   'otp_challenge_close',
   'otp_challenge_create',
   'otp_challenge_fail',

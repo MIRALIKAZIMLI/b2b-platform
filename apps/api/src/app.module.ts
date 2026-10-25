@@ -16,6 +16,7 @@ import { OutboxModule } from './core/outbox';
 import { RequestIdMiddleware } from './core/request-id.middleware';
 import { RedisModule } from './infrastructure/redis';
 import { SmsModule, type SmsRetryPolicy } from './infrastructure/sms';
+import { AccessModule } from './modules/access';
 import { BillingModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
@@ -51,6 +52,7 @@ export class AppModule implements NestModule {
         I18nModule,
         BusinessesModule,
         BillingModule,
+        AccessModule,
         IdentityModule.forRoot({
           otpHashKey: env.OTP_HASH_KEY,
           totpEncryptionKey: Buffer.from(env.TOTP_ENCRYPTION_KEY, 'base64'),

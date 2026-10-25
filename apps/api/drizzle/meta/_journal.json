@@ -71,6 +71,13 @@
       "when": 1792921850503,
       "tag": "0009_totp_platform_staff",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792925100409,
+      "tag": "0010_access",
+      "breakpoints": true
     }
   ]
 }

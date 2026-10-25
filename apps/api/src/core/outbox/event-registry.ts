@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 /** Kuyruk adları. Yeni kuyruk, onu tüketen iş (F1.11 ve sonrası) ile birlikte eklenir. */
-export const OUTBOX_QUEUE_NAMES = ['test'] as const;
+export const OUTBOX_QUEUE_NAMES = ['test', 'access'] as const;
 export type OutboxQueueName = (typeof OUTBOX_QUEUE_NAMES)[number];
 
 /** Serbest metin olmayan alan türleri. Kod alanı, seçenek listesiyle (`['a', 'b']`) tanımlanır. */
@@ -21,6 +21,11 @@ export interface OutboxEventDefinition {
 export const OUTBOX_EVENTS = {
   // Yalnızca testler için (F1.2b). Tüketicisi yok.
   'test.ping': { queue: 'test', fields: { ref: 'id', count: 'integer' } },
+  // F1.8a: üyelik rolü değişti. Tüketici F1.8b (izin önbelleği temizliği).
+  'membership.role_changed': {
+    queue: 'access',
+    fields: { membershipId: 'id', userId: 'id', oldRoleId: 'id', newRoleId: 'id' },
+  },
 } as const satisfies Record<string, OutboxEventDefinition>;
 
 export type OutboxEventType = keyof typeof OUTBOX_EVENTS;
