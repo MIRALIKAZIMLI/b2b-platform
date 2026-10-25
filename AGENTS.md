@@ -63,7 +63,22 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 2. **Kod yazmadan önce plan sun:** dosyalar, migration, AC başına testler, emin olmadığın noktalar. Onay bekle.
 3. Yalnızca adımın kapsamında çalış. Kapsam dışı bir şey gerekiyorsa sor.
 4. Belgede olmayan bir karar gerekiyorsa **uydurma, sor.** ADR'lerle (`docs/04-decisions/`) çelişme.
-5. Bitirmeden önce `pnpm lint && pnpm typecheck && pnpm test` çalıştır, sonucu göster; `docs/07-ai-development/definition-of-done.md` maddelerini işaretle; AC → test eşleşmesini listele.
+5. Bitirmeden önce yerel kontrolleri "Token ve süre kuralları" madde 5'e göre çalıştır, sonucu göster; `docs/07-ai-development/definition-of-done.md` maddelerini işaretle; AC → test eşleşmesini listele.
+
+## Token ve süre kuralları
+
+1. **Önce iki dosya:** göreve `docs/ai-context.md` ve görev kartıyla (`docs/tasks/<ID>.md`) başla.
+2. **Az oku:** yalnızca kartın "Okunacak dosyalar" listesini ve işin gerçekten gerektirdiği dosyaları aç. Tüm `docs/` klasörünü tarama; bir belgeden yalnızca kartın andığı bölümü oku.
+3. **Bağlamı güncel tut:** her PR, gerekiyorsa `docs/ai-context.md`'yi günceller (bitmiş adım, yeni ortak kural, yeni varsayılan karar).
+4. **a/b adımları:** aynı adımın `a` ve `b` kartları (ör. F1.13a → F1.13b) aynı Usta konuşmasında yapılır; bağlam yeniden okunmaz.
+5. **Yerel kontrol:** yalnızca değişen alanın testleri + `pnpm lint` + `pnpm typecheck`, sessiz modda (yalnızca hatalar görünsün). Örnek:
+   ```bash
+   pnpm -s lint && pnpm -s typecheck
+   pnpm -s --filter @b2b/api exec vitest run src/modules/<modül> --reporter=dot
+   ```
+   Tam takım (`pnpm test`, `test:integration`, `test:isolation`, `build`) CI'da çalışır. Kartın "Doğrulama komutu" bölümü CI'ın çalıştırdığı tam listedir; yerelde yalnızca yukarıdaki kontroller çalışır. Kart yerelde ayrıca bir komutu açıkça isterse (ör. `pnpm db:migrate && pnpm check-rls`) o da çalışır.
+6. **Kısa mesaj:** plan ve raporlar kısa; çıktının tamamını değil, yalnızca hataları ve özet satırını yapıştır.
+7. **Müfettiş düzeltme turu:** ikinci ve sonraki turlarda yalnızca yeni diff'e bakar. İstisna: güvenlik, kimlik/yetki, RLS ve migration (DB) adımlarında her tur tam inceleme.
 
 ## Yapma
 
@@ -78,6 +93,7 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 
 | Durum | Belge |
 | --- | --- |
+| Mimari özeti, ortak kurallar, bitmiş adımlar | `docs/ai-context.md` |
 | Görevin ne olduğu, dosyalar, kabul | `docs/07-ai-development/implementation-plan.md` |
 | Story ve AC metni | `docs/02-requirements/user-stories.md` |
 | Sayısal hedefler (performans, güvenlik) | `docs/02-requirements/non-functional-requirements.md` |

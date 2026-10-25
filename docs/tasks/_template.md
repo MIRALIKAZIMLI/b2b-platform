@@ -15,6 +15,12 @@
 
 <Bir-iki cümle: bu adım bitince ne çalışıyor olacak.>
 
+## Okunacak dosyalar (3–6)
+
+`AGENTS.md`, `docs/ai-context.md` ve bu kart her zaman okunur. Aşağıdakiler dışında yalnızca işin gerçekten gerektirdiği dosyayı aç; "Okunacak belgeler" listesi başvuru içindir, belgenin yalnızca anılan bölümünü oku.
+
+- <en önemli 3–6 dosya: belge bölümü veya kaynak kod yolu>
+
 ## Okunacak belgeler
 
 - `AGENTS.md`
@@ -44,7 +50,9 @@ Her satır en az bir test. Test adı AC kimliğiyle başlar.
 
 - <Usta plan aşamasında bunlar için soru sormalı; uydurmamalı>
 
-## Doğrulama komutu
+## Doğrulama komutu (CI)
+
+CI'ın çalıştırdığı tam liste. Yerelde `AGENTS.md` "Token ve süre kuralları" madde 5 geçerlidir.
 
 ```bash
 <implementation-plan.md "Test" satırı>
