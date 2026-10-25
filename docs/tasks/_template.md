@@ -50,7 +50,9 @@ Her satır en az bir test. Test adı AC kimliğiyle başlar.
 
 - <Usta plan aşamasında bunlar için soru sormalı; uydurmamalı>
 
-## Doğrulama komutu
+## Doğrulama komutu (CI)
+
+CI'ın çalıştırdığı tam liste. Yerelde `AGENTS.md` "Token ve süre kuralları" madde 5 geçerlidir.
 
 ```bash
 <implementation-plan.md "Test" satırı>

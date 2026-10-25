@@ -76,7 +76,7 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
    pnpm -s lint && pnpm -s typecheck
    pnpm -s --filter @b2b/api exec vitest run src/modules/<modül> --reporter=dot
    ```
-   Tam takım (`pnpm test`, `test:integration`, `test:isolation`, `build`) CI'da çalışır; kart başka bir komut istiyorsa kart geçerlidir.
+   Tam takım (`pnpm test`, `test:integration`, `test:isolation`, `build`) CI'da çalışır. Kartın "Doğrulama komutu" bölümü CI'ın çalıştırdığı tam listedir; yerelde yalnızca yukarıdaki kontroller çalışır. Kart yerelde ayrıca bir komutu açıkça isterse (ör. `pnpm db:migrate && pnpm check-rls`) o da çalışır.
 6. **Kısa mesaj:** plan ve raporlar kısa; çıktının tamamını değil, yalnızca hataları ve özet satırını yapıştır.
 7. **Müfettiş düzeltme turu:** ikinci ve sonraki turlarda yalnızca yeni diff'e bakar. İstisna: güvenlik, kimlik/yetki, RLS ve migration (DB) adımlarında her tur tam inceleme.
 
