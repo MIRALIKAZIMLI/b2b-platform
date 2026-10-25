@@ -78,6 +78,35 @@ GRANT SELECT, INSERT, UPDATE ON TABLE "users" TO app_user;
 --> statement-breakpoint
 GRANT SELECT ON TABLE "users" TO readonly;
 --> statement-breakpoint
+-- users alan koruması (businesses_guard_platform_columns kalıbı, Müfettiş D1): phone_e164, status ve
+-- last_login_at yalnızca platform bağlamında değişir. Kullanıcı kendi satırında bu alanları
+-- değiştiremez (ör. platform kilidini kaldıramaz, doğrulanmamış bir numarayı sahiplenemez).
+-- İhlal 42501. Ekleme zaten yalnızca platform politikasıyla mümkündür. Fonksiyon SECURITY
+-- DEFINER değildir (tablo okumaz); search_path sabittir.
+CREATE FUNCTION "users_guard_platform_columns"() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = pg_catalog, public, pg_temp
+AS $$
+BEGIN
+  IF current_setting('app.is_platform', true) = 'true' THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.phone_e164 IS DISTINCT FROM OLD.phone_e164
+     OR NEW.status IS DISTINCT FROM OLD.status
+     OR NEW.last_login_at IS DISTINCT FROM OLD.last_login_at THEN
+    RAISE EXCEPTION 'users: bu alanlar yalnızca platform bağlamında değiştirilebilir'
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+REVOKE ALL ON FUNCTION "users_guard_platform_columns"() FROM PUBLIC;
+--> statement-breakpoint
+CREATE TRIGGER "users_guard_platform_columns"
+  BEFORE UPDATE ON "users"
+  FOR EACH ROW EXECUTE FUNCTION "users_guard_platform_columns"();
+--> statement-breakpoint
 REVOKE ALL ON TABLE "otp_challenges" FROM PUBLIC;
 --> statement-breakpoint
 REVOKE ALL ON TABLE "dev_sms_outbox" FROM PUBLIC;

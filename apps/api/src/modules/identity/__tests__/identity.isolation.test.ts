@@ -66,6 +66,41 @@ describe('kimlik tabloları izolasyonu (identity)', () => {
     expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
   });
 
+  it('F1.5-AC10: kullanıcı kendi status / phone_e164 / last_login_at alanını değiştiremez → 42501', async () => {
+    const statements = [
+      sql`update users set status = 'locked' where id = ${userA}`,
+      sql`update users set phone_e164 = ${randomTestPhone()} where id = ${userA}`,
+      sql`update users set last_login_at = now() where id = ${userA}`,
+    ];
+    for (const statement of statements) {
+      const error = await errorOf(withTenantTx(asA, (tx) => tx.execute(statement)));
+      expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+    }
+  });
+
+  it('F1.5-AC10: kullanıcı kendi full_name alanını değiştirebilir', async () => {
+    const result = await withTenantTx(asA, (tx) =>
+      tx.execute(sql`update users set full_name = 'Yeni Ad' where id = ${userA}`),
+    );
+    expect(result.rowCount).toBe(1);
+  });
+
+  it('F1.5-AC10: platform status ve last_login_at değiştirebilir', async () => {
+    const result = await withPlatformTx({ userId: userA }, (tx) =>
+      tx.execute(
+        sql`update users set status = 'locked', last_login_at = now() where id = ${userB}`,
+      ),
+    );
+    expect(result.rowCount).toBe(1);
+    const row = await withPlatformTx({ userId: userA }, (tx) =>
+      tx.execute<{ status: string }>(sql`select status from users where id = ${userB}`),
+    );
+    expect(row.rows).toEqual([{ status: 'locked' }]);
+    await withPlatformTx({ userId: userA }, (tx) =>
+      tx.execute(sql`update users set status = 'active' where id = ${userB}`),
+    );
+  });
+
   it('F1.5-AC10: kiracı bağlamında kullanıcı eklenemez ve silinemez', async () => {
     const insert = await errorOf(
       withTenantTx(asA, (tx) =>

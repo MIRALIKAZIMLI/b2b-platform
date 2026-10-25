@@ -45,7 +45,7 @@ export const otpChallenges = pgTable(
     id: uuid('id').primaryKey(),
     phoneE164: text('phone_e164').notNull(),
     purpose: text('purpose').notNull(),
-    // HMAC-SHA256(OTP_HASH_KEY, challengeId + ':' + kod), hex; kod düz metin saklanmaz.
+    // HMAC-SHA256(OTP_HASH_KEY, 'otp:' + challengeId + ':' + kod), hex; kod düz metin saklanmaz.
     codeHash: text('code_hash').notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     attempts: smallint('attempts').notNull().default(0),

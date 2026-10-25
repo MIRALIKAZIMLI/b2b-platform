@@ -1,5 +1,5 @@
 // OTP kodu üretimi ve özeti (F1.5a, Mimar kararı 1). Kod kriptografik rastgele (`randomInt`);
-// veritabanında yalnızca HMAC-SHA256(OTP_HASH_KEY, challengeId + ':' + kod) saklanır. Karşılaştırma
+// veritabanında yalnızca HMAC-SHA256(OTP_HASH_KEY, 'otp:' + challengeId + ':' + kod) saklanır. Karşılaştırma
 // sabit zamanlıdır (`timingSafeEqual`). Anahtar veritabanında olmadığı için tablo sızsa da
 // 6 haneli kodlar denenerek bulunamaz.
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
