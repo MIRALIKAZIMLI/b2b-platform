@@ -2,7 +2,8 @@
 // - Sır otplib ile üretilir (20 bayt, base32), AES-256-GCM ile şifreli saklanır (totp-crypto.ts).
 // - Doğrulama ±1 adım (30 sn); aynı adım ikinci kez kabul edilmez (`last_used_step`).
 // - Kurtarma kodu: aynı `code` alanı, `XXXXX-XXXXX` biçimi; bir kez kullanılır (Mimar kararı K2).
-// - Kaba kuvvet: kullanıcı başına yanlış sayacı Redis'te (otp.* ayarları); kilitte 423 OTP_LOCKED.
+// - Kaba kuvvet: her deneme kod doğrulanmadan önce Redis'te atomik sayılır (otp.* ayarları);
+//   sınır aşılınca 423 OTP_LOCKED. Doğru kod sayacı sıfırlar.
 // - Sır, otpauth URI'si ve kodlar loglanmaz (F1.6-AC5). Zaman Clock'tan.
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
@@ -45,6 +46,14 @@ export interface TotpSettingsPort {
 const confirmSchema = z.string().regex(TOTP_CODE_PATTERN).optional();
 const codeSchema = z.string().max(32);
 
+/** Sayılmış bir deneme (reserveAttempt). */
+interface Attempt {
+  readonly count: number;
+  readonly maxAttempts: number;
+  readonly lockMinutes: number;
+  readonly nowMs: number;
+}
+
 type VerifyOutcome = 'ok' | 'invalid' | 'required';
 
 /** Redis anahtarında kullanıcının ikinci adım sayacı (OTP numara sayacından ayrı ad alanı). */
@@ -86,7 +95,8 @@ export class TotpService {
     }
 
     const code = parsed.data;
-    await this.assertNotLocked(userId);
+    // Deneme kod doğrulanmadan önce atomik sayılır (Müfettiş H1): eşzamanlı istekler kilidi aşamaz.
+    const attempt = await this.reserveAttempt(userId);
     const result = await this.repository.withLocked(userId, now, async (row, ops) => {
       // Kurulum başlatılmamış (satır yok) veya zaten etkin.
       if (row?.enabledAt !== null) {
@@ -103,8 +113,7 @@ export class TotpService {
       return recoveryCodes;
     });
     if (result === undefined) {
-      await this.recordFailure(userId);
-      throw new DomainError('TOTP_INVALID');
+      return await this.rejectAttempt(userId, attempt);
     }
     await this.limiter.clearFailures(limiterKey(userId));
     // Kodlar yalnızca bu yanıtta bir kez görünür; bir daha istenemez (US-002 AC4).
@@ -118,7 +127,8 @@ export class TotpService {
     if (!parsed.success) throw new DomainError('TOTP_INVALID');
     const code = parsed.data.trim().toUpperCase();
     await this.activeUser(userId);
-    await this.assertNotLocked(userId);
+    // Deneme kod doğrulanmadan önce atomik sayılır (Müfettiş H1): eşzamanlı istekler kilidi aşamaz.
+    const attempt = await this.reserveAttempt(userId);
     const now = this.clock.now();
 
     const outcome = await this.repository.withLocked(
@@ -154,8 +164,7 @@ export class TotpService {
       case 'required':
         throw new DomainError('TOTP_REQUIRED');
       case 'invalid':
-        await this.recordFailure(userId);
-        throw new DomainError('TOTP_INVALID');
+        return await this.rejectAttempt(userId, attempt);
       case 'ok':
         await this.limiter.clearFailures(limiterKey(userId));
         return await this.sessions.openSession(userId, device);
@@ -195,24 +204,39 @@ export class TotpService {
     if (lockedFor !== undefined) throw new DomainError('OTP_LOCKED', { retryAfter: lockedFor });
   }
 
-  /** Yanlış ikinci adım; pencerede `otp.max_attempts`'a ulaşınca kullanıcı kilitlenir (423). */
-  private async recordFailure(userId: string): Promise<void> {
+  /**
+   * Denemeyi kod doğrulanmadan önce sayar (Redis'te atomik ZADD + ZCARD). Kilitliyse veya bu
+   * deneme pencerede `otp.max_attempts` sayısını aşıyorsa kod hiç doğrulanmadan 423 OTP_LOCKED.
+   * Böylece aynı anda gelen N istekten en çok `otp.max_attempts` tanesi kodu dener.
+   */
+  private async reserveAttempt(userId: string): Promise<Attempt> {
+    await this.assertNotLocked(userId);
     const [maxAttempts, windowMinutes, lockMinutes] = await Promise.all([
       this.settings.get('otp.max_attempts'),
       this.settings.get('otp.fail_window_minutes'),
       this.settings.get('otp.lock_minutes'),
     ]);
     const nowMs = this.clock.now().getTime();
-    const failures = await this.limiter.recordFailure(
+    const count = await this.limiter.recordFailure(
       limiterKey(userId),
       nowMs,
       windowMinutes,
       randomUUID(),
     );
-    if (failures >= maxAttempts) {
-      await this.limiter.lock(limiterKey(userId), nowMs, lockMinutes);
-      throw new DomainError('OTP_LOCKED', { retryAfter: lockMinutes * 60 });
-    }
+    const attempt: Attempt = { count, maxAttempts, lockMinutes, nowMs };
+    if (count > maxAttempts) await this.lockAndThrow(userId, attempt);
+    return attempt;
+  }
+
+  /** Yanlış kod: bu deneme sınıra ulaştıysa kullanıcı kilitlenir (423), değilse 400 TOTP_INVALID. */
+  private async rejectAttempt(userId: string, attempt: Attempt): Promise<never> {
+    if (attempt.count >= attempt.maxAttempts) await this.lockAndThrow(userId, attempt);
+    throw new DomainError('TOTP_INVALID');
+  }
+
+  private async lockAndThrow(userId: string, attempt: Attempt): Promise<never> {
+    await this.limiter.lock(limiterKey(userId), attempt.nowMs, attempt.lockMinutes);
+    throw new DomainError('OTP_LOCKED', { retryAfter: attempt.lockMinutes * 60 });
   }
 
   private key(): Buffer {

@@ -15,6 +15,7 @@ function randomSecret(): string {
   return randomBytes(32).toString('hex');
 }
 
+const TOTP_KEY = randomBytes(32);
 const CURRENT = { id: 'k2', secret: randomSecret() };
 const PREVIOUS = { id: 'k1', secret: randomSecret() };
 const USER = '0190f1a2-0000-7000-8000-0000000000aa';
@@ -42,7 +43,10 @@ async function codeOf(promise: Promise<unknown>): Promise<string> {
 
 describe('TokenService (F1.5-AC12)', () => {
   const clock = new FixedClock(new Date('2026-10-26T08:00:00.000Z'));
-  const tokens = service({ otpHashKey: 'x', jwt: { current: CURRENT, previous: PREVIOUS } }, clock);
+  const tokens = service(
+    { otpHashKey: 'x', totpEncryptionKey: TOTP_KEY, jwt: { current: CURRENT, previous: PREVIOUS } },
+    clock,
+  );
 
   it('geçerli erişim anahtarı: sub ve sid döner; ömür 15 dk', async () => {
     const signed = await tokens.signAccess({ userId: USER, sessionId: SESSION });
@@ -56,7 +60,10 @@ describe('TokenService (F1.5-AC12)', () => {
 
   it('F1.5-AC12: süresi dolmuş JWT → UNAUTHENTICATED', async () => {
     const local = new FixedClock(clock.now());
-    const svc = service({ otpHashKey: 'x', jwt: { current: CURRENT } }, local);
+    const svc = service(
+      { otpHashKey: 'x', totpEncryptionKey: TOTP_KEY, jwt: { current: CURRENT } },
+      local,
+    );
     const { token } = await svc.signAccess({ userId: USER, sessionId: SESSION });
 
     local.advance(15 * 60 * 1000 - 1000);
@@ -80,7 +87,11 @@ describe('TokenService (F1.5-AC12)', () => {
 
   it('F1.5-AC12: bilinmeyen kid → UNAUTHENTICATED', async () => {
     const other = service(
-      { otpHashKey: 'x', jwt: { current: { id: 'k9', secret: CURRENT.secret } } },
+      {
+        otpHashKey: 'x',
+        totpEncryptionKey: TOTP_KEY,
+        jwt: { current: { id: 'k9', secret: CURRENT.secret } },
+      },
       clock,
     );
     const { token } = await other.signAccess({ userId: USER, sessionId: SESSION });
@@ -89,12 +100,18 @@ describe('TokenService (F1.5-AC12)', () => {
   });
 
   it('döndürme: önceki anahtarla imzalanmış JWT kabul edilir; yeni JWT güncel anahtarla imzalanır', async () => {
-    const old = service({ otpHashKey: 'x', jwt: { current: PREVIOUS } }, clock);
+    const old = service(
+      { otpHashKey: 'x', totpEncryptionKey: TOTP_KEY, jwt: { current: PREVIOUS } },
+      clock,
+    );
     const { token } = await old.signAccess({ userId: USER, sessionId: SESSION });
 
     await expect(tokens.verifyAccess(token)).resolves.toMatchObject({ userId: USER });
 
-    const withoutPrevious = service({ otpHashKey: 'x', jwt: { current: CURRENT } }, clock);
+    const withoutPrevious = service(
+      { otpHashKey: 'x', totpEncryptionKey: TOTP_KEY, jwt: { current: CURRENT } },
+      clock,
+    );
     expect(await codeOf(withoutPrevious.verifyAccess(token))).toBe('UNAUTHENTICATED');
   });
 

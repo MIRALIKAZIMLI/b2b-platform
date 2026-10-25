@@ -225,6 +225,43 @@ describe('TOTP ve platform ekibi (entegrasyon)', () => {
     expect((await verify(pending, good)).status).toBe(423);
   });
 
+  it('H1: aynı pendingToken ile 10 eşzamanlı yanlış kod → en çok otp.max_attempts deneme, kalanı 423', async () => {
+    const { phone } = await staffUser();
+    const pending = (await otpLogin(phone)).pendingToken ?? '';
+    const { secret } = await enroll(pending);
+    clock.advance(STEP_MS);
+    const good = totpCode(secret);
+    const wrong = good === '000000' ? '111111' : '000000';
+
+    const responses = await Promise.all(Array.from({ length: 10 }, () => verify(pending, wrong)));
+
+    const statuses = responses.map((response) => response.status);
+    // Kod yalnızca ilk 5 denemede doğrulanır: 4 tanesi 400, 5.si kilidi koyar (423), kalanlar 423.
+    expect(statuses.filter((status) => status === 400).length).toBeLessThanOrEqual(5);
+    expect(statuses.filter((status) => status === 400)).toHaveLength(4);
+    expect(statuses.filter((status) => status === 423)).toHaveLength(6);
+    expect((await verify(pending, good)).status).toBe(423);
+  });
+
+  it('H1: kurulum onayında da eşzamanlı yanlış kodlar kilidi aşamaz', async () => {
+    const { phone } = await staffUser();
+    const pending = (await otpLogin(phone)).pendingToken ?? '';
+    const started = await setup(pending);
+    expect(started.status).toBe(200);
+    const secret =
+      new URL((started.body as { otpauthUri: string }).otpauthUri).searchParams.get('secret') ?? '';
+    const wrong = totpCode(secret) === '000000' ? '111111' : '000000';
+
+    const responses = await Promise.all(
+      Array.from({ length: 10 }, () => setup(pending, { confirmCode: wrong })),
+    );
+
+    const statuses = responses.map((response) => response.status);
+    expect(statuses.filter((status) => status === 400).length).toBeLessThanOrEqual(4);
+    expect(statuses.filter((status) => status === 423).length).toBeGreaterThanOrEqual(6);
+    expect(statuses.every((status) => status === 400 || status === 423)).toBe(true);
+  });
+
   it('platform rolü olmayan kullanıcı doğrudan oturum açar (nextStep none)', async () => {
     const userId = randomUUID();
     const phone = randomTestPhone();

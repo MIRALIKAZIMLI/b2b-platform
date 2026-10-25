@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 // OtpService birim testleri: veritabanı ve Redis yerine sahteler. Gerçek akış otp.int.test.ts'de.
 import { type SettingKey, settingDefault, type SettingValue } from '@b2b/shared';
 import { describe, expect, it } from 'vitest';
@@ -84,7 +85,11 @@ function createService(options: {
     noAudit,
     new FixedClock(new Date('2026-10-25T08:00:00.000Z')),
     { next: () => `0190f1a2-0000-7000-8000-${String(++id).padStart(12, '0')}` },
-    { otpHashKey: KEY, jwt: { current: { id: 'k1', secret: 'x'.repeat(32) } } },
+    {
+      otpHashKey: KEY,
+      totpEncryptionKey: randomBytes(32),
+      jwt: { current: { id: 'k1', secret: 'x'.repeat(32) } },
+    },
   );
 }
 
