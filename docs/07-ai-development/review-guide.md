@@ -163,7 +163,8 @@ Usta PR açmadan önce bu listeyi kendi diff'ine uygular. Müfettiş her turda k
 3. Müfettiş yalnızca şunlara bakar: düzeltme sorunu çözüyor mu, yeni diff bir regresyon getiriyor mu (§2 Aşama 3).
 4. **İtiraz:** Müfettiş yeni bir tam inceleme başlatmaz, yalnızca Usta'nın gösterdiği kanıtı doğrular. Ya bulguyu kapatır (↩) ya da karşı kanıtla korur. İkinci kez anlaşılamazsa karar belgeye göre Mimar'dadır; belgede yoksa kullanıcıya sorulur.
 5. **Tur sınırı:** Aynı bulgu için en fazla iki düzeltme turu yapılır. Üçüncü turda hâlâ açıksa karar KARAR GEREKLİ olur. Müfettiş sorunu ve kanıtı Mimar'a yazar, Mimar kullanıcıdan karar ister. Kritik bir sorun çözülmeden inceleme başarılı sayılmaz.
-6. **Yeni mimari sorun:** Adımın kapsamını aşan bir sorun BLOCKER değilse bu PR'da çözülmez; "Açık riskler" bölümüne yazılır, Mimar ayrı kart açar. BLOCKER ise DÜZELT kararıyla raporlanır ve kapsam sorusu Mimar'a iletilir.
+7. **Doğrudan döngü:** Müfettiş incelediği PR'ın olaylarına abone olur; yeni push ve CI sonucu onu uyandırır, Mimar'ın aktarmasını beklemez. Usta bulguyu PR yorumundan okur, yanıtı PR'a yazar. Mimar yalnızca ilk inceleme isteğini ve son kararı (ONAYLA / KARAR GEREKLİ) alır ([speed-and-tokens.md](speed-and-tokens.md) H4).
+8. **Yeni mimari sorun:** Adımın kapsamını aşan bir sorun BLOCKER değilse bu PR'da çözülmez; "Açık riskler" bölümüne yazılır, Mimar ayrı kart açar. BLOCKER ise DÜZELT kararıyla raporlanır ve kapsam sorusu Mimar'a iletilir.
 
 ## 7. Birleştirme kapısı (Usta)
 

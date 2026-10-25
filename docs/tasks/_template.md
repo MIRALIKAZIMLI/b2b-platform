@@ -51,6 +51,16 @@ Her satır en az bir test. Test adı AC kimliğiyle başlar.
 
 - <Usta plan aşamasında bunlar için soru sormalı; uydurmamalı>
 
+## Yerel kontrol (Usta)
+
+Usta yerelde yalnızca bunu çalıştırır (`speed-and-tokens.md` H1). Tam takım yerelde çalışmaz.
+
+```bash
+pnpm -s lint && pnpm -s typecheck
+pnpm -s --filter @b2b/api exec vitest run src/modules/<modül> --reporter=dot
+# DB'ye dokunuyorsa: pnpm -s --filter @b2b/api exec vitest run --config vitest.integration.config.mts src/modules/<modül> --reporter=dot
+```
+
 ## Doğrulama komutu (CI)
 
 CI'ın çalıştırdığı tam liste. Yerelde `AGENTS.md` "Token ve süre kuralları" madde 5 geçerlidir.
