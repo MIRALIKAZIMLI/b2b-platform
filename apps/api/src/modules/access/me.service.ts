@@ -82,6 +82,7 @@ export class MeService {
       ...view,
       activeBusiness: {
         id: tenant.businessId,
+        // Yetenek onaylı değilse null (openapi: string | null; Müfettiş PR #24 M1).
         capability: tenant.capabilities[0] ?? null,
         timezone: membership.businessTimezone,
         currency: membership.businessCurrency,

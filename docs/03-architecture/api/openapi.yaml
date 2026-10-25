@@ -2089,7 +2089,10 @@ components:
           type: object
           properties:
             id: { type: string, format: uuid }
-            capability: { type: string }
+            capability:
+              type: [string, 'null']
+              enum: [seller, buyer, null]
+              description: "Rolün yeteneği, işletmede onaylıysa. Yetenek onaylı değilse (beklemede / askıda) null; bu durumda işletme bağlamlı uçlar 403 CAPABILITY_REQUIRED döner (F1.8b)."
             timezone: { type: string }
             currency: { $ref: '#/components/schemas/CurrencyCode' }
             permissions:

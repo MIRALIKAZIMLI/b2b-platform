@@ -491,6 +491,33 @@ describe('F1.8b AccessGuard ve TenantContext (entegrasyon)', () => {
           ?.businessStatus,
       ).toBe('suspended');
     });
+
+    it('F1.8b (Müfettiş M1): yetenek onaylı değilse /me activeBusiness.capability null, izinli uç CAPABILITY_REQUIRED', async () => {
+      const { tenant } = await seller();
+      const auth = await bearer(tenant.userId);
+      for (const status of ['pending', 'suspended'] as const) {
+        await grantCapability(tenant.businessId, 'seller', status);
+        const me = await http().get('/api/v1/me').set(auth).set('X-Business-Id', tenant.businessId);
+        expect(me.status, status).toBe(200);
+        const active = (me.body as { activeBusiness: { id: string; capability: unknown } })
+          .activeBusiness;
+        expect(active.id).toBe(tenant.businessId);
+        expect(active.capability, status).toBeNull();
+        const orders = await http()
+          .get('/api/v1/test-f18/orders')
+          .set(auth)
+          .set('X-Business-Id', tenant.businessId);
+        expect((orders.body as ErrorJson).code, status).toBe('CAPABILITY_REQUIRED');
+      }
+      await grantCapability(tenant.businessId, 'seller', 'approved');
+      const approved = await http()
+        .get('/api/v1/me')
+        .set(auth)
+        .set('X-Business-Id', tenant.businessId);
+      expect(
+        (approved.body as { activeBusiness: { capability: unknown } }).activeBusiness.capability,
+      ).toBe('seller');
+    });
   });
 
   describe('Müfettiş PR #23 notları', () => {
