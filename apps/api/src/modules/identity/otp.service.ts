@@ -34,7 +34,12 @@ export interface OtpTextPort {
 export type OtpRepositoryPort = Pick<OtpRepository, 'create' | 'close' | 'withLockedChallenge'>;
 export type OtpRateLimiterPort = Pick<
   OtpRateLimiter,
-  'lockRemainingSeconds' | 'lock' | 'reserveRequest' | 'countDailySms'
+  | 'lockRemainingSeconds'
+  | 'lock'
+  | 'reserveRequest'
+  | 'countDailySms'
+  | 'recordFailure'
+  | 'clearFailures'
 >;
 
 export interface RequestOtpInput {
@@ -185,7 +190,8 @@ export class OtpService {
 
   /**
    * Kodu doğrular (US-001 AC4, AC5). Doğruysa challenge kapatılır (tek kullanım) ve telefon döner.
-   * Yanlış kod deneme sayar; `otp.max_attempts` sayısına ulaşınca numara `otp.lock_minutes`
+   * Yanlış kod hem challenge başına hem numara başına (kayan pencere `otp.fail_window_minutes`,
+   * F1.5b) sayılır; ikisinden biri `otp.max_attempts` sayısına ulaşınca numara `otp.lock_minutes`
    * kilitlenir, challenge kapatılır ve audit'e yazılır. Hatalar: OTP_INVALID, OTP_EXPIRED, OTP_LOCKED.
    */
   async verifyChallenge(input: VerifyChallengeInput): Promise<VerifiedChallenge> {
@@ -194,9 +200,10 @@ export class OtpService {
       code: input.code,
     });
     // Ayarlar işlemden önce okunur: işlem açıkken ikinci bir bağlantı beklenmez.
-    const [maxAttempts, lockMinutes] = await Promise.all([
+    const [maxAttempts, lockMinutes, failWindowMinutes] = await Promise.all([
       this.settings.get('otp.max_attempts'),
       this.settings.get('otp.lock_minutes'),
+      this.settings.get('otp.fail_window_minutes'),
     ]);
     const now = this.clock.now();
     const nowMs = now.getTime();
@@ -219,13 +226,22 @@ export class OtpService {
         }
         if (otpCodeMatches(this.config.otpHashKey, challengeId, code, challenge.codeHash)) {
           await ops.close();
+          await this.limiter.clearFailures(numberKey);
           return {
             kind: 'ok',
             challenge: { phoneE164: challenge.phoneE164, purpose: challenge.purpose },
           };
         }
         const attempts = await ops.fail();
-        if (attempts < maxAttempts) {
+        // Numara başına sayaç (Müfettiş önerisi, F1.5b): her yeni koda birkaç yanlış deneyip
+        // kilide girmeden tahmin yapmayı sınırlar.
+        const numberFailures = await this.limiter.recordFailure(
+          numberKey,
+          nowMs,
+          failWindowMinutes,
+          `${challengeId}:${String(attempts)}`,
+        );
+        if (attempts < maxAttempts && numberFailures < maxAttempts) {
           return { kind: 'invalid' };
         }
         await ops.close();
@@ -235,7 +251,7 @@ export class OtpService {
           action: 'otp.locked',
           targetType: 'otp_challenge',
           targetId: challengeId,
-          after: { attempts, lockMinutes },
+          after: { attempts, numberFailures, lockMinutes },
           ...(input.context === undefined ? {} : { context: input.context }),
         });
         // Redis yazılamazsa hata atar ve işlem geri alınır (güvenli taraf: kilit ve audit

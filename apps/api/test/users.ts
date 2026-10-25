@@ -10,6 +10,31 @@ export function randomTestPhone(): string {
   return `+99450${randomInt(0, 10_000_000).toString().padStart(7, '0')}`;
 }
 
+/** Bilinen telefonla tek kullanıcı ekler (oturum testleri, F1.5b). */
+export async function insertTestUser(input: {
+  readonly id: string;
+  readonly phone: string;
+  readonly status?: 'active' | 'locked' | 'deleted';
+}): Promise<void> {
+  const client = new Client({ connectionString: process.env.DATABASE_MIGRATOR_URL });
+  await client.connect();
+  try {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    await client.query(
+      `insert into users (id, phone_e164, full_name, preferred_language, status)
+       values ($1, $2, 'Test Kullanıcı', null, $3)`,
+      [input.id, input.phone, input.status ?? 'active'],
+    );
+    await client.query('commit');
+  } catch (error) {
+    await client.query('rollback');
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
 /** Verilen kimliklerle kullanıcı ekler; var olanlar atlanır. */
 export async function insertTestUsers(...ids: string[]): Promise<void> {
   const client = new Client({ connectionString: process.env.DATABASE_MIGRATOR_URL });

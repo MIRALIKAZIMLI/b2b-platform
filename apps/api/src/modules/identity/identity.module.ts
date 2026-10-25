@@ -2,15 +2,22 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import { AuditModule } from '../../core/audit';
 import { I18nModule } from '../i18n';
 import { SettingsModule } from '../settings';
+import { AccessTokenGuard } from './access-token.guard';
+import { AuthController } from './auth.controller';
 import { IDENTITY_CONFIG, type IdentityConfig } from './identity.config';
+import { MeController } from './me.controller';
 import { OtpRateLimiter } from './otp-rate-limiter';
 import { OtpController } from './otp.controller';
 import { OtpRepository } from './otp.repository';
 import { OtpService } from './otp.service';
+import { SessionRepository } from './session.repository';
+import { SessionService } from './session.service';
+import { TokenService } from './token.service';
 
 /**
- * Kimlik (F1.5a): kullanıcılar, OTP isteme ve doğrulama. SmsSender global SmsModule'den,
- * Redis istemcisi global RedisModule'den gelir. Oturum ve `verify` ucu F1.5b'de.
+ * Kimlik: kullanıcılar, OTP (F1.5a), oturum, JWT ve yenileme anahtarı (F1.5b). SmsSender global
+ * SmsModule'den, Redis istemcisi global RedisModule'den gelir. AccessTokenGuard ve TokenService
+ * diğer modüllerin korumalı uçları için dışa açıktır.
  */
 @Module({})
 export class IdentityModule {
@@ -18,14 +25,18 @@ export class IdentityModule {
     return {
       module: IdentityModule,
       imports: [SettingsModule, I18nModule, AuditModule],
-      controllers: [OtpController],
+      controllers: [OtpController, AuthController, MeController],
       providers: [
         { provide: IDENTITY_CONFIG, useValue: config },
         OtpRepository,
         OtpRateLimiter,
         OtpService,
+        SessionRepository,
+        TokenService,
+        SessionService,
+        AccessTokenGuard,
       ],
-      exports: [OtpService],
+      exports: [OtpService, TokenService, AccessTokenGuard],
     };
   }
 }

@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-25 (F1.9 birleşti; F1.5a PR #17 açık).
+Son güncelleme: 2026-10-25 (F1.5a birleşti; F1.5b PR açık).
 
 ## 1. Mimari özeti
 
@@ -15,12 +15,13 @@ Son güncelleme: 2026-10-25 (F1.9 birleşti; F1.5a PR #17 açık).
 ## 2. Klasör yapısı (şu anki durum)
 
 ```
-apps/api/drizzle/                 0000_settings … 0006_audit_logs (+ 0007_identity, F1.5a)
+apps/api/drizzle/                 0000_settings … 0007_identity (+ 0008_user_sessions, F1.5b)
 apps/api/db/bootstrap/roles.sql   app_user, migrator, readonly (şifresiz; pnpm db:bootstrap)
 apps/api/src/core/                audit, bootstrap, config, db, errors, health, idempotency,
                                   logging, outbox, clock.ts, id-generator.ts, money.ts
-apps/api/src/infrastructure/      queue, redis
-apps/api/src/modules/             billing, businesses, i18n, settings (+ identity, F1.5a)
+apps/api/src/core/ports/          sms-sender (dış servis portları)
+apps/api/src/infrastructure/      queue, redis, sms (mock → dev_sms_outbox)
+apps/api/src/modules/             billing, businesses, dev (yalnız local/test/staging), i18n, identity, settings
 packages/shared/src/              env, errors, entitlements, settings, uuidv7, voen, format…
 apps/web, apps/mobile             boş kabuk (F0.3b)
 ```
@@ -35,6 +36,7 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 
 - `withTenantTx({ businessId, userId })` — kiracı işlemi; `app.business_id`, `app.user_id` ayarlanır.
 - `withPlatformTx({ userId })` — yalnızca `platform-admin`; `app.is_platform = 'true'`, `business_id` boş.
+- `withUserTx({ userId })` — yalnızca `app.user_id` (U tabloları, ör. kendi oturumları; F1.5b).
 - `withSystemTx(fn)` — bağlamsız sistem okuması (ayar, worker); T/P/U tablolarında 0 satır görür, S tablolarına yalnızca `SECURITY DEFINER` fonksiyonla erişir.
 - Doğrudan `db` nesnesi modüllerden içe aktarılmaz. Bağlam `set_config(..., true)` ile parametreli verilir.
 
@@ -78,7 +80,8 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.4a, F1.4b | `SettingsService` (+ `withSystemTx`); planlar, abonelikler, `EntitlementService` |
 | F1.7 | işletme çekirdek tabloları, VÖEN |
 | F1.9 | audit log yazıcısı (migration 0006), ayar değişikliği audit'i |
-| **F1.5a** | **sürüyor** (PR #17): kullanıcılar, OTP, mock SMS, `0007_identity.sql` |
+| F1.5a | kullanıcılar, OTP (`POST /auth/otp/request`, `verifyChallenge`), mock SMS ve `/dev/sms-outbox`, `0007_identity.sql`, backend kapsam eşiği (`test:coverage:backend`) |
+| **F1.5b** | **sürüyor**: oturum, JWT (HS256), yenileme anahtarı, `/auth/*`, `/me`, `0008_user_sessions.sql` |
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
@@ -93,6 +96,8 @@ Kaynak: ilgili kartın "Kararlar" bölümü ve faz spesifikasyonu §4.
 - **Outbox:** `INSERT … RETURNING` yok; yük yalnızca kimlik/kod/sayı (F1.2b K6–K7).
 - **Ayarlar:** okuma `withTenantTx` veya `withSystemTx`; yazma yalnızca `withPlatformTx`. Redis yoksa DB'den okunur, uyarı loglanır (F1.4a K1–K2).
 - **Abonelik:** yazma yalnızca platform; aboneliksiz işletmede sayısal hak reddedilir (`ENTITLEMENT_LIMIT_REACHED`), `feature.*` kapalı; sınırsız = `null`; seed `pilot` ve `buyer_free` (F1.4b). Atama F2.1/F2.3'te (R14).
-- **FK'sız sütunlar** (`settings.updated_by` vb.) `users` FK'sını F1.5a'da alır; `logo_file_id` F1.10, `default_price_list_id` F3 (faz spes. §6.10).
+- **FK'sız sütunlar** (`settings.updated_by` vb.) `users` FK'sını F1.5a'da aldı (migration'da elle, şemada değil; bekçi testi `identity.fk.int.test.ts`); `logo_file_id` F1.10, `default_price_list_id` F3 (faz spes. §6.10).
+- **Kimlik (F1.5a/b):** OTP kodu `HMAC-SHA256(OTP_HASH_KEY, 'otp:'+challengeId+':'+kod)`; hız sınırı, kilit ve numara başına yanlış sayacı (`otp.fail_window_minutes`) Redis'te, Redis yoksa `503 SMS_UNAVAILABLE`. Erişim anahtarı JWT HS256 (`typ=access`, `sub`, `sid`; izin/üyelik yok), ömür `auth.access_token_minutes`; guard veritabanına bakmaz (kapatılan oturum en geç 15 dk). Yenileme anahtarı opak, SHA-256 özeti saklanır, her yenilemede aynı ailede yeni satır; kapalı anahtar tekrar gelirse aile iptal + `401 REFRESH_TOKEN_REUSED` + audit. Kayıtsız numara → `nextStep: register` + `pendingToken` (`typ=pending`, `purpose=register`; erişim anahtarı değildir, F2.3 kullanır). Korumalı uç: `@UseGuards(AccessTokenGuard)` + `@CurrentSession()` (global guard ve `@Public()` F1.8). `users.phone_e164/status/last_login_at` yalnızca platform veya SECURITY DEFINER fonksiyonu değiştirir.
+- **openapi değişikliği (F1.5b):** `AuthResult` artık `TokenPair`'ı zorunlu içermez; `nextStep = register` iken `accessToken` yok, `pendingToken` var.
 - **MinIO yok** (S9): F1.10'dan önce ADR ile karar verilecek.
 - **Vitest + NestJS (S8):** kodda bağımlılıklar `@Inject()` ile açık yazılıyor (yeni paket yok); `unplugin-swc` eklenmedi.

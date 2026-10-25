@@ -127,7 +127,8 @@ flowchart TB
 | `TEST_DATABASE_ADMIN_URL` | Yalnızca CI testleri; süper kullanıcı, test veritabanını hazırlar |
 | `REDIS_URL` | `redis://` veya `rediss://`; api ve worker için zorunlu (F1.2a) |
 | `MEILI_URL`, `MEILI_MASTER_KEY` | — |
-| `JWT_SIGNING_KEY`, `JWT_KEY_ID` | Ortam başına ayrı; döndürme için iki anahtar desteklenir |
+| `JWT_SIGNING_KEY`, `JWT_KEY_ID` | Ortam başına ayrı; HS256 imza anahtarı en az 32 karakter, `JWT_KEY_ID` 1–64 karakter (`A-Z a-z 0-9 . _ -`). Yoksa veya kısaysa api açılmaz (F1.5b) |
+| `JWT_PREVIOUS_SIGNING_KEY`, `JWT_PREVIOUS_KEY_ID` | İsteğe bağlı, ikisi birlikte. Döndürmede eski anahtar: yalnızca doğrulamada kullanılır, yeni anahtar imzalar (F1.5b) |
 | `TOTP_ENCRYPTION_KEY` | 32 bayt |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_PUBLIC`, `R2_BUCKET_PRIVATE`, `FILES_PUBLIC_BASE_URL` | — |
 | `SMS_PROVIDER` | `mock` (production'da yasak; `APP_ENV=production` + `mock` → api açılmaz) / gerçek sağlayıcı adı (F6.5'e kadar yalnızca `mock` kabul edilir) |

@@ -112,7 +112,14 @@ describe('env: sunucu şeması (api ve worker)', () => {
 
 describe('env: api (SMS ve OTP, F1.5a)', () => {
   const OTP_HASH_KEY = 'k'.repeat(32);
-  const API_ENV = { ...SERVER_ENV, SMS_PROVIDER: 'mock', OTP_HASH_KEY };
+  const JWT_SIGNING_KEY = 'j'.repeat(32);
+  const API_ENV = {
+    ...SERVER_ENV,
+    SMS_PROVIDER: 'mock',
+    OTP_HASH_KEY,
+    JWT_SIGNING_KEY,
+    JWT_KEY_ID: 'k1',
+  };
 
   it('geçerli değerler okunur', () => {
     expect(parseApiEnv(API_ENV)).toMatchObject({ SMS_PROVIDER: 'mock', OTP_HASH_KEY });
@@ -140,5 +147,47 @@ describe('env: api (SMS ve OTP, F1.5a)', () => {
 
   it('worker şeması SMS ve OTP değişkenlerini istemez', () => {
     expect(() => parseServerEnv(SERVER_ENV)).not.toThrow();
+  });
+});
+
+describe('env: api JWT anahtarları (F1.5b, Mimar kararı K1)', () => {
+  const API_ENV = {
+    ...SERVER_ENV,
+    SMS_PROVIDER: 'mock',
+    OTP_HASH_KEY: 'k'.repeat(32),
+    JWT_SIGNING_KEY: 'jwt-secret-value-'.padEnd(32, 'x'),
+    JWT_KEY_ID: 'k1',
+  };
+
+  it('JWT_SIGNING_KEY yoksa veya 32 karakterden kısaysa reddedilir; değer mesajda yok', () => {
+    expect(() => parseApiEnv({ ...API_ENV, JWT_SIGNING_KEY: undefined })).toThrow(
+      /JWT_SIGNING_KEY/,
+    );
+    const message = errorMessage(() =>
+      parseApiEnv({ ...API_ENV, JWT_SIGNING_KEY: 'kisa-jwt-gizli' }),
+    );
+    expect(message).toMatch(/JWT_SIGNING_KEY/);
+    expect(message).not.toContain('kisa-jwt-gizli');
+  });
+
+  it('JWT_KEY_ID yoksa veya biçimi yanlışsa reddedilir', () => {
+    expect(() => parseApiEnv({ ...API_ENV, JWT_KEY_ID: undefined })).toThrow(/JWT_KEY_ID/);
+    expect(() => parseApiEnv({ ...API_ENV, JWT_KEY_ID: 'a b' })).toThrow(/JWT_KEY_ID/);
+  });
+
+  it('önceki anahtar ve kimliği birlikte verilir; kimlik güncel kimlikle aynı olamaz', () => {
+    const previous = 'p'.repeat(32);
+    expect(
+      parseApiEnv({ ...API_ENV, JWT_PREVIOUS_SIGNING_KEY: previous, JWT_PREVIOUS_KEY_ID: 'k0' }),
+    ).toMatchObject({ JWT_PREVIOUS_KEY_ID: 'k0' });
+    expect(() => parseApiEnv({ ...API_ENV, JWT_PREVIOUS_SIGNING_KEY: previous })).toThrow(
+      /JWT_PREVIOUS_KEY_ID/,
+    );
+    expect(() => parseApiEnv({ ...API_ENV, JWT_PREVIOUS_KEY_ID: 'k0' })).toThrow(
+      /JWT_PREVIOUS_SIGNING_KEY/,
+    );
+    expect(() =>
+      parseApiEnv({ ...API_ENV, JWT_PREVIOUS_SIGNING_KEY: previous, JWT_PREVIOUS_KEY_ID: 'k1' }),
+    ).toThrow(/JWT_PREVIOUS_KEY_ID/);
   });
 });

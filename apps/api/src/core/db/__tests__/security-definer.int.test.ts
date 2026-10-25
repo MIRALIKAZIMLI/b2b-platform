@@ -18,6 +18,8 @@ const EXPECTED_FUNCTIONS = [
   'idempotency_complete',
   'idempotency_release',
   'idempotency_reserve',
+  'identity_record_login',
+  'identity_user_by_phone',
   'otp_challenge_close',
   'otp_challenge_create',
   'otp_challenge_fail',
@@ -27,6 +29,7 @@ const EXPECTED_FUNCTIONS = [
   'outbox_mark_processed',
   'settings_get',
   'settings_put',
+  'user_session_rotate',
 ];
 
 describe('SECURITY DEFINER fonksiyonları ve S tabloları', () => {

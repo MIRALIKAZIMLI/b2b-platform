@@ -66,6 +66,16 @@ end
 return 0
 `;
 
+// Yanlış denemeyi numaranın kayan penceresine ekler ve penceredeki sayıyı döner (atomik).
+const FAILURE_SCRIPT = `
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now - window)
+redis.call('ZADD', KEYS[1], now, ARGV[3])
+redis.call('PEXPIRE', KEYS[1], window)
+return redis.call('ZCARD', KEYS[1])
+`;
+
 function toRetryAfterSeconds(ms: number): number {
   return Math.max(1, Math.ceil(ms / 1000));
 }
@@ -122,6 +132,34 @@ export class OtpRateLimiter {
     return wait > 0
       ? { allowed: false, retryAfterSeconds: toRetryAfterSeconds(wait) }
       : { allowed: true };
+  }
+
+  /**
+   * Numara başına yanlış deneme (F1.5b): `windowMinutes` içindeki yanlış sayısını döner.
+   * `member` denemenin benzersiz kimliğidir.
+   */
+  async recordFailure(
+    phoneKey: string,
+    nowMs: number,
+    windowMinutes: number,
+    member: string,
+  ): Promise<number> {
+    const count = await this.call(() =>
+      this.redis.eval(
+        FAILURE_SCRIPT,
+        1,
+        `otp:fail:${phoneKey}`,
+        nowMs,
+        windowMinutes * 60 * 1000,
+        member,
+      ),
+    );
+    return Number(count);
+  }
+
+  /** Doğru kod girilince numaranın yanlış sayacı sıfırlanır. */
+  async clearFailures(phoneKey: string): Promise<void> {
+    await this.call(() => this.redis.del(`otp:fail:${phoneKey}`));
   }
 
   /** Günün (UTC) SMS sayacını artırır; sınır aşıldıysa false (F1.5-AC8). */

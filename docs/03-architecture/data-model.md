@@ -217,6 +217,10 @@ Sütun listesinde `id`, `created_at`, `updated_at` her tabloda vardır ve tekrar
 | revoked_at | timestamptz | null | |
 | impersonation_session_id | uuid | null | |
 
+**F1.5b:** Yenileme anahtarı 32 rastgele bayt (base64url); `refresh_token_hash` = SHA-256 (hex). Her yenilemede aynı `family_id` ile yeni satır açılır, eski satır `revoked_at` ile kapanır; iptal edilmiş satırın anahtarı tekrar gelirse aynı ailedeki tüm satırlar iptal edilir (`401 REFRESH_TOKEN_REUSED`, audit `session.refresh_reused`). Oturum listesinde aile başına geçerli satır görünür; oturumu kapatmak ailesini iptal eder. `device_type` istekte yoksa `web`; `ip_city` kaynağı belgede yok, şimdilik null.
+
+**RLS (F1.5b):** `SELECT`, `INSERT`, `UPDATE` yalnızca kendi satırları (`user_id = app.user_id`); platform bağlamı tüm işlemler; silme yok. Kullanıcı bağlamı dışından erişim (doğrulama, yenileme) yalnızca `SECURITY DEFINER` fonksiyonlarla: `identity_user_by_phone`, `user_session_rotate`, `identity_record_login` (`users.last_login_at`). Bu fonksiyonlar kullanıcı bağlamı olmadan çalıştığı için `users` (SELECT, UPDATE) ve `user_sessions` (ALL) tablolarında yalnızca `migrator` rolüne açık politikalar vardır (`TO migrator`; `app_user` bu rolü üstlenemez). Koruma tetikleyicileri: `users_guard_platform_columns` fonksiyon sahibi `migrator` olarak çalışan yazmaya izin verir, `app_user` bu alanları yine yazamaz; `user_sessions_guard_columns` ile `app_user` platform dışında oturumu yalnızca kapatabilir (anahtar özeti, aile, süre, cihaz değişmez; kapatılmış oturum açılmaz).
+
 #### `user_totp`
 
 | Alan | Tip | Kısıt | Not |

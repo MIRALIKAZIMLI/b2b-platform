@@ -9,4 +9,6 @@ export const TEST_SERVER_ENV: ApiEnv = parseApiEnv({
   LOG_LEVEL: 'silent',
   SMS_PROVIDER: 'mock',
   OTP_HASH_KEY: 'test-only-otp-hash-key-0123456789abcdef',
+  JWT_SIGNING_KEY: 'test-only-jwt-signing-key-0123456789abcdef',
+  JWT_KEY_ID: 'test-k1',
 });

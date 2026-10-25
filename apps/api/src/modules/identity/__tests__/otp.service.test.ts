@@ -61,6 +61,8 @@ function fakeLimiter(overrides: Partial<OtpRateLimiterPort> = {}): OtpRateLimite
     lock: () => Promise.resolve(),
     reserveRequest: () => Promise.resolve(allowed),
     countDailySms: () => Promise.resolve(true),
+    recordFailure: () => Promise.resolve(1),
+    clearFailures: () => Promise.resolve(),
     ...overrides,
   };
 }
@@ -82,7 +84,7 @@ function createService(options: {
     noAudit,
     new FixedClock(new Date('2026-10-25T08:00:00.000Z')),
     { next: () => `0190f1a2-0000-7000-8000-${String(++id).padStart(12, '0')}` },
-    { otpHashKey: KEY },
+    { otpHashKey: KEY, jwt: { current: { id: 'k1', secret: 'x'.repeat(32) } } },
   );
 }
 

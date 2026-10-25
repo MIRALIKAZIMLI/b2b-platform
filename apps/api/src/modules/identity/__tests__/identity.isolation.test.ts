@@ -1,12 +1,13 @@
 // F1.5-AC10: `users` U sınıfı (kullanıcı yalnızca kendi satırını görür ve günceller), S tabloları
-// (`otp_challenges`, `dev_sms_outbox`) app_user'a kapalı. Gerçek PostgreSQL, app_user.
+// (`otp_challenges`, `dev_sms_outbox`) app_user'a kapalı. F1.5-AC14: `user_sessions` U sınıfı. Gerçek PostgreSQL, app_user.
 // check-rls denetimi: core/db/__tests__/check-rls.int.test.ts (F1.5-AC10).
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { connectAsAppUser } from '../../../../test/db-clients';
 import { pgErrorCode, PG_INSUFFICIENT_PRIVILEGE } from '../../../../test/isolation';
 import { insertTestUsers, randomTestPhone } from '../../../../test/users';
-import { withPlatformTx, withSystemTx, withTenantTx } from '../../../core/db';
+import { withPlatformTx, withSystemTx, withTenantTx, withUserTx } from '../../../core/db';
 
 async function errorOf(promise: Promise<unknown>): Promise<unknown> {
   return await promise.then(
@@ -136,5 +137,122 @@ describe('kimlik tabloları izolasyonu (identity)', () => {
       const error = await errorOf(withPlatformTx({ userId: userA }, (tx) => tx.execute(statement)));
       expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
     }
+  });
+
+  describe('user_sessions (F1.5-AC14)', () => {
+    const sessionA = randomUUID();
+    const sessionB = randomUUID();
+
+    function insertSession(userId: string, id: string) {
+      return withUserTx({ userId }, (tx) =>
+        tx.execute(sql`insert into user_sessions
+                         (id, user_id, refresh_token_hash, family_id, device_type, last_used_at, expires_at)
+                       values (${id}, ${userId}, ${randomUUID()}, ${randomUUID()}, 'web', now(),
+                               now() + interval '30 days')`),
+      );
+    }
+
+    beforeAll(async () => {
+      await insertSession(userA, sessionA);
+      await insertSession(userB, sessionB);
+    });
+
+    it('F1.5-AC14: kullanıcı yalnızca kendi oturumlarını görür', async () => {
+      const rows = await withUserTx({ userId: userA }, (tx) =>
+        tx.execute<{ id: string }>(
+          sql`select id from user_sessions where id in (${sessionA}, ${sessionB})`,
+        ),
+      );
+      expect(rows.rows).toEqual([{ id: sessionA }]);
+    });
+
+    it("F1.5-AC14: A, B'nin oturumunu kapatamaz (0 satır)", async () => {
+      const result = await withUserTx({ userId: userA }, (tx) =>
+        tx.execute(sql`update user_sessions set revoked_at = now() where id = ${sessionB}`),
+      );
+      expect(result.rowCount).toBe(0);
+    });
+
+    it('F1.5-AC14: başka kullanıcı adına oturum eklenemez → 42501', async () => {
+      const error = await errorOf(
+        insertSession(userB, randomUUID()).then(() =>
+          withUserTx({ userId: userA }, (tx) =>
+            tx.execute(sql`insert into user_sessions
+                           (id, user_id, refresh_token_hash, family_id, device_type, last_used_at, expires_at)
+                         values (${randomUUID()}, ${userB}, ${randomUUID()}, ${randomUUID()}, 'web',
+                                 now(), now())`),
+          ),
+        ),
+      );
+      expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+    });
+
+    it('F1.5-AC14: kullanıcı oturumunun anahtar özetini, süresini değiştiremez; kapatılmış oturumu açamaz → 42501', async () => {
+      const own = randomUUID();
+      await insertSession(userA, own);
+      for (const statement of [
+        sql`update user_sessions set refresh_token_hash = ${randomUUID()} where id = ${own}`,
+        sql`update user_sessions set expires_at = now() + interval '365 days' where id = ${own}`,
+      ]) {
+        const error = await errorOf(withUserTx({ userId: userA }, (tx) => tx.execute(statement)));
+        expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+      }
+      await withUserTx({ userId: userA }, (tx) =>
+        tx.execute(
+          sql`update user_sessions set revoked_at = now(), updated_at = now() where id = ${own}`,
+        ),
+      );
+      const reopen = await errorOf(
+        withUserTx({ userId: userA }, (tx) =>
+          tx.execute(sql`update user_sessions set revoked_at = null where id = ${own}`),
+        ),
+      );
+      expect(pgErrorCode(reopen)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+    });
+
+    it('F1.5-AC14: kiracı ve bağlamsız işlem başkasının oturumunu görmez; platform görür', async () => {
+      const system = await withSystemTx((tx) =>
+        tx.execute(sql`select id from user_sessions where id in (${sessionA}, ${sessionB})`),
+      );
+      expect(system.rows).toEqual([]);
+      const tenant = await withTenantTx(asA, (tx) =>
+        tx.execute<{ id: string }>(
+          sql`select id from user_sessions where id in (${sessionA}, ${sessionB})`,
+        ),
+      );
+      expect(tenant.rows).toEqual([{ id: sessionA }]);
+      const platform = await withPlatformTx({ userId: userA }, (tx) =>
+        tx.execute(sql`select id from user_sessions where id in (${sessionA}, ${sessionB})`),
+      );
+      expect(platform.rows).toHaveLength(2);
+    });
+
+    it('F1.5-AC14: app_user migrator rolünü üstlenemez (definer politikaları sızmaz)', async () => {
+      const client = await connectAsAppUser();
+      try {
+        const member = await client.query<{ member: boolean }>(
+          "select pg_has_role('app_user', 'migrator', 'MEMBER') as member",
+        );
+        expect(member.rows[0]?.member).toBe(false);
+        const error = await errorOf(client.query('set role migrator'));
+        expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+        // TO migrator politikaları app_user için geçerli değil: bağlamsız okuma 0 satır.
+        const rows = await client.query('select id from user_sessions where id = any($1::uuid[])', [
+          [sessionA, sessionB],
+        ]);
+        expect(rows.rows).toEqual([]);
+      } finally {
+        await client.end();
+      }
+    });
+
+    it('F1.5-AC14: user_sessions silinemez → 42501', async () => {
+      const error = await errorOf(
+        withUserTx({ userId: userA }, (tx) =>
+          tx.execute(sql`delete from user_sessions where id = ${sessionA}`),
+        ),
+      );
+      expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+    });
   });
 });
