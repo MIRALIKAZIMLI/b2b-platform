@@ -12,7 +12,8 @@ export const settings = pgTable(
     scopeId: uuid('scope_id'),
     key: text('key').notNull(),
     value: jsonb('value').notNull(),
-    // FK users F1.5a'da eklenir (F1 faz spesifikasyonu §6.10).
+    // users FK'sı drizzle şemasında değil, migration'da elle (drizzle/0007_identity.sql): şemadan
+    // identity modülünü içe aktarmak modüller arası döngü yaratır (identity → settings).
     updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -38,7 +38,7 @@ interface SmsSender {
 | --- | --- |
 | Sağlayıcı seçimi | `SMS_PROVIDER=mock` (dev, staging, test) veya gerçek sağlayıcı adı (production) |
 | Mock davranışı | SMS göndermez; `dev_sms_outbox` tablosuna yazar; `GET /api/v1/dev/sms-outbox` ile görüntülenir (NFR-96) |
-| Production koruması | `NODE_ENV=production` ve `SMS_PROVIDER=mock` ise uygulama açılışta hata verir ve başlamaz (NFR-97) |
+| Production koruması | `APP_ENV=production` ve `SMS_PROVIDER=mock` ise uygulama açılışta hata verir ve başlamaz (NFR-97) |
 | Mesaj içeriği | Kullanıcının dilinde, şablondan: `<kod> — B2B giriş kodunuz. 5 dakika geçerlidir. Kimseyle paylaşmayın.` |
 | Gönderim yeri | Worker'da değil, **API isteği içinde** (kullanıcı kodu hemen bekler); zaman aşımı 5 sn |
 | Yeniden deneme | Geçici hatada 2 kez (1 sn, 3 sn); sonra `503 SMS_UNAVAILABLE` |

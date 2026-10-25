@@ -13,6 +13,7 @@ import { SystemClock } from '../../../core/clock';
 import { SettingsCache } from '../settings.cache';
 import { SettingsRepository } from '../settings.repository';
 import { SettingsService } from '../settings.service';
+import { insertTestUsers } from '../../../../test/users';
 
 describe('ayar kiracı izolasyonu (settings)', () => {
   let redis: TestRedis;
@@ -21,6 +22,7 @@ describe('ayar kiracı izolasyonu (settings)', () => {
 
   beforeAll(async () => {
     await createTestTenantTable(inject('migratorUrl'));
+    await insertTestUsers(actor.userId);
     redis = createTestRedis();
     service = new SettingsService(
       new SettingsRepository(),

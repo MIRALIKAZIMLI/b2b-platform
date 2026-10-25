@@ -19,6 +19,7 @@ flowchart LR
     files
     audit
 
+    identity --> settings
     businesses --> settings
     businesses --> identity
     access --> identity

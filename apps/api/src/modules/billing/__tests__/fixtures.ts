@@ -12,6 +12,7 @@ import { BillingRepository } from '../billing.repository';
 import { EntitlementUsageRegistry } from '../entitlement-usage.registry';
 import { EntitlementService } from '../entitlement.service';
 import { PlanService } from '../plan.service';
+import { insertTestUsers } from '../../../../test/users';
 
 export const PLATFORM = { userId: randomUUID() };
 
@@ -21,6 +22,8 @@ export interface Refs {
 
 /** Üst kayıtlar (para birimi XBA, ülke XB, bölge); F1.7 fixture'larıyla aynı kodlar. */
 export async function createRefs(): Promise<Refs> {
+  // F1.5a: işlemi yapan platform kullanıcısı users'da olmalı (approved_by / created_by FK).
+  await insertTestUsers(PLATFORM.userId);
   return await withPlatformTx(PLATFORM, async (tx) => {
     await tx.execute(sql`insert into currencies (code, symbol, decimals, is_active)
                          values ('XBA', 'X', 2, true) on conflict do nothing`);

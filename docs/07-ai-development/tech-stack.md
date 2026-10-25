@@ -111,7 +111,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | Amaç | Araç |
 | --- | --- |
 | Birim ve entegrasyon testi | `vitest`, `supertest`, `@types/supertest`, `@nestjs/testing` (Nest test modülü) |
-| Kapsam ölçümü | `@vitest/coverage-v8` (`vitest` ile aynı sürüm); `pnpm test:coverage`, CI'da rapor yazdırılır, eşik F1.5a'da. Platform sahibi onayı F1.2a, 2026-10-24 |
+| Kapsam ölçümü | `@vitest/coverage-v8` (`vitest` ile aynı sürüm); `pnpm test:coverage` rapor yazdırır; backend eşiği (≥ %70, domain ≥ %85) `pnpm test:coverage:backend` ile birim + entegrasyon birlikte ölçülür, CI integration işinde (F1.5a). Platform sahibi onayı F1.2a, 2026-10-24 |
 | Test veritabanı | CI servis container'ları; yerelde `@testcontainers/postgresql` |
 | Web uçtan uca | `@playwright/test` |
 | Mobil uçtan uca | Maestro |
@@ -205,6 +205,12 @@ Eklenmeyenler: `@testcontainers/redis` (Redis entegrasyon testi docker compose /
 | --- | --- | --- |
 | `date-fns` | 4.4.0 | shared (`format.ts`, tarih biçimi ve yerel ayarlar az/ru/tr) |
 | `@date-fns/tz` | 1.5.0 | shared (`TZDate`, saat dilimi); paketin kendi ana sürümü 1.x, `date-fns` 4.x ile uyumlu; Mimar onayı F1.3 |
+
+## 7.7 Kurulu sürümler (F1.5a, 2026-10-25)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `libphonenumber-js` | 1.13.15 | api (`modules/identity/phone.ts`, E.164 telefon doğrulama); Mimar onayı F1.5a |
 
 ## 8. Kullanılmayacak teknolojiler
 

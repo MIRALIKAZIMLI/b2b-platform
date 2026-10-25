@@ -1,7 +1,7 @@
 // Plan, hak, abonelik ve istisna tabloları (data-model §4.6, F1.4b). RLS politikaları, GRANT'lar
 // ve `settings_get` güncellemesi migration'da elle yazılır (drizzle/0005_billing.sql, ADR-0005).
 // `plans.id` ve `subscriptions.id` uygulamada UUIDv7 ile üretilir (IdGenerator, Mimar D4).
-// `entitlement_overrides.created_by` → users FK'sı F1.5a'da eklenir (F1 faz spesifikasyonu §6.10).
+// `entitlement_overrides.created_by` → users FK'sı F1.5a'da eklendi (drizzle/0007_identity.sql).
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -114,6 +114,7 @@ export const entitlementOverrides = pgTable(
     key: text('key').notNull(),
     value: jsonb('value').notNull(),
     reason: text('reason'),
+    // FK users: migration'da elle (drizzle/0007_identity.sql, F1.5a).
     createdBy: uuid('created_by'),
     ...timestamps,
   },

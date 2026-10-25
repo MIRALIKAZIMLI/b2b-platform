@@ -4,8 +4,9 @@
 // `regions` gibi veritabanında üretilir (G tablosu, satırları admin/SQL girer).
 //
 // Henüz var olmayan tablolara giden FK'lar eklenmez (F1 faz spesifikasyonu §6.10):
-// `logo_file_id` → files (F1.10), `verified_by` / `approved_by` → users (F1.5a),
-// `default_price_list_id` → price_lists (F3).
+// `logo_file_id` → files (F1.10), `default_price_list_id` → price_lists (F3).
+// `verified_by` / `approved_by` → users FK'sı F1.5a migration'ında elle eklendi (drizzle/0007_identity.sql;
+// şemadan identity modülünü içe aktarmak modüller arası döngü yaratır).
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -69,6 +70,7 @@ export const businesses = pgTable(
     timezone: text('timezone').notNull(),
     status: text('status').notNull().default('active'),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    // FK users: migration'da elle (drizzle/0007_identity.sql, F1.5a).
     verifiedBy: uuid('verified_by'),
     createdVia: text('created_via').notNull(),
     dataConsentVersion: text('data_consent_version'),
@@ -108,6 +110,7 @@ export const businessCapabilities = pgTable(
       .references(() => businesses.id),
     capability: text('capability').notNull(),
     status: text('status').notNull(),
+    // FK users: migration'da elle (drizzle/0007_identity.sql, F1.5a).
     approvedBy: uuid('approved_by'),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
     ...timestamps,

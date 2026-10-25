@@ -182,6 +182,8 @@ Sütun listesinde `id`, `created_at`, `updated_at` her tabloda vardır ve tekrar
 | status | text | `active` / `locked` / `deleted` | |
 | last_login_at | timestamptz | null | |
 
+**RLS (F1.5a):** `SELECT` ve `UPDATE` yalnızca kendi satırı (`id = app.user_id`); platform bağlamı (`app.is_platform = 'true'`) tüm işlemler. Üyelik üzerinden görme politikası `memberships` tablosuyla (F1.8) eklenir. Önceki adımlarda FK'sız bırakılan `settings.updated_by`, `businesses.verified_by`, `business_capabilities.approved_by`, `entitlement_overrides.created_by` sütunlarına `users(id)` FK'sı F1.5a migration'ında eklenir (`audit_logs.actor_user_id` FK'sız kalır: yalnızca ekleme yapılan kayıt).
+
 #### `otp_challenges` (S)
 
 | Alan | Tip | Kısıt | Not |
@@ -195,6 +197,10 @@ Sütun listesinde `id`, `created_at`, `updated_at` her tabloda vardır ve tekrar
 | request_ip | inet | null | |
 
 İndeks: `(phone_e164, created_at DESC)`. 7 günden eski kayıtlar gece silinir.
+
+`code_hash` = `HMAC-SHA256(OTP_HASH_KEY, challengeId + ':' + kod)` (hex); karşılaştırma sabit zamanlı (F1.5a). Uygulama tabloya yalnızca `SECURITY DEFINER` fonksiyonlarla erişir (`otp_challenge_create`, `otp_challenge_attempt`, `otp_challenge_close`).
+
+**Numara kilidi ve hız sınırları tabloda değil, Redis'tedir (F1.5a):** kilit süreli bir anahtardır (`otp.lock_minutes`); numara ve IP sayaçları kayan penceredir. Anahtarlarda telefon düz yazılmaz, `OTP_HASH_KEY` ile HMAC'li hâli kullanılır. Redis'e ulaşılamazsa kod gönderilmez ve doğrulama yapılmaz (`503 SMS_UNAVAILABLE`).
 
 #### `user_sessions` (U)
 

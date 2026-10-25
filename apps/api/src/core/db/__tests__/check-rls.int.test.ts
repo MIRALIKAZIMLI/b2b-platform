@@ -322,6 +322,25 @@ describe('check-rls', () => {
     expect(audit === undefined ? undefined : evaluateRlsTable(audit)).toEqual([]);
   });
 
+  it('F1.5-AC10: users rls:U, otp_challenges ve dev_sms_outbox rls:S → check-rls temiz', async () => {
+    const tables = await readRlsTables(client, { schemas: ['public'] });
+    const identity = tables.filter((t) =>
+      ['public.users', 'public.otp_challenges', 'public.dev_sms_outbox'].includes(t.table),
+    );
+
+    expect(Object.fromEntries(identity.map((t) => [t.table, t.comment]))).toEqual({
+      'public.users': 'rls:U',
+      'public.otp_challenges': 'rls:S',
+      'public.dev_sms_outbox': 'rls:S',
+    });
+    for (const info of identity) {
+      expect({ table: info.table, problems: evaluateRlsTable(info) }).toEqual({
+        table: info.table,
+        problems: [],
+      });
+    }
+  });
+
   it('check-rls test sırasına bağlı değil: test_tenant_items kurulu olsa da public temiz', async () => {
     // İzolasyon testleri bu tabloyu public şemasında bırakır; daha önce yorumsuz olduğu için
     // bu dosya onlardan sonra çalışınca düşüyordu. Tablo burada bilerek kurulur.

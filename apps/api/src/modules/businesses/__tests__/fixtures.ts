@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { type TenantTxContext, withPlatformTx, withTenantTx } from '../../../core/db';
+import { insertTestUsers } from '../../../../test/users';
 
 export const PLATFORM = { userId: randomUUID() };
 
@@ -13,6 +14,8 @@ export interface Refs {
 }
 
 export async function createRefs(): Promise<Refs> {
+  // F1.5a: işlemi yapan platform kullanıcısı users'da olmalı (approved_by / created_by FK).
+  await insertTestUsers(PLATFORM.userId);
   return await withPlatformTx(PLATFORM, async (tx) => {
     await tx.execute(sql`insert into currencies (code, symbol, decimals, is_active)
                          values ('XBA', 'X', 2, true) on conflict do nothing`);

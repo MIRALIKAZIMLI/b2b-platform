@@ -255,6 +255,12 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `onboarding.seller_mode` | `manual` | seçenek: `manual` | — | — |
 | `sms.daily_cap` | 500 | tamsayı | 0 | 100000 |
 | `sms.allowed_country_codes` | `["+994"]` | ülke kodu listesi (`+` ve 1–4 rakam, 1–20 eleman) | — | — |
+| `otp.code_ttl_minutes` | 5 (NFR-45) | tamsayı | 1 | 30 |
+| `otp.resend_interval_seconds` | 60 (aynı numaraya iki kod arası, NFR-45) | tamsayı | 10 | 600 |
+| `otp.max_per_hour` | 5 (numara başına saatte kod, NFR-45) | tamsayı | 1 | 50 |
+| `otp.max_attempts` | 5 (kod başına yanlış deneme; aşılınca kilit, NFR-45) | tamsayı | 1 | 20 |
+| `otp.lock_minutes` | 15 (US-001 AC4) | tamsayı | 1 | 1440 |
+| `otp.ip_max_per_hour` | 20 (IP başına saatte kod isteği, NFR-45) | tamsayı | 1 | 1000 |
 | `mobile.min_version.ios`, `mobile.min_version.android` | `0.0.0` (ilk yayında ilk yayın sürümü yazılır, US-060) | sürüm metni (`X.Y.Z`) | — | — |
 | `system.maintenance` | `false` (RB-08, RB-13) | evet/hayır | — | — |
 | `idempotency.ttl_hours` | 24 | tamsayı | 1 | 168 |

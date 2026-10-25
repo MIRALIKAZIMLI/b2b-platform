@@ -1,13 +1,13 @@
 // api açılışı (main.ts). Hata runMain'e iletilir (F1.2b K8).
 import { NestFactory } from '@nestjs/core';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
-import type { ServerEnv } from '@b2b/shared';
+import type { ApiEnv } from '@b2b/shared';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { NEST_BOOTSTRAP_OPTIONS } from './core/bootstrap/run-main';
 import { createFastifyAdapter } from './core/request-id.middleware';
 
-export async function bootstrapApi(env: ServerEnv): Promise<NestFastifyApplication> {
+export async function bootstrapApi(env: ApiEnv): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.register(env),
     createFastifyAdapter(),

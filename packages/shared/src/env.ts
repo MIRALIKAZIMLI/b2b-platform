@@ -33,9 +33,43 @@ export const serverEnvSchema = dbEnvSchema.extend({
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
 });
 
+/** SMS sağlayıcıları (integrations §2). Gerçek sağlayıcı adı F6.5'te eklenir. */
+export const SMS_PROVIDERS = ['mock'] as const;
+export type SmsProvider = (typeof SMS_PROVIDERS)[number];
+
+/** Production'da kullanılamayan sağlayıcılar (NFR-97). */
+const SMS_PROVIDERS_FORBIDDEN_IN_PRODUCTION: ReadonlySet<string> = new Set(['mock']);
+
+/** OTP_HASH_KEY en az bu kadar karakter (F1.5a, Mimar kararı: en az 32 bayt). */
+export const OTP_HASH_KEY_MIN_LENGTH = 32;
+
+/**
+ * Yalnızca api sürecinin doğruladığı şema (F1.5a). Worker SMS göndermez, bu değişkenleri istemez.
+ * Production'da `SMS_PROVIDER=mock` reddedilir: api açılmaz (NFR-97, ADR-0021).
+ */
+export const apiEnvSchema = serverEnvSchema
+  .extend({
+    SMS_PROVIDER: z.enum(SMS_PROVIDERS),
+    /** OTP kod özeti (HMAC-SHA256) anahtarı; ortam başına ayrı ve rastgele. */
+    OTP_HASH_KEY: z.string().min(OTP_HASH_KEY_MIN_LENGTH),
+  })
+  .superRefine((env, ctx) => {
+    if (
+      env.APP_ENV === 'production' &&
+      SMS_PROVIDERS_FORBIDDEN_IN_PRODUCTION.has(env.SMS_PROVIDER)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMS_PROVIDER'],
+        message: 'production ortamında mock SMS sağlayıcısı kullanılamaz',
+      });
+    }
+  });
+
 export type DbEnv = z.infer<typeof dbEnvSchema>;
 export type MigratorEnv = z.infer<typeof migratorEnvSchema>;
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
+export type ApiEnv = z.infer<typeof apiEnvSchema>;
 
 type RawEnv = Record<string, string | undefined>;
 
@@ -60,4 +94,8 @@ export function parseMigratorEnv(env: RawEnv): MigratorEnv {
 
 export function parseServerEnv(env: RawEnv): ServerEnv {
   return parseEnv(serverEnvSchema, env);
+}
+
+export function parseApiEnv(env: RawEnv): ApiEnv {
+  return parseEnv(apiEnvSchema, env);
 }

@@ -10,6 +10,7 @@ import { SystemClock } from '../../../core/clock';
 import { SettingsCache } from '../settings.cache';
 import { SettingsRepository } from '../settings.repository';
 import { SettingsService } from '../settings.service';
+import { insertTestUsers } from '../../../../test/users';
 
 const PLATFORM = { userId: randomUUID() };
 
@@ -65,6 +66,7 @@ describe('SettingsService plan katmanı (entegrasyon: PostgreSQL + Redis)', () =
   let regionId: string;
 
   beforeAll(async () => {
+    await insertTestUsers(PLATFORM.userId);
     redis = createTestRedis();
     settings = new SettingsService(
       new SettingsRepository(),

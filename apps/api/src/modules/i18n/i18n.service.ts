@@ -67,6 +67,22 @@ export class I18nService implements ErrorMessageResolver {
     return snapshot.translate(`errors.${code}`, lang) ?? code;
   }
 
+  /**
+   * Bir çeviri anahtarının Accept-Language dilindeki değeri (ör. SMS şablonu, F1.5a):
+   * ilk aktif dil → varsayılan dil. Anahtar yoksa veya çeviriler yüklenemezse undefined;
+   * hata atmaz (çağıran kendi yedeğini kullanır).
+   */
+  async text(key: string, acceptLanguage: string | undefined): Promise<string | undefined> {
+    try {
+      const snapshot = await this.snapshot();
+      const lang = snapshot.pickLanguage(parseAcceptLanguage(acceptLanguage));
+      return snapshot.translate(key, lang);
+    } catch (error: unknown) {
+      this.logger.warn(`i18n.load_failed: çeviriler yüklenemedi (kod: ${errorCode(error)})`);
+      return undefined;
+    }
+  }
+
   /** ErrorMessageResolver (core/errors) uygulaması. */
   resolve(code: ErrorCode, acceptLanguage: string | undefined): Promise<string> {
     return this.errorMessage(code, acceptLanguage);

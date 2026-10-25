@@ -30,6 +30,7 @@ interface HttpRequest {
 interface HttpReply {
   readonly raw: ServerResponse;
   status(statusCode: number): HttpReply;
+  header(name: string, value: string): HttpReply;
   send(payload: unknown): unknown;
 }
 
@@ -128,6 +129,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       requestId,
       ...(details === undefined ? {} : { details }),
     };
+    // details.retryAfter (sn) varsa standart Retry-After başlığı da yazılır (OTP_RATE_LIMITED, F1.5a).
+    const retryAfter = details?.retryAfter;
+    if (typeof retryAfter === 'number' && Number.isInteger(retryAfter) && retryAfter > 0) {
+      reply.header('Retry-After', String(retryAfter));
+    }
     reply.status(httpStatusOf(code)).send(body);
   }
 
