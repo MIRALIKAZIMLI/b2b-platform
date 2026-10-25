@@ -418,6 +418,8 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | approval_threshold | numeric(14,2) | null | `above_amount` için zorunlu |
 | status | text | `active` / `inactive` | |
 
+Benzersiz `(business_id, id)`: memberships / invitations bileşik FK hedefi (F1.8a).
+
 #### `warehouses` (T) — `business_id`, `name`, `address_line`, `is_default bool`, `status (active/inactive)`; benzersiz `(business_id, id)` (bileşik FK hedefi); işletme başına tek `is_default` (kısmi benzersiz indeks)
 
 #### `seller_applications` (G — yalnızca platform okur)
@@ -449,11 +451,11 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 
 İzin kodları kodda sabittir ve migration ile eklenir; admin yalnızca şablonlara atar.
 
-#### `role_templates` (G) — `code text unique`, `name jsonb`, `capability`, `version int`
+#### `role_templates` (G) — `code text unique`, `name jsonb`, `capability`, `is_business_admin boolean default false` (kopyalanan rolün admin bayrağı, F1.8a), `version int`
 
 #### `role_template_permissions` (G) — `template_id`, `permission_code`, `default_scope`; PK `(template_id, permission_code)`
 
-#### `job_titles` (G) — `name jsonb`, `capability`, `role_template_id`, `is_active`
+#### `job_titles` (G) — `code text unique` (seed eşleşme anahtarı, F1.8a), `name jsonb`, `capability`, `role_template_id`, `is_active`
 
 #### `roles` (T)
 
@@ -467,6 +469,8 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | source_template_version | int | null | Yeni sürüm bildirimi için |
 
 #### `role_permissions` (T) — `role_id`, `permission_code`, `scope (all/branch/warehouse/assigned)`; PK `(role_id, permission_code)`
+
+`business_id` kolonu yoktur; RLS politikası `roles` satırının görünür olmasını ister (`EXISTS`). Kapsamın iznin kapsam seçeneklerinden biri olması ve iznin rolün yeteneğine uyması servis kuralıdır (`permissions.ts`, F1.8a Mimar K3).
 
 #### `memberships` (T)
 
@@ -483,7 +487,9 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 
 Benzersiz: `(user_id, business_id)`. Kural: her işletmede en az bir `active` ve `is_business_admin` rollü üyelik (trigger ile).
 
-#### `membership_regions` (T) — `membership_id`, `region_id`; satış temsilcisinin `assigned` kapsamı (US-019 AC3)
+F1.8a uygulaması: `memberships` UPDATE/DELETE ve `roles` UPDATE (`is_business_admin` true→false) tetikleyicileri son admini korur; ihlal `LAST_ADMIN_PROTECTED` (SQLSTATE `AC001`). Eşzamanlı kaldırma işletme başına `pg_advisory_xact_lock` ile sıraya girer. `role_id`, `branch_id`, `warehouse_id` bileşik FK ile aynı işletmeye bağlıdır (`(business_id, x_id)`; FK denetimi RLS dışıdır). Kullanıcının tüm işletmelerdeki aktif üyelikleri `list_my_memberships()` SECURITY DEFINER fonksiyonuyla okunur (yalnız `app.user_id` satırları); `app_user` için T kuralına ek politika yoktur.
+
+#### `membership_regions` (T) — `membership_id`, `region_id`; satış temsilcisinin `assigned` kapsamı (US-019 AC3). `business_id` yok; RLS `memberships` üzerinden (`EXISTS`).
 
 #### `invitations` (T)
 

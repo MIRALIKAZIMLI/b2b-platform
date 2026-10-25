@@ -188,6 +188,32 @@ flowchart LR
 | `ledger.courier_cash.manage` | seller | all | Kargocu nakdi teslimi (US-051 AC3) |
 | `ledger.export` | seller | all | e-qaimə uyumlu dışa aktarma (US-053) |
 
-**Rol şablonları (seed):** Analiz raporundaki varsayılan rol tabloları bu kodlara eşlenir. Örnek: *Satış Temsilcisi* = `directory.search` (assigned), `connections.view` (assigned), `connections.request.send` (assigned), `catalog.view`, `pricing.view` (assigned), `orders.view` (assigned), `ledger.view` (assigned), `ledger.payment.create` (assigned), `reports.view` (assigned). *Kargocu* = `delivery.update_own` (assigned), `orders.view` (assigned), `ledger.payment.create` (assigned). Tüm şablonların tam eşlemesi F1.8 adımında `apps/api/drizzle/seed/role-templates.ts` dosyasında yazılır ve bu bölüme tablo olarak eklenir.
+**Rol şablonları (seed):** Analiz raporundaki varsayılan rol tabloları bu kodlara eşlenir. Kod karşılığı `apps/api/src/modules/access/seed/role-templates.ts` (F1.8a); tablo ile dosya birebir aynıdır (test: `role-templates.test.ts`). Kapsam yazılmayan izin `all` kapsamlıdır. Her şablon için aynı kodla bir unvan (`job_titles`) açılır.
+
+| Şablon kodu | Ad (tr) | Yetenek | İşletme admini | İzinler |
+| --- | --- | --- | --- | --- |
+| `seller_business_admin` | İşletme Admini | seller | evet | `business.manage`, `team.manage`, `audit.view`, `reports.view`, `documents.generate`, `directory.search`, `connections.view`, `connections.request.send`, `connections.terms.manage`, `connections.cancel`, `catalog.view`, `catalog.manage`, `imports.run`, `pricing.view`, `pricing.manage`, `inventory.view`, `inventory.manage`, `orders.view`, `orders.approve`, `orders.prepare`, `orders.cancel`, `orders.resolve_dispute`, `orders.create_on_behalf` (assigned), `delivery.view`, `delivery.assign`, `delivery.update_own` (assigned), `ledger.view`, `ledger.payment.create`, `ledger.payment.review`, `ledger.courier_cash.manage`, `ledger.export` |
+| `seller_sales_manager` | Satış Müdürü | seller | — | `catalog.view`, `catalog.manage`, `pricing.view`, `pricing.manage`, `inventory.view`, `directory.search`, `connections.view`, `connections.request.send`, `connections.terms.manage`, `connections.cancel`, `orders.view`, `orders.approve`, `delivery.view`, `ledger.view`, `reports.view` |
+| `seller_sales_rep` | Satış Temsilcisi | seller | — | `directory.search` (assigned), `connections.view` (assigned), `connections.request.send` (assigned), `catalog.view`, `pricing.view` (assigned), `orders.view` (assigned), `ledger.view` (assigned), `ledger.payment.create` (assigned), `reports.view` (assigned) |
+| `seller_accountant` | Muhasebe | seller | — | `catalog.view`, `pricing.view`, `inventory.view`, `orders.view`, `ledger.view`, `ledger.payment.create`, `ledger.payment.review`, `ledger.courier_cash.manage`, `ledger.export`, `reports.view`, `documents.generate` |
+| `seller_warehouse` | Depo Sorumlusu | seller | — | `catalog.view`, `inventory.view` (warehouse), `inventory.manage` (warehouse), `orders.prepare` (warehouse), `delivery.view` (warehouse), `delivery.assign` (warehouse), `reports.view` (warehouse) |
+| `seller_courier` | Kargocu | seller | — | `delivery.update_own` (assigned), `orders.view` (assigned), `ledger.payment.create` (assigned) |
+| `buyer_business_admin` | İşletme Admini | buyer | evet | `business.manage`, `team.manage`, `audit.view`, `reports.view`, `documents.generate`, `connections.view`, `connections.request.respond`, `connections.block`, `connections.cancel`, `catalog.browse`, `orders.view`, `ledger.view` |
+| `buyer_branch_admin` | Şube Admini | buyer | — | `catalog.browse` (branch), `cart.edit` (branch), `cart.submit` (branch), `cart.approve` (branch), `orders.view` (branch), `orders.cancel_own` (branch), `orders.confirm_delivery` (branch) |
+| `buyer_purchaser` | Satın Alma Sorumlusu | buyer | — | `catalog.browse` (branch), `cart.edit` (branch), `cart.submit` (branch), `orders.view` (branch), `connections.view` |
+| `buyer_accountant` | Muhasebe | buyer | — | `ledger.view`, `documents.generate` |
+| `buyer_branch_staff` | Şube Çalışanı | buyer | — | `catalog.browse` (branch), `cart.edit` (branch), `orders.view` (branch), `orders.confirm_delivery` (branch) |
+
+📌 VARSAYILAN, KULLANICI ONAYI BEKLİYOR (F1.8a, Mimar): Analiz raporu ile izin kataloğunun örtüşmediği 7 noktada daha dar (az yetkili) seçenek seçildi. Platform sahibi onaylarsa not kaldırılır; değişiklik istenirse önce bu tablo, sonra `role-templates.ts` güncellenir.
+
+| # | Fark | Seçilen varsayılan |
+| --- | --- | --- |
+| 1 | `cart.*`, `orders.cancel_own`, `orders.confirm_delivery` yalnızca `branch` kapsamlı; perakendeci İşletme Admini tüm şubeler için kullanamaz. | İşletme Admini şablonuna bu izinler verilmez (şube işleri Şube Admini / çalışanında). |
+| 2 | Şube Admini "şube kullanıcılarını görür"; katalogda `team.view` yok, `team.manage` yalnız `all`. | Verilmez. |
+| 3 | Depo Sorumlusu için `orders.view` kapsamlarında `warehouse` yok. | `orders.view` verilmez; yalnız `orders.prepare` (warehouse). |
+| 4 | Satış Temsilcisi: rapor stok, teslimat görme ve müşteri adına sipariş diyor. | Verilmez (`inventory.view`, `delivery.view`, `orders.create_on_behalf` yok); yukarıdaki örnek liste korunur. |
+| 5 | Satış Müdürü "sipariş düzenle" (kod yok) ve "dışa aktar: evet". | `orders.view` + `orders.approve`; `ledger.export` verilmez. |
+| 6 | Rapor türleri (satış, finans, stok) kodda ayrı değil. | Hepsi `reports.view`; kapsam rolün işine göre (müdür/muhasebe `all`, depo `warehouse`, temsilci `assigned`). |
+| 7 | `documents.generate` raporda geçmiyor. | Yalnız İşletme Admini (iki taraf) ve Muhasebe (iki taraf). |
 
 📌 VARSAYIM: Analiz raporundaki "maliyeti gör" izni MVP'de yoktur, çünkü veri modelinde alış maliyeti alanı bulunmaz. Maliyet ve kâr marjı takibi istenirse önce veri modeline eklenir, sonra `pricing.view_cost` izni tanımlanır.
