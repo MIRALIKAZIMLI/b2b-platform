@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseApiEnv, parseDbEnv, parseMigratorEnv, parseServerEnv } from '../env';
+import { randomBytes } from 'node:crypto';
+import { parseApiEnv, parseDbEnv, parseMigratorEnv, parseSeedEnv, parseServerEnv } from '../env';
+
+// Her çalıştırmada rastgele (depoda anahtar gibi görünen değer yok).
+const TOTP_KEY = randomBytes(32).toString('base64');
 
 const APP_URL = 'postgres://app_user:secret-app@127.0.0.1:5432/b2b';
 const MIGRATOR_URL = 'postgresql://migrator:secret-mig@127.0.0.1:5432/b2b';
@@ -119,6 +123,7 @@ describe('env: api (SMS ve OTP, F1.5a)', () => {
     OTP_HASH_KEY,
     JWT_SIGNING_KEY,
     JWT_KEY_ID: 'k1',
+    TOTP_ENCRYPTION_KEY: TOTP_KEY,
   };
 
   it('geçerli değerler okunur', () => {
@@ -157,6 +162,7 @@ describe('env: api JWT anahtarları (F1.5b, Mimar kararı K1)', () => {
     OTP_HASH_KEY: 'k'.repeat(32),
     JWT_SIGNING_KEY: 'jwt-secret-value-'.padEnd(32, 'x'),
     JWT_KEY_ID: 'k1',
+    TOTP_ENCRYPTION_KEY: TOTP_KEY,
   };
 
   it('JWT_SIGNING_KEY yoksa veya 32 karakterden kısaysa reddedilir; değer mesajda yok', () => {
@@ -189,5 +195,36 @@ describe('env: api JWT anahtarları (F1.5b, Mimar kararı K1)', () => {
     expect(() =>
       parseApiEnv({ ...API_ENV, JWT_PREVIOUS_SIGNING_KEY: previous, JWT_PREVIOUS_KEY_ID: 'k1' }),
     ).toThrow(/JWT_PREVIOUS_KEY_ID/);
+  });
+});
+
+describe('env: TOTP ve seed (F1.6, Mimar kararı K1)', () => {
+  const API_ENV = {
+    ...SERVER_ENV,
+    SMS_PROVIDER: 'mock',
+    OTP_HASH_KEY: 'k'.repeat(32),
+    JWT_SIGNING_KEY: 'j'.repeat(32),
+    JWT_KEY_ID: 'k1',
+    TOTP_ENCRYPTION_KEY: TOTP_KEY,
+  };
+
+  it('TOTP_ENCRYPTION_KEY: base64 ve tam 32 bayt olmalı; yoksa api açılmaz, değer mesajda yok', () => {
+    expect(parseApiEnv(API_ENV).TOTP_ENCRYPTION_KEY).toBe(TOTP_KEY);
+    const short = randomBytes(16).toString('base64');
+    const long = randomBytes(48).toString('base64');
+    for (const value of [undefined, short, long, 'base64-degil!']) {
+      const message = errorMessage(() => parseApiEnv({ ...API_ENV, TOTP_ENCRYPTION_KEY: value }));
+      expect(message, String(value)).toMatch(/TOTP_ENCRYPTION_KEY/);
+      if (value !== undefined) expect(message).not.toContain(value);
+    }
+  });
+
+  it('SUPER_ADMIN_PHONE isteğe bağlı; verilirse E.164 olmalı', () => {
+    expect(parseSeedEnv({})).toEqual({});
+    expect(parseSeedEnv({ SUPER_ADMIN_PHONE: '' })).toEqual({});
+    expect(parseSeedEnv({ SUPER_ADMIN_PHONE: '+994501234567' })).toEqual({
+      SUPER_ADMIN_PHONE: '+994501234567',
+    });
+    expect(() => parseSeedEnv({ SUPER_ADMIN_PHONE: '0501234567' })).toThrow(/SUPER_ADMIN_PHONE/);
   });
 });

@@ -1,7 +1,7 @@
 // F1.5-AC10: `users` U sınıfı (kullanıcı yalnızca kendi satırını görür ve günceller), S tabloları
 // (`otp_challenges`, `dev_sms_outbox`) app_user'a kapalı. F1.5-AC14: `user_sessions` U sınıfı. Gerçek PostgreSQL, app_user.
 // check-rls denetimi: core/db/__tests__/check-rls.int.test.ts (F1.5-AC10).
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { connectAsAppUser } from '../../../../test/db-clients';
@@ -253,6 +253,86 @@ describe('kimlik tabloları izolasyonu (identity)', () => {
         ),
       );
       expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+    });
+  });
+
+  describe('user_totp ve platform_staff (F1.6-AC6)', () => {
+    function insertTotp(userId: string, enabled: boolean) {
+      return withUserTx({ userId }, (tx) =>
+        tx.execute(sql`insert into user_totp (user_id, secret_encrypted, recovery_codes_hash, enabled_at)
+                       values (${userId}, ${randomBytes(48)}, '[]'::jsonb,
+                               ${enabled ? sql`now()` : sql`null`})`),
+      );
+    }
+
+    const totpA = randomUUID();
+    const totpB = randomUUID();
+
+    beforeAll(async () => {
+      await insertTestUsers(totpA, totpB);
+      await insertTotp(totpA, true);
+      await insertTotp(totpB, false);
+    });
+
+    it('F1.6-AC6: kullanıcı yalnızca kendi user_totp satırını görür', async () => {
+      const rows = await withUserTx({ userId: totpA }, (tx) =>
+        tx.execute<{ user_id: string }>(
+          sql`select user_id from user_totp where user_id in (${totpA}, ${totpB})`,
+        ),
+      );
+      expect(rows.rows).toEqual([{ user_id: totpA }]);
+      const system = await withSystemTx((tx) =>
+        tx.execute(sql`select user_id from user_totp where user_id in (${totpA}, ${totpB})`),
+      );
+      expect(system.rows).toEqual([]);
+    });
+
+    it('F1.6-AC6: başkası adına TOTP eklenemez; başkasının satırı güncellenemez', async () => {
+      const insert = await errorOf(
+        withUserTx({ userId: totpA }, (tx) =>
+          tx.execute(sql`insert into user_totp (user_id, secret_encrypted, recovery_codes_hash)
+                         values (${randomUUID()}, ${randomBytes(48)}, '[]'::jsonb)`),
+        ),
+      );
+      expect(pgErrorCode(insert)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+      const update = await withUserTx({ userId: totpA }, (tx) =>
+        tx.execute(sql`update user_totp set enabled_at = now() where user_id = ${totpB}`),
+      );
+      expect(update.rowCount).toBe(0);
+    });
+
+    it('F1.6-AC6: etkin TOTP kullanıcı tarafından kapatılamaz veya sırrı değiştirilemez → 42501', async () => {
+      for (const statement of [
+        sql`update user_totp set enabled_at = null where user_id = ${totpA}`,
+        sql`update user_totp set secret_encrypted = ${randomBytes(48)} where user_id = ${totpA}`,
+      ]) {
+        const error = await errorOf(withUserTx({ userId: totpA }, (tx) => tx.execute(statement)));
+        expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+      }
+      const remove = await errorOf(
+        withUserTx({ userId: totpA }, (tx) =>
+          tx.execute(sql`delete from user_totp where user_id = ${totpA}`),
+        ),
+      );
+      expect(pgErrorCode(remove)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+    });
+
+    it('K4: app_user platform_staff tablosunu doğrudan okuyamaz/yazamaz; rol fonksiyonla okunur', async () => {
+      for (const statement of [
+        sql`select * from platform_staff`,
+        sql`insert into platform_staff (user_id, role) values (${totpA}, 'super_admin')`,
+      ]) {
+        const error = await errorOf(
+          withPlatformTx({ userId: totpA }, (tx) => tx.execute(statement)),
+        );
+        expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+      }
+      const role = await withSystemTx((tx) =>
+        tx.execute<{ role: string | null }>(
+          sql`select platform_staff_role(${totpA}::uuid) as role`,
+        ),
+      );
+      expect(role.rows).toEqual([{ role: null }]);
     });
   });
 });

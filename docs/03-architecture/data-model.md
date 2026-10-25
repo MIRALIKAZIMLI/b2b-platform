@@ -221,7 +221,7 @@ Sütun listesinde `id`, `created_at`, `updated_at` her tabloda vardır ve tekrar
 
 **RLS (F1.5b):** `SELECT`, `INSERT`, `UPDATE` yalnızca kendi satırları (`user_id = app.user_id`); platform bağlamı tüm işlemler; silme yok. Kullanıcı bağlamı dışından erişim (doğrulama, yenileme) yalnızca `SECURITY DEFINER` fonksiyonlarla: `identity_user_by_phone`, `user_session_rotate`, `identity_record_login` (`users.last_login_at`). Bu fonksiyonlar kullanıcı bağlamı olmadan çalıştığı için `users` (SELECT, UPDATE) ve `user_sessions` (ALL) tablolarında yalnızca `migrator` rolüne açık politikalar vardır (`TO migrator`; `app_user` bu rolü üstlenemez). Koruma tetikleyicileri: `users_guard_platform_columns` fonksiyon sahibi `migrator` olarak çalışan yazmaya izin verir, `app_user` bu alanları yine yazamaz; `user_sessions_guard_columns` ile `app_user` platform dışında oturumu yalnızca kapatabilir (anahtar özeti, aile, süre, cihaz değişmez; kapatılmış oturum açılmaz).
 
-#### `user_totp`
+#### `user_totp` (U)
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
@@ -229,14 +229,19 @@ Sütun listesinde `id`, `created_at`, `updated_at` her tabloda vardır ve tekrar
 | secret_encrypted | bytea | not null | Uygulama anahtarıyla şifreli |
 | recovery_codes_hash | jsonb | not null | 10 kod |
 | enabled_at | timestamptz | null | |
+| last_used_step | bigint | null | Son kabul edilen TOTP adımı (30 sn); aynı kod tekrar kullanılamaz (F1.6) |
 
-#### `platform_staff`
+**F1.6:** `secret_encrypted` = AES-256-GCM (`TOTP_ENCRYPTION_KEY`), biçim `nonce (12 bayt) ‖ etiket (16) ‖ şifreli metin`; her şifrelemede yeni rastgele nonce, ek doğrulama verisi (AAD) `user_id`. `recovery_codes_hash` = `[{ "hash": HMAC-SHA256(OTP_HASH_KEY, 'recovery:' + user_id + ':' + kod), "usedAt": null | zaman }]`; kurulum onaylanınca 10 kod üretilir ve yalnızca o yanıtta bir kez gösterilir; her kod bir kez kullanılır. Onaysız kurulumda (`enabled_at` null) liste boştur ve yeni kurulum sırrı ezer. RLS: kullanıcı yalnızca kendi satırını okur, ekler, günceller (`user_id = app.user_id`); platform bağlamı her şey; silme yok.
+
+#### `platform_staff` (S)
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
 | user_id | uuid | PK, FK users | |
 | role | text | `super_admin` / `operations` / `support` / `content` | |
 | is_active | boolean | default true | |
+
+**F1.6:** S sınıfı: `app_user`'ın tablo izni yok; giriş akışı rolü `platform_staff_role(user_id)` SECURITY DEFINER fonksiyonuyla okur (aktif satır yoksa null). Yazma şimdilik yalnızca seed (`SUPER_ADMIN_PHONE` → `super_admin`); platform admin paneli F2.
 
 #### `dev_sms_outbox` (S — yalnızca dev/staging)
 

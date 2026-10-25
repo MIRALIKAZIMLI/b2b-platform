@@ -330,6 +330,8 @@ describe('check-rls', () => {
         'public.otp_challenges',
         'public.dev_sms_outbox',
         'public.user_sessions',
+        'public.user_totp',
+        'public.platform_staff',
       ].includes(t.table),
     );
 
@@ -338,6 +340,8 @@ describe('check-rls', () => {
       'public.otp_challenges': 'rls:S',
       'public.dev_sms_outbox': 'rls:S',
       'public.user_sessions': 'rls:U',
+      'public.user_totp': 'rls:U',
+      'public.platform_staff': 'rls:S',
     });
     for (const info of identity) {
       expect({ table: info.table, problems: evaluateRlsTable(info) }).toEqual({

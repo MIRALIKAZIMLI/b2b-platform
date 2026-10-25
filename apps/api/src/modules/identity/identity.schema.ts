@@ -4,11 +4,15 @@
 // - otp_challenges (S), dev_sms_outbox (S): app_user'ın doğrudan izni yok; yalnızca fonksiyonlar.
 // Başka modüller `users` tablosunu FK için modülün index.ts'inden içe aktarır.
 import { sql } from 'drizzle-orm';
+import { customType } from 'drizzle-orm/pg-core';
 import {
+  bigint,
+  boolean,
   char,
   check,
   index,
   inet,
+  jsonb,
   pgTable,
   smallint,
   text,
@@ -109,5 +113,52 @@ export const userSessions = pgTable(
     index('user_sessions_user_idx').on(table.userId),
     index('user_sessions_family_idx').on(table.familyId),
     check('user_sessions_device_type_check', sql`${table.deviceType} in ('web', 'ios', 'android')`),
+  ],
+);
+
+/** PostgreSQL bytea ↔ Buffer. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea',
+});
+
+/** Kurtarma kodu özeti (data-model §4.2, F1.6). */
+export interface RecoveryCodeHash {
+  readonly hash: string;
+  readonly usedAt: string | null;
+}
+
+/** TOTP (U, F1.6). Sır AES-256-GCM ile şifreli; kurtarma kodlarının yalnızca HMAC özeti. */
+export const userTotp = pgTable('user_totp', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id),
+  secretEncrypted: bytea('secret_encrypted').notNull(),
+  recoveryCodesHash: jsonb('recovery_codes_hash').$type<RecoveryCodeHash[]>().notNull(),
+  enabledAt: timestamp('enabled_at', { withTimezone: true }),
+  lastUsedStep: bigint('last_used_step', { mode: 'number' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const PLATFORM_ROLES = ['super_admin', 'operations', 'support', 'content'] as const;
+export type PlatformRole = (typeof PLATFORM_ROLES)[number];
+
+/** Platform ekibi (S, F1.6): app_user okumaz; rol platform_staff_role() ile. */
+export const platformStaff = pgTable(
+  'platform_staff',
+  {
+    userId: uuid('user_id')
+      .primaryKey()
+      .references(() => users.id),
+    role: text('role').notNull(),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'platform_staff_role_check',
+      sql`${table.role} in ('super_admin', 'operations', 'support', 'content')`,
+    ),
   ],
 );

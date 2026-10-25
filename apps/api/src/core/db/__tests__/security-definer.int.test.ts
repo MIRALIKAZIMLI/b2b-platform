@@ -27,6 +27,7 @@ const EXPECTED_FUNCTIONS = [
   'outbox_claim_batch',
   'outbox_mark_failed',
   'outbox_mark_processed',
+  'platform_staff_role',
   'settings_get',
   'settings_put',
   'user_session_rotate',

@@ -129,6 +129,7 @@ describe('oturum, JWT, yenileme anahtarı (entegrasyon)', () => {
       preferredLanguage: null,
       timezone: null,
       platformRole: null,
+      totpEnabled: false,
       memberships: [],
     });
 

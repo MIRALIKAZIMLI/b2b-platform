@@ -46,6 +46,20 @@ export const OTP_HASH_KEY_MIN_LENGTH = 32;
 /** JWT imza anahtarı (HS256) en az bu kadar karakter (F1.5b, Mimar kararı K1). */
 export const JWT_SIGNING_KEY_MIN_LENGTH = 32;
 
+/** TOTP_ENCRYPTION_KEY: base64, çözülünce tam 32 bayt (AES-256-GCM, F1.6). */
+export const TOTP_ENCRYPTION_KEY_BYTES = 32;
+const totpEncryptionKey = z
+  .string()
+  .regex(/^[A-Za-z0-9+/]+={0,2}$/)
+  .refine((value) => base64ByteLength(value) === TOTP_ENCRYPTION_KEY_BYTES);
+
+/** Base64 metnin çözülmüş bayt sayısı (Buffer gerekmez; istemci paketinde de derlenir). */
+function base64ByteLength(value: string): number {
+  if (value.length % 4 !== 0) return -1;
+  const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0;
+  return (value.length / 4) * 3 - padding;
+}
+
 const jwtKeyId = z.string().regex(/^[A-Za-z0-9._-]{1,64}$/);
 
 /**
@@ -63,6 +77,8 @@ export const apiEnvSchema = serverEnvSchema
     /** Döndürme: eski anahtar yalnızca doğrulamada kullanılır; ikisi birlikte verilir. */
     JWT_PREVIOUS_SIGNING_KEY: z.string().min(JWT_SIGNING_KEY_MIN_LENGTH).optional(),
     JWT_PREVIOUS_KEY_ID: jwtKeyId.optional(),
+    /** TOTP sırrı şifreleme anahtarı (F1.6). */
+    TOTP_ENCRYPTION_KEY: totpEncryptionKey,
   })
   .superRefine((env, ctx) => {
     if ((env.JWT_PREVIOUS_SIGNING_KEY === undefined) !== (env.JWT_PREVIOUS_KEY_ID === undefined)) {
@@ -127,4 +143,18 @@ export function parseServerEnv(env: RawEnv): ServerEnv {
 
 export function parseApiEnv(env: RawEnv): ApiEnv {
   return parseEnv(apiEnvSchema, env);
+}
+
+/** `pnpm db:seed` için isteğe bağlı ilk süper admin telefonu (F1.6). Boş veya yoksa undefined. */
+export const seedEnvSchema = z.object({
+  SUPER_ADMIN_PHONE: z
+    .string()
+    .regex(/^\+[1-9][0-9]{7,14}$/)
+    .optional(),
+});
+
+export type SeedEnv = z.infer<typeof seedEnvSchema>;
+
+export function parseSeedEnv(env: RawEnv): SeedEnv {
+  return parseEnv(seedEnvSchema, env);
 }

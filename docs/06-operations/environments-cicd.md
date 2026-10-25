@@ -129,7 +129,8 @@ flowchart TB
 | `MEILI_URL`, `MEILI_MASTER_KEY` | — |
 | `JWT_SIGNING_KEY`, `JWT_KEY_ID` | Ortam başına ayrı; HS256 imza anahtarı en az 32 karakter, `JWT_KEY_ID` 1–64 karakter (`A-Z a-z 0-9 . _ -`). Yoksa veya kısaysa api açılmaz (F1.5b) |
 | `JWT_PREVIOUS_SIGNING_KEY`, `JWT_PREVIOUS_KEY_ID` | İsteğe bağlı, ikisi birlikte. Döndürmede eski anahtar: yalnızca doğrulamada kullanılır, yeni anahtar imzalar (F1.5b) |
-| `TOTP_ENCRYPTION_KEY` | 32 bayt |
+| `TOTP_ENCRYPTION_KEY` | 32 bayt, base64 (TOTP sırrı AES-256-GCM anahtarı). Yoksa veya çözülünce 32 bayt değilse api açılmaz (F1.6) |
+| `SUPER_ADMIN_PHONE` | İsteğe bağlı, E.164. `pnpm db:seed` bu numarayla ilk süper admini (`platform_staff.role = super_admin`) açar; yoksa seed bu adımı atlar (F1.6) |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_PUBLIC`, `R2_BUCKET_PRIVATE`, `FILES_PUBLIC_BASE_URL` | — |
 | `SMS_PROVIDER` | `mock` (production'da yasak; `APP_ENV=production` + `mock` → api açılmaz) / gerçek sağlayıcı adı (F6.5'e kadar yalnızca `mock` kabul edilir) |
 | `SMS_API_KEY` | Gerçek sağlayıcıda |

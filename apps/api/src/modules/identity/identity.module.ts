@@ -13,9 +13,13 @@ import { OtpService } from './otp.service';
 import { SessionRepository } from './session.repository';
 import { SessionService } from './session.service';
 import { TokenService } from './token.service';
+import { TotpController } from './totp/totp.controller';
+import { TotpRepository } from './totp/totp.repository';
+import { TotpService } from './totp/totp.service';
 
 /**
- * Kimlik: kullanıcılar, OTP (F1.5a), oturum, JWT ve yenileme anahtarı (F1.5b). SmsSender global
+ * Kimlik: kullanıcılar, OTP (F1.5a), oturum, JWT ve yenileme anahtarı (F1.5b), TOTP ve platform
+ * ekibi (F1.6). SmsSender global
  * SmsModule'den, Redis istemcisi global RedisModule'den gelir. AccessTokenGuard ve TokenService
  * diğer modüllerin korumalı uçları için dışa açıktır.
  */
@@ -25,7 +29,7 @@ export class IdentityModule {
     return {
       module: IdentityModule,
       imports: [SettingsModule, I18nModule, AuditModule],
-      controllers: [OtpController, AuthController, MeController],
+      controllers: [OtpController, AuthController, MeController, TotpController],
       providers: [
         { provide: IDENTITY_CONFIG, useValue: config },
         OtpRepository,
@@ -35,6 +39,8 @@ export class IdentityModule {
         TokenService,
         SessionService,
         AccessTokenGuard,
+        TotpRepository,
+        TotpService,
       ],
       exports: [OtpService, TokenService, AccessTokenGuard],
     };

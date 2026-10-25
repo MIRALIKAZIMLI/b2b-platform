@@ -324,7 +324,7 @@ Bir toptancı satış ekibi üyesi olarak bir perakendeciye bağlantı isteği g
 - **AC3:** Given aynı çift için aktif bir bağlantı, When istek gönderilir, Then reddedilir (`CONNECTION_ALREADY_ACTIVE`).
 - **AC4:** Given perakendecinin bu toptancıyı engellemiş olması, When istek gönderilir, Then reddedilir (`CONNECTION_BLOCKED`) ve arayüzde "Bu işletme istek kabul etmiyor" yazar.
 - **AC5:** Given son 30 gün içinde reddedilmiş bir istek veya perakendecinin iptal ettiği bir bağlantı, When istek gönderilir, Then reddedilir (`CONNECTION_COOLDOWN_ACTIVE`) ve bekleme süresinin bitiş tarihi gösterilir.
-- **AC6:** Given toptancının bugünkü istek sayısı kotaya ulaşmışsa, When istek gönderilir, Then reddedilir (`CONNECTION_DAILY_QUOTA_EXCEEDED`). Gün, toptancının saat dilimine göre hesaplanır.
+- **AC6:** Given toptancının bugünkü istek sayısı kotaya ulaşmışsa, When istek gönderilir, Then reddedilir (`429 CONNECTION_DAILY_QUOTA_EXCEEDED`, `retryAfter` = toptancının gece yarısına kalan saniye; `Retry-After` başlığı). Gün, toptancının saat dilimine göre hesaplanır.
 - **AC7:** Given toptancının bir iptalinden sonra, When aynı perakendeciye yeni istek gönderilir, Then bekleme süresi uygulanmaz.
 
 📌 VARSAYIM: Toptancının kendi iptalinden sonra bekleme süresi yoktur; bekleme süresi yalnızca perakendecinin reddi ve perakendecinin iptalinden sonra uygulanır (rapor, bağlantı kuralları tablosu).

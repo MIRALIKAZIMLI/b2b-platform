@@ -117,19 +117,30 @@ paths:
               type: object
               required: [pendingToken, code]
               properties:
-                pendingToken: { type: string }
-                code: { type: string }
+                pendingToken: { type: string, description: otp/verify yanıtındaki ön oturum anahtarı (nextStep = totp) }
+                code:
+                  type: string
+                  description: >-
+                    6 haneli TOTP kodu veya kurtarma kodu (XXXXX-XXXXX, bir kez kullanılır; F1.6).
+                    Aynı TOTP kodu ikinci kez kabul edilmez.
+                device: { $ref: '#/components/schemas/DeviceInfo' }
       responses:
         '200':
-          description: Doğrulandı
+          description: Doğrulandı, oturum açıldı (nextStep = none)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResult' }
         '401': { $ref: '#/components/responses/Error' }
+        '423': { $ref: '#/components/responses/Error' }
   /api/v1/auth/totp/setup:
     post:
       tags: [auth]
       summary: TOTP kurulumu başlat / tamamla (US-002)
+      description: >-
+        Yetki Authorization Bearer ile: ön oturum anahtarı (otp/verify yanıtındaki pendingToken,
+        nextStep = totp_setup; F1.6). confirmCode boşsa yeni sır üretilir ve otpauthUri döner; doluysa
+        kod doğrulanır, kurulum etkinleşir ve 10 kurtarma kodu yalnızca bu yanıtta bir kez döner.
+        Kurulu kullanıcı için 409 INVALID_STATE_TRANSITION.
       requestBody:
         content:
           application/json:
@@ -147,6 +158,9 @@ paths:
                 properties:
                   otpauthUri: { type: string }
                   recoveryCodes: { type: array, items: { type: string } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /api/v1/auth/refresh:
     post:
       tags: [auth]
@@ -2031,8 +2045,8 @@ components:
         pendingToken:
           type: string
           description: >-
-            nextStep = register (kayıt, F2.3; telefonu taşır, 15 dk) veya totp ise. Erişim anahtarı
-            olarak kabul edilmez.
+            nextStep = register (kayıt, F2.3; telefonu taşır, 15 dk) veya totp / totp_setup (yalnızca
+            /auth/totp/* uçlarında geçerli ön oturum, F1.6) ise. Erişim anahtarı olarak kabul edilmez.
         memberships:
           type: array
           items: { $ref: '#/components/schemas/MembershipSummary' }
@@ -2061,6 +2075,7 @@ components:
         preferredLanguage: { $ref: '#/components/schemas/LanguageCode' }
         timezone: { type: [string, 'null'] }
         platformRole: { type: [string, 'null'] }
+        totpEnabled: { type: boolean, description: TOTP kurulu ve etkin mi (F1.6) }
         memberships: { type: array, items: { $ref: '#/components/schemas/MembershipSummary' } }
         activeBusiness:
           type: object
