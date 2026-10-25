@@ -3,6 +3,7 @@ import eslint from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import boundaries from 'eslint-plugin-boundaries';
 import tseslint from 'typescript-eslint';
+import b2b from './eslint-rules/require-endpoint-access.mjs';
 
 const TS_FILES = ['**/*.ts', '**/*.mts', '**/*.tsx'];
 
@@ -85,6 +86,13 @@ export default tseslint.config(
         },
       ],
     },
+  },
+
+  // Her controller uç noktası tam bir erişim işareti taşır (AGENTS kural 2, F1.8b).
+  {
+    files: ['apps/api/src/**/*.ts'],
+    plugins: { b2b },
+    rules: { 'b2b/require-endpoint-access': 'error' },
   },
 
   // Veritabanına tek kapı (coding-guidelines §3.7): core/db dışından yalnızca core/db/index.ts.

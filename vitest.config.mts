@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 // Paket testleri kendi vitest.config dosyalarıyla `pnpm -r test` üzerinden çalışır.
 export default defineConfig({
   test: {
-    include: ['scripts/**/*.test.mts'],
+    include: ['scripts/**/*.test.mts', 'packages/config/eslint-rules/**/*.test.mjs'],
     environment: 'node',
   },
 });

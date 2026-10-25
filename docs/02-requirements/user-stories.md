@@ -264,6 +264,8 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `otp.fail_window_minutes` | 60 (numara başına yanlış kod sayacının penceresi; pencerede `otp.max_attempts` yanlış → kilit, F1.5b) | tamsayı | 5 | 1440 |
 | `auth.access_token_minutes` | 15 (erişim anahtarı ömrü, NFR-44) | tamsayı | 5 | 60 |
 | `auth.refresh_token_days` | 30 (yenileme anahtarı ömrü, NFR-44) | tamsayı | 1 | 90 |
+| `access.permission_cache_seconds` | 60 (üyelik başına izin önbelleği ömrü; rol değişikliğinde silinir, F1.8b) | tamsayı | 1 | 3600 |
+| `security.require_admin_2fa` | `false` (işletme ayarı: `true` ise işletme admini TOTP kurmadan işletme bağlamlı uçları kullanamaz, US-002 AC3, F1.8b) | evet/hayır | — | — |
 | `mobile.min_version.ios`, `mobile.min_version.android` | `0.0.0` (ilk yayında ilk yayın sürümü yazılır, US-060) | sürüm metni (`X.Y.Z`) | — | — |
 | `system.maintenance` | `false` (RB-08, RB-13) | evet/hayır | — | — |
 | `idempotency.ttl_hours` | 24 | tamsayı | 1 | 168 |

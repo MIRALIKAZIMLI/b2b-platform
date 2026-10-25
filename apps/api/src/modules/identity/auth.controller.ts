@@ -1,19 +1,9 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Inject,
-  Param,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Req } from '@nestjs/common';
 import { z } from 'zod';
 import type { AuditRequestContext } from '../../core/audit';
 import { resolveRequestId } from '../../core/request-id.middleware';
-import { AccessTokenGuard, CurrentSession } from './access-token.guard';
+import { Authenticated, Public } from '../../core/auth/access-decorators';
+import { CurrentSession } from './current-session';
 import { DEVICE_TYPES } from './identity.schema';
 import {
   type AuthResult,
@@ -63,7 +53,7 @@ interface SessionJson {
 export class AuthController {
   constructor(@Inject(SessionService) private readonly sessions: SessionService) {}
 
-  // TODO(F1.8): @Public()
+  @Public()
   @Post('otp/verify')
   @HttpCode(200)
   async verify(@Body() body: unknown, @Req() req: HttpRequest): Promise<AuthResult> {
@@ -84,7 +74,8 @@ export class AuthController {
     });
   }
 
-  // TODO(F1.8): @Public(). Web'de cookie desteği F1.13'te.
+  // Web'de cookie desteği F1.13'te.
+  @Public()
   @Post('refresh')
   @HttpCode(200)
   async refresh(@Body() body: unknown, @Req() req: HttpRequest): Promise<TokenPair> {
@@ -94,13 +85,13 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(204)
-  @UseGuards(AccessTokenGuard)
+  @Authenticated()
   async logout(@CurrentSession() auth: SessionAuth): Promise<void> {
     await this.sessions.logout(auth);
   }
 
   @Get('sessions')
-  @UseGuards(AccessTokenGuard)
+  @Authenticated()
   async list(@CurrentSession() auth: SessionAuth): Promise<SessionJson[]> {
     const sessions = await this.sessions.list(auth);
     return sessions.map((session) => ({
@@ -115,7 +106,7 @@ export class AuthController {
 
   @Delete('sessions/:id')
   @HttpCode(204)
-  @UseGuards(AccessTokenGuard)
+  @Authenticated()
   async close(@CurrentSession() auth: SessionAuth, @Param('id') id: string): Promise<void> {
     await this.sessions.close(auth, id);
   }

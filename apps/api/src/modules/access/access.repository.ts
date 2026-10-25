@@ -81,6 +81,18 @@ export class AccessRepository {
       );
   }
 
+  /** İşletmede bu yetenek kaydı var mı (durumdan bağımsız; onay okumada denetlenir). */
+  async businessHasCapability(
+    tx: Tx,
+    businessId: string,
+    capability: 'seller' | 'buyer',
+  ): Promise<boolean> {
+    const result = await tx.execute(sql`
+      select 1 from business_capabilities
+       where business_id = ${businessId} and capability = ${capability}`);
+    return (result.rowCount ?? 0) > 0;
+  }
+
   async findRole(tx: Tx, businessId: string, roleId: string): Promise<RoleRow | undefined> {
     const rows = await tx
       .select()

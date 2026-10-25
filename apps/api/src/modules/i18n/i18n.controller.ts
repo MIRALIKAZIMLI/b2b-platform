@@ -1,5 +1,6 @@
 import { Controller, Get, Headers, Inject, Param, Query, Res } from '@nestjs/common';
 import { z } from 'zod';
+import { Public } from '../../core/auth/access-decorators';
 import { matchesIfNoneMatch } from './i18n-snapshot';
 import type { Region } from './i18n.ports';
 import { I18nService } from './i18n.service';
@@ -25,7 +26,7 @@ export class I18nController {
    * Arayüz çevirileri (US-058). `Cache-Control: no-cache`: istemci her kullanımda ETag ile
    * doğrular; değişiklik yoksa 304 ve boş gövde (F1.3-AC9).
    */
-  // TODO(F1.8): @Public()
+  @Public()
   @Get('i18n/:lang')
   async translations(
     @Param('lang') lang: string,
@@ -42,7 +43,7 @@ export class I18nController {
   }
 
   /** Şehir / rayon listesi (openapi `Region`). */
-  // TODO(F1.8): @Public()
+  @Public()
   @Get('catalog/regions')
   async regions(@Query() query: unknown): Promise<Region[]> {
     const { country } = regionsQuerySchema.parse(query);

@@ -29,7 +29,8 @@ interface EventRow extends Record<string, unknown> {
 
 async function eventRows(): Promise<EventRow[]> {
   return queryAsOwner<EventRow>(
-    'select id::text, type, processed_at, attempts, last_error from outbox_events order by id',
+    // ORDER BY sayısal kimlikle (çıktıdaki id metin; '10' < '7' olmasın).
+    'select id::text, type, processed_at, attempts, last_error from outbox_events order by outbox_events.id',
   );
 }
 

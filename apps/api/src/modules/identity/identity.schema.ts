@@ -140,8 +140,8 @@ export const userTotp = pgTable('user_totp', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const PLATFORM_ROLES = ['super_admin', 'operations', 'support', 'content'] as const;
-export type PlatformRole = (typeof PLATFORM_ROLES)[number];
+// Rol listesinin tek kaynağı @b2b/shared (F1.8b: @RequirePlatformRole core'da da kullanır).
+export { PLATFORM_ROLES, type PlatformRole } from '@b2b/shared';
 
 /** Platform ekibi (S, F1.6): app_user okumaz; rol platform_staff_role() ile. */
 export const platformStaff = pgTable(

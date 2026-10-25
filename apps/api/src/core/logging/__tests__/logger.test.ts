@@ -1,3 +1,4 @@
+import { Public } from '../../auth/access-decorators';
 import { Controller, Post } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DrizzleQueryError } from 'drizzle-orm';
@@ -25,6 +26,7 @@ function captureLogger(): { logger: pino.Logger; capture: LogCapture } {
 class LoggingTestController {
   constructor(@InjectPinoLogger('LoggingTestController') private readonly logger: PinoLogger) {}
 
+  @Public()
   @Post()
   create(): { ok: true } {
     this.logger.info({ event: 'test.created' }, 'kayıt oluşturuldu');
