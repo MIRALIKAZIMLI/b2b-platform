@@ -70,16 +70,17 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 1. **Önce iki dosya:** göreve `docs/ai-context.md` ve görev kartıyla (`docs/tasks/<ID>.md`) başla.
 2. **Az oku:** yalnızca kartın "Okunacak dosyalar" listesini ve işin gerçekten gerektirdiği dosyaları aç. Tüm `docs/` klasörünü tarama; bir belgeden yalnızca kartın andığı bölümü oku.
 3. **Bağlamı güncel tut:** her PR, gerekiyorsa `docs/ai-context.md`'yi günceller (bitmiş adım, yeni ortak kural, yeni varsayılan karar).
-4. **a/b adımları:** aynı adımın `a` ve `b` kartları (ör. F1.13a → F1.13b) aynı Usta konuşmasında yapılır; bağlam yeniden okunmaz.
+4. **a/b adımları:** aynı adımın `a` ve `b` kartları (ör. F1.13a → F1.13b) aynı Usta konuşmasında yapılır; bağlam yeniden okunmaz. Bir Usta konuşması en fazla bir adım ya da bir a/b çiftidir; sonraki adım yeni Usta konuşmasında başlar. Aynı bilgisayarda aynı anda tek Usta çalışır.
 5. **Yerel kontrol:** yalnızca değişen alanın testleri + `pnpm lint` + `pnpm typecheck`, sessiz modda (yalnızca hatalar görünsün). Örnek:
    ```bash
    pnpm -s lint && pnpm -s typecheck
    pnpm -s --filter @b2b/api exec vitest run src/modules/<modül> --reporter=dot
    ```
-   Tam takım (`pnpm test`, `test:integration`, `test:isolation`, `build`) CI'da çalışır. Kartın "Doğrulama komutu" bölümü CI'ın çalıştırdığı tam listedir; yerelde yalnızca yukarıdaki kontroller çalışır. Kart yerelde ayrıca bir komutu açıkça isterse (ör. `pnpm db:migrate && pnpm check-rls`) o da çalışır.
-6. **Kısa mesaj:** plan ve raporlar kısa; çıktının tamamını değil, yalnızca hataları ve özet satırını yapıştır.
+   Adım DB'ye dokunuyorsa yalnızca o modülün entegrasyon testleri: `pnpm -s --filter @b2b/api exec vitest run --config vitest.integration.config.mts src/modules/<modül> --reporter=dot`. Tam takım (`pnpm test`, `test:integration`, `test:isolation`, `build`) yerelde çalışmaz, CI'da çalışır. Kartın "Doğrulama komutu" bölümü CI'ın çalıştırdığı tam listedir; yerelde yalnızca yukarıdaki kontroller çalışır. Kart yerelde ayrıca bir komutu açıkça isterse (ör. `pnpm db:migrate && pnpm check-rls`) o da çalışır.
+6. **Kısa mesaj:** plan ve raporlar kısa; çıktının tamamını değil, yalnızca hataları ve özet satırını yapıştır. İlerleme kartı yalnızca adım sınırında güncellenir (en fazla ~6 kez); kullanıcıya mesaj yalnızca PR açılınca, karar gerekince ve iş bitince.
 7. **Müfettiş yeniden incelemesi:** ikinci ve sonraki turlarda önceki bulguların durumunu yazar ve yalnızca son incelenen SHA'dan bu yana gelen diff'i tam derinlikte inceler. Bu diff riskli bir yola (migration, RLS, kimlik/yetki, log/audit, para, sözleşme, CI) dokunuyorsa o dosyaların tamamına ve doğrudan çağıranlarına da bakar. İstisna: kartında `Müfettiş: Zorunlu` yazan adımlarda (güvenlik, kimlik/yetki, RLS, migration) her turda PR'ın riskli yollardaki **tüm** dosyaları yeniden incelenir. Ayrıntı: `docs/07-ai-development/review-guide.md` §2–§4.
 8. **Bulgu döngüsü:** Usta PR açmadan önce `review-guide.md` §5'teki bilinen tuzakları kendi diff'inde kontrol eder. Müfettiş raporuna PR'da tek yorumla yanıt verir: her bulgu için "düzeltildi" ya da "itiraz + kanıt". Aynı bulgu için en fazla iki düzeltme turu yapılır, sonra karar Mimar'a gider (§6). Usta birleştirmeden önce §7'deki birleştirme kapısını uygular.
+9. **Doğrudan döngü ve limit:** Müfettiş PR olaylarıyla uyanır, Usta bulguyu PR yorumundan okur; Mimar yalnızca ilk inceleme isteğini ve son kararı görür (`review-guide.md` §6 madde 7). Kullanıcı Usta çalışırken bilgisayarın uyumasını kapatır. Ayrıntı ve ölçüm: `docs/07-ai-development/speed-and-tokens.md`.
 
 ## Yapma
 
@@ -110,3 +111,4 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 | CI/CD, ortam değişkenleri | `docs/06-operations/environments-cicd.md` |
 | "Bitti" mi? | `docs/07-ai-development/definition-of-done.md` |
 | PR incelemesi, bulgu biçimi, birleştirme kapısı | `docs/07-ai-development/review-guide.md` |
+| Hız, token, yerel test sınırı | `docs/07-ai-development/speed-and-tokens.md` |
