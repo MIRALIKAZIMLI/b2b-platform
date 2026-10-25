@@ -132,7 +132,7 @@ flowchart LR
 
 | Servis | Modül | Girdi | Çıktı | Not |
 | --- | --- | --- | --- | --- |
-| `PermissionGuard` | access | uç noktanın `@RequirePermission('orders.approve')` dekoratörü, `TenantContext` | izin / 403 | İzinler üyelik başına önbelleklenir (Redis, 60 sn); rol değişikliğinde önbellek silinir. |
+| `PermissionGuard` | access | uç noktanın `@RequirePermission('orders.approve')` dekoratörü, `TenantContext` | izin / 403 | İzinler üyelik başına önbelleklenir (Redis, `access.permission_cache_seconds`, varsayılan 60 sn); kayıt rol kimliğiyle doğrulanır, rol değişikliğinde silinir. Üyelik ve işletme durumu önbelleklenmez (her istekte okunur). Global `AccessGuard` (F1.8b). |
 | `SettingsService.get(key, businessId)` | settings | anahtar, işletme | değer | İşletme → plan → platform sırası. |
 | `EntitlementService.check(key, businessId, delta)` | billing | hak anahtarı | izin / `ENTITLEMENT_LIMIT_REACHED` | Limit + mevcut kullanım. |
 | `ConnectionPolicy.canRequest(sellerId, buyerId)` | connections | çift | izin / hata kodu | Aktif bağlantı, bekleyen istek, engel, bekleme süresi, kota sırasıyla kontrol edilir. |

@@ -130,6 +130,8 @@ describe('oturum, JWT, yenileme anahtarı (entegrasyon)', () => {
       timezone: null,
       platformRole: null,
       totpEnabled: false,
+      // F1.8b: /me genişledi (kırıcı değil).
+      twoFactorRecommended: false,
       memberships: [],
     });
 

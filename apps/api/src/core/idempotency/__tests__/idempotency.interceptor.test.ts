@@ -1,5 +1,6 @@
 // İdempotens interceptor'ının veritabanına gitmeden verdiği kararlar (birim).
 // Test ortamında DATABASE_URL ulaşılamaz bir adrestir: bu testler veritabanına gitseydi hata alırdı.
+import { Public } from '../../auth/access-decorators';
 import {
   type CanActivate,
   Controller,
@@ -37,12 +38,14 @@ class FakeUserGuard implements CanActivate {
 @Controller('test-idem-unit')
 @UseGuards(FakeUserGuard)
 class IdemUnitController {
+  @Public()
   @Post('items')
   create(): { n: number } {
     calls.post += 1;
     return { n: calls.post };
   }
 
+  @Public()
   @Get('items')
   list(): { n: number } {
     calls.get += 1;

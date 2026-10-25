@@ -32,6 +32,10 @@ export class RoleService {
         throw new DomainError('NOT_FOUND');
       }
       const capability = template.capability === 'buyer' ? 'buyer' : 'seller';
+      // Rolün yeteneği işletmenin yeteneği olmalı (data-model §4.5; Müfettiş PR #23 notu 1).
+      if (!(await this.repository.businessHasCapability(tx, ctx.businessId, capability))) {
+        throw new DomainError('CAPABILITY_REQUIRED');
+      }
       const items = await this.repository.templatePermissions(tx, templateId);
       assertPermissionsValid(capability, items);
       const roleId = this.ids.next();

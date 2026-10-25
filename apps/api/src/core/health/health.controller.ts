@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { Public } from '../auth/access-decorators';
 
 export interface HealthResponse {
   status: 'ok';
@@ -7,7 +8,7 @@ export interface HealthResponse {
 // /api/health sürümsüzdür (openapi.yaml). Veritabanı ve Redis kontrolü (503) F1.1a ve sonrasında eklenir.
 @Controller('api')
 export class HealthController {
-  // TODO(F1.8): @Public() dekoratörü erişim adımında gelir; geldiğinde buraya eklenecek.
+  @Public()
   @Get('health')
   check(): HealthResponse {
     return { status: 'ok' };

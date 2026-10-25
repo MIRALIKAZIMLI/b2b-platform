@@ -9,6 +9,7 @@ import { type TenantTxContext, withTenantTx, withUserTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { OutboxWriter } from '../../core/outbox';
 import { AccessRepository, type MyMembership } from './access.repository';
+import { PermissionCache } from './permission.cache';
 
 export interface ChangeRoleInput {
   readonly membershipId: string;
@@ -28,24 +29,35 @@ export class MembershipService {
     @Inject(AuditService) private readonly audit: AuditRecorder,
     @Inject(OutboxWriter) private readonly outbox: OutboxWriter,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(PermissionCache) private readonly cache: Pick<PermissionCache, 'invalidate'>,
   ) {}
 
   async changeRole(ctx: MembershipActorContext, input: ChangeRoleInput): Promise<void> {
-    await withTenantTx(ctx, async (tx) => {
+    const changed = await withTenantTx(ctx, async (tx) => {
       const membership = await this.repository.lockMembership(
         tx,
         ctx.businessId,
         input.membershipId,
       );
-      if (membership === undefined) {
+      // Yalnız aktif üyelik (Mimar K4; Müfettiş PR #23 notu 3): removed üyelik yok sayılır.
+      if (membership?.status !== 'active') {
         throw new DomainError('NOT_FOUND');
       }
       const role = await this.repository.findRole(tx, ctx.businessId, input.roleId);
       if (role === undefined) {
         throw new DomainError('NOT_FOUND');
       }
+      if (
+        !(await this.repository.businessHasCapability(
+          tx,
+          ctx.businessId,
+          role.capability === 'buyer' ? 'buyer' : 'seller',
+        ))
+      ) {
+        throw new DomainError('CAPABILITY_REQUIRED');
+      }
       if (membership.roleId === role.id) {
-        return;
+        return false;
       }
       await this.repository.updateMembershipRole(tx, membership.id, role.id, this.clock.now());
       await this.audit.record(tx, {
@@ -70,7 +82,10 @@ export class MembershipService {
           newRoleId: role.id,
         },
       });
+      return true;
     });
+    // Commit sonrası: önbellek hemen temizlenir (worker tüketicisi yedek; F1.8-AC5).
+    if (changed) await this.cache.invalidate(input.membershipId);
   }
 
   /** Kullanıcının tüm işletmelerdeki aktif üyelikleri (/me, işletme seçici; F1.8b kullanır). */

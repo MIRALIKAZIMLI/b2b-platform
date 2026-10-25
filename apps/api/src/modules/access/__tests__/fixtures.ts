@@ -23,6 +23,15 @@ export interface AccessServices {
   readonly memberships: MembershipService;
 }
 
+/** Rol değişikliğinde silinen önbellek anahtarları (F1.8a testleri gerçek Redis kullanmaz). */
+export const invalidations = {
+  ids: [] as string[],
+  invalidate(membershipId: string): Promise<void> {
+    this.ids.push(membershipId);
+    return Promise.resolve();
+  },
+};
+
 export function createServices(): AccessServices {
   const repository = new AccessRepository();
   return {
@@ -32,6 +41,7 @@ export function createServices(): AccessServices {
       new AuditService(clock),
       new OutboxWriter(),
       clock,
+      invalidations,
     ),
   };
 }
@@ -103,11 +113,29 @@ export async function testRefs(): Promise<Refs> {
 }
 
 /** Yeni toptancı işletmesi; işlemi yapan kullanıcı (`userId`) users'da. */
-export async function newBusiness(): Promise<TenantTxContext & { userId: string }> {
+/** İşletmeye yetenek kaydı (platform bağlamında; approved_by FK users). */
+export async function grantCapability(
+  businessId: string,
+  capability: 'seller' | 'buyer',
+  status: 'pending' | 'approved' | 'suspended' = 'approved',
+): Promise<void> {
+  await insertTestUsers(PLATFORM.userId);
+  await withPlatformTx(PLATFORM, (tx) =>
+    tx.execute(sql`insert into business_capabilities (business_id, capability, status)
+                   values (${businessId}, ${capability}, ${status})
+                   on conflict (business_id, capability) do update set status = excluded.status`),
+  );
+}
+
+/** Yeni işletme (varsayılan: onaylı toptancı); işlemi yapan kullanıcı (`userId`) users'da. */
+export async function newBusiness(
+  capability: 'seller' | 'buyer' | null = 'seller',
+): Promise<TenantTxContext & { userId: string }> {
   const shared = await testRefs();
   const tenant = { businessId: randomUUID(), userId: randomUUID() };
   await insertTestUsers(tenant.userId);
   await createBusiness(tenant, shared);
+  if (capability !== null) await grantCapability(tenant.businessId, capability);
   return tenant;
 }
 

@@ -1,5 +1,6 @@
 import { Body, Controller, Headers, HttpCode, Inject, Post, Req } from '@nestjs/common';
 import { z } from 'zod';
+import { Public } from '../../core/auth/access-decorators';
 import { OTP_PURPOSES } from './identity.schema';
 import { OtpService } from './otp.service';
 
@@ -19,7 +20,7 @@ export class OtpController {
   constructor(@Inject(OtpService) private readonly otp: OtpService) {}
 
   /** openapi `POST /api/v1/auth/otp/request` (US-001): 202 {challengeId, expiresAt}. */
-  // TODO(F1.8): @Public()
+  @Public()
   @Post('request')
   @HttpCode(202)
   async request(

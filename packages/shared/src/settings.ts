@@ -82,6 +82,8 @@ export const SETTING_DEFINITIONS = {
   'otp.fail_window_minutes': intSetting(60, 5, 1440),
   'auth.access_token_minutes': intSetting(15, 5, 60),
   'auth.refresh_token_days': intSetting(30, 1, 90),
+  'access.permission_cache_seconds': intSetting(60, 1, 3600),
+  'security.require_admin_2fa': boolSetting(false),
   'mobile.min_version.ios': versionSetting('0.0.0'),
   'mobile.min_version.android': versionSetting('0.0.0'),
   'system.maintenance': boolSetting(false),

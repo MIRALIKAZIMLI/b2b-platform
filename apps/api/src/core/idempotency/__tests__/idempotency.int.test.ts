@@ -1,5 +1,6 @@
 // İdempotens (F1.2-AC3, F1.2-AC3b, F1.2-AC10): gerçek PostgreSQL (app_user) + Redis.
 // Kimlik F1.5'te gelir; testte sahte bir guard `x-test-user` başlığından `request.user` yazar.
+import { Public } from '../../auth/access-decorators';
 import { randomUUID } from 'node:crypto';
 import {
   Body,
@@ -63,12 +64,14 @@ class FakeUserGuard implements CanActivate {
 @Controller('test-idem')
 @UseGuards(FakeUserGuard)
 class IdemTestController {
+  @Public()
   @Post('items')
   create(@Body() body: unknown): { n: number; body: unknown } {
     counters.created += 1;
     return { n: counters.created, body };
   }
 
+  @Public()
   @Post('accept')
   @HttpCode(200)
   accept(): { n: number } {
@@ -76,12 +79,14 @@ class IdemTestController {
     return { n: counters.accepted };
   }
 
+  @Public()
   @Post('fail')
   fail(): never {
     counters.failed += 1;
     throw new DomainError('NOT_FOUND');
   }
 
+  @Public()
   @Post('slow')
   async slow(): Promise<{ n: number }> {
     counters.slow += 1;

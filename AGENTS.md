@@ -46,7 +46,7 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 ## Uyulması zorunlu kurallar
 
 1. **Kiracı izolasyonu:** Veritabanına yalnızca `withTenantTx` / `withPlatformTx` üzerinden eriş. Kiracıya bağlı her yeni tablo aynı migration'da RLS ile gelir. Kiracıya bağlı her uç nokta için izolasyon testi yaz.
-2. **Yetki:** Her controller metodu `@RequirePermission('<kod>')` veya `@Public()` taşır. Yetkiyi işletme tipine göre değil, yetenek (`seller`/`buyer`) ve izne göre kontrol et.
+2. **Yetki:** Her controller metodu tam bir erişim işareti taşır: `@RequirePermission('<kod>')`, `@Public()`, `@Authenticated()` (yalnızca giriş; işletme bağlamı yok, ör. `/me`, oturumlar) veya `@RequirePlatformRole(...)` (platform uçları). İşaretsiz uç varsayılan olarak reddedilir (lint `b2b/require-endpoint-access` + bekçi testi). Yetkiyi işletme tipine göre değil, yetenek (`seller`/`buyer`) ve izne göre kontrol et.
 3. **Sözleşme önce:** API değişikliği önce `docs/03-architecture/api/openapi.yaml`'da. `/api/v1`'de kırıcı değişiklik yok.
 4. **Veri modeli önce:** Yeni tablo/kolon önce `docs/03-architecture/data-model.md`'de.
 5. **Durumlar:** Durum değişiklikleri yalnızca `*StateMachine` ile; geçişler `docs/03-architecture/state-machines.md` ile aynı.

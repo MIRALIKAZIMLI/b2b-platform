@@ -16,3 +16,4 @@
 - docs: Müfettiş inceleme kılavuzu (review-guide.md), hedefli yeniden inceleme, birleştirme kapısı
 - F1.6: TOTP ve platform ekibi
 - F1.8a: erişim tabloları
+- F1.8b: kiracı bağlamı ve PermissionGuard

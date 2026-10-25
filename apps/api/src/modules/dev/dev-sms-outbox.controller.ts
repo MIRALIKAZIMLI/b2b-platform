@@ -1,5 +1,6 @@
 import { Controller, Get, Inject, Query } from '@nestjs/common';
 import { z } from 'zod';
+import { Public } from '../../core/auth/access-decorators';
 import { DevSmsOutboxRepository } from '../../infrastructure/sms';
 
 /** openapi `/api/v1/dev/sms-outbox`: son 50 mesaj. */
@@ -27,7 +28,7 @@ export interface DevSmsOutboxItem {
 export class DevSmsOutboxController {
   constructor(@Inject(DevSmsOutboxRepository) private readonly outbox: DevSmsOutboxRepository) {}
 
-  // TODO(F1.8): @Public()
+  @Public()
   @Get('sms-outbox')
   async list(@Query() query: unknown): Promise<{ items: DevSmsOutboxItem[] }> {
     const { phone } = querySchema.parse(query);

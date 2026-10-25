@@ -5,6 +5,7 @@ export * from './errors';
 export * from './format';
 export * from './localized-text';
 export * from './permissions';
+export * from './platform-roles';
 export * from './settings';
 export * from './uuidv7';
 export * from './voen';

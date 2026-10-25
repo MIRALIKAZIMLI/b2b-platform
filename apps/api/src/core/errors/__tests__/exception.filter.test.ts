@@ -1,3 +1,4 @@
+import { Public } from '../../auth/access-decorators';
 import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import request from 'supertest';
@@ -15,22 +16,26 @@ const createSchema = z.object({ name: z.string().min(1), qty: z.number().int() }
 // Yalnızca test için: her hata türünü üreten uçlar.
 @Controller('test-errors')
 class ErrorsTestController {
+  @Public()
   @Get('domain')
   domain(): never {
     throw new DomainError('CONNECTION_NOT_ACTIVE', { connectionId: 'c-1' });
   }
 
+  @Public()
   @Get('domain-no-details')
   domainNoDetails(): never {
     throw new DomainError('NOT_FOUND');
   }
 
+  @Public()
   @Post('zod')
   zod(@Body() body: unknown): { ok: true } {
     createSchema.parse(body);
     return { ok: true };
   }
 
+  @Public()
   @Get('boom')
   boom(): never {
     throw new Error('gizli-ic-ayrinti: veritabanı şifresi yanlış');
@@ -42,6 +47,7 @@ class ErrorsTestController {
 class InjectProbeController {
   constructor(@Inject(Clock) private readonly clock: Clock) {}
 
+  @Public()
   @Get()
   probe(): { ok: boolean } {
     return { ok: this.clock.now() instanceof Date };

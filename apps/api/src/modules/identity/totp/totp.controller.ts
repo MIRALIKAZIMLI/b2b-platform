@@ -1,5 +1,6 @@
 import { Body, Controller, Headers, HttpCode, Inject, Post } from '@nestjs/common';
 import { z } from 'zod';
+import { Public } from '../../../core/auth/access-decorators';
 import { DomainError } from '../../../core/errors/domain-error';
 import { DEVICE_TYPES } from '../identity.schema';
 import type { AuthResult } from '../session.service';
@@ -31,7 +32,8 @@ export class TotpController {
   ) {}
 
   /** Yetki: `Authorization: Bearer <pendingToken>` (purpose = totp); erişim anahtarı kabul edilmez. */
-  // TODO(F1.8): @Public() (ön oturum burada doğrulanır)
+  // Erişim anahtarı değil, TOTP ön oturumu: guard JWT bakmaz, uç kendisi doğrular.
+  @Public()
   @Post('setup')
   @HttpCode(200)
   async setup(
@@ -45,7 +47,7 @@ export class TotpController {
     return await this.totp.setup(userId, input.confirmCode);
   }
 
-  // TODO(F1.8): @Public()
+  @Public()
   @Post('verify')
   @HttpCode(200)
   async verify(@Body() body: unknown): Promise<AuthResult> {

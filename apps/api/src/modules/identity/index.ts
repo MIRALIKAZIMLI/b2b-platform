@@ -1,8 +1,10 @@
-export { AccessTokenGuard, CurrentSession } from './access-token.guard';
+export { CurrentSession } from './current-session';
 export { IdentityModule } from './identity.module';
 export { type SuperAdminSeedResult, seedSuperAdmin } from './seed/super-admin.seed';
 export { type IdentityConfig, type JwtKey } from './identity.config';
-export { type SessionAuth } from './session.service';
+export { type MeView, type SessionAuth, SessionService } from './session.service';
+export { TotpRepository } from './totp/totp.repository';
+export { PLATFORM_ROLES, type PlatformRole } from './identity.schema';
 export { TokenService } from './token.service';
 export {
   OTP_PURPOSES,
