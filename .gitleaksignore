@@ -1,0 +1,6 @@
+# gitleaks istisnaları: yalnızca gerçek olmayan, geçmişte kalmış bulgular. Her satır tek bir bulgunun
+# parmak izidir (commit:dosya:kural:satır); kural veya dosya düzeyinde istisna eklenmez.
+# F1.5b (PR #19): token.service.test.ts ilk commit'indeki sahte JWT test anahtarları. Sonraki commit
+# bunları çalışma anında rastgele üretilen değerlerle değiştirdi; commit main geçmişinde kaldı.
+8d1b713095a765af59c16965e8b234c4c7086b2a:apps/api/src/modules/identity/__tests__/token.service.test.ts:generic-api-key:13
+8d1b713095a765af59c16965e8b234c4c7086b2a:apps/api/src/modules/identity/__tests__/token.service.test.ts:generic-api-key:66
