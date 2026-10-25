@@ -76,6 +76,7 @@ describe('TokenService (F1.5-AC12)', () => {
     const forger = service(
       {
         otpHashKey: 'x',
+        totpEncryptionKey: TOTP_KEY,
         jwt: { current: { id: CURRENT.id, secret: randomSecret() } },
       },
       clock,
