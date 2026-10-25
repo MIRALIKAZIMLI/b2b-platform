@@ -13,3 +13,4 @@
 - F1.9: audit log yazıcısı
 - F1.5a: kullanıcılar, OTP, mock SMS
 - F1.5b: oturum, JWT, yenileme anahtarı
+- docs: Müfettiş inceleme kılavuzu (review-guide.md), hedefli yeniden inceleme, birleştirme kapısı

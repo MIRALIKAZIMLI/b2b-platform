@@ -13,9 +13,18 @@
 
 ## Komut çıktısı
 
+<!-- AGENTS.md "Token ve süre kuralları" madde 5: yalnızca hatalar ve özet satırı. -->
+
 ```text
-pnpm lint && pnpm typecheck && pnpm test
+pnpm -s lint && pnpm -s typecheck
+pnpm -s --filter @b2b/api exec vitest run src/modules/<modül> --reporter=dot
 ```
+
+## Müfettiş için
+
+- Riskli yollar (review-guide §4): <!-- dokunulan dosyalar veya "yok" -->
+- Plandan sapmalar: <!-- yoksa "Yok" -->
+- Bilinen tuzaklar (review-guide §5) kontrol edildi: <!-- T1–T9; uygulanmayanı belirt -->
 
 ## Elle test
 
@@ -69,7 +78,7 @@ pnpm lint && pnpm typecheck && pnpm test
 
 - [ ] **(CI)** Gizli bilgi taraması temiz; bağımlılık taramasında yüksek/kritik açık yok.
 - [ ] Kişisel veri loglanmıyor; yeni 🔒 alan data-model.md'de işaretli.
-- [ ] Kimlik, yetki, kiracı bağlamı, fiyat, stok veya cari kodu değiştiyse Müfettiş incelemesi yapıldı ve kritik/önemli bulgu kalmadı.
+- [ ] Kimlik, yetki, kiracı bağlamı, fiyat, stok veya cari kodu değiştiyse Müfettiş incelemesi yapıldı ve BLOCKER/HIGH/MEDIUM bulgu kalmadı ([review-guide.md](../docs/07-ai-development/review-guide.md) §3).
 
 ## 6. Belgeler
 
@@ -81,6 +90,7 @@ pnpm lint && pnpm typecheck && pnpm test
 ## 7. Birleştirme
 
 - [ ] **(CI)** Tüm kontroller yeşil.
+- [ ] Müfettiş'in son ONAYLA'sı PR'ın şu anki head SHA'sı için verildi (review-guide §7).
 - [ ] Squash merge; commit mesajı `<tür>(<ID>): <açıklama>`.
 - [ ] Birleştirmeden sonra staging dağıtımı ve duman testi başarılı.
 - [ ] Değişen belgeler Claude Projesi bilgi tabanına yeniden yüklendi.
