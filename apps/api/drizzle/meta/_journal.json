@@ -43,6 +43,13 @@
       "when": 1792901282590,
       "tag": "0005_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792904045852,
+      "tag": "0006_audit_logs",
+      "breakpoints": true
     }
   ]
 }

@@ -67,8 +67,8 @@ describe('SECURITY DEFINER fonksiyonları ve S tabloları', () => {
        order by 1
     `);
 
-    // test_tenant_items yalnızca izolasyon testlerinin kurduğu örnek tablodur (gerçek migration değil).
-    expect(result.problems.filter((p) => p.table !== 'public.test_tenant_items')).toEqual([]);
+    // İzolasyon testlerinin kurduğu test_tenant_items de rls:T yorumu taşır; istisna gerekmez.
+    expect(result.problems).toEqual([]);
     expect(tables.rows).toEqual([
       { table: 'idempotency_keys', comment: 'rls:S' },
       { table: 'outbox_events', comment: 'rls:S' },

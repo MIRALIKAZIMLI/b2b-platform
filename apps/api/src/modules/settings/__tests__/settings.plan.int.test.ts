@@ -5,6 +5,8 @@ import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
 import { withPlatformTx, withTenantTx } from '../../../core/db';
+import { AuditService } from '../../../core/audit';
+import { SystemClock } from '../../../core/clock';
 import { SettingsCache } from '../settings.cache';
 import { SettingsRepository } from '../settings.repository';
 import { SettingsService } from '../settings.service';
@@ -64,7 +66,11 @@ describe('SettingsService plan katmanı (entegrasyon: PostgreSQL + Redis)', () =
 
   beforeAll(async () => {
     redis = createTestRedis();
-    settings = new SettingsService(new SettingsRepository(), new SettingsCache(redis.client));
+    settings = new SettingsService(
+      new SettingsRepository(),
+      new SettingsCache(redis.client),
+      new AuditService(new SystemClock()),
+    );
     regionId = await createRegion();
   });
 

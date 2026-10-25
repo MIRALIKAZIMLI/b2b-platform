@@ -8,6 +8,12 @@ import {
   type SettingValue,
   settingDefault,
 } from '@b2b/shared';
+import {
+  type AuditRecorder,
+  type AuditRequestContext,
+  AuditService,
+  settingAuditTargetId,
+} from '../../core/audit';
 import { DomainError } from '../../core/errors/domain-error';
 import { SettingsCache } from './settings.cache';
 import type {
@@ -28,6 +34,8 @@ const DORMANT_KEYS: ReadonlySet<SettingKey> = new Set(DORMANT_SETTING_KEYS);
 export interface SettingActor {
   /** Ayarı değiştiren platform kullanıcısı (`updated_by`). */
   readonly userId: string;
+  /** Audit için istek bilgisi; HTTP ucu (controller) verir. */
+  readonly context?: AuditRequestContext;
 }
 
 /**
@@ -42,6 +50,7 @@ export class SettingsService {
   constructor(
     @Inject(SettingsRepository) private readonly repository: SettingsRepositoryPort,
     @Inject(SettingsCache) private readonly cache: SettingsCachePort,
+    @Inject(AuditService) private readonly audit: AuditRecorder,
   ) {}
 
   async get<K extends SettingKey>(key: K, businessId?: string): Promise<SettingValue<K>> {
@@ -51,7 +60,8 @@ export class SettingsService {
 
   /**
    * Değeri doğrular ve yazar (yalnızca platform bağlamı; işletme kendi ayarını yazamaz).
-   * Tip, sınır veya çapraz kural ihlali → `SETTING_OUT_OF_RANGE`. Audit kaydı F1.9'da.
+   * Tip, sınır veya çapraz kural ihlali → `SETTING_OUT_OF_RANGE`. Eski ve yeni değer aynı
+   * işlemde audit'e yazılır (US-017 AC2); audit yazılamazsa ayar da yazılmaz.
    */
   async set(
     key: SettingKey,
@@ -69,7 +79,18 @@ export class SettingsService {
     if (DORMANT_KEYS.has(key)) {
       await this.assertDormantOrder(key, parsed.value, target);
     }
-    await this.repository.write(target, key, parsed.value, actor.userId);
+    await this.repository.write(target, key, parsed.value, actor.userId, (tx, previous) =>
+      this.audit.record(tx, {
+        actor: { type: 'platform', userId: actor.userId },
+        businessId: target.scope === 'business' ? target.businessId : null,
+        action: 'setting.updated',
+        targetType: 'setting',
+        targetId: settingAuditTargetId(target, key),
+        before: previous,
+        after: parsed.value,
+        ...(actor.context === undefined ? {} : { context: actor.context }),
+      }),
+    );
     await this.cache.invalidate(key, target);
   }
 

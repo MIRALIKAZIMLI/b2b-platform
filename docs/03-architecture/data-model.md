@@ -256,7 +256,7 @@ Benzersiz: `(scope, coalesce(scope_id, '00000000-0000-0000-0000-000000000000'), 
 Erişim (S sınıfı, F1.4a): `app_user`'ın tabloda hiçbir izni yoktur. `migrator` sahipli `SECURITY DEFINER` fonksiyonlar:
 
 - `settings_get(p_key text, p_business_id uuid)` → `(scope, value)` satırları: platform satırı ve (`p_business_id` verildiyse) işletme satırı ile işletmenin güncel aboneliğinin (`subscriptions.status IN ('active','grace','read_only')`) planına ait `scope = 'plan'` satırı (F1.4b). İşletme ve plan satırları yalnızca `p_business_id = app.business_id` iken veya platform bağlamında döner.
-- `settings_put(p_scope text, p_scope_id uuid, p_key text, p_value jsonb)`: yalnızca platform bağlamında (`app.is_platform = 'true'`); `updated_by` = `app.user_id`. Değer doğrulaması uygulamada (`SettingsService`).
+- `settings_put(p_scope text, p_scope_id uuid, p_key text, p_value jsonb) RETURNS jsonb`: yalnızca platform bağlamında (`app.is_platform = 'true'`); `updated_by` = `app.user_id`. Aynı kapsamdaki önceki değeri döner (yoksa `NULL`); `SettingsService.set` bunu aynı işlemde audit'e eski değer olarak yazar (US-017 AC2, F1.9). Değer doğrulaması uygulamada (`SettingsService`).
 
 SECURITY DEFINER fonksiyonlarda search_path her zaman `pg_catalog, public, pg_temp` ile (pg_temp en sonda) sabitlenir.
 
