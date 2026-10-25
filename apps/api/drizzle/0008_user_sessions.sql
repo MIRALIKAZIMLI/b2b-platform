@@ -70,7 +70,7 @@ CREATE FUNCTION "user_sessions_guard_columns"() RETURNS trigger
   SET search_path = pg_catalog, public, pg_temp
 AS $$
 BEGIN
-  IF current_setting('app.is_platform', true) = 'true' OR current_user <> 'app_user' THEN
+  IF current_setting('app.is_platform', true) = 'true' OR current_user = 'migrator' THEN
     RETURN NEW;
   END IF;
   IF TG_OP = 'INSERT' THEN
@@ -113,7 +113,7 @@ CREATE OR REPLACE FUNCTION "users_guard_platform_columns"() RETURNS trigger
   SET search_path = pg_catalog, public, pg_temp
 AS $$
 BEGIN
-  IF current_setting('app.is_platform', true) = 'true' OR current_user <> 'app_user' THEN
+  IF current_setting('app.is_platform', true) = 'true' OR current_user = 'migrator' THEN
     RETURN NEW;
   END IF;
   IF NEW.phone_e164 IS DISTINCT FROM OLD.phone_e164

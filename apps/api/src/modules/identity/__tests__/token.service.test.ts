@@ -1,6 +1,7 @@
 // F1.5-AC12: erişim anahtarı doğrulaması (birim). Süresi dolmuş, yanlış imzalı, bilinmeyen `kid`li,
 // yanlış türde (kayıt anahtarı) veya bozuk JWT → 401 UNAUTHENTICATED. Önceki anahtar (döndürme)
 // yalnızca doğrular.
+import { randomBytes } from 'node:crypto';
 import { settingDefault, type SettingKey, type SettingValue } from '@b2b/shared';
 import { SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
@@ -9,8 +10,13 @@ import { DomainError } from '../../../core/errors/domain-error';
 import type { IdentityConfig } from '../identity.config';
 import { TokenService } from '../token.service';
 
-const CURRENT = { id: 'k2', secret: 'current-secret-0123456789abcdefghij' };
-const PREVIOUS = { id: 'k1', secret: 'previous-secret-0123456789abcdefghi' };
+// Anahtarlar her çalıştırmada rastgele üretilir (depoda anahtar gibi görünen değer yok).
+function randomSecret(): string {
+  return randomBytes(32).toString('hex');
+}
+
+const CURRENT = { id: 'k2', secret: randomSecret() };
+const PREVIOUS = { id: 'k1', secret: randomSecret() };
 const USER = '0190f1a2-0000-7000-8000-0000000000aa';
 const SESSION = '0190f1a2-0000-7000-8000-0000000000bb';
 
@@ -63,7 +69,7 @@ describe('TokenService (F1.5-AC12)', () => {
     const forger = service(
       {
         otpHashKey: 'x',
-        jwt: { current: { id: CURRENT.id, secret: 'attacker-secret-0123456789abcdefgh' } },
+        jwt: { current: { id: CURRENT.id, secret: randomSecret() } },
       },
       clock,
     );

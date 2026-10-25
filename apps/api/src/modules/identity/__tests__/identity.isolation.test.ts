@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { connectAsAppUser } from '../../../../test/db-clients';
 import { pgErrorCode, PG_INSUFFICIENT_PRIVILEGE } from '../../../../test/isolation';
 import { insertTestUsers, randomTestPhone } from '../../../../test/users';
 import { withPlatformTx, withSystemTx, withTenantTx, withUserTx } from '../../../core/db';
@@ -224,6 +225,25 @@ describe('kimlik tabloları izolasyonu (identity)', () => {
         tx.execute(sql`select id from user_sessions where id in (${sessionA}, ${sessionB})`),
       );
       expect(platform.rows).toHaveLength(2);
+    });
+
+    it('F1.5-AC14: app_user migrator rolünü üstlenemez (definer politikaları sızmaz)', async () => {
+      const client = await connectAsAppUser();
+      try {
+        const member = await client.query<{ member: boolean }>(
+          "select pg_has_role('app_user', 'migrator', 'MEMBER') as member",
+        );
+        expect(member.rows[0]?.member).toBe(false);
+        const error = await errorOf(client.query('set role migrator'));
+        expect(pgErrorCode(error)).toBe(PG_INSUFFICIENT_PRIVILEGE);
+        // TO migrator politikaları app_user için geçerli değil: bağlamsız okuma 0 satır.
+        const rows = await client.query('select id from user_sessions where id = any($1::uuid[])', [
+          [sessionA, sessionB],
+        ]);
+        expect(rows.rows).toEqual([]);
+      } finally {
+        await client.end();
+      }
     });
 
     it('F1.5-AC14: user_sessions silinemez → 42501', async () => {
