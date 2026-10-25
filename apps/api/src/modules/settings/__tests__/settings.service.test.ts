@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 import type { SettingKey } from '@b2b/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainError } from '../../../core/errors/domain-error';
-import type { SettingLayers, SettingsCachePort, SettingsRepositoryPort } from '../settings.ports';
+import type {
+  SettingLayers,
+  SettingsCacheLookup,
+  SettingsCachePort,
+  SettingsRepositoryPort,
+} from '../settings.ports';
 import { SettingsService, type SettingTarget } from '../settings.service';
 
 interface Write {
@@ -12,20 +17,26 @@ interface Write {
   readonly userId: string;
 }
 
-/** Bellekte ayar deposu: platform ve işletme katmanları. */
+/** Bellekte ayar deposu: platform, plan ve işletme katmanları. */
 class FakeRepository implements SettingsRepositoryPort {
   readonly platform = new Map<string, unknown>();
+  readonly plan = new Map<string, unknown>();
   readonly business = new Map<string, unknown>();
+  /** İşletme → güncel aboneliğinin planı. */
+  readonly planOf = new Map<string, string>();
   readonly writes: Write[] = [];
   reads = 0;
 
   read(key: SettingKey, businessId?: string): Promise<SettingLayers> {
     this.reads += 1;
-    const layers: { platform?: unknown; business?: unknown } = {};
+    const layers: { platform?: unknown; plan?: unknown; business?: unknown } = {};
     if (this.platform.has(key)) layers.platform = this.platform.get(key);
-    const businessKey = `${businessId ?? ''}:${key}`;
-    if (businessId !== undefined && this.business.has(businessKey)) {
-      layers.business = this.business.get(businessKey);
+    if (businessId !== undefined) {
+      const planId = this.planOf.get(businessId);
+      const planKey = `${planId ?? ''}:${key}`;
+      if (planId !== undefined && this.plan.has(planKey)) layers.plan = this.plan.get(planKey);
+      const businessKey = `${businessId}:${key}`;
+      if (this.business.has(businessKey)) layers.business = this.business.get(businessKey);
     }
     return Promise.resolve(layers);
   }
@@ -33,6 +44,7 @@ class FakeRepository implements SettingsRepositoryPort {
   write(target: SettingTarget, key: SettingKey, value: unknown, userId: string): Promise<void> {
     this.writes.push({ target, key, value, userId });
     if (target.scope === 'platform') this.platform.set(key, value);
+    else if (target.scope === 'plan') this.plan.set(`${target.planId}:${key}`, value);
     else this.business.set(`${target.businessId}:${key}`, value);
     return Promise.resolve();
   }
@@ -42,8 +54,8 @@ class FakeRepository implements SettingsRepositoryPort {
 class NoCache implements SettingsCachePort {
   readonly deleted: string[] = [];
 
-  getLayers(): Promise<SettingLayers | undefined> {
-    return Promise.resolve(undefined);
+  getLayers(): Promise<SettingsCacheLookup> {
+    return Promise.resolve({ layers: undefined, planVersion: '0' });
   }
 
   setLayers(): Promise<void> {
@@ -77,6 +89,79 @@ describe('SettingsService (birim)', () => {
     repo = new FakeRepository();
     cache = new NoCache();
     service = new SettingsService(repo, cache);
+  });
+
+  describe('F1.4-AC1: çözümleme tablosu (işletme → plan → platform → varsayılan)', () => {
+    const KEY = 'connection.daily_request_quota';
+    const cases: {
+      name: string;
+      platform?: unknown;
+      plan?: unknown;
+      business?: unknown;
+      subscribed: boolean;
+      expected: number;
+    }[] = [
+      { name: 'hiç satır yok → kod varsayılanı', subscribed: true, expected: 20 },
+      { name: 'yalnızca platform', platform: 25, subscribed: true, expected: 25 },
+      {
+        name: 'plan değeri platformu ezer',
+        platform: 25,
+        plan: 30,
+        subscribed: true,
+        expected: 30,
+      },
+      { name: 'yalnızca plan', plan: 30, subscribed: true, expected: 30 },
+      {
+        name: 'işletme değeri planı ezer',
+        platform: 25,
+        plan: 30,
+        business: 40,
+        subscribed: true,
+        expected: 40,
+      },
+      {
+        name: 'aboneliksiz işletmede plan katmanı yok',
+        platform: 25,
+        plan: 30,
+        subscribed: false,
+        expected: 25,
+      },
+      {
+        name: 'geçersiz işletme değeri → plan',
+        platform: 25,
+        plan: 30,
+        business: 'bozuk',
+        subscribed: true,
+        expected: 30,
+      },
+      {
+        name: 'geçersiz plan değeri → platform',
+        platform: 25,
+        plan: -1,
+        subscribed: true,
+        expected: 25,
+      },
+    ];
+
+    it.each(cases)('$name', async (c) => {
+      const businessId = randomUUID();
+      const planId = randomUUID();
+      if (c.subscribed) repo.planOf.set(businessId, planId);
+      if ('platform' in c) repo.platform.set(KEY, c.platform);
+      if ('plan' in c) repo.plan.set(`${planId}:${KEY}`, c.plan);
+      if ('business' in c) repo.business.set(`${businessId}:${KEY}`, c.business);
+
+      expect(await service.get(KEY, businessId)).toBe(c.expected);
+    });
+
+    it('işletmesiz çağrıda plan katmanı yok', async () => {
+      const businessId = randomUUID();
+      const planId = randomUUID();
+      repo.planOf.set(businessId, planId);
+      repo.plan.set(`${planId}:${KEY}`, 30);
+
+      expect(await service.get(KEY)).toBe(20);
+    });
   });
 
   it('F1.4-AC1: işletme değeri platformu ezer', async () => {
@@ -179,5 +264,35 @@ describe('SettingsService (birim)', () => {
     await service.set('sms.daily_cap', 100, { scope: 'business', businessId }, actor);
 
     expect(cache.deleted).toEqual(['platform:sms.daily_cap', 'business:sms.daily_cap']);
+  });
+
+  it('F1.4-AC1: plan kapsamına yazılır, plan önbelleği geçersiz kılınır', async () => {
+    const businessId = randomUUID();
+    const planId = randomUUID();
+    repo.planOf.set(businessId, planId);
+    const target: SettingTarget = { scope: 'plan', planId };
+
+    await service.set('sms.daily_cap', 120, target, actor);
+
+    expect(repo.writes).toEqual([
+      { target, key: 'sms.daily_cap', value: 120, userId: actor.userId },
+    ]);
+    expect(cache.deleted).toEqual(['plan:sms.daily_cap']);
+    expect(await service.get('sms.daily_cap', businessId)).toBe(120);
+    expect(await service.get('sms.daily_cap')).toBe(500);
+  });
+
+  it('F1.4-AC2: plan kapsamında da sınır dışı değer → SETTING_OUT_OF_RANGE', async () => {
+    const code = await domainErrorCode(
+      service.set(
+        'connection.cooldown_after_reject_days',
+        6,
+        { scope: 'plan', planId: randomUUID() },
+        actor,
+      ),
+    );
+
+    expect(code).toBe('SETTING_OUT_OF_RANGE');
+    expect(repo.writes).toEqual([]);
   });
 });

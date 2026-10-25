@@ -31,8 +31,9 @@ export interface SettingActor {
 }
 
 /**
- * Katmanlı ayarlar (ADR-0009). Çözümleme: işletme → platform → kod varsayılanı
- * (plan katmanı F1.4b'de). Değer tipi ve sınırı `@b2b/shared` ayar kaydından gelir.
+ * Katmanlı ayarlar (ADR-0009). Çözümleme: işletme → plan → platform → kod varsayılanı. Plan
+ * katmanı işletmenin güncel aboneliğinin planıdır (F1.4b); işletmesiz çağrıda plan katmanı yoktur.
+ * Değer tipi ve sınırı `@b2b/shared` ayar kaydından gelir.
  */
 @Injectable()
 export class SettingsService {
@@ -74,13 +75,13 @@ export class SettingsService {
 
   private async loadLayers(key: SettingKey, businessId?: string): Promise<SettingLayers> {
     const cached = await this.cache.getLayers(key, businessId);
-    if (cached !== undefined) {
-      return cached;
+    if (cached.layers !== undefined) {
+      return cached.layers;
     }
     const layers = await this.repository.read(key, businessId);
     const ttlSeconds =
       key === CACHE_TTL_KEY ? this.resolve(CACHE_TTL_KEY, layers) : await this.get(CACHE_TTL_KEY);
-    await this.cache.setLayers(key, businessId, layers, ttlSeconds);
+    await this.cache.setLayers(key, businessId, layers, ttlSeconds, cached.planVersion);
     return layers;
   }
 
@@ -88,6 +89,7 @@ export class SettingsService {
   private resolve<K extends SettingKey>(key: K, layers: SettingLayers): SettingValue<K> {
     const candidates: [scope: string, present: boolean, value: unknown][] = [
       ['business', 'business' in layers, layers.business],
+      ['plan', 'plan' in layers, layers.plan],
       ['platform', 'platform' in layers, layers.platform],
     ];
     for (const [scope, present, value] of candidates) {
@@ -101,7 +103,10 @@ export class SettingsService {
     return settingDefault(key);
   }
 
-  /** Aynı kapsamdaki geçerli değerlerle çapraz kural (US-017, F1.4a K4). */
+  /**
+   * Aynı kapsamdaki geçerli değerlerle çapraz kural (US-017, F1.4a K4). Plan kapsamında işletme
+   * olmadığından plan satırları okunamaz; kontrol platform değerleriyle yapılır (F1.4b notu).
+   */
   private async assertDormantOrder(
     key: SettingKey,
     value: unknown,

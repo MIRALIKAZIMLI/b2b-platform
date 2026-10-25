@@ -9,3 +9,4 @@
 - F1.2b: idempotens ve outbox
 - F1.3: diller, çeviriler, para birimleri, bölgeler
 - F1.7: işletme çekirdek tabloları
+- F1.4b: planlar, abonelikler, hak servisi

@@ -255,7 +255,7 @@ Benzersiz: `(scope, coalesce(scope_id, '00000000-0000-0000-0000-000000000000'), 
 
 Erişim (S sınıfı, F1.4a): `app_user`'ın tabloda hiçbir izni yoktur. `migrator` sahipli `SECURITY DEFINER` fonksiyonlar:
 
-- `settings_get(p_key text, p_business_id uuid)` → `(scope, value)` satırları: platform satırı ve (`p_business_id` verildiyse) işletme satırı. İşletme satırı yalnızca `p_business_id = app.business_id` iken veya platform bağlamında döner.
+- `settings_get(p_key text, p_business_id uuid)` → `(scope, value)` satırları: platform satırı ve (`p_business_id` verildiyse) işletme satırı ile işletmenin güncel aboneliğinin (`subscriptions.status IN ('active','grace','read_only')`) planına ait `scope = 'plan'` satırı (F1.4b). İşletme ve plan satırları yalnızca `p_business_id = app.business_id` iken veya platform bağlamında döner.
 - `settings_put(p_scope text, p_scope_id uuid, p_key text, p_value jsonb)`: yalnızca platform bağlamında (`app.is_platform = 'true'`); `updated_by` = `app.user_id`. Değer doğrulaması uygulamada (`SettingsService`).
 
 SECURITY DEFINER fonksiyonlarda search_path her zaman `pg_catalog, public, pg_temp` ile (pg_temp en sonda) sabitlenir.
@@ -486,25 +486,52 @@ Benzersiz: `(user_id, business_id)`. Kural: her işletmede en az bir `active` ve
 
 ### 4.6 `billing`
 
-#### `plans` (G) — `code unique`, `name jsonb`, `capability`, `price numeric(14,2)`, `currency_code`, `period (month/year)`, `is_active`
+#### `plans` (G)
 
-#### `plan_entitlements` (G) — `plan_id`, `key`, `value jsonb`; PK `(plan_id, key)`. Anahtarlar: `users.max`, `buyers.active.max`, `warehouses.max`, `connection_requests.daily`, `feature.courier_app`, `feature.export`, `feature.branch_pricing`
+| Alan | Tip | Kısıt | Not |
+| --- | --- | --- | --- |
+| id | uuid | PK | UUIDv7, uygulama üretir (`IdGenerator`) |
+| code | text | unique, not null | Yalnızca seed ve admin ekranında kullanılır; kod plan adına göre dallanmaz (ADR-0009 §3) |
+| name | jsonb | not null | Çok dilli |
+| capability | text | `seller` / `buyer` (CHECK) | |
+| price | numeric(14,2) | not null, ≥ 0 (CHECK) | Kodda `Money`, asla `number` |
+| currency_code | char(3) | FK currencies, not null | |
+| period | text | `month` / `year` (CHECK) | |
+| is_active | boolean | not null default true | |
+
+Seed (F1.4b): `pilot` (seller, 0.00 AZN, aylık, bütün sayısal haklar sınırsız, bütün `feature.*` açık) ve `buyer_free` (buyer, 0.00 AZN, aylık, bütün sayısal haklar sınırsız, bütün `feature.*` kapalı). Gerçek fiyatlar F6.3 admin ekranından girilir.
+
+#### `plan_entitlements` (G) — `plan_id` (FK plans), `key text`, `value jsonb not null`; PK `(plan_id, key)`; `id` yok
+
+Anahtarlar ve tipleri (kayıt: `packages/shared/src/entitlements.ts`; yazımda Zod ile doğrulanır, bilinmeyen anahtar veya yanlış tip → `VALIDATION_FAILED`):
+
+| Anahtar | Tip |
+| --- | --- |
+| `users.max`, `buyers.active.max`, `warehouses.max`, `connection_requests.daily` | tamsayı ≥ 0 veya `null` (= sınırsız) |
+| `feature.courier_app`, `feature.export`, `feature.branch_pricing` | boolean |
 
 #### `subscriptions` (T)
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| business_id | uuid | | |
-| plan_id | uuid | | |
-| status | text | `active` / `grace` / `read_only` / `cancelled` | |
-| current_period_start | date | | |
-| current_period_end | date | | |
+| id | uuid | PK | UUIDv7, uygulama üretir (`IdGenerator`) |
+| business_id | uuid | FK businesses, not null | |
+| plan_id | uuid | FK plans, not null | |
+| status | text | `active` / `grace` / `read_only` / `cancelled` (CHECK) | Geçişler: state-machines §8 |
+| current_period_start | date | not null | |
+| current_period_end | date | not null, ≥ start (CHECK) | |
 | grace_until | date | null | +7 gün |
 | payment_note | text | null | Manuel ödeme notu |
 
-Benzersiz: `(business_id) WHERE status IN ('active','grace','read_only')`.
+Benzersiz: `(business_id) WHERE status IN ('active','grace','read_only')`. Bu üç durumdaki satır işletmenin **güncel aboneliğidir**; hak kontrolü ve ayarların plan katmanı bu satırın planını kullanır.
 
-#### `entitlement_overrides` (T) — `business_id`, `key`, `value jsonb`, `reason text`, `created_by`; PK `(business_id, key)`
+#### `entitlement_overrides` (T) — `business_id` (FK businesses), `key text`, `value jsonb not null`, `reason text null`, `created_by uuid null` (FK users F1.5a'da); PK `(business_id, key)`; `id` yok
+
+Değer tipi `plan_entitlements` ile aynıdır ve aynı kayıtla doğrulanır.
+
+**RLS (F1.4b, Mimar düzeltmesi D1):** `subscriptions` ve `entitlement_overrides` için kiracı politikası yalnızca `FOR SELECT` (kiracı kendi aboneliğini ve istisnasını okur, yazamaz); yazma yalnızca platform politikasıyla (`app.is_platform = 'true'`, USING ve WITH CHECK). `plans` ve `plan_entitlements` G kalıbı (F1.3).
+
+**Hak kontrolü (`EntitlementService`, F1.4b):** değer sırası `entitlement_overrides` → güncel aboneliğin planı (`plan_entitlements`). Güncel aboneliği olmayan işletmede veya planda anahtar yoksa sayısal hak reddedilir (`ENTITLEMENT_LIMIT_REACHED`), `feature.*` kapalı sayılır. `null` = sınırsız.
 
 ### 4.7 `connections`
 

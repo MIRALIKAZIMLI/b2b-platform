@@ -15,6 +15,7 @@ import { IdempotencyModule } from './core/idempotency';
 import { OutboxModule } from './core/outbox';
 import { RequestIdMiddleware } from './core/request-id.middleware';
 import { RedisModule } from './infrastructure/redis';
+import { BillingModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
 import { I18nModule } from './modules/i18n';
 import { SettingsModule } from './modules/settings';
@@ -40,6 +41,7 @@ export class AppModule implements NestModule {
         SettingsModule,
         I18nModule,
         BusinessesModule,
+        BillingModule,
         IdempotencyModule,
         OutboxModule,
       ],

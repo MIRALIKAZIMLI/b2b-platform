@@ -12,6 +12,7 @@ interface LayerRow extends Record<string, unknown> {
 /**
  * `settings` (S) erişimi yalnızca SECURITY DEFINER fonksiyonlarla (F1.4a K1, K2):
  * - okuma: işletme varsa withTenantTx (kullanıcısız), yoksa withSystemTx; withPlatformTx değil.
+ *   İşletme verilirse fonksiyon güncel aboneliğin plan satırını da döndürür (F1.4b).
  * - yazma: withPlatformTx; `updated_by` fonksiyonda `app.user_id`'den yazılır.
  */
 @Injectable()
@@ -26,9 +27,10 @@ export class SettingsRepository implements SettingsRepositoryPort {
         ? await withSystemTx(query)
         : await withTenantTx({ businessId, userId: null }, query);
 
-    const layers: { platform?: unknown; business?: unknown } = {};
+    const layers: { platform?: unknown; plan?: unknown; business?: unknown } = {};
     for (const row of result.rows) {
       if (row.scope === 'platform') layers.platform = row.value;
+      if (row.scope === 'plan') layers.plan = row.value;
       if (row.scope === 'business') layers.business = row.value;
     }
     return layers;
@@ -40,7 +42,12 @@ export class SettingsRepository implements SettingsRepositoryPort {
     value: unknown,
     userId: string,
   ): Promise<void> {
-    const scopeId = target.scope === 'business' ? target.businessId : null;
+    const scopeId =
+      target.scope === 'business'
+        ? target.businessId
+        : target.scope === 'plan'
+          ? target.planId
+          : null;
     const json = JSON.stringify(value);
     await withPlatformTx({ userId }, (tx) =>
       tx.execute(
