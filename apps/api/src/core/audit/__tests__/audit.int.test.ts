@@ -150,6 +150,37 @@ describe('AuditService (entegrasyon)', () => {
     expect(JSON.stringify(row)).not.toContain('+994');
   });
 
+  it('F1.9-AC2: camelCase alanlar da veritabanına maskeli yazılır', async () => {
+    const targetId = `business:${randomUUID()}:mask-camel`;
+    const personal = {
+      phoneE164: '+994501234567',
+      fullName: 'Ad Soyad',
+      contactName: 'Əlaqə',
+      personalPhone: '+994551112233',
+      email: 'a@b.az',
+      deliverySnapshot: { address: 'Bakı', phoneE164: '+994501234567' },
+      status: 'active',
+    };
+
+    await withSystemTx((tx) =>
+      service.record(tx, entryFor(targetId, { before: personal, after: { nested: [personal] } })),
+    );
+
+    const masked = {
+      phoneE164: AUDIT_MASK,
+      fullName: AUDIT_MASK,
+      contactName: AUDIT_MASK,
+      personalPhone: AUDIT_MASK,
+      email: AUDIT_MASK,
+      deliverySnapshot: AUDIT_MASK,
+      status: 'active',
+    };
+    const [row] = await rowsFor(targetId);
+    expect(row?.before).toEqual(masked);
+    expect(row?.after).toEqual({ nested: [masked] });
+    expect(JSON.stringify(row)).not.toMatch(/\+994|Ad Soyad|a@b\.az/);
+  });
+
   it('F1.9-AC3: işlem geri alınırsa audit kaydı da yoktur (aynı tx)', async () => {
     const targetId = `business:${randomUUID()}:rollback`;
 

@@ -29,6 +29,56 @@ describe('maskAuditValue (birim)', () => {
     }
   });
 
+  it('F1.9-AC2: 6 alanın camelCase biçimi de maskelenir', () => {
+    const camel = [
+      'phoneE164',
+      'fullName',
+      'contactName',
+      'personalPhone',
+      'email',
+      'deliverySnapshot',
+    ];
+    for (const field of camel) {
+      expect(maskAuditValue({ [field]: 'gizli', other: 1 }), field).toEqual({
+        [field]: AUDIT_MASK,
+        other: 1,
+      });
+    }
+  });
+
+  it('F1.9-AC2: büyük harf, PascalCase ve tireli biçimler de maskelenir', () => {
+    expect(
+      maskAuditValue({ PhoneE164: 'a', CONTACT_NAME: 'b', 'personal-phone': 'c', Email: 'd' }),
+    ).toEqual({
+      PhoneE164: AUDIT_MASK,
+      CONTACT_NAME: AUDIT_MASK,
+      'personal-phone': AUDIT_MASK,
+      Email: AUDIT_MASK,
+    });
+  });
+
+  it('F1.9-AC2: iç içe nesne ve dizilerde camelCase de maskelenir', () => {
+    const value = {
+      user: { fullName: 'Ad Soyad', phoneE164: '+994501234567', status: 'active' },
+      contacts: [{ contactName: 'X', personalPhone: '+994551112233', role: 'owner' }],
+      order: { deliverySnapshot: { address: 'Bakı' } },
+    };
+
+    expect(maskAuditValue(value)).toEqual({
+      user: { fullName: AUDIT_MASK, phoneE164: AUDIT_MASK, status: 'active' },
+      contacts: [{ contactName: AUDIT_MASK, personalPhone: AUDIT_MASK, role: 'owner' }],
+      order: { deliverySnapshot: AUDIT_MASK },
+    });
+  });
+
+  it('F1.9-AC2: benzer ama farklı adlar maskelenmez', () => {
+    expect(maskAuditValue({ phone: 'x', name: 'y', emailVerified: true })).toEqual({
+      phone: 'x',
+      name: 'y',
+      emailVerified: true,
+    });
+  });
+
   it('F1.9-AC2: nesne değerli alan (delivery_snapshot) tümüyle maskelenir', () => {
     const value = { delivery_snapshot: { address: 'Bakı', contact_name: 'X', phone_e164: '+994' } };
 
