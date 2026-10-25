@@ -5,7 +5,7 @@ import { Writable } from 'node:stream';
 import type { Provider, Type } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import type { ServerEnv } from '@b2b/shared';
+import type { ApiEnv } from '@b2b/shared';
 import { AppModule } from '../src/app.module';
 import { createFastifyAdapter } from '../src/core/request-id.middleware';
 import { TEST_SERVER_ENV } from './env';
@@ -41,12 +41,12 @@ export interface TestAppOptions {
   readonly controllers?: Type[];
   readonly providers?: Provider[];
   readonly overrides?: ProviderOverride[];
-  readonly env?: Partial<ServerEnv>;
+  readonly env?: Partial<ApiEnv>;
   readonly logStream?: LogCapture;
 }
 
 export async function createTestApp(options: TestAppOptions = {}): Promise<NestFastifyApplication> {
-  const env: ServerEnv = { ...TEST_SERVER_ENV, ...options.env };
+  const env: ApiEnv = { ...TEST_SERVER_ENV, ...options.env };
   const builder = Test.createTestingModule({
     imports: [AppModule.register(env, options.logStream ? { logStream: options.logStream } : {})],
     controllers: options.controllers ?? [],

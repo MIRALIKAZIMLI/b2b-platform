@@ -58,7 +58,7 @@ flowchart LR
 | `typecheck` | `tsc --noEmit` tüm paketlerde | Herhangi bir hata |
 | `secrets` | Gizli bilgi taraması (gitleaks) | Herhangi bir bulgu |
 | `unit` | Vitest birim testleri | Başarısız test |
-| `integration` | Vitest + Supertest; PostgreSQL 16 ve Redis 7 servis container'ları; sıra: `db:bootstrap` → `db:migrate` (sıfırdan) → `check-rls` → `test:integration`. Rol şifreleri her çalıştırmada rastgele üretilir ve loglarda maskelenir | Başarısız test; kapsam eşiği (NFR-80/81) altı; `check-rls` hatası (RLS sınıfı yorumu eksik tablo, RLS'siz kiracı tablosu) |
+| `integration` | Vitest + Supertest; PostgreSQL 16 ve Redis 7 servis container'ları; sıra: `db:bootstrap` → `db:migrate` (sıfırdan) → `check-rls` → `test:coverage:backend` (api birim + entegrasyon/izolasyon testleri tek çalıştırmada, kapsam eşikleriyle; F1.5a). Rol şifreleri her çalıştırmada rastgele üretilir ve loglarda maskelenir | Başarısız test; kapsam eşiği (NFR-80/81) altı; `check-rls` hatası (RLS sınıfı yorumu eksik tablo, RLS'siz kiracı tablosu) |
 | `contract` | API'den OpenAPI üret → `docs/03-architecture/api/openapi.yaml` ile karşılaştır; kırıcı değişiklik denetimi | Fark var veya `/api/v1`'de kırıcı değişiklik |
 | `deps-audit` | `pnpm audit --audit-level=high` | Yüksek / kritik açık |
 | `build` | Tüm uygulamaların derlenmesi | Derleme hatası |
@@ -130,8 +130,9 @@ flowchart TB
 | `JWT_SIGNING_KEY`, `JWT_KEY_ID` | Ortam başına ayrı; döndürme için iki anahtar desteklenir |
 | `TOTP_ENCRYPTION_KEY` | 32 bayt |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_PUBLIC`, `R2_BUCKET_PRIVATE`, `FILES_PUBLIC_BASE_URL` | — |
-| `SMS_PROVIDER` | `mock` (production'da yasak) / gerçek sağlayıcı adı |
+| `SMS_PROVIDER` | `mock` (production'da yasak; `APP_ENV=production` + `mock` → api açılmaz) / gerçek sağlayıcı adı (F6.5'e kadar yalnızca `mock` kabul edilir) |
 | `SMS_API_KEY` | Gerçek sağlayıcıda |
+| `OTP_HASH_KEY` | OTP kod özeti (HMAC-SHA256) anahtarı; en az 32 karakter, ortam başına ayrı ve rastgele. Yoksa veya kısaysa api açılmaz (F1.5a) |
 | `EXPO_ACCESS_TOKEN` | Push |
 | `SENTRY_DSN` | Boş bırakılabilir |
 | `CORS_ORIGINS` | Web alan adları |

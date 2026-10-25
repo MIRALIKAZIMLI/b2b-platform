@@ -14,6 +14,7 @@
     "test": "pnpm --filter @b2b/shared build && pnpm -r test && vitest run",
     "test:coverage": "pnpm --filter @b2b/shared build && pnpm -r --filter @b2b/api --filter @b2b/shared --filter @b2b/web test --coverage",
     "build": "pnpm -r build",
+    "test:coverage:backend": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api test:coverage",
     "test:integration": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api test:integration",
     "test:isolation": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api test:isolation",
     "db:bootstrap": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api db:bootstrap",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadServerEnv, type EnvExitIo } from '../load-env';
+import { loadApiEnv, loadServerEnv, type EnvExitIo } from '../load-env';
 
 class ExitCalled extends Error {
   constructor(readonly code: number) {
@@ -68,5 +68,47 @@ describe('loadServerEnv (api ve worker açılışı)', () => {
     for (const value of ['canli', 'redis-secret', 'secret-app', '127.0.0.1']) {
       expect(output).not.toContain(value);
     }
+  });
+});
+
+describe('loadApiEnv (api açılışı, F1.5a)', () => {
+  const API_VALID = {
+    ...VALID,
+    SMS_PROVIDER: 'mock',
+    OTP_HASH_KEY: 'otp-hash-secret-value-0123456789abcdef',
+  };
+
+  function runApiAndCatch(env: Record<string, string | undefined>, io: EnvExitIo): ExitCalled {
+    try {
+      loadApiEnv(env, io);
+    } catch (error) {
+      if (error instanceof ExitCalled) return error;
+      throw error;
+    }
+    throw new Error('loadApiEnv çıkış yapmadı');
+  }
+
+  it('geçerli ortamla şemayı döner', () => {
+    const io = fakeIo();
+    expect(loadApiEnv(API_VALID, io).SMS_PROVIDER).toBe('mock');
+    expect(io.output).toEqual([]);
+  });
+
+  it('F1.5-AC7: APP_ENV=production + SMS_PROVIDER=mock → başlamaz (çıkış kodu 1)', () => {
+    const io = fakeIo();
+    const exit = runApiAndCatch({ ...API_VALID, APP_ENV: 'production' }, io);
+
+    expect(exit.code).toBe(1);
+    const output = io.output.join('');
+    expect(output).toMatch(/SMS_PROVIDER/);
+    expect(output).not.toContain('otp-hash-secret-value');
+  });
+
+  it('OTP_HASH_KEY yoksa başlamaz', () => {
+    const io = fakeIo();
+    const exit = runApiAndCatch({ ...API_VALID, OTP_HASH_KEY: undefined }, io);
+
+    expect(exit.code).toBe(1);
+    expect(io.output.join('')).toMatch(/OTP_HASH_KEY/);
   });
 });

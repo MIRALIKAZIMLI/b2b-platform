@@ -10,6 +10,7 @@ import { DomainError } from '../../../core/errors/domain-error';
 import { SettingsCache } from '../settings.cache';
 import { SettingsRepository } from '../settings.repository';
 import { SettingsService } from '../settings.service';
+import { insertTestUsers } from '../../../../test/users';
 
 /** migrator (tablo sahibi) ile tablodaki satırı okur; testte doğrulama için. */
 async function readRowAsOwner(
@@ -63,7 +64,8 @@ describe('SettingsService (entegrasyon: PostgreSQL + Redis)', () => {
   const actor = { userId: randomUUID() };
   const clock = new FixedClock(new Date('2026-10-25T08:00:00.000Z'));
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    await insertTestUsers(actor.userId);
     redis = createTestRedis();
     service = new SettingsService(
       new SettingsRepository(),
@@ -134,6 +136,7 @@ describe('SettingsService (entegrasyon: PostgreSQL + Redis)', () => {
 
   it('K2: updated_by platform kullanıcısıdır', async () => {
     const userId = randomUUID();
+    await insertTestUsers(userId);
     await service.set('outbox.poll_interval_ms', 2000, { scope: 'platform' }, { userId });
 
     expect(await readRowAsOwner('outbox.poll_interval_ms', null)).toEqual({

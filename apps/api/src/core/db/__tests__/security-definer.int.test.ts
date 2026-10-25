@@ -13,9 +13,15 @@ interface FunctionRow {
 }
 
 const EXPECTED_FUNCTIONS = [
+  'dev_sms_outbox_insert',
+  'dev_sms_outbox_list',
   'idempotency_complete',
   'idempotency_release',
   'idempotency_reserve',
+  'otp_challenge_close',
+  'otp_challenge_create',
+  'otp_challenge_fail',
+  'otp_challenge_lock',
   'outbox_claim_batch',
   'outbox_mark_failed',
   'outbox_mark_processed',

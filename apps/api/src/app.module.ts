@@ -6,7 +6,7 @@ import {
   RequestMethod,
 } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
-import type { ServerEnv } from '@b2b/shared';
+import type { ApiEnv } from '@b2b/shared';
 import type { DestinationStream } from 'pino';
 import { CoreModule } from './core/core.module';
 import { GlobalExceptionFilter } from './core/errors/exception.filter';
@@ -15,19 +15,24 @@ import { IdempotencyModule } from './core/idempotency';
 import { OutboxModule } from './core/outbox';
 import { RequestIdMiddleware } from './core/request-id.middleware';
 import { RedisModule } from './infrastructure/redis';
+import { SmsModule, type SmsRetryPolicy } from './infrastructure/sms';
 import { BillingModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
+import { DevModule, isDevModuleEnabled } from './modules/dev';
 import { I18nModule } from './modules/i18n';
+import { IdentityModule } from './modules/identity';
 import { SettingsModule } from './modules/settings';
 
 export interface AppModuleOptions {
   /** Testler için: loglar bu akışa yazılır. */
   readonly logStream?: DestinationStream;
+  /** Testler için: SMS yeniden deneme bekleme süreleri. */
+  readonly smsRetryPolicy?: SmsRetryPolicy;
 }
 
 @Module({})
 export class AppModule implements NestModule {
-  static register(env: ServerEnv, options: AppModuleOptions = {}): DynamicModule {
+  static register(env: ApiEnv, options: AppModuleOptions = {}): DynamicModule {
     return {
       module: AppModule,
       imports: [
@@ -37,11 +42,18 @@ export class AppModule implements NestModule {
           ...(options.logStream === undefined ? {} : { stream: options.logStream }),
         }),
         RedisModule.forRoot({ url: env.REDIS_URL }),
+        SmsModule.forRoot({
+          provider: env.SMS_PROVIDER,
+          ...(options.smsRetryPolicy === undefined ? {} : { retryPolicy: options.smsRetryPolicy }),
+        }),
         HealthModule,
         SettingsModule,
         I18nModule,
         BusinessesModule,
         BillingModule,
+        IdentityModule.forRoot({ otpHashKey: env.OTP_HASH_KEY }),
+        // /api/v1/dev/* production'da hiç kaydedilmez (NFR-96, ADR-0021).
+        ...(isDevModuleEnabled(env.APP_ENV) ? [DevModule] : []),
         IdempotencyModule,
         OutboxModule,
       ],

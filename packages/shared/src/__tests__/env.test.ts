@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDbEnv, parseMigratorEnv, parseServerEnv } from '../env';
+import { parseApiEnv, parseDbEnv, parseMigratorEnv, parseServerEnv } from '../env';
 
 const APP_URL = 'postgres://app_user:secret-app@127.0.0.1:5432/b2b';
 const MIGRATOR_URL = 'postgresql://migrator:secret-mig@127.0.0.1:5432/b2b';
@@ -107,5 +107,38 @@ describe('env: sunucu şeması (api ve worker)', () => {
     for (const value of ['gizli-ortam', 'secret-app', 'db.internal', 'redis-secret', 'cache']) {
       expect(message).not.toContain(value);
     }
+  });
+});
+
+describe('env: api (SMS ve OTP, F1.5a)', () => {
+  const OTP_HASH_KEY = 'k'.repeat(32);
+  const API_ENV = { ...SERVER_ENV, SMS_PROVIDER: 'mock', OTP_HASH_KEY };
+
+  it('geçerli değerler okunur', () => {
+    expect(parseApiEnv(API_ENV)).toMatchObject({ SMS_PROVIDER: 'mock', OTP_HASH_KEY });
+    expect(parseApiEnv({ ...API_ENV, APP_ENV: 'staging' }).APP_ENV).toBe('staging');
+  });
+
+  it('F1.5-AC7: production + SMS_PROVIDER=mock reddedilir (NFR-97)', () => {
+    const message = errorMessage(() => parseApiEnv({ ...API_ENV, APP_ENV: 'production' }));
+
+    expect(message).toMatch(/SMS_PROVIDER/);
+    expect(message).not.toContain(OTP_HASH_KEY);
+  });
+
+  it('OTP_HASH_KEY yoksa veya 32 karakterden kısaysa reddedilir; değer mesajda yok', () => {
+    expect(() => parseApiEnv({ ...API_ENV, OTP_HASH_KEY: undefined })).toThrow(/OTP_HASH_KEY/);
+    const message = errorMessage(() => parseApiEnv({ ...API_ENV, OTP_HASH_KEY: 'kisa-gizli' }));
+    expect(message).toMatch(/OTP_HASH_KEY/);
+    expect(message).not.toContain('kisa-gizli');
+  });
+
+  it('SMS_PROVIDER yoksa veya bilinmiyorsa reddedilir', () => {
+    expect(() => parseApiEnv({ ...API_ENV, SMS_PROVIDER: undefined })).toThrow(/SMS_PROVIDER/);
+    expect(() => parseApiEnv({ ...API_ENV, SMS_PROVIDER: 'twilio' })).toThrow(/SMS_PROVIDER/);
+  });
+
+  it('worker şeması SMS ve OTP değişkenlerini istemez', () => {
+    expect(() => parseServerEnv(SERVER_ENV)).not.toThrow();
   });
 });

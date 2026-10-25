@@ -4,6 +4,7 @@
 // - ON CONFLICT DO NOTHING: adminin sonradan yaptığı düzenlemeler ezilmez.
 // - Bölge eklemez: pilot bölge listesi belgede yok (data-model §6 AÇIK SORU, Mimar kararı F1.3).
 import { ERROR_MESSAGES } from './error-messages';
+import { SMS_MESSAGES } from './sms-messages';
 
 /** pg `Client` / `PoolClient` uyar (modüller pg'yi içe aktarmaz; bağlantıyı cli.ts açar). */
 export interface SeedClient {
@@ -57,6 +58,13 @@ async function insertAll(client: SeedClient): Promise<number> {
   for (const [code, text] of Object.entries(ERROR_MESSAGES)) {
     for (const lang of SEED_LANGS) {
       keys.push(`errors.${code}`);
+      langs.push(lang);
+      values.push(text[lang]);
+    }
+  }
+  for (const [key, text] of Object.entries(SMS_MESSAGES)) {
+    for (const lang of SEED_LANGS) {
+      keys.push(key);
       langs.push(lang);
       values.push(text[lang]);
     }
