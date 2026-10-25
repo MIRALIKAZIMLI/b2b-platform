@@ -1,8 +1,10 @@
-// İsteğin kimliği doğrulanmış kullanıcısı. Kimlik doğrulama (F1.5) `request.user`'ı doldurur;
-// o zamana kadar yalnızca testler doldurur. Değer uuid değilse kullanıcı yok sayılır.
+// İsteğin kimliği doğrulanmış kullanıcısı. AccessTokenGuard (identity, F1.5b) `request.user`'ı
+// doldurur; korumasız uçlarda testler doldurabilir. Değer uuid değilse kullanıcı yok sayılır.
 
 export interface RequestUser {
   readonly id: string;
+  /** Erişim anahtarındaki oturum (`sid`, F1.5b). */
+  readonly sessionId?: string;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

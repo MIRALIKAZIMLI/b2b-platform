@@ -208,7 +208,11 @@ describe('OTP (entegrasyon: PostgreSQL + Redis, mock SMS)', () => {
       [challengeId],
     );
     expect(audit).toEqual([
-      { action: 'otp.locked', actor_type: 'system', after: { attempts: 5, lockMinutes: 15 } },
+      {
+        action: 'otp.locked',
+        actor_type: 'system',
+        after: { attempts: 5, numberFailures: 5, lockMinutes: 15 },
+      },
     ]);
 
     // Kilitliyken doğru kod da kabul edilmez; yeni kod istenemez (kalan süre döner).
@@ -241,6 +245,57 @@ describe('OTP (entegrasyon: PostgreSQL + Redis, mock SMS)', () => {
       otp.verifyChallenge({ challengeId: second.challengeId, code: secondCode }),
     );
     expect(error.code).toBe('OTP_LOCKED');
+  });
+
+  it('F1.5b: numara başına sayaç: farklı kodlara toplam 5 yanlış (3 + 2) → OTP_LOCKED, audit', async () => {
+    const phone = randomTestPhone();
+    const first = (await requestCode(phone)).body as { challengeId: string };
+    const firstCode = await latestCode(phone);
+    for (let i = 0; i < 3; i++) {
+      const error = await errorOf(
+        otp.verifyChallenge({ challengeId: first.challengeId, code: wrongCode(firstCode) }),
+      );
+      expect(error.code).toBe('OTP_INVALID');
+    }
+    clock.advance(61_000);
+    const second = (await requestCode(phone)).body as { challengeId: string };
+    const secondCode = await latestCode(phone);
+
+    const fourth = await errorOf(
+      otp.verifyChallenge({ challengeId: second.challengeId, code: wrongCode(secondCode) }),
+    );
+    expect(fourth.code).toBe('OTP_INVALID');
+    const fifth = await errorOf(
+      otp.verifyChallenge({ challengeId: second.challengeId, code: wrongCode(secondCode) }),
+    );
+
+    expect(fifth.code).toBe('OTP_LOCKED');
+    const audit = await queryAsOwner<{ after: unknown }>(
+      `select after from audit_logs where target_type = 'otp_challenge' and target_id = $1`,
+      [second.challengeId],
+    );
+    expect(audit).toEqual([{ after: { attempts: 2, numberFailures: 5, lockMinutes: 15 } }]);
+  });
+
+  it('F1.5b: doğru kod numaranın yanlış sayacını sıfırlar', async () => {
+    const phone = randomTestPhone();
+    const first = (await requestCode(phone)).body as { challengeId: string };
+    const firstCode = await latestCode(phone);
+    for (let i = 0; i < 4; i++) {
+      await errorOf(
+        otp.verifyChallenge({ challengeId: first.challengeId, code: wrongCode(firstCode) }),
+      );
+    }
+    await otp.verifyChallenge({ challengeId: first.challengeId, code: firstCode });
+    clock.advance(61_000);
+    const second = (await requestCode(phone)).body as { challengeId: string };
+    const secondCode = await latestCode(phone);
+
+    const error = await errorOf(
+      otp.verifyChallenge({ challengeId: second.challengeId, code: wrongCode(secondCode) }),
+    );
+
+    expect(error.code).toBe('OTP_INVALID');
   });
 
   it('US-001 AC5: süresi dolmuş kod → OTP_EXPIRED', async () => {

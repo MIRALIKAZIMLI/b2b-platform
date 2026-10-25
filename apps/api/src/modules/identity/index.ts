@@ -1,5 +1,8 @@
+export { AccessTokenGuard, CurrentSession } from './access-token.guard';
 export { IdentityModule } from './identity.module';
-export { type IdentityConfig } from './identity.config';
+export { type IdentityConfig, type JwtKey } from './identity.config';
+export { type SessionAuth } from './session.service';
+export { TokenService } from './token.service';
 export {
   OTP_PURPOSES,
   type OtpPurpose,

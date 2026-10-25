@@ -43,6 +43,11 @@ const SMS_PROVIDERS_FORBIDDEN_IN_PRODUCTION: ReadonlySet<string> = new Set(['moc
 /** OTP_HASH_KEY en az bu kadar karakter (F1.5a, Mimar kararı: en az 32 bayt). */
 export const OTP_HASH_KEY_MIN_LENGTH = 32;
 
+/** JWT imza anahtarı (HS256) en az bu kadar karakter (F1.5b, Mimar kararı K1). */
+export const JWT_SIGNING_KEY_MIN_LENGTH = 32;
+
+const jwtKeyId = z.string().regex(/^[A-Za-z0-9._-]{1,64}$/);
+
 /**
  * Yalnızca api sürecinin doğruladığı şema (F1.5a). Worker SMS göndermez, bu değişkenleri istemez.
  * Production'da `SMS_PROVIDER=mock` reddedilir: api açılmaz (NFR-97, ADR-0021).
@@ -52,8 +57,32 @@ export const apiEnvSchema = serverEnvSchema
     SMS_PROVIDER: z.enum(SMS_PROVIDERS),
     /** OTP kod özeti (HMAC-SHA256) anahtarı; ortam başına ayrı ve rastgele. */
     OTP_HASH_KEY: z.string().min(OTP_HASH_KEY_MIN_LENGTH),
+    /** Erişim anahtarı (JWT, HS256) imza anahtarı ve `kid` değeri (F1.5b). */
+    JWT_SIGNING_KEY: z.string().min(JWT_SIGNING_KEY_MIN_LENGTH),
+    JWT_KEY_ID: jwtKeyId,
+    /** Döndürme: eski anahtar yalnızca doğrulamada kullanılır; ikisi birlikte verilir. */
+    JWT_PREVIOUS_SIGNING_KEY: z.string().min(JWT_SIGNING_KEY_MIN_LENGTH).optional(),
+    JWT_PREVIOUS_KEY_ID: jwtKeyId.optional(),
   })
   .superRefine((env, ctx) => {
+    if ((env.JWT_PREVIOUS_SIGNING_KEY === undefined) !== (env.JWT_PREVIOUS_KEY_ID === undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [
+          env.JWT_PREVIOUS_KEY_ID === undefined
+            ? 'JWT_PREVIOUS_KEY_ID'
+            : 'JWT_PREVIOUS_SIGNING_KEY',
+        ],
+        message: 'önceki JWT anahtarı ve kimliği birlikte verilir',
+      });
+    }
+    if (env.JWT_PREVIOUS_KEY_ID !== undefined && env.JWT_PREVIOUS_KEY_ID === env.JWT_KEY_ID) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['JWT_PREVIOUS_KEY_ID'],
+        message: 'önceki anahtar kimliği güncel kimlikle aynı olamaz',
+      });
+    }
     if (
       env.APP_ENV === 'production' &&
       SMS_PROVIDERS_FORBIDDEN_IN_PRODUCTION.has(env.SMS_PROVIDER)

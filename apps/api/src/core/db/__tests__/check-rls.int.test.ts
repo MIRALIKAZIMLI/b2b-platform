@@ -322,16 +322,22 @@ describe('check-rls', () => {
     expect(audit === undefined ? undefined : evaluateRlsTable(audit)).toEqual([]);
   });
 
-  it('F1.5-AC10: users rls:U, otp_challenges ve dev_sms_outbox rls:S → check-rls temiz', async () => {
+  it('F1.5-AC10/AC14: users ve user_sessions rls:U, otp_challenges ve dev_sms_outbox rls:S → temiz', async () => {
     const tables = await readRlsTables(client, { schemas: ['public'] });
     const identity = tables.filter((t) =>
-      ['public.users', 'public.otp_challenges', 'public.dev_sms_outbox'].includes(t.table),
+      [
+        'public.users',
+        'public.otp_challenges',
+        'public.dev_sms_outbox',
+        'public.user_sessions',
+      ].includes(t.table),
     );
 
     expect(Object.fromEntries(identity.map((t) => [t.table, t.comment]))).toEqual({
       'public.users': 'rls:U',
       'public.otp_challenges': 'rls:S',
       'public.dev_sms_outbox': 'rls:S',
+      'public.user_sessions': 'rls:U',
     });
     for (const info of identity) {
       expect({ table: info.table, problems: evaluateRlsTable(info) }).toEqual({

@@ -2,11 +2,12 @@
 // olmayan `action` / `target_type` değerini reddeder. Biçim: `<hedef>.<fiil>` (data-model §4.1).
 import type { SettingKey } from '@b2b/shared';
 
-export const AUDIT_ACTIONS = ['setting.updated', 'otp.locked'] as const;
+export const AUDIT_ACTIONS = ['setting.updated', 'otp.locked', 'session.refresh_reused'] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 // otp_challenge: hedef kimliği challengeId; telefon audit'e yazılmaz (F1.5a).
-export const AUDIT_TARGET_TYPES = ['setting', 'otp_challenge'] as const;
+// session_family: hedef kimliği oturum ailesi (family_id), F1.5b.
+export const AUDIT_TARGET_TYPES = ['setting', 'otp_challenge', 'session_family'] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 
 /** Ayar kapsamı (SettingTarget ile aynı biçim). */

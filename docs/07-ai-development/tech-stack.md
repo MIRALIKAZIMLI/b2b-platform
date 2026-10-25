@@ -212,6 +212,12 @@ Eklenmeyenler: `@testcontainers/redis` (Redis entegrasyon testi docker compose /
 | --- | --- | --- |
 | `libphonenumber-js` | 1.13.15 | api (`modules/identity/phone.ts`, E.164 telefon doğrulama); Mimar onayı F1.5a |
 
+## 7.8 Kurulu sürümler (F1.5b, 2026-10-25)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `jose` | 6.2.13 | api (`modules/identity/token.service.ts`, JWT HS256 imza ve doğrulama); Mimar onayı F1.5b |
+
 ## 8. Kullanılmayacak teknolojiler
 
 | Kullanılmaz | Yerine | Neden |

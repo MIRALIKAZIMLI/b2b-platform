@@ -261,6 +261,9 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `otp.max_attempts` | 5 (kod başına yanlış deneme; aşılınca kilit, NFR-45) | tamsayı | 1 | 20 |
 | `otp.lock_minutes` | 15 (US-001 AC4) | tamsayı | 1 | 1440 |
 | `otp.ip_max_per_hour` | 20 (IP başına saatte kod isteği, NFR-45) | tamsayı | 1 | 1000 |
+| `otp.fail_window_minutes` | 60 (numara başına yanlış kod sayacının penceresi; pencerede `otp.max_attempts` yanlış → kilit, F1.5b) | tamsayı | 5 | 1440 |
+| `auth.access_token_minutes` | 15 (erişim anahtarı ömrü, NFR-44) | tamsayı | 5 | 60 |
+| `auth.refresh_token_days` | 30 (yenileme anahtarı ömrü, NFR-44) | tamsayı | 1 | 90 |
 | `mobile.min_version.ios`, `mobile.min_version.android` | `0.0.0` (ilk yayında ilk yayın sürümü yazılır, US-060) | sürüm metni (`X.Y.Z`) | — | — |
 | `system.maintenance` | `false` (RB-08, RB-13) | evet/hayır | — | — |
 | `idempotency.ttl_hours` | 24 | tamsayı | 1 | 168 |

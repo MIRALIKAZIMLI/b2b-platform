@@ -76,6 +76,8 @@ describe('loadApiEnv (api açılışı, F1.5a)', () => {
     ...VALID,
     SMS_PROVIDER: 'mock',
     OTP_HASH_KEY: 'otp-hash-secret-value-0123456789abcdef',
+    JWT_SIGNING_KEY: 'jwt-signing-secret-value-0123456789abcdef',
+    JWT_KEY_ID: 'k1',
   };
 
   function runApiAndCatch(env: Record<string, string | undefined>, io: EnvExitIo): ExitCalled {

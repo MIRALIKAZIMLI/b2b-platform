@@ -51,7 +51,17 @@ export class AppModule implements NestModule {
         I18nModule,
         BusinessesModule,
         BillingModule,
-        IdentityModule.forRoot({ otpHashKey: env.OTP_HASH_KEY }),
+        IdentityModule.forRoot({
+          otpHashKey: env.OTP_HASH_KEY,
+          jwt: {
+            current: { id: env.JWT_KEY_ID, secret: env.JWT_SIGNING_KEY },
+            ...(env.JWT_PREVIOUS_KEY_ID === undefined || env.JWT_PREVIOUS_SIGNING_KEY === undefined
+              ? {}
+              : {
+                  previous: { id: env.JWT_PREVIOUS_KEY_ID, secret: env.JWT_PREVIOUS_SIGNING_KEY },
+                }),
+          },
+        }),
         // /api/v1/dev/* production'da hiç kaydedilmez (NFR-96, ADR-0021).
         ...(isDevModuleEnabled(env.APP_ENV) ? [DevModule] : []),
         IdempotencyModule,

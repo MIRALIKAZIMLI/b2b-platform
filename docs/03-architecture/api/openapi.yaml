@@ -2018,15 +2018,24 @@ components:
         expiresIn: { type: integer, description: saniye (900) }
         refreshToken: { type: string, description: Yalnızca mobil; web'de cookie }
     AuthResult:
-      allOf:
-        - $ref: '#/components/schemas/TokenPair'
-        - type: object
-          properties:
-            nextStep: { type: string, enum: [none, register, totp, totp_setup] }
-            pendingToken: { type: string, description: nextStep = totp ise }
-            memberships:
-              type: array
-              items: { $ref: '#/components/schemas/MembershipSummary' }
+      type: object
+      description: >-
+        nextStep = none iken accessToken ve expiresIn dolu (oturum açıldı). nextStep = register iken
+        oturum açılmaz; accessToken yok, pendingToken kayıt için kısa ömürlü anahtardır (F1.5b).
+      required: [nextStep, memberships]
+      properties:
+        accessToken: { type: string }
+        expiresIn: { type: integer, description: saniye (900) }
+        refreshToken: { type: string, description: Yalnızca mobil; web'de cookie }
+        nextStep: { type: string, enum: [none, register, totp, totp_setup] }
+        pendingToken:
+          type: string
+          description: >-
+            nextStep = register (kayıt, F2.3; telefonu taşır, 15 dk) veya totp ise. Erişim anahtarı
+            olarak kabul edilmez.
+        memberships:
+          type: array
+          items: { $ref: '#/components/schemas/MembershipSummary' }
     Session:
       type: object
       properties:

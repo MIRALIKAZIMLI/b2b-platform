@@ -76,3 +76,38 @@ export const devSmsOutbox = pgTable(
     index('dev_sms_outbox_phone_created_idx').on(table.phoneE164, table.createdAt.desc()),
   ],
 );
+
+export const DEVICE_TYPES = ['web', 'ios', 'android'] as const;
+export type DeviceType = (typeof DEVICE_TYPES)[number];
+
+/**
+ * Oturumlar (U, F1.5b). Her yenilemede aynı `family_id` ile yeni satır açılır, eski satır
+ * `revoked_at` ile kapanır (data-model §4.2). `refresh_token_hash` = SHA-256 (hex).
+ */
+export const userSessions = pgTable(
+  'user_sessions',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    refreshTokenHash: text('refresh_token_hash')
+      .notNull()
+      .unique('user_sessions_refresh_token_hash_uq'),
+    familyId: uuid('family_id').notNull(),
+    deviceType: text('device_type').notNull(),
+    deviceName: text('device_name'),
+    ipCity: text('ip_city'),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    impersonationSessionId: uuid('impersonation_session_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('user_sessions_user_idx').on(table.userId),
+    index('user_sessions_family_idx').on(table.familyId),
+    check('user_sessions_device_type_check', sql`${table.deviceType} in ('web', 'ios', 'android')`),
+  ],
+);

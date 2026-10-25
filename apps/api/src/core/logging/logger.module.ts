@@ -31,6 +31,7 @@ const SECRET_KEYS = [
   'token',
   'accessToken',
   'refreshToken',
+  'pendingToken',
   'password',
   'secret',
   // 🔒 person_data (data-model §5, F1.7)
