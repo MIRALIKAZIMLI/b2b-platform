@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { inject } from 'vitest';
+import { createTestTenantTable } from '../../../../test/isolation';
 import { checkRls, type CheckRlsResult, evaluateRlsTable, readRlsTables } from '../check-rls';
 
 const I18N_TABLES = [
@@ -311,5 +312,25 @@ describe('check-rls', () => {
       tables.filter((t) => t.table in F17_TABLES).map((t) => [t.table, t.comment]),
     );
     expect(f17).toEqual(F17_TABLES);
+  });
+
+  it('F1.9: audit_logs rls:S ve app_user SELECT izni yok → check-rls temiz', async () => {
+    const tables = await readRlsTables(client, { schemas: ['public'] });
+    const audit = tables.find((t) => t.table === 'public.audit_logs');
+
+    expect(audit?.comment).toBe('rls:S');
+    expect(audit === undefined ? undefined : evaluateRlsTable(audit)).toEqual([]);
+  });
+
+  it('check-rls test sırasına bağlı değil: test_tenant_items kurulu olsa da public temiz', async () => {
+    // İzolasyon testleri bu tabloyu public şemasında bırakır; daha önce yorumsuz olduğu için
+    // bu dosya onlardan sonra çalışınca düşüyordu. Tablo burada bilerek kurulur.
+    await createTestTenantTable(inject('migratorUrl'));
+
+    const result = await checkRls(client, { schemas: ['public'] });
+    const tables = await readRlsTables(client, { schemas: ['public'] });
+
+    expect(result.problems).toEqual([]);
+    expect(tables.find((t) => t.table === 'public.test_tenant_items')?.comment).toBe('rls:T');
   });
 });

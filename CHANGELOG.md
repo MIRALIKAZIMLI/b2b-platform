@@ -10,3 +10,4 @@
 - F1.3: diller, çeviriler, para birimleri, bölgeler
 - F1.7: işletme çekirdek tabloları
 - F1.4b: planlar, abonelikler, hak servisi
+- F1.9: audit log yazıcısı

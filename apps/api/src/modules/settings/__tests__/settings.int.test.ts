@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PG_INSUFFICIENT_PRIVILEGE, pgErrorCode, queryAsOwner } from '../../../../test/isolation';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
+import { AuditService } from '../../../core/audit';
+import { FixedClock } from '../../../core/clock';
 import { withPlatformTx, withSystemTx, withTenantTx } from '../../../core/db';
 import { DomainError } from '../../../core/errors/domain-error';
 import { SettingsCache } from '../settings.cache';
@@ -22,6 +24,32 @@ async function readRowAsOwner(
   return rows[0];
 }
 
+interface AuditRow extends Record<string, unknown> {
+  occurred_at: Date;
+  actor_user_id: string | null;
+  actor_type: string;
+  business_id: string | null;
+  action: string;
+  target_type: string;
+  target_id: string;
+  before: unknown;
+  after: unknown;
+  ip: string | null;
+  request_id: string | null;
+}
+
+/** migrator ile hedefin audit kayıtları (app_user okuyamaz). */
+async function auditRowsAsOwner(targetId: string): Promise<AuditRow[]> {
+  return queryAsOwner<AuditRow>(
+    `select occurred_at, actor_user_id, actor_type, business_id, action, target_type, target_id,
+            before, after, host(ip) as ip, request_id
+       from audit_logs
+      where target_type = 'setting' and target_id = $1
+      order by id`,
+    [targetId],
+  );
+}
+
 async function errorOf(promise: Promise<unknown>): Promise<unknown> {
   return promise.then(
     () => undefined,
@@ -33,10 +61,15 @@ describe('SettingsService (entegrasyon: PostgreSQL + Redis)', () => {
   let redis: TestRedis;
   let service: SettingsService;
   const actor = { userId: randomUUID() };
+  const clock = new FixedClock(new Date('2026-10-25T08:00:00.000Z'));
 
   beforeAll(() => {
     redis = createTestRedis();
-    service = new SettingsService(new SettingsRepository(), new SettingsCache(redis.client));
+    service = new SettingsService(
+      new SettingsRepository(),
+      new SettingsCache(redis.client),
+      new AuditService(clock),
+    );
   });
 
   afterAll(async () => {
@@ -89,6 +122,7 @@ describe('SettingsService (entegrasyon: PostgreSQL + Redis)', () => {
       const offline = new SettingsService(
         new SettingsRepository(),
         new SettingsCache(broken.client),
+        new AuditService(clock),
       );
       await offline.set('outbox.max_attempts', 7, { scope: 'platform' }, actor);
 
@@ -191,5 +225,75 @@ describe('SettingsService (entegrasyon: PostgreSQL + Redis)', () => {
       const searchPath = (row.proconfig ?? []).find((entry) => entry.startsWith('search_path='));
       expect(searchPath, row.proname).toBe('search_path=pg_catalog, public, pg_temp');
     }
+  });
+
+  it("US-017 AC2: ayar değişikliği audit'e eski ve yeni değerle yazılır", async () => {
+    const businessId = randomUUID();
+    const target = { scope: 'business', businessId } as const;
+    const context = { requestId: 'req-us017-ac2', ip: '203.0.113.7' };
+
+    await service.set('sms.daily_cap', 40, target, { ...actor, context });
+    await service.set('sms.daily_cap', 45, target, actor);
+
+    const rows = await auditRowsAsOwner(`business:${businessId}:sms.daily_cap`);
+    expect(rows).toEqual([
+      {
+        occurred_at: clock.now(),
+        actor_user_id: actor.userId,
+        actor_type: 'platform',
+        business_id: businessId,
+        action: 'setting.updated',
+        target_type: 'setting',
+        target_id: `business:${businessId}:sms.daily_cap`,
+        before: null,
+        after: 40,
+        ip: '203.0.113.7',
+        request_id: 'req-us017-ac2',
+      },
+      expect.objectContaining({ before: 40, after: 45, ip: null, request_id: null }),
+    ]);
+  });
+
+  it('US-017 AC2: platform ve plan kapsamında hedef kimliği ve işletme', async () => {
+    const planId = randomUUID();
+    await service.set('sms.daily_cap', 70, { scope: 'plan', planId }, actor);
+    await service.set('connection.block_rate_alert_pct', 15, { scope: 'platform' }, actor);
+
+    const plan = await auditRowsAsOwner(`plan:${planId}:sms.daily_cap`);
+    const platform = await auditRowsAsOwner('platform:platform:connection.block_rate_alert_pct');
+
+    expect(plan).toEqual([expect.objectContaining({ business_id: null, before: null, after: 70 })]);
+    expect(platform.at(-1)).toEqual(expect.objectContaining({ business_id: null, after: 15 }));
+  });
+
+  it('US-017 AC2: geçersiz değer → ayar da audit kaydı da yok', async () => {
+    const businessId = randomUUID();
+    const error = await errorOf(
+      service.set(
+        'connection.cooldown_after_reject_days',
+        6,
+        { scope: 'business', businessId },
+        actor,
+      ),
+    );
+
+    expect((error as DomainError).code).toBe('SETTING_OUT_OF_RANGE');
+    expect(
+      await auditRowsAsOwner(`business:${businessId}:connection.cooldown_after_reject_days`),
+    ).toEqual([]);
+  });
+
+  it('F1.9-AC3: audit yazılamazsa ayar da yazılmaz (aynı işlem)', async () => {
+    const businessId = randomUUID();
+    const failing = new SettingsService(new SettingsRepository(), new SettingsCache(redis.client), {
+      record: () => Promise.reject(new Error('audit yazılamadı')),
+    });
+
+    const error = await errorOf(
+      failing.set('sms.daily_cap', 30, { scope: 'business', businessId }, actor),
+    );
+
+    expect((error as Error).message).toBe('audit yazılamadı');
+    expect(await readRowAsOwner('sms.daily_cap', businessId)).toBeUndefined();
   });
 });

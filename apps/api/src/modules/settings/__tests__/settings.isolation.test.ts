@@ -8,6 +8,8 @@ import {
 } from '../../../../test/isolation';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
 import { withSystemTx, withTenantTx } from '../../../core/db';
+import { AuditService } from '../../../core/audit';
+import { SystemClock } from '../../../core/clock';
 import { SettingsCache } from '../settings.cache';
 import { SettingsRepository } from '../settings.repository';
 import { SettingsService } from '../settings.service';
@@ -20,7 +22,11 @@ describe('ayar kiracı izolasyonu (settings)', () => {
   beforeAll(async () => {
     await createTestTenantTable(inject('migratorUrl'));
     redis = createTestRedis();
-    service = new SettingsService(new SettingsRepository(), new SettingsCache(redis.client));
+    service = new SettingsService(
+      new SettingsRepository(),
+      new SettingsCache(redis.client),
+      new AuditService(new SystemClock()),
+    );
   });
 
   afterAll(async () => {

@@ -39,6 +39,7 @@ const CREATE_TEST_TABLE_SQL = `
     using (business_id = nullif(current_setting('app.business_id', true), '')::uuid)
     with check (business_id = nullif(current_setting('app.business_id', true), '')::uuid);
   grant select, insert, update, delete on test_tenant_items to app_user;
+  comment on table test_tenant_items is 'rls:T';
 `;
 
 /** Örnek tabloyu `migrator` rolüyle (tablo sahibi) sıfırdan oluşturur. */

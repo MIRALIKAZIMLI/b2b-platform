@@ -1,4 +1,5 @@
 import type { SettingKey } from '@b2b/shared';
+import type { Tx } from '../../core/db';
 
 /** Ayarın yazılacağı kapsam (ADR-0009: işletme → plan → platform). */
 export type SettingTarget =
@@ -29,8 +30,21 @@ export interface SettingsCacheLookup {
 
 export interface SettingsRepositoryPort {
   read(key: SettingKey, businessId?: string): Promise<SettingLayers>;
-  write(target: SettingTarget, key: SettingKey, value: unknown, userId: string): Promise<void>;
+  /**
+   * Değeri yazar ve aynı işlemde `afterWrite(tx, previous)` çağırır (audit, US-017 AC2).
+   * `previous` aynı kapsamdaki önceki ham değerdir; satır yoksa null. `afterWrite` hata verirse
+   * yazım geri alınır.
+   */
+  write(
+    target: SettingTarget,
+    key: SettingKey,
+    value: unknown,
+    userId: string,
+    afterWrite: SettingWriteHook,
+  ): Promise<void>;
 }
+
+export type SettingWriteHook = (tx: Tx, previous: unknown) => Promise<void>;
 
 export interface SettingsCachePort {
   /** Önbellekte bütün katmanlar geçerliyse `layers` doludur; yoksa veya Redis hata verirse undefined. */

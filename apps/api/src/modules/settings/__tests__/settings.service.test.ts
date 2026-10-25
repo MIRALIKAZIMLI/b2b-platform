@@ -1,12 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import type { SettingKey } from '@b2b/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { AuditEntry, AuditRecorder } from '../../../core/audit';
+import type { Tx } from '../../../core/db';
 import { DomainError } from '../../../core/errors/domain-error';
 import type {
   SettingLayers,
   SettingsCacheLookup,
   SettingsCachePort,
   SettingsRepositoryPort,
+  SettingWriteHook,
 } from '../settings.ports';
 import { SettingsService, type SettingTarget } from '../settings.service';
 
@@ -41,11 +44,39 @@ class FakeRepository implements SettingsRepositoryPort {
     return Promise.resolve(layers);
   }
 
-  write(target: SettingTarget, key: SettingKey, value: unknown, userId: string): Promise<void> {
+  async write(
+    target: SettingTarget,
+    key: SettingKey,
+    value: unknown,
+    userId: string,
+    afterWrite: SettingWriteHook,
+  ): Promise<void> {
     this.writes.push({ target, key, value, userId });
-    if (target.scope === 'platform') this.platform.set(key, value);
-    else if (target.scope === 'plan') this.plan.set(`${target.planId}:${key}`, value);
-    else this.business.set(`${target.businessId}:${key}`, value);
+    const store =
+      target.scope === 'platform'
+        ? this.platform
+        : target.scope === 'plan'
+          ? this.plan
+          : this.business;
+    const storeKey =
+      target.scope === 'platform'
+        ? key
+        : `${target.scope === 'plan' ? target.planId : target.businessId}:${key}`;
+    const previous = store.has(storeKey) ? store.get(storeKey) : null;
+    store.set(storeKey, value);
+    await afterWrite(FAKE_TX, previous);
+  }
+}
+
+/** Birim testte işlem nesnesi kullanılmaz; yalnızca iletildiği doğrulanır. */
+const FAKE_TX = {} as Tx;
+
+/** Audit kayıtlarını bellekte toplar. */
+class FakeAudit implements AuditRecorder {
+  readonly entries: { tx: Tx; entry: AuditEntry }[] = [];
+
+  record(tx: Tx, entry: AuditEntry): Promise<void> {
+    this.entries.push({ tx, entry });
     return Promise.resolve();
   }
 }
@@ -81,6 +112,7 @@ async function domainErrorCode(promise: Promise<unknown>): Promise<string | unde
 describe('SettingsService (birim)', () => {
   let repo: FakeRepository;
   let cache: NoCache;
+  let audit: FakeAudit;
   let service: SettingsService;
   const platform: SettingTarget = { scope: 'platform' };
   const actor = { userId: randomUUID() };
@@ -88,7 +120,8 @@ describe('SettingsService (birim)', () => {
   beforeEach(() => {
     repo = new FakeRepository();
     cache = new NoCache();
-    service = new SettingsService(repo, cache);
+    audit = new FakeAudit();
+    service = new SettingsService(repo, cache, audit);
   });
 
   describe('F1.4-AC1: çözümleme tablosu (işletme → plan → platform → varsayılan)', () => {
@@ -294,5 +327,52 @@ describe('SettingsService (birim)', () => {
 
     expect(code).toBe('SETTING_OUT_OF_RANGE');
     expect(repo.writes).toEqual([]);
+  });
+
+  it("US-017 AC2: yazım aynı işlemde eski ve yeni değerle audit'e iletilir", async () => {
+    const businessId = randomUUID();
+    const target: SettingTarget = { scope: 'business', businessId };
+    const context = { requestId: 'req-1', ip: '198.51.100.1' };
+
+    await service.set('sms.daily_cap', 50, target, { ...actor, context });
+    await service.set('sms.daily_cap', 60, target, actor);
+
+    expect(audit.entries).toEqual([
+      {
+        tx: FAKE_TX,
+        entry: {
+          actor: { type: 'platform', userId: actor.userId },
+          businessId,
+          action: 'setting.updated',
+          targetType: 'setting',
+          targetId: `business:${businessId}:sms.daily_cap`,
+          before: null,
+          after: 50,
+          context,
+        },
+      },
+      {
+        tx: FAKE_TX,
+        entry: expect.objectContaining({ before: 50, after: 60 }) as AuditEntry,
+      },
+    ]);
+    expect(audit.entries[1]?.entry).not.toHaveProperty('context');
+  });
+
+  it('US-017 AC2: platform ve plan kapsamında işletme null, hedef kimliği kapsamı taşır', async () => {
+    const planId = randomUUID();
+    await service.set('sms.daily_cap', 200, platform, actor);
+    await service.set('sms.daily_cap', 120, { scope: 'plan', planId }, actor);
+
+    expect(audit.entries.map(({ entry }) => [entry.businessId, entry.targetId])).toEqual([
+      [null, 'platform:platform:sms.daily_cap'],
+      [null, `plan:${planId}:sms.daily_cap`],
+    ]);
+  });
+
+  it("US-017 AC2: reddedilen değer audit'e yazılmaz", async () => {
+    await domainErrorCode(service.set('connection.cooldown_after_reject_days', 6, platform, actor));
+
+    expect(audit.entries).toEqual([]);
   });
 });
