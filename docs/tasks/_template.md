@@ -15,6 +15,12 @@
 
 <Bir-iki cümle: bu adım bitince ne çalışıyor olacak.>
 
+## Okunacak dosyalar (3–6)
+
+`AGENTS.md`, `docs/ai-context.md` ve bu kart her zaman okunur. Aşağıdakiler dışında yalnızca işin gerçekten gerektirdiği dosyayı aç; "Okunacak belgeler" listesi başvuru içindir, belgenin yalnızca anılan bölümünü oku.
+
+- <en önemli 3–6 dosya: belge bölümü veya kaynak kod yolu>
+
 ## Okunacak belgeler
 
 - `AGENTS.md`

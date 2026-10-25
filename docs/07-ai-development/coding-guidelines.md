@@ -157,5 +157,5 @@ b2b-platform/
 3. Yalnızca görevin kapsamındaki dosyaları değiştir. Kapsam dışı bir değişiklik gerekiyorsa sor.
 4. Belgelerde olmayan bir karar gerekiyorsa uydurma; dur ve sor. Bir ADR ile çelişen bir şey önerme.
 5. Var olmayan bir paket, fonksiyon veya API seçeneği uydurma; emin değilsen belirt.
-6. Bitti demeden önce `pnpm lint`, `pnpm typecheck`, `pnpm test` çalıştır ve sonuçları göster.
+6. Bitti demeden önce `pnpm lint`, `pnpm typecheck` ve değişen alanın testlerini çalıştır, sonuçları göster; tam test takımı CI'da çalışır (`AGENTS.md` "Token ve süre kuralları").
 7. Değişikliğin sonunda: hangi AC'lerin hangi testlerle karşılandığını listele; [definition-of-done.md](definition-of-done.md) maddelerini işaretle.
