@@ -47,6 +47,7 @@ Başka bir modül, ADR veya belge yalnızca diff'in etkisini anlamak için gerek
 
 ### Aşama 3: Hedefli yeniden inceleme (2. tur ve sonrası)
 
+- **Zorunlu adımlar:** Kartında `Müfettiş: Zorunlu` yazan adımlarda (güvenlik, kimlik/yetki, RLS, migration) her turda PR'ın §4 riskli yollardaki **tüm** dosyaları yeniden incelenir, dokunulmamış olsalar bile. Sebep: bir migration düzeltmesi, dokunulmamış başka bir migration'daki politika veya tetikleyiciyle etkileşebilir (ör. `CREATE OR REPLACE` önceki tanımın yerine geçer). Aşağıdaki hedefli kurallar bu adımlarda yalnızca riskli yollar dışındaki dosyalar için geçerlidir.
 - Bakılacak fark: `git diff <son incelenen SHA>..<yeni SHA>`. Son incelenen SHA önceki raporun başlığındadır.
 - Her açık bulgunun durumu yazılır: ✅ çözüldü, ❌ açık, ↩ itiraz kabul edildi, ⚠ regresyon.
 - Yeni diff'in tamamı tam derinlikte incelenir. Değişmemiş kod yeniden incelenmez.
@@ -77,7 +78,7 @@ Başka bir modül, ADR veya belge yalnızca diff'in etkisini anlamak için gerek
 | Düzeltme | Önerilen çözüm |
 | Güven | Doğrulandı / Muhtemel |
 
-Kanıtlanmamış şüphe "Muhtemel" diye yazılır. "Muhtemel" bir bulgu tek başına HIGH veya BLOCKER olamaz; önce kanıt aranır, bulunamazsa "Açık riskler" bölümüne yazılır.
+Kanıtlanmamış şüphe "Muhtemel" diye yazılır. "Muhtemel" bir bulgu tek başına HIGH veya BLOCKER olamaz; önce kanıt aranır, bulunamazsa "Açık riskler" bölümüne yazılır. Güvenlik alanındaki (§2 Aşama 2, madde 1–4) ciddi bir "Muhtemel" şüphe ayrıca Mimar'a soru olarak iletilir; sessizce kalmaz.
 
 ### Karar
 
@@ -117,7 +118,9 @@ Raporun dışında yazılacaklar:
 
 Kullanıcıya ve Mimar'a giden mesaj raporun özetidir: karar, CI, engel listesi. Rapor tekrar anlatılmaz, aynı tur için ikinci rapor yazılmaz.
 
-## 4. Riskli yollar (kapsam hiçbir turda daraltılmaz)
+## 4. Riskli yollar
+
+Bu yollara dokunan diff her turda genişletilmiş kapsamla incelenir (§2 Aşama 3). `Müfettiş: Zorunlu` adımlarında bu yollardaki tüm PR dosyaları her turda yeniden incelenir.
 
 - `apps/api/drizzle/**`, `apps/api/db/**` (migration, rol, GRANT, POLICY, `SECURITY DEFINER`, tetikleyici)
 - `apps/api/src/core/db/**` (`withTenantTx`, `withPlatformTx`, `withUserTx`, `withSystemTx`, check-rls)
