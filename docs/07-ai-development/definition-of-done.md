@@ -46,7 +46,7 @@ Bir uygulama planı adımı (pull request), aşağıdaki maddelerin **tamamı** 
 
 - [ ] **(CI)** Gizli bilgi taraması temiz; bağımlılık taramasında yüksek/kritik açık yok.
 - [ ] Kişisel veri loglanmıyor; yeni 🔒 alan data-model.md'de işaretli.
-- [ ] Kimlik, yetki, kiracı bağlamı, fiyat, stok veya cari kodu değiştiyse Müfettiş incelemesi yapıldı ve kritik/önemli bulgu kalmadı.
+- [ ] Kimlik, yetki, kiracı bağlamı, fiyat, stok veya cari kodu değiştiyse Müfettiş incelemesi yapıldı ve BLOCKER/HIGH/MEDIUM bulgu kalmadı ([review-guide.md](review-guide.md) §3).
 
 ## 6. Belgeler
 
@@ -58,6 +58,7 @@ Bir uygulama planı adımı (pull request), aşağıdaki maddelerin **tamamı** 
 ## 7. Birleştirme
 
 - [ ] **(CI)** Tüm kontroller yeşil.
+- [ ] Müfettiş'in son ONAYLA'sı PR'ın şu anki head SHA'sı için verildi (review-guide §7).
 - [ ] Squash merge; commit mesajı `<tür>(<ID>): <açıklama>`.
 - [ ] Birleştirmeden sonra staging dağıtımı ve duman testi başarılı.
 - [ ] Değişen belgeler Claude Projesi bilgi tabanına yeniden yüklendi.

@@ -1,8 +1,8 @@
 # AI bağlam özeti
 
-Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
+Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-25 (F1.5a birleşti; F1.5b PR açık).
+Son güncelleme: 2026-10-25 (F1.5b birleşti; Müfettiş inceleme kılavuzu eklendi).
 
 ## 1. Mimari özeti
 
@@ -15,7 +15,7 @@ Son güncelleme: 2026-10-25 (F1.5a birleşti; F1.5b PR açık).
 ## 2. Klasör yapısı (şu anki durum)
 
 ```
-apps/api/drizzle/                 0000_settings … 0007_identity (+ 0008_user_sessions, F1.5b)
+apps/api/drizzle/                 0000_settings … 0008_user_sessions
 apps/api/db/bootstrap/roles.sql   app_user, migrator, readonly (şifresiz; pnpm db:bootstrap)
 apps/api/src/core/                audit, bootstrap, config, db, errors, health, idempotency,
                                   logging, outbox, clock.ts, id-generator.ts, money.ts
@@ -81,7 +81,7 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.7 | işletme çekirdek tabloları, VÖEN |
 | F1.9 | audit log yazıcısı (migration 0006), ayar değişikliği audit'i |
 | F1.5a | kullanıcılar, OTP (`POST /auth/otp/request`, `verifyChallenge`), mock SMS ve `/dev/sms-outbox`, `0007_identity.sql`, backend kapsam eşiği (`test:coverage:backend`) |
-| **F1.5b** | **sürüyor**: oturum, JWT (HS256), yenileme anahtarı, `/auth/*`, `/me`, `0008_user_sessions.sql` |
+| F1.5b | oturum, JWT (HS256), yenileme anahtarı, `/auth/*`, `/me`, `0008_user_sessions.sql` |
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 

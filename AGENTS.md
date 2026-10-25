@@ -78,7 +78,8 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
    ```
    Tam takım (`pnpm test`, `test:integration`, `test:isolation`, `build`) CI'da çalışır. Kartın "Doğrulama komutu" bölümü CI'ın çalıştırdığı tam listedir; yerelde yalnızca yukarıdaki kontroller çalışır. Kart yerelde ayrıca bir komutu açıkça isterse (ör. `pnpm db:migrate && pnpm check-rls`) o da çalışır.
 6. **Kısa mesaj:** plan ve raporlar kısa; çıktının tamamını değil, yalnızca hataları ve özet satırını yapıştır.
-7. **Müfettiş düzeltme turu:** ikinci ve sonraki turlarda yalnızca yeni diff'e bakar. İstisna: güvenlik, kimlik/yetki, RLS ve migration (DB) adımlarında her tur tam inceleme.
+7. **Müfettiş yeniden incelemesi:** ikinci ve sonraki turlarda önceki bulguların durumunu yazar ve yalnızca son incelenen SHA'dan bu yana gelen diff'i tam derinlikte inceler. Bu diff riskli bir yola (migration, RLS, kimlik/yetki, log/audit, para, sözleşme, CI) dokunuyorsa o dosyaların tamamına ve doğrudan çağıranlarına da bakar. Ayrıntı: `docs/07-ai-development/review-guide.md` §2–§4.
+8. **Bulgu döngüsü:** Usta PR açmadan önce `review-guide.md` §5'teki bilinen tuzakları kendi diff'inde kontrol eder. Müfettiş raporuna PR'da tek yorumla yanıt verir: her bulgu için "düzeltildi" ya da "itiraz + kanıt". Aynı bulgu için en fazla iki düzeltme turu yapılır, sonra karar Mimar'a gider (§6). Usta birleştirmeden önce §7'deki birleştirme kapısını uygular.
 
 ## Yapma
 
@@ -108,3 +109,4 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 | Kod stili, katmanlar, hata, log | `docs/07-ai-development/coding-guidelines.md` |
 | CI/CD, ortam değişkenleri | `docs/06-operations/environments-cicd.md` |
 | "Bitti" mi? | `docs/07-ai-development/definition-of-done.md` |
+| PR incelemesi, bulgu biçimi, birleştirme kapısı | `docs/07-ai-development/review-guide.md` |
