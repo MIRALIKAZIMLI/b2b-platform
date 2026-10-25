@@ -1,8 +1,8 @@
 # AI bağlam özeti
 
-Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
+Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-25 (F1.5b birleşti; F1.6 PR açık).
+Son güncelleme: 2026-10-25 (F1.5b birleşti; Müfettiş inceleme kılavuzu eklendi; F1.6 PR açık).
 
 ## 1. Mimari özeti
 
