@@ -208,6 +208,28 @@ describe('TOTP ve platform ekibi (entegrasyon)', () => {
     expect((await verify(pending, recoveryCodes[4] ?? '')).status).toBe(200);
   });
 
+  it("F1.13-AC1: web (X-Client web) TOTP ikinci adımında yenileme anahtarı gövdede değil httpOnly cookie'de", async () => {
+    const { phone } = await staffUser();
+    const { secret } = await enroll((await otpLogin(phone)).pendingToken ?? '');
+    clock.advance(2 * MINUTE_MS);
+    const login = await otpLogin(phone);
+
+    const response = await http()
+      .post('/api/v1/auth/totp/verify')
+      .set('X-Client', 'web')
+      .send({ pendingToken: login.pendingToken ?? '', code: totpCode(secret) });
+
+    expect(response.status).toBe(200);
+    const session = response.body as LoginJson;
+    expect(session.accessToken).toBeTruthy();
+    expect(session.refreshToken).toBeUndefined();
+    const cookies = response.headers['set-cookie'] as unknown as string[];
+    const cookie = cookies.find((c) => c.startsWith('b2b_rt=')) ?? '';
+    expect(cookie).toMatch(
+      /^b2b_rt=[A-Za-z0-9_-]{43}; HttpOnly; Secure; SameSite=Strict; Path=\/api\/v1\/auth; Max-Age=\d+$/,
+    );
+  });
+
   it('kaba kuvvet: 5 yanlış ikinci adım → 423 OTP_LOCKED; doğru kod da kabul edilmez', async () => {
     const { phone } = await staffUser();
     const pending = (await otpLogin(phone)).pendingToken ?? '';

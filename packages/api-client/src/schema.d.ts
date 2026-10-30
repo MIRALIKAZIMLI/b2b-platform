@@ -68,7 +68,10 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description `web` → yenileme anahtarı yanıt gövdesinde dönmez, `b2b_rt` httpOnly cookie'sine yazılır (ADR-0006 madde 3, TM-04; F1.13a). Mobil başlığı göndermez; davranışı değişmez. */
+                    "X-Client"?: components["parameters"]["XClient"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -83,9 +86,10 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Doğrulandı */
+                /** @description Doğrulandı. Web'de `refreshToken` gövdede yok, cookie'de. */
                 200: {
                     headers: {
+                        "Set-Cookie": components["headers"]["SetRefreshCookie"];
                         [name: string]: unknown;
                     };
                     content: {
@@ -116,7 +120,10 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description `web` → yenileme anahtarı yanıt gövdesinde dönmez, `b2b_rt` httpOnly cookie'sine yazılır (ADR-0006 madde 3, TM-04; F1.13a). Mobil başlığı göndermez; davranışı değişmez. */
+                    "X-Client"?: components["parameters"]["XClient"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -132,9 +139,10 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Doğrulandı, oturum açıldı (nextStep = none) */
+                /** @description Doğrulandı, oturum açıldı (nextStep = none). Web'de `refreshToken` cookie'de. */
                 200: {
                     headers: {
+                        "Set-Cookie": components["headers"]["SetRefreshCookie"];
                         [name: string]: unknown;
                     };
                     content: {
@@ -212,11 +220,19 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Erişim anahtarını yenile (yenileme anahtarı döndürülür) */
+        /**
+         * Erişim anahtarını yenile (yenileme anahtarı döndürülür)
+         * @description Gövdedeki `refreshToken` (mobil) önceliklidir. Gövdede yoksa `b2b_rt` cookie'si okunur (web); bu durumda `X-Requested-With` zorunludur, yoksa anahtar tüketilmeden `401 UNAUTHENTICATED` (TM-21). Cookie ile yenilemede yeni anahtar yine cookie'ye yazılır ve gövdede dönmez; yenileme başarısızsa cookie silinir (F1.13a).
+         */
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description `web` → yenileme anahtarı yanıt gövdesinde dönmez, `b2b_rt` httpOnly cookie'sine yazılır (ADR-0006 madde 3, TM-04; F1.13a). Mobil başlığı göndermez; davranışı değişmez. */
+                    "X-Client"?: components["parameters"]["XClient"];
+                    /** @description Cookie ile yenilemede zorunlu (boş olmayan herhangi bir değer; web `fetch` gönderir); yoksa anahtar tüketilmeden `401 UNAUTHENTICATED` (CSRF, TM-21; F1.13a). */
+                    "X-Requested-With"?: components["parameters"]["XRequestedWith"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -232,6 +248,7 @@ export interface paths {
                 /** @description Yeni anahtarlar */
                 200: {
                     headers: {
+                        "Set-Cookie": components["headers"]["SetRefreshCookie"];
                         [name: string]: unknown;
                     };
                     content: {
@@ -256,7 +273,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Bu oturumdan çıkış */
+        /**
+         * Bu oturumdan çıkış
+         * @description Oturum ailesi kapatılır; web cookie'si (`b2b_rt`) her durumda silinir (F1.13a).
+         */
         post: {
             parameters: {
                 query?: never;
@@ -269,6 +289,7 @@ export interface paths {
                 /** @description Çıkış yapıldı */
                 204: {
                     headers: {
+                        "Set-Cookie": components["headers"]["SetRefreshCookie"];
                         [name: string]: unknown;
                     };
                     content?: never;
@@ -388,7 +409,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Ad, dil, saat dilimi güncelle */
+        /**
+         * Ad, dil, saat dilimi güncelle
+         * @description Yalnızca verilen alanlar değişir. `preferredLanguage` etkin bir dil olmalıdır (US-058 AC1, AC4); pasif dil veya geçersiz saat dilimi `422 VALIDATION_FAILED` (F1.13a).
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -414,6 +438,8 @@ export interface paths {
                     };
                     content?: never;
                 };
+                401: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         trace?: never;
@@ -5968,13 +5994,20 @@ export interface components {
     parameters: {
         BusinessId: string;
         BusinessIdOptional: string;
+        /** @description `web` → yenileme anahtarı yanıt gövdesinde dönmez, `b2b_rt` httpOnly cookie'sine yazılır (ADR-0006 madde 3, TM-04; F1.13a). Mobil başlığı göndermez; davranışı değişmez. */
+        XClient: "web";
+        /** @description Cookie ile yenilemede zorunlu (boş olmayan herhangi bir değer; web `fetch` gönderir); yoksa anahtar tüketilmeden `401 UNAUTHENTICATED` (CSRF, TM-21; F1.13a). */
+        XRequestedWith: string;
         IdempotencyKey: string;
         Id: string;
         Cursor: string;
         Limit: number;
     };
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Yalnızca web (`X-Client: web` veya cookie ile yenileme): `b2b_rt=<anahtar>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=<auth.refresh_token_days>`. `Domain` yok; web API'yi kendi kökeninden çağırır (Next rewrite). Silme: aynı bayraklarla `b2b_rt=; Max-Age=0`. */
+        SetRefreshCookie: string;
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;

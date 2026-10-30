@@ -234,6 +234,17 @@ Eklenmeyenler: `@testcontainers/redis` (Redis entegrasyon testi docker compose /
 
 Eklenmeyenler: Zod → OpenAPI dönüştürücüsü (karşılaştırma yol + metot + yanıt kodu düzeyinde, Zod şeması gerekmez; şema gövdesi karşılaştırması gelince ayrı karar). YAML ayrıştırıcı paketi (`contract-compare.mts` yalnızca `paths` bölümünün üç anahtar düzeyini okur; beklenmeyen biçimde hata verir).
 
+## 7.11 Kurulu sürümler (F1.13a, 2026-10-30)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `next-intl` | 4.14.9 | web (`src/i18n/`, `proxy.ts`); mesajlar API'den (`GET /api/v1/i18n/{lang}`) |
+| `@tanstack/react-query` | 5.105.0 | web (`lib/session.ts`) |
+| `@playwright/test` | 1.64.1 | web (dev; `e2e/`, `pnpm --filter @b2b/web test:e2e`) |
+| `pg`, `@types/pg` | 8.23.1 / 8.23.1 | web (dev; yalnızca `e2e/fixtures.ts` test kullanıcısı; api ile aynı sürüm) |
+
+Eklenmeyenler: `@fastify/cookie` (listede yok; yalnızca `b2b_rt` okunup yazıldığı için `modules/identity/refresh-cookie.ts` yeterli).
+
 ## 8. Kullanılmayacak teknolojiler
 
 | Kullanılmaz | Yerine | Neden |

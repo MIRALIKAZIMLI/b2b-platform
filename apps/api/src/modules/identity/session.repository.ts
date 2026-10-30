@@ -56,6 +56,12 @@ export interface SelfUser {
   readonly status: UserStatus;
 }
 
+export interface SelfProfilePatch {
+  readonly fullName?: string;
+  readonly preferredLanguage?: string;
+  readonly timezone?: string;
+}
+
 interface SelfUserRow extends Record<string, unknown> {
   id: string;
   full_name: string;
@@ -112,6 +118,35 @@ export class SessionRepository {
           timezone: row.timezone,
           status: row.status,
         };
+  }
+
+  /**
+   * PATCH /me: kullanıcı kendi ad, dil, saat dilimini günceller (RLS: yalnızca kendi satırı;
+   * tetikleyici platform alanlarını korur). Dil yalnızca etkin `languages` satırı olabilir
+   * (G tablosu). Dil etkin değilse `inactive_language`, satır yoksa (RLS) `not_found`.
+   */
+  async updateSelf(
+    userId: string,
+    patch: SelfProfilePatch,
+    now: Date,
+  ): Promise<'updated' | 'inactive_language' | 'not_found'> {
+    return await withUserTx({ userId }, async (tx) => {
+      if (patch.preferredLanguage !== undefined) {
+        const language = await tx.execute<{ is_active: boolean }>(
+          sql`select is_active from languages where code = ${patch.preferredLanguage}`,
+        );
+        if (language.rows[0]?.is_active !== true) return 'inactive_language';
+      }
+      const result = await tx.execute(sql`
+        update users set
+          full_name = coalesce(${patch.fullName ?? null}::text, full_name),
+          preferred_language = coalesce(${patch.preferredLanguage ?? null}::char(2), preferred_language),
+          timezone = coalesce(${patch.timezone ?? null}::text, timezone),
+          updated_at = ${now.toISOString()}::timestamptz
+        where id = ${userId}::uuid
+      `);
+      return (result.rowCount ?? 0) > 0 ? 'updated' : 'not_found';
+    });
   }
 
   /** Oturum açar ve `last_login_at` yazar (aynı işlem, kullanıcı bağlamı). */

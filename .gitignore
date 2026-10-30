@@ -19,3 +19,7 @@ apps/mobile/ios/
 apps/mobile/android/
 # Yerel dosya deposu (STORAGE_PROVIDER=local, ADR-0023)
 .local-storage/
+
+# Playwright (F1.13a)
+apps/web/test-results/
+apps/web/playwright-report/

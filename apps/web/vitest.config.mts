@@ -6,7 +6,7 @@ export default defineConfig({
     jsx: { runtime: 'automatic' },
   },
   test: {
-    include: ['src/**/*.test.tsx'],
+    include: ['src/**/*.test.{ts,tsx}'],
     environment: 'node',
     // Kapsam raporu: pnpm test:coverage (eşik F1.5a'da).
     coverage: {

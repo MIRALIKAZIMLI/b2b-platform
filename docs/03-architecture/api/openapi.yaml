@@ -84,6 +84,7 @@ paths:
       tags: [auth]
       summary: OTP kodunu doğrula ve oturum aç (US-001)
       security: []
+      parameters: [ { $ref: '#/components/parameters/XClient' } ]
       requestBody:
         required: true
         content:
@@ -97,7 +98,9 @@ paths:
                 device: { $ref: '#/components/schemas/DeviceInfo' }
       responses:
         '200':
-          description: Doğrulandı
+          description: Doğrulandı. Web'de `refreshToken` gövdede yok, cookie'de.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResult' }
@@ -109,6 +112,7 @@ paths:
       tags: [auth]
       summary: TOTP ikinci adımı (US-002)
       security: []
+      parameters: [ { $ref: '#/components/parameters/XClient' } ]
       requestBody:
         required: true
         content:
@@ -126,7 +130,9 @@ paths:
                 device: { $ref: '#/components/schemas/DeviceInfo' }
       responses:
         '200':
-          description: Doğrulandı, oturum açıldı (nextStep = none)
+          description: Doğrulandı, oturum açıldı (nextStep = none). Web'de `refreshToken` cookie'de.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResult' }
@@ -165,7 +171,15 @@ paths:
     post:
       tags: [auth]
       summary: Erişim anahtarını yenile (yenileme anahtarı döndürülür)
+      description: >-
+        Gövdedeki `refreshToken` (mobil) önceliklidir. Gövdede yoksa `b2b_rt` cookie'si okunur (web);
+        bu durumda `X-Requested-With` zorunludur, yoksa anahtar tüketilmeden `401 UNAUTHENTICATED`
+        (TM-21). Cookie ile yenilemede yeni anahtar yine cookie'ye yazılır ve gövdede dönmez; yenileme
+        başarısızsa cookie silinir (F1.13a).
       security: []
+      parameters:
+        - { $ref: '#/components/parameters/XClient' }
+        - { $ref: '#/components/parameters/XRequestedWith' }
       requestBody:
         content:
           application/json:
@@ -176,6 +190,8 @@ paths:
       responses:
         '200':
           description: Yeni anahtarlar
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TokenPair' }
@@ -184,8 +200,12 @@ paths:
     post:
       tags: [auth]
       summary: Bu oturumdan çıkış
+      description: Oturum ailesi kapatılır; web cookie'si (`b2b_rt`) her durumda silinir (F1.13a).
       responses:
-        '204': { description: Çıkış yapıldı }
+        '204':
+          description: Çıkış yapıldı
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
   /api/v1/auth/sessions:
     get:
       tags: [auth]
@@ -221,6 +241,9 @@ paths:
     patch:
       tags: [me]
       summary: Ad, dil, saat dilimi güncelle
+      description: >-
+        Yalnızca verilen alanlar değişir. `preferredLanguage` etkin bir dil olmalıdır (US-058 AC1, AC4);
+        pasif dil veya geçersiz saat dilimi `422 VALIDATION_FAILED` (F1.13a).
       requestBody:
         content:
           application/json:
@@ -232,6 +255,8 @@ paths:
                 timezone: { type: string, examples: [Asia/Baku] }
       responses:
         '200': { description: Güncellendi }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
 
   # ---------------------------------------------------------------- business
   /api/v1/buyers/register:
@@ -1972,6 +1997,22 @@ components:
       in: header
       required: false
       schema: { type: string, format: uuid }
+    XClient:
+      name: X-Client
+      in: header
+      required: false
+      description: >-
+        `web` → yenileme anahtarı yanıt gövdesinde dönmez, `b2b_rt` httpOnly cookie'sine yazılır
+        (ADR-0006 madde 3, TM-04; F1.13a). Mobil başlığı göndermez; davranışı değişmez.
+      schema: { type: string, enum: [web] }
+    XRequestedWith:
+      name: X-Requested-With
+      in: header
+      required: false
+      description: >-
+        Cookie ile yenilemede zorunlu (boş olmayan herhangi bir değer; web `fetch` gönderir); yoksa
+        anahtar tüketilmeden `401 UNAUTHENTICATED` (CSRF, TM-21; F1.13a).
+      schema: { type: string }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -1990,6 +2031,14 @@ components:
       name: limit
       in: query
       schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+  headers:
+    SetRefreshCookie:
+      description: >-
+        Yalnızca web (`X-Client: web` veya cookie ile yenileme):
+        `b2b_rt=<anahtar>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=<auth.refresh_token_days>`.
+        `Domain` yok; web API'yi kendi kökeninden çağırır (Next rewrite). Silme: aynı bayraklarla
+        `b2b_rt=; Max-Age=0`.
+      schema: { type: string }
   responses:
     Error:
       description: Hata
