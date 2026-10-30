@@ -2,13 +2,18 @@
 // doğrudan depoya yükler; `complete` boyutu ve dosya imzasını (ilk 16 bayt) doğrular.
 // `private` dosya yalnızca süreli imzalı URL ile okunur (getReadUrl; uç noktası yok, sonraki fazlar
 // çağırır). Süre ve boyut sınırları SettingsService'ten (AGENTS kural 6).
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { PermissionCode } from '@b2b/shared';
 import { Clock } from '../../core/clock';
 import type { TenantTxContext } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
-import { FILE_PURPOSE_BUCKET, type FilePurpose, FileStorage } from '../../core/ports/file-storage';
+import {
+  FILE_PURPOSE_BUCKET,
+  type FilePurpose,
+  FileStorage,
+  stagingKeyOf,
+} from '../../core/ports/file-storage';
 import type { TenantContext } from '../../core/tenant-context';
 import { FILES_PUBLIC_BASE_URL } from '../../infrastructure/storage';
 import { assertAllowed } from '../access';
@@ -90,8 +95,17 @@ function isAllowedType(
   return (PURPOSE_CONTENT_TYPES[purpose] as readonly string[]).includes(contentType);
 }
 
+/** Okunan içeriğin boyutu ve ilk 16 bayt imzası (aynı buffer kalıcı anahtara yazılır). */
+function validateContent(file: FileRow, body: Buffer): string | null {
+  if (body.length !== file.sizeBytes) return 'size';
+  if (detectContentType(body.subarray(0, SIGNATURE_BYTES)) !== file.contentType) return 'signature';
+  return null;
+}
+
 @Injectable()
 export class FilesService {
+  private readonly logger = new Logger(FilesService.name);
+
   constructor(
     @Inject(FilesRepository) private readonly repository: FilesRepository,
     @Inject(FileStorage) private readonly storage: FileStorage,
@@ -127,10 +141,11 @@ export class FilesService {
       sizeBytes: input.sizeBytes,
       now,
     });
-    // Boyut imzaya girer: istemci bildirdiği boyuttan farklı bir dosya yükleyemez.
+    // İstemci private bucket'taki geçici anahtara yükler (F1.10b); kalıcı anahtara (public
+    // olabilir) yalnızca complete doğrulayınca kopyalanır. Boyut imzaya girer.
     const upload = await this.storage.createUploadUrl({
-      bucket,
-      key,
+      bucket: 'private',
+      key: stagingKeyOf(key),
       contentType: input.contentType,
       maxBytes: input.sizeBytes,
       ttlSeconds: ttlMinutes * 60,
@@ -145,8 +160,9 @@ export class FilesService {
   }
 
   /**
-   * SF-09 adım 2: `head` + ilk 16 bayt imza. Geçersiz → nesne silinir, satır `rejected`,
-   * `FILE_INVALID`. Başka işletmenin dosyası RLS ile görünmez → `NOT_FOUND`.
+   * SF-09 adım 2: geçici anahtarda `head` + ilk 16 bayt imza. Geçersiz → geçici nesne silinir,
+   * satır `rejected`, `FILE_INVALID`. Geçerli → kalıcı anahtara kopyalanır, satır `ready`, geçici
+   * silinir (F1.10b). Başka işletmenin dosyası RLS ile görünmez → `NOT_FOUND`.
    */
   async complete(tenant: TenantContext, fileId: string): Promise<CompletedFile> {
     const file = await this.repository.findById(tenant, fileId);
@@ -156,16 +172,29 @@ export class FilesService {
     if (file.status === 'ready') return await this.completedView(tenant, file);
     if (file.status === 'rejected') throw new DomainError('FILE_INVALID', { reason: 'rejected' });
 
-    const object = await this.storage.head(file.objectKey);
+    const stagingKey = stagingKeyOf(file.objectKey);
+    const object = await this.storage.head(stagingKey);
     // Henüz yüklenmemiş: satır pending kalır, yükleme URL'si süresi içinde tekrar denenebilir.
     if (object === null) throw new DomainError('FILE_INVALID', { reason: 'not_uploaded' });
 
-    const reason = await this.validate(file, object.size, tenant.businessId);
-    if (reason !== null) {
-      await this.storage.delete(file.objectKey);
-      await this.repository.finish(tenant, file.id, { status: 'rejected' }, this.clock.now());
-      throw new DomainError('FILE_INVALID', { reason });
+    // Tek okuma (Müfettiş PR #29 H1): doğrulanan baytlar ile kalıcı anahtara yazılan baytlar aynı
+    // buffer. Boyut sınırı önce `head` ile (sınırı aşan dosya belleğe alınmaz); bildirilen boyuttan
+    // uzun içerik yakalansın diye bir bayt fazla okunur.
+    let reason = await this.validateSize(file, object.size, tenant.businessId);
+    let body: Buffer | null = null;
+    if (reason === null) {
+      body = await this.storage.readRange(stagingKey, file.sizeBytes + 1);
+      reason = validateContent(file, body);
     }
+    if (reason !== null || body === null) {
+      await this.storage.delete(stagingKey);
+      await this.repository.finish(tenant, file.id, { status: 'rejected' }, this.clock.now());
+      throw new DomainError('FILE_INVALID', { reason: reason ?? 'size' });
+    }
+
+    // Kalıcı anahtara yalnızca sunucu ve yalnızca bir kez yazar: eşzamanlı başka bir complete
+    // zaten kopyaladıysa (o da doğrulanmış baytlar) üzerine yazılmaz.
+    await this.storage.putIfAbsent(file.objectKey, body, file.contentType);
 
     const finished = await this.repository.finish(
       tenant,
@@ -176,6 +205,15 @@ export class FilesService {
     if (!finished) {
       // Eşzamanlı başka bir complete sonuçlandırdı: güncel durumu dön.
       return await this.complete(tenant, fileId);
+    }
+    // Satır ready: geçici nesnenin silinememesi yalnızca private'ta artık bırakır; yanıt yine ready
+    // (Müfettiş PR #29 M1). Anahtar loglanmaz, yalnız dosya kimliği.
+    try {
+      await this.storage.delete(stagingKey);
+    } catch (error) {
+      this.logger.warn(
+        `files.staging_delete_failed fileId=${file.id} (${error instanceof Error ? error.name : 'unknown'})`,
+      );
     }
     return await this.completedView(tenant, { ...file, status: 'ready', sizeBytes: object.size });
   }
@@ -213,13 +251,15 @@ export class FilesService {
     });
   }
 
-  /** Geçersizlik nedeni veya `null`. */
-  private async validate(file: FileRow, size: number, businessId: string): Promise<string | null> {
+  /** Boyut sınırı (head'den); geçersizlik nedeni veya `null`. */
+  private async validateSize(
+    file: FileRow,
+    size: number,
+    businessId: string,
+  ): Promise<string | null> {
     if (size <= 0 || size !== file.sizeBytes) return 'size';
     if (!isAllowedType(file.purpose, file.contentType)) return 'content_type';
     if (size > (await this.maxBytes(file.contentType, businessId))) return 'size';
-    const head = await this.storage.readRange(file.objectKey, SIGNATURE_BYTES);
-    if (detectContentType(head) !== file.contentType) return 'signature';
     return null;
   }
 

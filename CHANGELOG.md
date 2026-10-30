@@ -21,3 +21,4 @@
 - F1.12: api-client üretimi ve sözleşme kontrolü
 - F1.11: push ve uygulama içi bildirim altyapısı
 - F1.10: dosya yükleme
+- F1.10b: dosyalar önce private alana
