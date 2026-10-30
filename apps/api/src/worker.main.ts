@@ -1,13 +1,13 @@
 import 'reflect-metadata';
 import { PinoLogger } from 'nestjs-pino';
 import { runMain } from './core/bootstrap/run-main';
-import { loadServerEnv } from './core/config/load-env';
+import { loadWorkerEnv } from './core/config/load-env';
 import { bootstrapWorker } from './worker.bootstrap';
 
-// Geçersiz ortamla başlamaz: çıkış kodu 1, mesajda yalnızca değişken adı (loadServerEnv).
+// Geçersiz ortamla başlamaz: çıkış kodu 1, mesajda yalnızca değişken adı (loadWorkerEnv).
 // Diğer açılış hataları güvenli loglanır, çıkış kodu 1 (runMain).
 void runMain('worker', async () => {
-  const app = await bootstrapWorker(loadServerEnv(process.env));
+  const app = await bootstrapWorker(loadWorkerEnv(process.env));
   const logger = await app.resolve(PinoLogger);
   logger.setContext('Worker');
 

@@ -351,6 +351,25 @@ describe('check-rls', () => {
     }
   });
 
+  it('F1.11-AC7: bildirim tabloları rls:U, şablonlar rls:G → temiz', async () => {
+    const expected = {
+      'public.push_tokens': 'rls:U',
+      'public.notifications': 'rls:U',
+      'public.notification_preferences': 'rls:U',
+      'public.notification_templates': 'rls:G',
+    };
+    const tables = await readRlsTables(client, { schemas: ['public'] });
+    const ours = tables.filter((t) => Object.keys(expected).includes(t.table));
+
+    expect(Object.fromEntries(ours.map((t) => [t.table, t.comment]))).toEqual(expected);
+    for (const info of ours) {
+      expect({ table: info.table, problems: evaluateRlsTable(info) }).toEqual({
+        table: info.table,
+        problems: [],
+      });
+    }
+  });
+
   it('check-rls test sırasına bağlı değil: test_tenant_items kurulu olsa da public temiz', async () => {
     // İzolasyon testleri bu tabloyu public şemasında bırakır; daha önce yorumsuz olduğu için
     // bu dosya onlardan sonra çalışınca düşüyordu. Tablo burada bilerek kurulur.

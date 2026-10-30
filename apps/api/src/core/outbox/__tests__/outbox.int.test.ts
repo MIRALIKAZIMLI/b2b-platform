@@ -148,7 +148,7 @@ describe('Outbox (entegrasyon: PostgreSQL + Redis)', () => {
       await writeCommitted(7);
       const dispatcher = new OutboxDispatcher(
         fakeSettings(),
-        new BullOutboxQueues(connection, { test: queue, access: queue }),
+        new BullOutboxQueues(connection, { test: queue, access: queue, notifications: queue }),
         clock,
         fakeLog(),
       );
@@ -174,7 +174,11 @@ describe('Outbox (entegrasyon: PostgreSQL + Redis)', () => {
     it('F1.2-AC4: aynı olay yeniden eklenirse BullMQ ikinci iş açmaz (jobId)', async () => {
       await writeCommitted(1);
       const [row] = await eventRows();
-      const queues = new BullOutboxQueues(connection, { test: queue, access: queue });
+      const queues = new BullOutboxQueues(connection, {
+        test: queue,
+        access: queue,
+        notifications: queue,
+      });
       const job: OutboxJob = {
         queue: 'test',
         name: 'test.ping',

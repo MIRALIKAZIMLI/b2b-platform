@@ -92,6 +92,9 @@ export const SETTING_DEFINITIONS = {
   'outbox.max_attempts': intSetting(10, 1, 100),
   'outbox.poll_interval_ms': intSetting(1000, 100, 60_000),
   'outbox.batch_size': intSetting(100, 1, 1000),
+  'push.retry_delays_minutes': increasingIntListSetting([1, 5, 15], 1, 1440),
+  'push.receipt_check_minutes': intSetting(15, 1, 1440),
+  'push.batch_size': intSetting(100, 1, 100),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
   'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
 } as const satisfies Record<string, SettingDefinition<unknown>>;

@@ -19,3 +19,4 @@
 - F1.8b: kiracı bağlamı ve PermissionGuard
 - docs: hız ve token kuralları (speed-and-tokens.md), dar yerel test, Usta konuşma sınırı, doğrudan Müfettiş döngüsü
 - F1.12: api-client üretimi ve sözleşme kontrolü
+- F1.11: push ve uygulama içi bildirim altyapısı

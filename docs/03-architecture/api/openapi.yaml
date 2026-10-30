@@ -1513,10 +1513,21 @@ paths:
   /api/v1/notifications:
     get:
       tags: [notifications]
-      summary: Uygulama içi bildirimler
+      summary: Uygulama içi bildirimler (US-054 AC1; en yeni önce)
       parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/notifications/read:
     post:
       tags: [notifications]
@@ -1527,14 +1538,16 @@ paths:
             schema:
               type: object
               properties:
-                ids: { type: array, items: { type: string, format: uuid } }
+                ids: { type: array, maxItems: 100, items: { type: string, format: uuid } }
                 all: { type: boolean }
       responses:
         '204': { description: Güncellendi }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/notifications/preferences:
     put:
       tags: [notifications]
-      summary: Bildirim tercihleri (US-054 AC2)
+      summary: Bildirim tercihleri (US-054 AC2); anahtar bildirim türü, değer push açık mı
       requestBody:
         content:
           application/json:
@@ -1542,11 +1555,19 @@ paths:
               type: object
               additionalProperties: { type: boolean }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Güncellendi; tüm türlerin güncel tercihi
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: { type: boolean }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/push-tokens:
     post:
       tags: [notifications]
-      summary: Cihaz push anahtarını kaydet
+      summary: Cihaz push anahtarını kaydet (anahtar başka kullanıcıdaysa bu kullanıcıya taşınır)
       requestBody:
         content:
           application/json:
@@ -1554,10 +1575,12 @@ paths:
               type: object
               required: [token, platform]
               properties:
-                token: { type: string }
+                token: { type: string, maxLength: 255, description: 'ExponentPushToken[...]' }
                 platform: { type: string, enum: [ios, android] }
       responses:
         '204': { description: Kaydedildi }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
 
   # ---------------------------------------------------------------- dashboard & system
   /api/v1/dashboard:
@@ -2214,6 +2237,23 @@ components:
         creditLimit: { type: [string, 'null'] }
         paymentTermDays: { type: integer, minimum: 0, maximum: 180 }
         salesRepMembershipId: { type: [string, 'null'], format: uuid }
+    Notification:
+      type: object
+      required: [id, type, businessId, title, body, data, readAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string }
+        businessId: { type: [string, 'null'], format: uuid }
+        title: { type: string }
+        body: { type: string }
+        data:
+          type: object
+          required: [type, id]
+          properties:
+            type: { type: string }
+            id: { type: string }
+        readAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
     Packaging:
       type: object
       required: [level, unitCode, baseQty]

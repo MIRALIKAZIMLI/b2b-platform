@@ -29,6 +29,7 @@ const EXPECTED_FUNCTIONS = [
   'outbox_mark_failed',
   'outbox_mark_processed',
   'platform_staff_role',
+  'push_token_register',
   'settings_get',
   'settings_put',
   'user_session_rotate',

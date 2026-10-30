@@ -2,7 +2,7 @@
 import { Test } from '@nestjs/testing';
 import type { Redis } from 'ioredis';
 import { afterEach, describe, expect, it } from 'vitest';
-import { TEST_SERVER_ENV } from '../../../../test/env';
+import { TEST_WORKER_ENV } from '../../../../test/env';
 import { WorkerModule } from '../../../worker.module';
 import { REDIS_CLIENT } from '../../redis';
 import { BULLMQ_CONNECTION, createBullConnection } from '../index';
@@ -24,7 +24,7 @@ describe('BullMQ bağlantısı', () => {
 
   it('K7: worker modülünde BullMQ bağlantısı ayarların istemcisinden ayrıdır', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [WorkerModule.register(TEST_SERVER_ENV)],
+      imports: [WorkerModule.register(TEST_WORKER_ENV)],
     }).compile();
     try {
       const bull = moduleRef.get<Redis>(BULLMQ_CONNECTION);

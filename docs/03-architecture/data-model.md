@@ -958,10 +958,17 @@ Kısıt: `(debit > 0) <> (credit > 0)` (tam olarak biri). Benzersiz: `(order_id)
 
 | Tablo | Sınıf | Alanlar |
 | --- | --- | --- |
-| `push_tokens` | U | `user_id`, `token text unique`, `platform (ios/android)`, `last_seen_at` |
-| `notifications` | U | `user_id`, `business_id`, `type`, `payload jsonb`, `read_at` |
-| `notification_templates` | G | `type`, `lang`, `title`, `body`; PK `(type, lang)` |
-| `notification_preferences` | U | `user_id`, `type`, `push_enabled bool`; PK `(user_id, type)` |
+| `push_tokens` | U | `id`, `user_id`, `token text unique`, `platform (ios/android)`, `last_seen_at`, `created_at`, `updated_at` |
+| `notifications` | U | `id`, `user_id`, `business_id` (boş olabilir; işletmesiz bildirim), `type`, `payload jsonb`, `read_at`, `created_at`; dizin `(user_id, id)` |
+| `notification_templates` | G | `type`, `lang`, `title`, `body`, `created_at`, `updated_at`; PK `(type, lang)` |
+| `notification_preferences` | U | `user_id`, `type`, `push_enabled bool`, `created_at`, `updated_at`; PK `(user_id, type)` |
+
+**Kurallar (F1.11):**
+
+- `notifications.payload` = `{ id, params }`: yalnızca kimlik, sayı veya kod (outbox yükü kuralı, ADR-0010 §3). Başlık ve metin satırda saklanmaz; okunurken alıcının dilindeki şablondan üretilir (yoksa `az`, US-058 AC3). Şablonda `{ad}` yer tutucusu `params.ad` ile doldurulur.
+- Tercih satırı yoksa push açıktır (`push_enabled = true` varsayılan).
+- **RLS:** `push_tokens` app_user için `SELECT`, `DELETE` (kendi satırı); ekleme ve başka kullanıcıdan taşıma yalnızca `push_token_register(id, token, platform, now)` SECURITY DEFINER fonksiyonuyla (kullanıcı `app.user_id`'den alınır, parametreden değil). `notifications` için `SELECT`, `INSERT`, yalnızca `read_at` kolonunda `UPDATE`. `notification_preferences` için `SELECT`, `INSERT`, `UPDATE`. Silme yok (token hariç).
+- Worker alıcı adına `withUserTx({ userId: alıcı })` ile yazar; dil `users.preferred_language` (kendi satırı).
 
 ### 4.17 `platform-admin`
 

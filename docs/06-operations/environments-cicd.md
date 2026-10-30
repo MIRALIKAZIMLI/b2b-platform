@@ -135,7 +135,8 @@ flowchart TB
 | `SMS_PROVIDER` | `mock` (production'da yasak; `APP_ENV=production` + `mock` → api açılmaz) / gerçek sağlayıcı adı (F6.5'e kadar yalnızca `mock` kabul edilir) |
 | `SMS_API_KEY` | Gerçek sağlayıcıda |
 | `OTP_HASH_KEY` | OTP kod özeti (HMAC-SHA256) anahtarı; en az 32 karakter, ortam başına ayrı ve rastgele. Yoksa veya kısaysa api açılmaz (F1.5a) |
-| `EXPO_ACCESS_TOKEN` | Push |
+| `PUSH_PROVIDER` | Yalnızca worker: `expo` / `mock` (production'da `mock` yasak; `APP_ENV=production` + `mock` → worker açılmaz, F1.11) |
+| `EXPO_ACCESS_TOKEN` | İsteğe bağlı, yalnızca worker. Expo hesabında "enhanced push security" açıksa gerekir (F1.11) |
 | `SENTRY_DSN` | Boş bırakılabilir |
 | `CORS_ORIGINS` | Web alan adları |
 

@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 /** Kuyruk adları. Yeni kuyruk, onu tüketen iş (F1.11 ve sonrası) ile birlikte eklenir. */
-export const OUTBOX_QUEUE_NAMES = ['test', 'access'] as const;
+export const OUTBOX_QUEUE_NAMES = ['test', 'access', 'notifications'] as const;
 export type OutboxQueueName = (typeof OUTBOX_QUEUE_NAMES)[number];
 
 /** Serbest metin olmayan alan türleri. Kod alanı, seçenek listesiyle (`['a', 'b']`) tanımlanır. */
@@ -26,6 +26,8 @@ export const OUTBOX_EVENTS = {
     queue: 'access',
     fields: { membershipId: 'id', userId: 'id', oldRoleId: 'id', newRoleId: 'id' },
   },
+  // F1.11: bildirim altyapısının test olayı (US-054 AC1 altyapı). `userId` alıcı, `ref` konu kimliği.
+  'notification.test': { queue: 'notifications', fields: { userId: 'id', ref: 'id' } },
 } as const satisfies Record<string, OutboxEventDefinition>;
 
 export type OutboxEventType = keyof typeof OUTBOX_EVENTS;

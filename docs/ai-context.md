@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-30 (F1.8b birleşti; F1.12 PR açık).
+Son güncelleme: 2026-10-30 (F1.12 birleşti; F1.11 PR açık).
 
 ## 1. Mimari özeti
 
@@ -15,13 +15,13 @@ Son güncelleme: 2026-10-30 (F1.8b birleşti; F1.12 PR açık).
 ## 2. Klasör yapısı (şu anki durum)
 
 ```
-apps/api/drizzle/                 0000_settings … 0009_totp_platform_staff (+ 0010_access, F1.8a)
+apps/api/drizzle/                 0000_settings … 0010_access (+ 0011_notifications, F1.11)
 apps/api/db/bootstrap/roles.sql   app_user, migrator, readonly (şifresiz; pnpm db:bootstrap)
 apps/api/src/core/                audit, bootstrap, config, db, errors, health, idempotency,
                                   logging, outbox, clock.ts, id-generator.ts, money.ts
-apps/api/src/core/ports/          sms-sender (dış servis portları)
-apps/api/src/infrastructure/      queue, redis, sms (mock → dev_sms_outbox)
-apps/api/src/modules/             access, billing, businesses, dev (yalnız local/test/staging), i18n, identity, settings
+apps/api/src/core/ports/          sms-sender, push-sender (dış servis portları)
+apps/api/src/infrastructure/      push (expo, mock), queue, redis, sms (mock → dev_sms_outbox)
+apps/api/src/modules/             access, billing, businesses, dev (yalnız local/test/staging), i18n, identity, notifications, settings
 packages/api-client/              openapi.yaml → src/schema.d.ts (üretilir, elle düzenlenmez), createApiClient
 packages/shared/src/              env, errors, entitlements, permissions, settings, uuidv7, voen, format…
 apps/web, apps/mobile             boş kabuk (F0.3b)
@@ -88,7 +88,8 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.6 | TOTP (`/auth/totp/setup`, `/auth/totp/verify`), kurtarma kodları, `platform_staff`, ilk süper admin seed (`SUPER_ADMIN_PHONE`), `0009_totp_platform_staff.sql` |
 | F1.8a | izin kataloğu (`packages/shared/src/permissions.ts` = c4 §5), rol şablonları ve unvanlar (seed), `roles`, `role_permissions`, `memberships`, `membership_regions`, `invitations`, son admin tetikleyicisi, `list_my_memberships()`, rol değişikliği audit + outbox, `0010_access.sql` |
 | F1.8b | global AccessGuard, TenantContext, `@RequirePermission`/`@Public`/`@Authenticated`/`@RequirePlatformRole`, lint kuralı, izin önbelleği + `access` kuyruğu tüketicisi, `/me` üyelik ve izinler |
-| **F1.12** | **sürüyor**: `packages/api-client` (`pnpm generate:api`, `createApiClient`), `pnpm contract:check` + CI `contract` işi |
+| F1.12 | `packages/api-client` (`pnpm generate:api`, `createApiClient`), `pnpm contract:check` + CI `contract` işi |
+| **F1.11** | **sürüyor**: `push_tokens`, `notifications`, `notification_preferences` (U), `notification_templates` (G), `push_token_register()`, `PushSender` (expo/mock), `notifications` kuyruğu, `/push-tokens`, `/notifications*`, `0011_notifications.sql` |
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
@@ -111,5 +112,6 @@ Kaynak: ilgili kartın "Kararlar" bölümü ve faz spesifikasyonu §4.
 - **Hata kodu (F1.6):** `CONNECTION_DAILY_QUOTA_EXCEEDED` → `429` + `retryAfter`.
 - **openapi değişikliği (F1.5b):** `AuthResult` artık `TokenPair`'ı zorunlu içermez; `nextStep = register` iken `accessToken` yok, `pendingToken` var.
 - **Sözleşme kontrolü (F1.12):** `pnpm contract:check` iki şey denetler: üretilmiş `packages/api-client` güncel mi; uygulamanın uçları `openapi.yaml`'da var mı (yol + metot + yanıt kodu, gövde değil). Uygulama şeması Nest `preview` kipinde (bağlantısız) `@nestjs/swagger` ile `apps/api/dist/cli.js openapi:export`. Uygulamada olup sözleşmede olmayan uç veya başarı kodu → hata; sözleşmede olup yazılmamış uç → uyarı (`CONTRACT_VERBOSE=1` listeler). Yeni uç: önce `openapi.yaml`, sonra `pnpm generate:api`, üretilen dosya PR'a girer. `@HttpCode` sözleşmedeki başarı koduyla aynı olmalı.
+- **Bildirim (F1.11):** Outbox olayı → `notifications` kuyruğu → `NotificationDispatcher` (worker): alıcı adına `withUserTx` ile satır yazar, tercih kapalıysa push yok. Yeni olay: `event-registry.ts` (kuyruk `notifications`) + `notification-types.ts` (tür, alıcı, konu kimliği) + 3 dilde şablon seed'i. Satırda metin yok; `payload = { id, params }`, metin okunurken alıcının dilinde şablondan (yoksa `az`). Push içeriği yalnızca başlık, metin, `data: { type, id }`; Redis işinde yalnızca kimlik. Geçici hata → `push.retry_delays_minutes`, `DeviceNotRegistered` → token silinir (bilet + `push.receipt_check_minutes` sonra makbuz). Token ekleme/taşıma yalnızca `push_token_register()` (kullanıcı `app.user_id`'den). Uçlar `@Authenticated()`. Worker ortamı `PUSH_PROVIDER` (`expo`/`mock`, production'da mock → worker açılmaz), `EXPO_ACCESS_TOKEN` isteğe bağlı. `expo-server-sdk` 7.2.0 (ESM; Node 24 `require(esm)`). `QueueModule` global (`QUEUE_MAP`).
 - **MinIO yok** (S9): F1.10'dan önce ADR ile karar verilecek.
 - **Vitest + NestJS (S8):** kodda bağımlılıklar `@Inject()` ile açık yazılıyor (yeni paket yok); `unplugin-swc` eklenmedi.
