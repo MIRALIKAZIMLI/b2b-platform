@@ -18,6 +18,12 @@ Yalnızca şunlar okunur:
 3. PR açıklaması. Usta'nın raporu, plandan sapmalar ve AC → test tablosu buradadır. Usta'nın konuşması ayrıca okunmaz.
 4. PR diff'i (`gh pr diff <n>`) ve değişen dosyaların gerekli bölümleri.
 
+**Üretilmiş dosyalar okunmaz:** `packages/api-client/src/schema.d.ts`, `apps/api/drizzle/meta/*.json` ve `pnpm-lock.yaml` (`.gitattributes`'ta `linguist-generated`). Bunları CI denetler (`contract` işi, migration testleri). Yalnızca listede olup olmadıkları ve `pnpm-lock.yaml`'da yeni paket adı olup olmadığı (`tech-stack.md`) kontrol edilir. Diff'i bunlar olmadan almak için:
+
+```bash
+git diff origin/main...HEAD -- . ':(exclude)packages/api-client/src/schema.d.ts' ':(exclude)apps/api/drizzle/meta/*.json' ':(exclude)pnpm-lock.yaml'
+```
+
 Başka bir modül, ADR veya belge yalnızca diff'in etkisini anlamak için gerekiyorsa açılır, o zaman da yalnızca ilgili bölümü okunur. Tüm repo veya önceki konuşmaların tamamı yeniden okunmaz.
 
 ## 2. Aşamalar

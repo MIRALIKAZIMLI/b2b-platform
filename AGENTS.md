@@ -81,6 +81,7 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 7. **Müfettiş yeniden incelemesi:** ikinci ve sonraki turlarda önceki bulguların durumunu yazar ve yalnızca son incelenen SHA'dan bu yana gelen diff'i tam derinlikte inceler. Bu diff riskli bir yola (migration, RLS, kimlik/yetki, log/audit, para, sözleşme, CI) dokunuyorsa o dosyaların tamamına ve doğrudan çağıranlarına da bakar. İstisna: kartında `Müfettiş: Zorunlu` yazan adımlarda (güvenlik, kimlik/yetki, RLS, migration) her turda PR'ın riskli yollardaki **tüm** dosyaları yeniden incelenir. Ayrıntı: `docs/07-ai-development/review-guide.md` §2–§4.
 8. **Bulgu döngüsü:** Usta PR açmadan önce `review-guide.md` §5'teki bilinen tuzakları kendi diff'inde kontrol eder. Müfettiş raporuna PR'da tek yorumla yanıt verir: her bulgu için "düzeltildi" ya da "itiraz + kanıt". Aynı bulgu için en fazla iki düzeltme turu yapılır, sonra karar Mimar'a gider (§6). Usta birleştirmeden önce §7'deki birleştirme kapısını uygular.
 9. **Doğrudan döngü ve limit:** Müfettiş PR olaylarıyla uyanır, Usta bulguyu PR yorumundan okur; Mimar yalnızca ilk inceleme isteğini ve son kararı görür (`review-guide.md` §6 madde 7). Kullanıcı Usta çalışırken bilgisayarın uyumasını kapatır. Ayrıntı ve ölçüm: `docs/07-ai-development/speed-and-tokens.md`.
+10. **PR boyutu:** elle yazılmış diff ~2.000 satırı geçecekse (üretilmiş dosyalar hariç) planda a/b bölmeyi öner (`speed-and-tokens.md` H7).
 
 ## Yapma
 

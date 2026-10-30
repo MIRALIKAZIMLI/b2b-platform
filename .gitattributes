@@ -3,3 +3,9 @@
 *.jpg binary
 *.ico binary
 README.md -text
+
+# Üretilmiş dosyalar: GitHub diff'inde katlanır, dil istatistiğine girmez.
+# Elle düzenlenmez; Müfettiş satır satır okumaz (review-guide.md §1).
+packages/api-client/src/schema.d.ts linguist-generated=true
+apps/api/drizzle/meta/*.json linguist-generated=true
+pnpm-lock.yaml linguist-generated=true

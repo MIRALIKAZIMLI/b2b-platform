@@ -29,6 +29,7 @@ PR #21 sonrası inceleme hızlandı (iki tur 12–20 dk → 9,6 dk). Darboğaz a
 | H4 | **Müfettiş–Usta döngüsü doğrudan.** Müfettiş PR olaylarına abone olur ve yeni push ile uyanır; Usta bulguyu PR yorumundan okur ve yanıtı PR'a yazar. Mimar yalnızca ilk inceleme isteğini ve son kararı (ONAYLA / KARAR GEREKLİ) görür. | Müfettiş, Usta | `review-guide.md` §6 madde 7. |
 | H5 | **Seyrek durum güncellemesi.** İlerleme kartı yalnızca adım sınırında güncellenir (plan, kod, yerel kontrol, PR, CI; en fazla ~6 kez). Kullanıcıya mesaj yalnızca PR açılınca, karar gerekince ve iş bitince. | Herkes | Her güncelleme bir tur daha demektir. |
 | H6 | **Limit izlenir.** Bir adımda yine limite takılınca Mimar bunu kullanıcıya bildirir ve ölçüm tablosuna (§4) yazar. Tekrarlarsa plan yükseltmesi kullanıcıya seçenek olarak sunulur (karar ve maliyet kullanıcınındır). | Mimar | |
+| H7 | **PR elle yazılmış ~2.000 satırı geçmez.** Üretilmiş dosyalar (`schema.d.ts`, `drizzle/meta/*.json`, `pnpm-lock.yaml`) sayılmaz. Usta plan aşamasında bu sınırın aşılacağını görürse adımı `<ID>a`/`<ID>b` diye bölmeyi önerir; karar Mimar'ın. | Usta, Mimar | F1.10–F1.12 PR'ları ~6.600 satırdı; üretilmiş dosyalar çıkınca elle yazılan 640–2.760 satır kaldı. Küçük PR, Müfettiş'in ilk turunu ucuzlatır. |
 
 ## 3. Yerel kontrol komutları (H1)
 
