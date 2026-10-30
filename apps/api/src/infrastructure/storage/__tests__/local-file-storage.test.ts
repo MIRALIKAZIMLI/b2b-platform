@@ -58,6 +58,12 @@ describe('LocalFileStorage', () => {
     expect(await storage.head(KEY)).toBeNull();
   });
 
+  it('putIfAbsent: nesne varsa üzerine yazmaz', async () => {
+    expect(await storage.putIfAbsent(KEY, Buffer.from('first'), 'image/jpeg')).toBe(true);
+    expect(await storage.putIfAbsent(KEY, Buffer.from('other'), 'image/jpeg')).toBe(false);
+    expect((await storage.readRange(KEY, 16)).toString()).toBe('first');
+  });
+
   it('biçim dışı anahtar (yol gezintisi) kabul edilmez', async () => {
     await expect(storage.put('../x/import/a.xlsx', Buffer.from('x'), 'x')).rejects.toThrow();
     await expect(storage.put('a/import/../../etc.xlsx', Buffer.from('x'), 'x')).rejects.toThrow();

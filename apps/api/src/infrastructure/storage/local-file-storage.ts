@@ -64,7 +64,7 @@ export class LocalFileStorage extends FileStorage {
     });
     return Promise.resolve({
       url: this.urlFor(token),
-      headers: { 'Content-Type': input.contentType },
+      headers: { 'Content-Type': input.contentType, 'If-None-Match': '*' },
     });
   }
 
@@ -108,6 +108,23 @@ export class LocalFileStorage extends FileStorage {
     await writeFile(`${file}.meta.json`, JSON.stringify({ contentType }));
   }
 
+  /**
+   * Yalnızca nesne yoksa yazar (R2'deki `If-None-Match: *` karşılığı, Müfettiş PR #28 M1).
+   * Nesne zaten varsa `false`, hiçbir şey değişmez.
+   */
+  async putIfAbsent(key: string, body: Buffer, contentType: string): Promise<boolean> {
+    const file = this.pathOf(key);
+    await mkdir(path.dirname(file), { recursive: true });
+    try {
+      await writeFile(file, body, { flag: 'wx' });
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'EEXIST') return false;
+      throw error;
+    }
+    await writeFile(`${file}.meta.json`, JSON.stringify({ contentType }));
+    return true;
+  }
+
   async delete(key: string): Promise<void> {
     const file = this.pathOf(key);
     await rm(file, { force: true });
@@ -121,16 +138,17 @@ export class LocalFileStorage extends FileStorage {
     const expected = this.mac(encoded);
     const given = Buffer.from(signature, 'base64url');
     if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
-    let payload: LocalStorageToken;
+    let raw: unknown;
     try {
-      payload = tokenPayloadSchema.parse(
-        JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')),
-      );
-    } catch {
-      return null;
+      raw = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+    } catch (error) {
+      if (error instanceof SyntaxError) return null;
+      throw error;
     }
-    if (payload.exp <= this.clock.now().getTime()) return null;
-    return payload;
+    const parsed = tokenPayloadSchema.safeParse(raw);
+    if (!parsed.success) return null;
+    if (parsed.data.exp <= this.clock.now().getTime()) return null;
+    return parsed.data;
   }
 
   /** Dev ucu için: nesnenin içeriği ve türü; yoksa `null`. */

@@ -86,7 +86,10 @@ export class DevStorageController implements OnModuleInit {
     ) {
       throw new DomainError('PERMISSION_DENIED');
     }
-    await local.put(payload.key, body, payload.contentType);
+    // Tek yazım (R2 `If-None-Match: *` karşılığı): nesne varsa üzerine yazılmaz (PR #28 M1).
+    if (!(await local.putIfAbsent(payload.key, body, payload.contentType))) {
+      throw new DomainError('PERMISSION_DENIED');
+    }
   }
 
   @Public()

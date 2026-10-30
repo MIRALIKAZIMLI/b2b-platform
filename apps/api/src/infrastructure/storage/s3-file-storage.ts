@@ -61,20 +61,27 @@ export class S3FileStorage extends FileStorage {
       throw new Error('Anahtar ve bucket uyuşmuyor');
     }
     // Boyut imzaya girer: istemci bildirdiğinden farklı boyutta yükleyemez.
+    // `If-None-Match: *` imzaya girer: nesne yalnızca bir kez yazılır; doğrulanmış (`ready`) dosyanın
+    // üzerine aynı URL ile başka içerik yazılamaz (Müfettiş PR #28 M1; R2 koşullu yazma → 412).
     const command = new PutObjectCommand({
       Bucket: this.options.buckets[input.bucket],
       Key: input.key,
       ContentType: input.contentType,
       ContentLength: input.maxBytes,
+      IfNoneMatch: '*',
     });
     const url = await getSignedUrl(this.client, command, {
       expiresIn: input.ttlSeconds,
       signingDate: this.clock.now(),
-      signableHeaders: new Set(['content-type', 'content-length']),
+      signableHeaders: new Set(['content-type', 'content-length', 'if-none-match']),
     });
     return {
       url,
-      headers: { 'Content-Type': input.contentType, 'Content-Length': String(input.maxBytes) },
+      headers: {
+        'Content-Type': input.contentType,
+        'Content-Length': String(input.maxBytes),
+        'If-None-Match': '*',
+      },
     };
   }
 

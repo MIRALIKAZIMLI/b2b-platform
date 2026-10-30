@@ -37,6 +37,19 @@ describe('S3FileStorage imzalı URL', () => {
     expect(url.searchParams.get('X-Amz-Signature')).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("F1.10-AC2: yükleme URL'si tek yazımlık — If-None-Match: * imzada (PR #28 M1)", async () => {
+    const result = await storage().createUploadUrl({
+      bucket: 'private',
+      key: `${BUSINESS}/import/0190f1a0-0000-7000-8000-0000000000dd.xlsx`,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      maxBytes: 10,
+      ttlSeconds: 600,
+    });
+    const signed = new URL(result.url).searchParams.get('X-Amz-SignedHeaders') ?? '';
+    expect(signed.split(';')).toContain('if-none-match');
+    expect(result.headers['If-None-Match']).toBe('*');
+  });
+
   it("yükleme URL'si: public bucket, 600 sn, içerik türü ve boyut imzada", async () => {
     const result = await storage().createUploadUrl({
       bucket: 'public',
@@ -50,8 +63,14 @@ describe('S3FileStorage imzalı URL', () => {
     expect(url.host).toBe('test-public.acc123.r2.cloudflarestorage.com');
     expect(url.searchParams.get('X-Amz-Expires')).toBe('600');
     const signed = url.searchParams.get('X-Amz-SignedHeaders') ?? '';
-    expect(signed.split(';')).toEqual(expect.arrayContaining(['content-length', 'content-type']));
-    expect(result.headers).toEqual({ 'Content-Type': 'image/png', 'Content-Length': '1234' });
+    expect(signed.split(';')).toEqual(
+      expect.arrayContaining(['content-length', 'content-type', 'if-none-match']),
+    );
+    expect(result.headers).toEqual({
+      'Content-Type': 'image/png',
+      'Content-Length': '1234',
+      'If-None-Match': '*',
+    });
   });
 
   it('anahtar ve bucket uyuşmazsa URL üretilmez', async () => {

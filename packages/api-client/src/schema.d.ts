@@ -5371,7 +5371,8 @@ export interface paths {
         /**
          * Yerel dosya deposuna yükleme (STORAGE_PROVIDER=local, ADR-0023) — production'da yok
          * @description `token` (sorgu parametresi), `local` deposunun ürettiği imzalı (HMAC) ve süreli yükleme bağlantısıdır. İmza veya süre
-         *     geçersizse, Content-Type ya da gövde boyutu imzadakinden farklıysa 403 (R2 davranışıyla aynı).
+         *     geçersizse, Content-Type ya da gövde boyutu imzadakinden farklıysa veya nesne zaten yazılmışsa
+         *     (tek yazım, R2'de `If-None-Match: *`) 403.
          */
         put: {
             parameters: {

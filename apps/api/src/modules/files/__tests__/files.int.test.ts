@@ -212,6 +212,45 @@ describe('F1.10 dosya yükleme (entegrasyon)', () => {
     });
   });
 
+  describe("F1.10-AC2: yükleme URL'si tek yazımlık (PR #28 M1)", () => {
+    it("F1.10-AC2: ready dosyanın yükleme URL'si ikinci kez kullanılamaz (içerik değişmez)", async () => {
+      const { headers } = await owner();
+      const upload = await ticket(headers, {
+        purpose: 'product_image',
+        contentType: 'image/png',
+        sizeBytes: PNG_BYTES.length,
+      });
+      expect(upload.headers['If-None-Match']).toBe('*');
+      expect((await putObject(ctx.app, upload, PNG_BYTES)).status).toBe(204);
+      const complete = await http().post(`/api/v1/files/${upload.fileId}/complete`).set(headers);
+      expect(complete.status).toBe(200);
+
+      // Aynı boyutta EXE ile aynı URL: reddedilir, nesne değişmez.
+      const sameSizeExe = Buffer.concat([
+        EXE_BYTES,
+        Buffer.alloc(PNG_BYTES.length - EXE_BYTES.length),
+      ]);
+      expect(sameSizeExe.length).toBe(PNG_BYTES.length);
+      const second = await putObject(ctx.app, upload, sameSizeExe);
+      expect(second.status).toBe(403);
+
+      const row = await fileRow(upload.fileId);
+      const head = await ctx.app.get(FileStorage).readRange(row?.object_key ?? '', 8);
+      expect(head).toEqual(PNG_BYTES.subarray(0, 8));
+    });
+
+    it('F1.10-AC2: complete öncesi de ikinci yazım reddedilir', async () => {
+      const { headers } = await owner();
+      const upload = await ticket(headers, {
+        purpose: 'logo',
+        contentType: 'image/png',
+        sizeBytes: PNG_BYTES.length,
+      });
+      expect((await putObject(ctx.app, upload, PNG_BYTES)).status).toBe(204);
+      expect((await putObject(ctx.app, upload, PNG_BYTES)).status).toBe(403);
+    });
+  });
+
   describe('F1.10-AC3: private dosya yalnızca süreli imzalı URL ile okunur', () => {
     it('F1.10-AC3: 5 dk içinde okunur, süre dolunca erişim yok (FixedClock)', async () => {
       const { headers, tenant } = await owner();
