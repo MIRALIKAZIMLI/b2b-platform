@@ -60,6 +60,12 @@ function auditContext(req: HttpRequest): AuditRequestContext {
   return { requestId: resolveRequestId(req.raw), ...(ip.success ? { ip: ip.data } : {}) };
 }
 
+/** Cookie'yi silen yenileme hataları: anahtar geçersiz, süresi dolmuş veya yeniden kullanılmış. */
+const COOKIE_CLEARING_CODES: ReadonlySet<string> = new Set([
+  'UNAUTHENTICATED',
+  'REFRESH_TOKEN_REUSED',
+]);
+
 /** Web yanıtında `refreshToken` gövdeden çıkar (cookie'ye taşınır). */
 type WebAware<T> = T | Omit<T, 'refreshToken'>;
 
@@ -148,7 +154,10 @@ export class AuthController {
         await this.sessions.refreshTokenMaxAgeSeconds(),
       );
     } catch (error) {
-      reply.header('Set-Cookie', clearRefreshCookieHeader());
+      // Yalnız anahtar geçersizse cookie silinir; geçici hata (ör. DB) oturumu bitirmez (Müfettiş L1).
+      if (error instanceof DomainError && COOKIE_CLEARING_CODES.has(error.code)) {
+        reply.header('Set-Cookie', clearRefreshCookieHeader());
+      }
       throw error;
     }
   }

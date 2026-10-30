@@ -8,6 +8,19 @@ import { type ApiClient, createApiClient } from '@b2b/api-client';
 
 type FetchFn = (input: Request) => Promise<Response>;
 
+/** Web Locks API'nin kullanılan kısmı (`navigator.locks`). */
+export interface RefreshLocks {
+  request<T>(name: string, callback: () => Promise<T>): Promise<T>;
+}
+
+/** Sekmeler arası tek yenileme kilidinin adı. */
+export const REFRESH_LOCK_NAME = 'b2b-refresh';
+
+function browserLocks(): RefreshLocks | undefined {
+  const nav = (globalThis as { navigator?: { locks?: RefreshLocks } }).navigator;
+  return nav?.locks;
+}
+
 export interface WebApiOptions {
   /** Tarayıcıda boş (aynı köken, Next rewrite); testte tam adres. */
   readonly baseUrl: string;
@@ -16,6 +29,8 @@ export interface WebApiOptions {
   readonly businessId?: () => string | undefined;
   /** Yenileme başarısız: oturum bitti, giriş ekranına dön. */
   readonly onSessionExpired?: () => void;
+  /** Sekmeler arası kilit; verilmezse `navigator.locks` (yoksa yalnız sekme içi tekillik). */
+  readonly locks?: RefreshLocks;
 }
 
 export interface WebApi {
@@ -44,13 +59,23 @@ export function createWebApi(options: WebApiOptions): WebApi {
     language: options.language,
   });
 
-  async function doRefresh(): Promise<boolean> {
+  async function postRefresh(): Promise<boolean> {
     const { data } = await authClient.POST('/api/v1/auth/refresh', {
       params: { header: { 'X-Client': 'web', 'X-Requested-With': 'fetch' } },
       body: {},
     });
     accessToken = data?.accessToken;
     return accessToken !== undefined;
+  }
+
+  /**
+   * Birden çok sekme aynı cookie ile aynı anda yenilerse ikincisi döndürülmüş anahtarı "yeniden
+   * kullanmış" olur ve sunucu tüm aileyi iptal eder (ADR-0006 madde 2). Web Locks ile istekler
+   * sekmeler arasında sıraya girer; sıradaki istek tarayıcının güncellediği yeni cookie'yi taşır.
+   */
+  function doRefresh(): Promise<boolean> {
+    const locks = options.locks ?? browserLocks();
+    return locks === undefined ? postRefresh() : locks.request(REFRESH_LOCK_NAME, postRefresh);
   }
 
   function refresh(): Promise<boolean> {

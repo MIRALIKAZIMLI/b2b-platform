@@ -47,6 +47,9 @@ export function LoginForm() {
     setError(undefined);
     try {
       await action();
+    } catch (failure) {
+      // Ağ hatası vb.: kullanıcıya genel hata gösterilir (Müfettiş L2).
+      setError(errorCode(failure));
     } finally {
       setBusy(false);
     }

@@ -149,3 +149,72 @@ describe('web api istemcisi (F1.13a)', () => {
     expect(api.hasSession()).toBe(false);
   });
 });
+
+/** Tarayıcı Web Locks davranışı: aynı adlı kilit istekleri sırayla çalışır. */
+function fakeLocks() {
+  let tail: Promise<unknown> = Promise.resolve();
+  const names: string[] = [];
+  return {
+    names,
+    request<T>(name: string, callback: () => Promise<T>): Promise<T> {
+      names.push(name);
+      const run = tail.then(callback, callback);
+      tail = run.catch(() => undefined);
+      return run;
+    },
+  };
+}
+
+/** Sunucu + tarayıcı cookie kavanozu: yenileme cookie'yi döndürür; eski cookie gelirse aile iptal. */
+function rotatingServer() {
+  let jar = 'rt-0';
+  let current = 'rt-0';
+  let familyRevoked = false;
+  let n = 0;
+  const fetch = async (): Promise<Response> => {
+    const sent = jar; // tarayıcı cookie'yi istek anında ekler
+    await new Promise((r) => setTimeout(r, 5));
+    if (familyRevoked || sent !== current) {
+      familyRevoked = true;
+      return json(401, { code: 'REFRESH_TOKEN_REUSED' });
+    }
+    n += 1;
+    current = `rt-${String(n)}`;
+    jar = current;
+    return json(200, { accessToken: `at-${String(n)}`, expiresIn: 900 });
+  };
+  return { fetch, revoked: () => familyRevoked };
+}
+
+describe('sekmeler arası yenileme (Müfettiş M1)', () => {
+  it('iki sekme aynı anda yenilerse Web Locks ile istekler sıralanır, aile iptal olmaz', async () => {
+    const server = rotatingServer();
+    const locks = fakeLocks();
+    const tab = () =>
+      createWebApi({ baseUrl: BASE, fetch: server.fetch, language: () => 'az', locks });
+    const [a, b] = [tab(), tab()];
+
+    const results = await Promise.all([a.refresh(), b.refresh()]);
+
+    expect(results).toEqual([true, true]);
+    expect(server.revoked()).toBe(false);
+    expect(locks.names).toEqual(['b2b-refresh', 'b2b-refresh']);
+  });
+
+  it('kilitsiz eşzamanlı yenileme aileyi iptal eder (kilidin neden gerektiğini gösterir)', async () => {
+    const server = rotatingServer();
+    const passthrough = { request: <T>(_: string, cb: () => Promise<T>) => cb() };
+    const tab = () =>
+      createWebApi({
+        baseUrl: BASE,
+        fetch: server.fetch,
+        language: () => 'az',
+        locks: passthrough,
+      });
+
+    const results = await Promise.all([tab().refresh(), tab().refresh()]);
+
+    expect(results).toContain(false);
+    expect(server.revoked()).toBe(true);
+  });
+});
