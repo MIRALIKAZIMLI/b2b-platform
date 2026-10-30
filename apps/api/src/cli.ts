@@ -3,6 +3,7 @@
 //   node dist/cli.js db:migrate     migration'ları migrator rolüyle uygular
 //   node dist/cli.js check-rls      tabloların RLS sınıfını denetler; sorun varsa çıkış kodu 1
 //   node dist/cli.js db:seed        başlangıç verisini migrator rolüyle yükler (idempotent)
+//   node dist/cli.js openapi:export uygulamanın OpenAPI şemasını JSON olarak yazar (contract:check)
 // Kökten: pnpm db:bootstrap · pnpm db:migrate · pnpm db:seed · pnpm check-rls
 // Adres ve şifreler ekrana yazılmaz.
 import { parseDbEnv, parseMigratorEnv, parseSeedEnv } from '@b2b/shared';
@@ -91,11 +92,19 @@ async function checkRlsCommand(): Promise<void> {
   }
 }
 
+async function openapiExport(): Promise<void> {
+  // Bağlantı kurmaz, ortam değişkeni okumaz (core/openapi). Çıktı stdout'a JSON.
+  await import('reflect-metadata');
+  const { createOpenApiDocument } = await import('./core/openapi/openapi-document.js');
+  process.stdout.write(`${JSON.stringify(await createOpenApiDocument())}\n`);
+}
+
 const COMMANDS: Record<string, () => Promise<void>> = {
   'db:bootstrap': dbBootstrap,
   'db:migrate': dbMigrate,
   'db:seed': dbSeed,
   'check-rls': checkRlsCommand,
+  'openapi:export': openapiExport,
 };
 
 async function main(): Promise<void> {

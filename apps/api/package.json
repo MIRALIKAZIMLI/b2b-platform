@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "@b2b/config": "workspace:*",
+    "@nestjs/swagger": "11.4.7",
     "@nestjs/testing": "11.2.8",
     "@testcontainers/postgresql": "12.2.1",
     "@types/pg": "8.23.1",

@@ -224,6 +224,16 @@ Eklenmeyenler: `@testcontainers/redis` (Redis entegrasyon testi docker compose /
 | --- | --- | --- |
 | `otplib` | 12.0.1 | api (`modules/identity/totp/`, TOTP üretme ve doğrulama); listedeki 12.x sürümü (13.x mevcut, liste değişmedi); Mimar onayı F1.6 |
 
+## 7.10 Kurulu sürümler (F1.12, 2026-10-30)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `@nestjs/swagger` | 11.4.7 | api (dev; `core/openapi`, şema üretimi yalnızca `contract:check` için); 12.x Nest 12 ister, Nest 11 ile uyumlu son sürüm |
+| `openapi-typescript` | 7.13.0 | api-client (dev; `generate.ts`) |
+| `openapi-fetch` | 0.17.0 | api-client (`createApiClient`) |
+
+Eklenmeyenler: Zod → OpenAPI dönüştürücüsü (karşılaştırma yol + metot + yanıt kodu düzeyinde, Zod şeması gerekmez; şema gövdesi karşılaştırması gelince ayrı karar). YAML ayrıştırıcı paketi (`contract-compare.mts` yalnızca `paths` bölümünün üç anahtar düzeyini okur; beklenmeyen biçimde hata verir).
+
 ## 8. Kullanılmayacak teknolojiler
 
 | Kullanılmaz | Yerine | Neden |

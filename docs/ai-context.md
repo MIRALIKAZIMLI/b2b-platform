@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-25 (F1.8a birleşti; F1.8b PR açık).
+Son güncelleme: 2026-10-30 (F1.8b birleşti; F1.12 PR açık).
 
 ## 1. Mimari özeti
 
@@ -22,6 +22,7 @@ apps/api/src/core/                audit, bootstrap, config, db, errors, health, 
 apps/api/src/core/ports/          sms-sender (dış servis portları)
 apps/api/src/infrastructure/      queue, redis, sms (mock → dev_sms_outbox)
 apps/api/src/modules/             access, billing, businesses, dev (yalnız local/test/staging), i18n, identity, settings
+packages/api-client/              openapi.yaml → src/schema.d.ts (üretilir, elle düzenlenmez), createApiClient
 packages/shared/src/              env, errors, entitlements, permissions, settings, uuidv7, voen, format…
 apps/web, apps/mobile             boş kabuk (F0.3b)
 ```
@@ -86,7 +87,8 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.5b | oturum, JWT (HS256), yenileme anahtarı, `/auth/*`, `/me`, `0008_user_sessions.sql`, numara başına OTP sayacı |
 | F1.6 | TOTP (`/auth/totp/setup`, `/auth/totp/verify`), kurtarma kodları, `platform_staff`, ilk süper admin seed (`SUPER_ADMIN_PHONE`), `0009_totp_platform_staff.sql` |
 | F1.8a | izin kataloğu (`packages/shared/src/permissions.ts` = c4 §5), rol şablonları ve unvanlar (seed), `roles`, `role_permissions`, `memberships`, `membership_regions`, `invitations`, son admin tetikleyicisi, `list_my_memberships()`, rol değişikliği audit + outbox, `0010_access.sql` |
-| **F1.8b** | **sürüyor**: global AccessGuard, TenantContext, `@RequirePermission`/`@Public`/`@Authenticated`/`@RequirePlatformRole`, lint kuralı, izin önbelleği + `access` kuyruğu tüketicisi, `/me` üyelik ve izinler |
+| F1.8b | global AccessGuard, TenantContext, `@RequirePermission`/`@Public`/`@Authenticated`/`@RequirePlatformRole`, lint kuralı, izin önbelleği + `access` kuyruğu tüketicisi, `/me` üyelik ve izinler |
+| **F1.12** | **sürüyor**: `packages/api-client` (`pnpm generate:api`, `createApiClient`), `pnpm contract:check` + CI `contract` işi |
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
@@ -108,5 +110,6 @@ Kaynak: ilgili kartın "Kararlar" bölümü ve faz spesifikasyonu §4.
 - **Erişim (F1.8a):** `role_permissions` / `membership_regions` RLS'i üst satır üzerinden (`EXISTS`). Rol, şube, depo bileşik FK ile aynı işletmeye bağlı (FK denetimi RLS dışı; tek kolonlu FK başka kiracının kimliğini kabul ederdi). Son admin: tetikleyici + `pg_advisory_xact_lock`, SQLSTATE `AC001` → `mapLastAdminError` → `LAST_ADMIN_PROTECTED`. Kullanıcının tüm üyelikleri yalnız `list_my_memberships()` ile (T kuralına app_user için ek politika yok; migrator'a `TO migrator` SELECT politikası). Kapsam/yetenek uyumu servis kuralı (`assertPermissionsValid`). Rol değişikliği → audit `membership.role_changed` + outbox (`access` kuyruğu; tüketici F1.8b). Şablon eşlemesindeki 7 fark: daha dar seçenek, "kullanıcı onayı bekliyor" (c4 §5).
 - **Hata kodu (F1.6):** `CONNECTION_DAILY_QUOTA_EXCEEDED` → `429` + `retryAfter`.
 - **openapi değişikliği (F1.5b):** `AuthResult` artık `TokenPair`'ı zorunlu içermez; `nextStep = register` iken `accessToken` yok, `pendingToken` var.
+- **Sözleşme kontrolü (F1.12):** `pnpm contract:check` iki şey denetler: üretilmiş `packages/api-client` güncel mi; uygulamanın uçları `openapi.yaml`'da var mı (yol + metot + yanıt kodu, gövde değil). Uygulama şeması Nest `preview` kipinde (bağlantısız) `@nestjs/swagger` ile `apps/api/dist/cli.js openapi:export`. Uygulamada olup sözleşmede olmayan uç veya başarı kodu → hata; sözleşmede olup yazılmamış uç → uyarı (`CONTRACT_VERBOSE=1` listeler). Yeni uç: önce `openapi.yaml`, sonra `pnpm generate:api`, üretilen dosya PR'a girer. `@HttpCode` sözleşmedeki başarı koduyla aynı olmalı.
 - **MinIO yok** (S9): F1.10'dan önce ADR ile karar verilecek.
 - **Vitest + NestJS (S8):** kodda bağımlılıklar `@Inject()` ile açık yazılıyor (yeni paket yok); `unplugin-swc` eklenmedi.
