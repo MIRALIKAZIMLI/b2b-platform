@@ -1,9 +1,10 @@
-import { Body, Controller, Headers, HttpCode, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Headers, HttpCode, Inject, Post, Res } from '@nestjs/common';
 import { z } from 'zod';
 import { Public } from '../../../core/auth/access-decorators';
 import { DomainError } from '../../../core/errors/domain-error';
 import { DEVICE_TYPES } from '../identity.schema';
-import type { AuthResult } from '../session.service';
+import { type CookieReply, deliverRefreshToken, isWebClient } from '../refresh-cookie';
+import { type AuthResult, SessionService } from '../session.service';
 import { TokenService } from '../token.service';
 import { type TotpSetupResult, TotpService } from './totp.service';
 
@@ -29,6 +30,7 @@ export class TotpController {
   constructor(
     @Inject(TotpService) private readonly totp: TotpService,
     @Inject(TokenService) private readonly tokens: TokenService,
+    @Inject(SessionService) private readonly sessions: SessionService,
   ) {}
 
   /** Yetki: `Authorization: Bearer <pendingToken>` (purpose = totp); erişim anahtarı kabul edilmez. */
@@ -47,13 +49,18 @@ export class TotpController {
     return await this.totp.setup(userId, input.confirmCode);
   }
 
+  /** `X-Client: web` → yenileme anahtarı httpOnly cookie'de (F1.13a; otp/verify ile aynı). */
   @Public()
   @Post('verify')
   @HttpCode(200)
-  async verify(@Body() body: unknown): Promise<AuthResult> {
+  async verify(
+    @Body() body: unknown,
+    @Headers('x-client') client: string | undefined,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ): Promise<AuthResult | Omit<AuthResult, 'refreshToken'>> {
     const input = verifyBodySchema.parse(body);
     const device = input.device;
-    return await this.totp.verify(
+    const result = await this.totp.verify(
       input.pendingToken,
       input.code,
       device === undefined
@@ -62,6 +69,12 @@ export class TotpController {
             ...(device.type === undefined ? {} : { type: device.type }),
             ...(device.name === undefined ? {} : { name: device.name }),
           },
+    );
+    return deliverRefreshToken(
+      result,
+      isWebClient(client),
+      reply,
+      await this.sessions.refreshTokenMaxAgeSeconds(),
     );
   }
 }

@@ -1,10 +1,31 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { z } from 'zod';
 import type { AuditRequestContext } from '../../core/audit';
 import { resolveRequestId } from '../../core/request-id.middleware';
 import { Authenticated, Public } from '../../core/auth/access-decorators';
+import { DomainError } from '../../core/errors/domain-error';
 import { CurrentSession } from './current-session';
 import { DEVICE_TYPES } from './identity.schema';
+import {
+  clearRefreshCookieHeader,
+  type CookieReply,
+  deliverRefreshToken,
+  hasRequestedWith,
+  isWebClient,
+  readRefreshCookie,
+} from './refresh-cookie';
 import {
   type AuthResult,
   type SessionAuth,
@@ -39,6 +60,9 @@ function auditContext(req: HttpRequest): AuditRequestContext {
   return { requestId: resolveRequestId(req.raw), ...(ip.success ? { ip: ip.data } : {}) };
 }
 
+/** Web yanıtında `refreshToken` gövdeden çıkar (cookie'ye taşınır). */
+type WebAware<T> = T | Omit<T, 'refreshToken'>;
+
 interface SessionJson {
   readonly id: string;
   readonly deviceType: string;
@@ -53,13 +77,19 @@ interface SessionJson {
 export class AuthController {
   constructor(@Inject(SessionService) private readonly sessions: SessionService) {}
 
+  /** `X-Client: web` → yenileme anahtarı httpOnly cookie'de, gövdede yok (F1.13a). */
   @Public()
   @Post('otp/verify')
   @HttpCode(200)
-  async verify(@Body() body: unknown, @Req() req: HttpRequest): Promise<AuthResult> {
+  async verify(
+    @Body() body: unknown,
+    @Req() req: HttpRequest,
+    @Headers('x-client') client: string | undefined,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ): Promise<WebAware<AuthResult>> {
     const input = verifyBodySchema.parse(body);
     const device = input.device;
-    return await this.sessions.verifyOtp({
+    const result = await this.sessions.verifyOtp({
       challengeId: input.challengeId,
       code: input.code,
       ...(device === undefined
@@ -72,22 +102,67 @@ export class AuthController {
           }),
       context: auditContext(req),
     });
+    return deliverRefreshToken(
+      result,
+      isWebClient(client),
+      reply,
+      await this.sessions.refreshTokenMaxAgeSeconds(),
+    );
   }
 
-  // Web'de cookie desteği F1.13'te.
+  /**
+   * Gövdedeki anahtar (mobil) önceliklidir; yoksa cookie okunur. Cookie ile yenileme
+   * `X-Requested-With` ister (TM-21); başlık yoksa anahtar tüketilmeden 401. Cookie ile gelen
+   * istekte yeni anahtar yine cookie'ye yazılır; hata olursa cookie silinir.
+   */
   @Public()
   @Post('refresh')
   @HttpCode(200)
-  async refresh(@Body() body: unknown, @Req() req: HttpRequest): Promise<TokenPair> {
+  async refresh(
+    @Body() body: unknown,
+    @Req() req: HttpRequest,
+    @Headers('x-client') client: string | undefined,
+    @Headers('x-requested-with') requestedWith: string | undefined,
+    @Headers('cookie') cookieHeader: string | undefined,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ): Promise<WebAware<TokenPair>> {
     const input = refreshBodySchema.parse(body ?? {});
-    return await this.sessions.refresh(input.refreshToken, auditContext(req));
+    if (input.refreshToken !== undefined) {
+      const result = await this.sessions.refresh(input.refreshToken, auditContext(req));
+      return deliverRefreshToken(
+        result,
+        isWebClient(client),
+        reply,
+        await this.sessions.refreshTokenMaxAgeSeconds(),
+      );
+    }
+    const cookieToken = readRefreshCookie(cookieHeader);
+    if (cookieToken === undefined) throw new DomainError('UNAUTHENTICATED');
+    if (!hasRequestedWith(requestedWith)) throw new DomainError('UNAUTHENTICATED');
+    try {
+      const result = await this.sessions.refresh(cookieToken, auditContext(req));
+      return deliverRefreshToken(
+        result,
+        true,
+        reply,
+        await this.sessions.refreshTokenMaxAgeSeconds(),
+      );
+    } catch (error) {
+      reply.header('Set-Cookie', clearRefreshCookieHeader());
+      throw error;
+    }
   }
 
+  /** Oturum ailesi kapatılır; web cookie'si her durumda silinir (mobilde etkisiz). */
   @Post('logout')
   @HttpCode(204)
   @Authenticated()
-  async logout(@CurrentSession() auth: SessionAuth): Promise<void> {
+  async logout(
+    @CurrentSession() auth: SessionAuth,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ): Promise<void> {
     await this.sessions.logout(auth);
+    reply.header('Set-Cookie', clearRefreshCookieHeader());
   }
 
   @Get('sessions')

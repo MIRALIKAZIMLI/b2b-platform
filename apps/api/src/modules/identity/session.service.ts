@@ -14,7 +14,7 @@ import { SettingsService } from '../settings';
 import type { DeviceType, PlatformRole } from './identity.schema';
 import { TotpRepository } from './totp/totp.repository';
 import { OtpService } from './otp.service';
-import { type ActiveSession, SessionRepository } from './session.repository';
+import { type ActiveSession, type SelfProfilePatch, SessionRepository } from './session.repository';
 import { TokenService } from './token.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -262,6 +262,20 @@ export class SessionService {
       totpEnabled: await this.totp.isEnabled(user.id),
       memberships: [],
     };
+  }
+
+  /** PATCH /me (openapi; US-058 AC1: dil profilde saklanır). Etkin olmayan dil → 422. */
+  async updateProfile(auth: SessionAuth, patch: SelfProfilePatch): Promise<void> {
+    const result = await this.sessions.updateSelf(auth.userId, patch, this.clock.now());
+    if (result === 'inactive_language') {
+      throw new DomainError('VALIDATION_FAILED', { preferredLanguage: ['inactive_language'] });
+    }
+    if (result === 'not_found') throw new DomainError('UNAUTHENTICATED');
+  }
+
+  /** Web cookie ömrü (`auth.refresh_token_days`, F1.13a). */
+  async refreshTokenMaxAgeSeconds(): Promise<number> {
+    return (await this.settings.get('auth.refresh_token_days')) * (DAY_MS / 1000);
   }
 
   private async refreshExpiry(now: Date): Promise<Date> {

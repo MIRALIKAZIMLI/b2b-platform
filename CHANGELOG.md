@@ -22,3 +22,4 @@
 - F1.11: push ve uygulama içi bildirim altyapısı
 - F1.10: dosya yükleme
 - F1.10b: dosyalar önce private alana
+- F1.13a: web giriş, oturum, dil

@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-30 (F1.10b birleşti, PR #29; sıradaki adım F1.13a).
+Son güncelleme: 2026-10-30 (F1.13a: web giriş, oturum, dil; sıradaki adım F1.13b).
 
 ## 1. Mimari özeti
 
@@ -24,7 +24,9 @@ apps/api/src/infrastructure/      push (expo, mock), queue, redis, sms (mock →
 apps/api/src/modules/             access, billing, businesses, dev (yalnız local/test/staging), files, i18n, identity, notifications, settings
 packages/api-client/              openapi.yaml → src/schema.d.ts (üretilir, elle düzenlenmez), createApiClient
 packages/shared/src/              env, errors, entitlements, permissions, settings, uuidv7, voen, format…
-apps/web, apps/mobile             boş kabuk (F0.3b)
+apps/web/src/                     lib/{api,session,i18n}.ts, i18n/{routing,request}.ts, proxy.ts,
+                                  features/{auth,i18n}, app/[locale]/(auth)/login; e2e/ (Playwright)
+apps/mobile                       boş kabuk (F0.3b)
 ```
 
 Hedef yapı: [coding-guidelines](07-ai-development/coding-guidelines.md) §1.
@@ -92,8 +94,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.11 | `push_tokens`, `notifications`, `notification_preferences` (U), `notification_templates` (G), `push_token_register()`, `PushSender` (expo/mock), `notifications` kuyruğu, `/push-tokens`, `/notifications*`, `0011_notifications.sql` |
 | F1.10 | `files` (T), `FileStorage` (r2/local, ADR-0023), `/files/upload-url`, `/files/{id}/complete`, `FilesService.getReadUrl`, `/dev/storage` (yalnız local), `businesses.logo_file_id` bileşik FK, `0012_files.sql` |
 | F1.10b | yükleme private geçici anahtara, `complete`'te kalıcı anahtara koşullu kopya (`putIfAbsent`) |
+| F1.13a | web yenileme cookie'si (`X-Client: web`, `b2b_rt`), `PATCH /me`, web `api.ts`/oturum/`next-intl`, giriş ekranı (telefon → kod → TOTP), dil seçici, Playwright |
 
-**Sıradaki:** F1.13a → F1.13b → F1.14a → F1.14b.
+**Sıradaki:** F1.13b → F1.14a → F1.14b.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
@@ -119,4 +122,6 @@ Kaynak: ilgili kartın "Kararlar" bölümü ve faz spesifikasyonu §4.
 - **Bildirim (F1.11):** Outbox olayı → `notifications` kuyruğu → `NotificationDispatcher` (worker): alıcı adına `withUserTx` ile satır yazar, tercih kapalıysa push yok. Yeni olay: `event-registry.ts` (kuyruk `notifications`) + `notification-types.ts` (tür, alıcı, konu kimliği) + 3 dilde şablon seed'i. Tüketici idempotent: `notifications.source_event_id` + benzersiz `(user_id, source_event_id)`, tekrar gelen olay atlanır (ADR-0010 §4). Satırda metin yok; `payload = { id, params }`, metin okunurken alıcının dilinde şablondan (yoksa `az`). Push içeriği yalnızca başlık, metin, `data: { type, id }`; Redis işinde yalnızca kimlik. Geçici hata → `push.retry_delays_minutes`, `DeviceNotRegistered` → token silinir (bilet + `push.receipt_check_minutes` sonra makbuz). Token ekleme/taşıma yalnızca `push_token_register()` (kullanıcı `app.user_id`'den). Uçlar `@Authenticated()`. Worker ortamı `PUSH_PROVIDER` (`expo`/`mock`, production'da mock → worker açılmaz), `EXPO_ACCESS_TOKEN` isteğe bağlı. `expo-server-sdk` 7.2.0 (ESM; Node 24 `require(esm)`). `QueueModule` global (`QUEUE_MAP`).
 - **Dosya deposu (S9 → C, ADR-0023):** MinIO yok; yerelde ve CI'da `STORAGE_PROVIDER=local` (disk, `STORAGE_LOCAL_DIR`), staging/production'da R2 (`R2_*`, `FILES_PUBLIC_BASE_URL`). Production'da `local` → api açılmaz. Yerel imzalı bağlantılar `/api/v1/dev/storage?token=` (HMAC + süre, Fastify yol parametresi 100 karakter sınırı yüzünden sorguda); uç yalnız DevModule + local'de.
 - **Dosya (F1.10):** `FileStorage` portu integrations §4 ile birebir; `key` alan yöntemler bucket'ı anahtarın `purpose` bölümünden bulur (`fileBucketOfKey`). İzin `purpose`'a göre (`FILE_PURPOSE_PERMISSIONS`; dispute_photo iki koddan biri) → uçlar `@Authenticated()` + `TenantContextService.resolve` + `assertPurposeAllowed`; X-Business-Id zorunlu, platform dosyası yükleme ucu yok. Tür/boyut ihlali `422 FILE_INVALID` (`details.reason`: content_type/size/signature/not_uploaded/rejected). İstemci her zaman private bucket'taki geçici anahtara (`<owner>/upload/<fileId>.<ext>`, `stagingKeyOf`) yükler; `complete` geçici nesneyi bir kez okur, aynı buffer'ı doğrular ve kalıcı anahtara koşullu yazar (`putIfAbsent`; port integrations §4'te genişletildi), satırı `ready` yapar, geçiciyi siler — reddedilen/tamamlanmamış dosya public'e çıkmaz (F1.10b). Yükleme URL'si bildirilen boyutu ve `If-None-Match: *` başlığını imzalar (tek yazım; yerel depoda `putIfAbsent`, PR #28 M1). `complete`: boyut + ilk 16 bayt imza (PNG/JPEG/WebP/ZIP=XLSX); geçersiz → nesne silinir, satır `rejected` (satır silinmez; app_user'da DELETE yok). Okuma: public → `FILES_PUBLIC_BASE_URL/<key>` (yerelde imzalı URL), private → `files.download_url_ttl_minutes`. `businesses.logo_file_id` → `files(owner_business_id, id)` bileşik FK. `pending` temizliği ayrı adım.
+- **Web oturumu (F1.13a):** İstemci `X-Client: web` gönderir; `otp/verify`, `totp/verify`, `refresh` yenileme anahtarını gövde yerine `b2b_rt=…; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=<auth.refresh_token_days>` cookie'sine yazar (`Domain` yok). `refresh`: gövdedeki anahtar (mobil) öncelikli; yoksa cookie, o zaman `X-Requested-With` zorunlu, yoksa anahtar tüketilmeden `401 UNAUTHENTICATED` (TM-21); hata olursa cookie silinir. `logout` cookie'yi her zaman siler. Cookie yardımcıları `modules/identity/refresh-cookie.ts` (yeni paket yok). Web API'yi aynı kökenden çağırır (Next `rewrites` `/api/v1/*` → `API_URL`); erişim anahtarı yalnız `lib/api.ts` belleğinde, `401`'de tek paylaşılan yenileme, başarısızsa giriş ekranı. Sayfa açılışında oturum cookie ile geri alınır.
+- **Web dili (F1.13a):** `next-intl` mesajları sunucuda `GET /api/v1/i18n/{lang}`'tan (ETag önbelleği, `lib/i18n.ts`), düz anahtar → iç içe (`toNested`), eksik anahtar `az`'den. `[locale]` az/ru/tr; `en` yalnız `/i18n/en` 200 ise (US-058 AC4). Dil seçici oturum varsa `PATCH /me` (`preferredLanguage`, pasif dil 422); girişte profildeki dile geçilir. Web metinleri `i18n/seed/ui-messages.ts` (taslak, onay bekliyor). Playwright `apps/web/e2e`, CI işi F1.13b'de.
 - **Vitest + NestJS (S8):** kodda bağımlılıklar `@Inject()` ile açık yazılıyor (yeni paket yok); `unplugin-swc` eklenmedi.

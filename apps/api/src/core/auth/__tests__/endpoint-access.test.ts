@@ -34,6 +34,8 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'GET /api/v1/auth/sessions': 'authenticated',
   'DELETE /api/v1/auth/sessions/:id': 'authenticated',
   'GET /api/v1/me': 'authenticated',
+  // F1.13a: profil (ad, dil, saat dilimi); yalnız kendi satırı (users U).
+  'PATCH /api/v1/me': 'authenticated',
   'POST /api/v1/push-tokens': 'authenticated',
   'GET /api/v1/notifications': 'authenticated',
   'POST /api/v1/notifications/read': 'authenticated',
