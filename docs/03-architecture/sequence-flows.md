@@ -344,6 +344,6 @@ sequenceDiagram
     end
 ```
 
-Ürün görseli `public` bucket'a, teslim fotoğrafı ve belgeler `private` bucket'a yazılır. `private` dosyalar yalnızca süreli imzalı GET URL'siyle (5 dk) okunur.
+İstemci her zaman `private` bucket'taki geçici anahtara yükler; `complete` doğrulayınca API dosyayı kalıcı anahtara kopyalar ve geçiciyi siler (F1.10b). Ürün görseli kalıcı olarak `public` bucket'a, teslim fotoğrafı ve belgeler `private` bucket'a yazılır; reddedilen veya tamamlanmamış dosya `public` bucket'a hiç çıkmaz. `private` dosyalar yalnızca süreli imzalı GET URL'siyle (5 dk) okunur.
 
 📌 VARSAYIM: Görsel küçültme (200 / 800 / 1600 px) Cloudflare'in görsel dönüştürme özelliğiyle değil, worker'da yükleme sonrası yapılır (ek ücretli özellik kullanmamak için).

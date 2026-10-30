@@ -28,14 +28,37 @@ function isFilePurpose(value: string): value is FilePurpose {
   return (FILE_PURPOSES as readonly string[]).includes(value);
 }
 
-/** Anahtarın bucket'ı (`<owner>/<purpose>/<file>`); biçim dışı anahtar → hata. */
-export function fileBucketOfKey(key: string): FileBucket {
-  const parts = key.split('/');
-  const purpose = parts[1];
-  if (parts.length !== 3 || purpose === undefined || !isFilePurpose(purpose)) {
+/**
+ * Geçici yükleme anahtarlarının bölümü (F1.10b): istemci her zaman `private` bucket'taki
+ * `<owner>/upload/<fileId>.<ext>` anahtarına yükler; `complete` doğrulayınca kalıcı anahtara
+ * kopyalanır. Reddedilen veya tamamlanmamış dosya hiç `public` bucket'a çıkmaz.
+ */
+export const UPLOAD_STAGING_SEGMENT = 'upload';
+
+/** Kalıcı anahtarın geçici yükleme karşılığı (`<owner>/<purpose>/<f>` → `<owner>/upload/<f>`). */
+export function stagingKeyOf(objectKey: string): string {
+  const parts = objectKey.split('/');
+  const [owner, purpose, file] = parts;
+  if (
+    parts.length !== 3 ||
+    owner === undefined ||
+    file === undefined ||
+    purpose === undefined ||
+    !isFilePurpose(purpose)
+  ) {
     throw new Error('Geçersiz dosya anahtarı');
   }
-  return FILE_PURPOSE_BUCKET[purpose];
+  return `${owner}/${UPLOAD_STAGING_SEGMENT}/${file}`;
+}
+
+/** Anahtarın bucket'ı (`<owner>/<purpose|upload>/<file>`); biçim dışı anahtar → hata. */
+export function fileBucketOfKey(key: string): FileBucket {
+  const parts = key.split('/');
+  const segment = parts[1];
+  if (parts.length !== 3 || segment === undefined) throw new Error('Geçersiz dosya anahtarı');
+  if (segment === UPLOAD_STAGING_SEGMENT) return 'private';
+  if (!isFilePurpose(segment)) throw new Error('Geçersiz dosya anahtarı');
+  return FILE_PURPOSE_BUCKET[segment];
 }
 
 export interface UploadUrlInput {
