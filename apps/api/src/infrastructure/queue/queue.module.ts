@@ -45,13 +45,17 @@ export interface QueueModuleOptions extends BullConnectionOptions {
   readonly prefix?: string;
 }
 
-/** BullMQ kuyrukları (@nestjs/bullmq), kendi Redis bağlantısıyla. */
+/**
+ * BullMQ kuyrukları (@nestjs/bullmq), kendi Redis bağlantısıyla. Global: kuyruk tüketicileri
+ * gecikmeli iş eklemek için `QUEUE_MAP`'i alabilir (ör. push yeniden denemesi, F1.11).
+ */
 @Module({})
 export class QueueModule {
   static forRoot(options: QueueModuleOptions): DynamicModule {
     const connection = BullConnectionModule.forRoot({ url: options.url });
     return {
       module: QueueModule,
+      global: true,
       imports: [
         connection,
         BullModule.forRootAsync({

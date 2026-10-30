@@ -31,6 +31,10 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'GET /api/v1/auth/sessions': 'authenticated',
   'DELETE /api/v1/auth/sessions/:id': 'authenticated',
   'GET /api/v1/me': 'authenticated',
+  'POST /api/v1/push-tokens': 'authenticated',
+  'GET /api/v1/notifications': 'authenticated',
+  'POST /api/v1/notifications/read': 'authenticated',
+  'PUT /api/v1/notifications/preferences': 'authenticated',
 };
 
 function join(...parts: (string | undefined)[]): string {

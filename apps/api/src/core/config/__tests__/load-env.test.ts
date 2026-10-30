@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { loadApiEnv, loadServerEnv, type EnvExitIo } from '../load-env';
+import { loadApiEnv, loadServerEnv, loadWorkerEnv, type EnvExitIo } from '../load-env';
 
 class ExitCalled extends Error {
   constructor(readonly code: number) {
@@ -114,5 +114,26 @@ describe('loadApiEnv (api açılışı, F1.5a)', () => {
 
     expect(exit.code).toBe(1);
     expect(io.output.join('')).toMatch(/OTP_HASH_KEY/);
+  });
+});
+
+describe('loadWorkerEnv (worker açılışı, F1.11)', () => {
+  it('production + PUSH_PROVIDER=mock → worker başlamaz (çıkış kodu 1)', () => {
+    const io = fakeIo();
+    let exit: ExitCalled | undefined;
+    try {
+      loadWorkerEnv({ ...VALID, APP_ENV: 'production', PUSH_PROVIDER: 'mock' }, io);
+    } catch (error) {
+      if (!(error instanceof ExitCalled)) throw error;
+      exit = error;
+    }
+    expect(exit?.code).toBe(1);
+    expect(io.output.join('')).toMatch(/PUSH_PROVIDER/);
+  });
+
+  it('local + mock kabul edilir', () => {
+    const io = fakeIo();
+    expect(loadWorkerEnv({ ...VALID, PUSH_PROVIDER: 'mock' }, io).PUSH_PROVIDER).toBe('mock');
+    expect(io.output).toEqual([]);
   });
 });

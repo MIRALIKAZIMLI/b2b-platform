@@ -59,11 +59,12 @@ interface PushSender {
 | --- | --- |
 | Sağlayıcı | Expo Push Service; mobil uygulama Expo push anahtarı (`ExponentPushToken[...]`) üretir ve `POST /api/v1/push-tokens` ile kaydeder |
 | Gönderim yeri | Worker (`notifications` kuyruğu), outbox olayından |
-| Toplu gönderim | Expo API'sine istek başına en fazla 100 mesaj (📌 VARSAYIM: Expo belgelerindeki sınır; F1.7 adımında doğrulanır) |
-| Makbuz kontrolü | Gönderimden 15 dk sonra makbuz (receipt) sorgulanır; `DeviceNotRegistered` hatası alan anahtar silinir |
-| Yeniden deneme | Geçici hatada 3 kez (1, 5, 15 dk) (US-054 AC3) |
+| Toplu gönderim | Expo API'sine istek başına en fazla 100 mesaj (Expo belgesindeki sınır; F1.11 adımında doğrulandı). Grup boyu `push.batch_size` (US-017) |
+| Makbuz kontrolü | Gönderimden `push.receipt_check_minutes` (15) dk sonra makbuz (receipt) sorgulanır; bilette veya makbuzda `DeviceNotRegistered` hatası alan anahtar silinir |
+| Yeniden deneme | Geçici hatada (ağ, HTTP 429/5xx) `push.retry_delays_minutes` (1, 5, 15 dk) beklemelerle 3 kez (US-054 AC3). Push için §8'deki genel "5 deneme, üstel bekleme" yerine bu kural geçerlidir (F1.11). Kalıcı hata (ör. geçersiz kimlik bilgisi) yeniden denenmez, loglanır |
 | İçerik | Kişisel veri içermez; yalnızca başlık, kısa metin ve `data: { type, id }`; uygulama detayı API'den çeker |
-| Mock | Testlerde ve yerelde mesajı belleğe/loga yazar |
+| Mock | `PUSH_PROVIDER=mock`: mesajı yalnızca belleğe yazar; token ve metin loglanmaz. Production'da `mock` ile worker açılmaz (F1.11, platform sahibi kararı) |
+| Kuyruktaki iş | Redis'teki push işleri yalnızca kimlik taşır (bildirim, kullanıcı, token satırı kimliği); token ve metin taşımaz (F1.11) |
 
 ## 4. Dosya deposu (`FileStorage`)
 

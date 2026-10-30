@@ -111,10 +111,41 @@ export const apiEnvSchema = serverEnvSchema
     }
   });
 
+/** Push sağlayıcıları (integrations §3, F1.11). */
+export const PUSH_PROVIDERS = ['expo', 'mock'] as const;
+export type PushProvider = (typeof PUSH_PROVIDERS)[number];
+
+/** Production'da kullanılamayan push sağlayıcıları (F1.11, platform sahibi kararı). */
+const PUSH_PROVIDERS_FORBIDDEN_IN_PRODUCTION: ReadonlySet<string> = new Set(['mock']);
+
+/**
+ * Yalnızca worker sürecinin doğruladığı şema (F1.11): push gönderimi worker'dadır.
+ * Production'da `PUSH_PROVIDER=mock` reddedilir: worker açılmaz.
+ */
+export const workerEnvSchema = serverEnvSchema
+  .extend({
+    PUSH_PROVIDER: z.enum(PUSH_PROVIDERS),
+    /** İsteğe bağlı: Expo hesabında "enhanced push security" açıksa gerekir. */
+    EXPO_ACCESS_TOKEN: z.string().min(1).optional(),
+  })
+  .superRefine((env, ctx) => {
+    if (
+      env.APP_ENV === 'production' &&
+      PUSH_PROVIDERS_FORBIDDEN_IN_PRODUCTION.has(env.PUSH_PROVIDER)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PUSH_PROVIDER'],
+        message: 'production ortamında mock push sağlayıcısı kullanılamaz',
+      });
+    }
+  });
+
 export type DbEnv = z.infer<typeof dbEnvSchema>;
 export type MigratorEnv = z.infer<typeof migratorEnvSchema>;
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
+export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 
 type RawEnv = Record<string, string | undefined>;
 
@@ -143,6 +174,10 @@ export function parseServerEnv(env: RawEnv): ServerEnv {
 
 export function parseApiEnv(env: RawEnv): ApiEnv {
   return parseEnv(apiEnvSchema, env);
+}
+
+export function parseWorkerEnv(env: RawEnv): WorkerEnv {
+  return parseEnv(workerEnvSchema, env);
 }
 
 /** `pnpm db:seed` için isteğe bağlı ilk süper admin telefonu (F1.6). Boş veya yoksa undefined. */

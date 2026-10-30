@@ -22,6 +22,7 @@ import { BusinessesModule } from './modules/businesses';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
 import { I18nModule } from './modules/i18n';
 import { IdentityModule } from './modules/identity';
+import { NotificationsModule } from './modules/notifications';
 import { SettingsModule } from './modules/settings';
 
 export interface AppModuleOptions {
@@ -53,6 +54,7 @@ export class AppModule implements NestModule {
         BusinessesModule,
         BillingModule,
         AccessModule,
+        NotificationsModule,
         IdentityModule.forRoot({
           otpHashKey: env.OTP_HASH_KEY,
           totpEncryptionKey: Buffer.from(env.TOTP_ENCRYPTION_KEY, 'base64'),

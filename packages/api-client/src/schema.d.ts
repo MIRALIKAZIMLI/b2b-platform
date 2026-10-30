@@ -4185,7 +4185,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Uygulama içi bildirimler */
+        /** Uygulama içi bildirimler (US-054 AC1; en yeni önce) */
         get: {
             parameters: {
                 query?: {
@@ -4203,8 +4203,15 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["Notification"][];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                401: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -4248,6 +4255,8 @@ export interface paths {
                     };
                     content?: never;
                 };
+                401: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -4264,7 +4273,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Bildirim tercihleri (US-054 AC2) */
+        /** Bildirim tercihleri (US-054 AC2); anahtar bildirim türü, değer push açık mı */
         put: {
             parameters: {
                 query?: never;
@@ -4280,13 +4289,19 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Güncellendi */
+                /** @description Güncellendi; tüm türlerin güncel tercihi */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            [key: string]: boolean;
+                        };
+                    };
                 };
+                401: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         post?: never;
@@ -4305,7 +4320,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cihaz push anahtarını kaydet */
+        /** Cihaz push anahtarını kaydet (anahtar başka kullanıcıdaysa bu kullanıcıya taşınır) */
         post: {
             parameters: {
                 query?: never;
@@ -4316,6 +4331,7 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description ExponentPushToken[...] */
                         token: string;
                         /** @enum {string} */
                         platform: "ios" | "android";
@@ -4330,6 +4346,8 @@ export interface paths {
                     };
                     content?: never;
                 };
+                401: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -5540,6 +5558,23 @@ export interface components {
             paymentTermDays?: number;
             /** Format: uuid */
             salesRepMembershipId?: string | null;
+        };
+        Notification: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            /** Format: uuid */
+            businessId: string | null;
+            title: string;
+            body: string;
+            data: {
+                type: string;
+                id: string;
+            };
+            /** Format: date-time */
+            readAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
         Packaging: {
             /** Format: uuid */

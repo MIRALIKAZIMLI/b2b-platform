@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { randomBytes } from 'node:crypto';
-import { parseApiEnv, parseDbEnv, parseMigratorEnv, parseSeedEnv, parseServerEnv } from '../env';
+import {
+  parseApiEnv,
+  parseDbEnv,
+  parseMigratorEnv,
+  parseSeedEnv,
+  parseServerEnv,
+  parseWorkerEnv,
+} from '../env';
 
 // Her çalıştırmada rastgele (depoda anahtar gibi görünen değer yok).
 const TOTP_KEY = randomBytes(32).toString('base64');
@@ -226,5 +233,35 @@ describe('env: TOTP ve seed (F1.6, Mimar kararı K1)', () => {
       SUPER_ADMIN_PHONE: '+994501234567',
     });
     expect(() => parseSeedEnv({ SUPER_ADMIN_PHONE: '0501234567' })).toThrow(/SUPER_ADMIN_PHONE/);
+  });
+});
+
+describe('env: worker push sağlayıcısı (F1.11)', () => {
+  const WORKER_ENV = { ...SERVER_ENV, PUSH_PROVIDER: 'mock' };
+
+  it('geçerli değerler okunur; EXPO_ACCESS_TOKEN isteğe bağlı', () => {
+    expect(parseWorkerEnv(WORKER_ENV)).toMatchObject({ PUSH_PROVIDER: 'mock' });
+    expect(parseWorkerEnv(WORKER_ENV).EXPO_ACCESS_TOKEN).toBeUndefined();
+    const token = randomBytes(12).toString('hex');
+    expect(
+      parseWorkerEnv({ ...WORKER_ENV, PUSH_PROVIDER: 'expo', EXPO_ACCESS_TOKEN: token }),
+    ).toMatchObject({ PUSH_PROVIDER: 'expo', EXPO_ACCESS_TOKEN: token });
+  });
+
+  it('PUSH_PROVIDER yoksa veya bilinmiyorsa reddedilir', () => {
+    expect(() => parseWorkerEnv(SERVER_ENV)).toThrow(/PUSH_PROVIDER/);
+    expect(() => parseWorkerEnv({ ...WORKER_ENV, PUSH_PROVIDER: 'fcm' })).toThrow(/PUSH_PROVIDER/);
+  });
+
+  it('production + PUSH_PROVIDER=mock reddedilir; expo kabul', () => {
+    const token = randomBytes(12).toString('hex');
+    const message = errorMessage(() =>
+      parseWorkerEnv({ ...WORKER_ENV, APP_ENV: 'production', EXPO_ACCESS_TOKEN: token }),
+    );
+    expect(message).toMatch(/PUSH_PROVIDER/);
+    expect(message).not.toContain(token);
+    expect(
+      parseWorkerEnv({ ...WORKER_ENV, APP_ENV: 'production', PUSH_PROVIDER: 'expo' }).APP_ENV,
+    ).toBe('production');
   });
 });
