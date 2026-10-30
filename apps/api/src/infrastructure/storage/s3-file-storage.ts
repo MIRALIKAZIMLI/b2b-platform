@@ -43,6 +43,14 @@ function isNotFound(error: unknown): boolean {
   );
 }
 
+/** Koşullu yazmada nesne zaten var (`If-None-Match: *` → 412). */
+function isPreconditionFailed(error: unknown): boolean {
+  return (
+    error instanceof S3ServiceException &&
+    (error.name === 'PreconditionFailed' || error.$metadata.httpStatusCode === 412)
+  );
+}
+
 export class S3FileStorage extends FileStorage {
   private readonly client: S3Client;
 
@@ -132,6 +140,24 @@ export class S3FileStorage extends FileStorage {
         ContentType: contentType,
       }),
     );
+  }
+
+  async putIfAbsent(key: string, body: Buffer, contentType: string): Promise<boolean> {
+    try {
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.bucketOf(key),
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+          IfNoneMatch: '*',
+        }),
+      );
+      return true;
+    } catch (error) {
+      if (isPreconditionFailed(error)) return false;
+      throw error;
+    }
   }
 
   async delete(key: string): Promise<void> {

@@ -1,6 +1,7 @@
 // F1.10-AC3 (R2 tarafı, ADR-0023 madde 5): imzalı URL'ler ağsız üretilir; süre, imza zamanı
 // (FixedClock) ve bucket seçimi URL'de görünür. Gerçek R2 davranışı staging'de elle doğrulanır.
 import { randomBytes } from 'node:crypto';
+import { type S3Client, S3ServiceException } from '@aws-sdk/client-s3';
 import { describe, expect, it } from 'vitest';
 import { FixedClock } from '../../../core/clock';
 import { S3FileStorage } from '../s3-file-storage';
@@ -83,5 +84,42 @@ describe('S3FileStorage imzalı URL', () => {
         ttlSeconds: 600,
       }),
     ).rejects.toThrow();
+  });
+
+  it('F1.10b: putIfAbsent — nesne varsa (412) false, yoksa true; If-None-Match: * gönderilir', async () => {
+    const sent: unknown[] = [];
+    let exists = false;
+    const client = {
+      send: (command: { input: unknown }) => {
+        sent.push(command.input);
+        if (exists) {
+          return Promise.reject(
+            new S3ServiceException({
+              name: 'PreconditionFailed',
+              $fault: 'client',
+              $metadata: { httpStatusCode: 412 },
+              message: 'At least one of the pre-conditions you specified did not hold',
+            }),
+          );
+        }
+        exists = true;
+        return Promise.resolve({});
+      },
+    } as unknown as S3Client;
+    const s3 = new S3FileStorage(
+      {
+        accountId: 'acc123',
+        accessKeyId: 'test-access-id',
+        secretAccessKey: randomBytes(24).toString('hex'),
+        buckets: { public: 'test-public', private: 'test-private' },
+        client,
+      },
+      new FixedClock(NOW),
+    );
+    const key = `${BUSINESS}/logo/0190f1a0-0000-7000-8000-0000000000ee.png`;
+
+    expect(await s3.putIfAbsent(key, Buffer.from('a'), 'image/png')).toBe(true);
+    expect(await s3.putIfAbsent(key, Buffer.from('b'), 'image/png')).toBe(false);
+    expect(sent[0]).toMatchObject({ Bucket: 'test-public', Key: key, IfNoneMatch: '*' });
   });
 });

@@ -75,6 +75,7 @@ interface FileStorage {
   head(key: string): Promise<{ size: number; contentType: string } | null>;
   readRange(key: string, bytes: number): Promise<Buffer>;
   put(key: string, body: Buffer, contentType: string): Promise<void>;
+  putIfAbsent(key: string, body: Buffer, contentType: string): Promise<boolean>; // F1.10b: nesne varsa false
   delete(key: string): Promise<void>;
 }
 ```
@@ -84,7 +85,7 @@ interface FileStorage {
 | Uygulama | Cloudflare R2, S3 uyumlu API |
 | Bucket'lar | `<env>-public` (ürün görselleri, logolar; CDN ile herkese açık okunur) ve `<env>-private` (teslim ve itiraz fotoğrafları, belgeler, içe aktarma dosyaları) |
 | Anahtar yapısı | `<businessId>/<purpose>/<fileId>.<ext>`; yalnızca `key` alan yöntemler bucket'ı `purpose` bölümünden bulur (F1.10). İstemci her zaman `private` bucket'taki geçici anahtara (`<businessId>/upload/<fileId>.<ext>`) yükler; `complete` doğrulayınca kalıcı anahtara kopyalanır, geçici silinir. Reddedilen veya tamamlanmamış dosya hiç `public` bucket'a çıkmaz (F1.10b) |
-| Yükleme URL'si ömrü | 10 dk, tek yazımlık (`If-None-Match: *` imzada; doğrulanmış dosyanın üzerine yazılamaz, F1.10); indirme URL'si (private) 5 dk |
+| Yükleme URL'si ömrü | 10 dk; indirme URL'si (private) 5 dk. Yükleme URL'si yalnızca private geçici anahtara yazar; `If-None-Match: *` geçici nesne varken üzerine yazmayı engeller. Kalıcı anahtara yalnızca sunucu yazar: doğrulanan buffer'ın aynısı, koşullu (`putIfAbsent`; R2'de `If-None-Match: *`, 412 → zaten kopyalandı), böylece `ready` dosyanın üzerine yazılmaz (F1.10b) |
 | Doğrulama | `complete` adımında `head` + ilk 16 bayt imza kontrolü (NFR-49) |
 | Mock | Yerelde ve CI'da yerel dosya sistemi uygulaması (`STORAGE_PROVIDER=local`, ADR-0023); production'da `local` ile süreç başlamaz |
 

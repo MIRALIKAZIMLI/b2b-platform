@@ -81,6 +81,8 @@ export abstract class FileStorage {
   /** İlk `bytes` bayt (nesne daha kısaysa tamamı). */
   abstract readRange(key: string, bytes: number): Promise<Buffer>;
   abstract put(key: string, body: Buffer, contentType: string): Promise<void>;
+  /** Yalnızca nesne yoksa yazar; nesne zaten varsa `false`, hiçbir şey değişmez (F1.10b). */
+  abstract putIfAbsent(key: string, body: Buffer, contentType: string): Promise<boolean>;
   /** Nesne yoksa sessizce geçer. */
   abstract delete(key: string): Promise<void>;
 }
