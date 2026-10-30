@@ -83,7 +83,7 @@ interface FileStorage {
 | --- | --- |
 | Uygulama | Cloudflare R2, S3 uyumlu API |
 | Bucket'lar | `<env>-public` (ürün görselleri, logolar; CDN ile herkese açık okunur) ve `<env>-private` (teslim ve itiraz fotoğrafları, belgeler, içe aktarma dosyaları) |
-| Anahtar yapısı | `<businessId>/<purpose>/<fileId>.<ext>` |
+| Anahtar yapısı | `<businessId>/<purpose>/<fileId>.<ext>`; yalnızca `key` alan yöntemler bucket'ı `purpose` bölümünden bulur (F1.10) |
 | Yükleme URL'si ömrü | 10 dk; indirme URL'si (private) 5 dk |
 | Doğrulama | `complete` adımında `head` + ilk 16 bayt imza kontrolü (NFR-49) |
 | Mock | Yerelde ve CI'da yerel dosya sistemi uygulaması (`STORAGE_PROVIDER=local`, ADR-0023); production'da `local` ile süreç başlamaz |

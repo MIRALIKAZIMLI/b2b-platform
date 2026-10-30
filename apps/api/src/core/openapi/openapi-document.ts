@@ -27,6 +27,8 @@ function contractEnv(): ApiEnv {
     JWT_SIGNING_KEY: randomBytes(32).toString('base64'),
     JWT_KEY_ID: 'contract',
     TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+    STORAGE_PROVIDER: 'local',
+    STORAGE_LOCAL_DIR: '.local-storage',
   };
 }
 

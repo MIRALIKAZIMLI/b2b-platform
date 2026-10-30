@@ -24,4 +24,52 @@ describe('dev modülü (NFR-96)', () => {
       await app.close();
     }
   });
+
+  // Mimar notu (F1.10 S3): yerel depo ucu canlıda kapalı.
+  it("F1.10: production'da /api/v1/dev/storage kayıtlı değil → 404", async () => {
+    const app = await createTestApp({ env: { APP_ENV: 'production' } });
+    try {
+      const put = await request(app.getHttpServer())
+        .put('/api/v1/dev/storage?token=abc.def')
+        .set('Content-Type', 'image/png')
+        .send(Buffer.from([0x89, 0x50]));
+      const get = await request(app.getHttpServer()).get('/api/v1/dev/storage?token=abc.def');
+
+      expect(put.status).toBe(404);
+      expect(get.status).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('F1.10: R2 kullanan ortamda (staging) /api/v1/dev/storage kayıtlı değil → 404', async () => {
+    const app = await createTestApp({
+      env: {
+        APP_ENV: 'staging',
+        STORAGE_PROVIDER: 'r2',
+        R2_ACCOUNT_ID: 'acc123',
+        R2_ACCESS_KEY_ID: 'test-access-id',
+        R2_SECRET_ACCESS_KEY: 'unused',
+        R2_BUCKET_PUBLIC: 'staging-public',
+        R2_BUCKET_PRIVATE: 'staging-private',
+        FILES_PUBLIC_BASE_URL: 'https://cdn.example.com',
+      },
+    });
+    try {
+      const response = await request(app.getHttpServer()).get('/api/v1/dev/storage?token=abc.def');
+      expect(response.status).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('F1.10: yerel depoda (local) /api/v1/dev/storage kayıtlı; geçersiz token → 403', async () => {
+    const app = await createTestApp();
+    try {
+      const response = await request(app.getHttpServer()).get('/api/v1/dev/storage?token=abc.def');
+      expect(response.status).toBe(403);
+    } finally {
+      await app.close();
+    }
+  });
 });

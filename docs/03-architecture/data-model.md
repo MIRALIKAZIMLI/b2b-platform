@@ -307,13 +307,20 @@ G tablolarının hepsinde `created_at`, `updated_at` (§1). RLS: `SELECT USING (
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| owner_business_id | uuid | null | Platform dosyalarında null |
-| bucket | text | `public` / `private` | |
-| object_key | text | unique | |
-| content_type | text | | İmzayla doğrulanmış |
-| size_bytes | int | | |
-| status | text | `pending` / `ready` / `rejected` | |
-| created_by | uuid | FK users | |
+| id | uuid | PK (UUIDv7, uygulamada) | Anahtardaki `<fileId>` |
+| owner_business_id | uuid | null, FK businesses | Platform dosyalarında null |
+| purpose | text | `product_image` / `logo` / `delivery_photo` / `dispute_photo` / `import` (CHECK) | Bucket ve izin buna göre (F1.10) |
+| bucket | text | `public` / `private` (CHECK) | |
+| object_key | text | not null, unique | `<businessId>/<purpose>/<fileId>.<ext>` (platform: `platform/...`) |
+| content_type | text | not null | İstekte bildirilen; `ready` olunca imzayla doğrulanmış tür |
+| size_bytes | int | not null, > 0 | İstekte bildirilen; `ready` olunca depodaki gerçek boyut |
+| status | text | `pending` / `ready` / `rejected` (CHECK) | |
+| created_by | uuid | not null, FK users | |
+| created_at, updated_at | timestamptz | not null default now() | |
+
+Benzersiz: `(owner_business_id, id)` (bileşik FK hedefi). RLS (F1.10): `files_tenant` — `owner_business_id = app.business_id` (FOR ALL); `files_platform` — `app.is_platform = 'true'` (FOR ALL). Platform dosyası (`owner_business_id` null) yalnızca platform bağlamında görünür ve yazılır. `app_user`: SELECT, INSERT, UPDATE (DELETE yok; reddedilen dosyanın satırı `rejected` olarak kalır); `readonly`: SELECT.
+
+`businesses.logo_file_id` FK'sı bileşiktir: `(id, logo_file_id) → files(owner_business_id, id)`; işletme yalnızca kendi dosyasını logo yapabilir (FK denetimi RLS dışıdır, F1.8a kuralı).
 
 ### 4.4 `businesses`
 

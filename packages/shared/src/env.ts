@@ -62,6 +62,25 @@ function base64ByteLength(value: string): number {
 
 const jwtKeyId = z.string().regex(/^[A-Za-z0-9._-]{1,64}$/);
 
+/** Dosya deposu sağlayıcıları (integrations §4, ADR-0023). */
+export const STORAGE_PROVIDERS = ['r2', 'local'] as const;
+export type StorageProvider = (typeof STORAGE_PROVIDERS)[number];
+
+/** Production'da kullanılamayan depo sağlayıcıları (ADR-0023 madde 3). */
+const STORAGE_PROVIDERS_FORBIDDEN_IN_PRODUCTION: ReadonlySet<string> = new Set(['local']);
+
+/** `STORAGE_PROVIDER=r2` iken zorunlu değişkenler (environments-cicd §5). */
+const R2_REQUIRED_KEYS = [
+  'R2_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET_PUBLIC',
+  'R2_BUCKET_PRIVATE',
+  'FILES_PUBLIC_BASE_URL',
+] as const;
+
+const bucketName = z.string().regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/);
+
 /**
  * Yalnızca api sürecinin doğruladığı şema (F1.5a). Worker SMS göndermez, bu değişkenleri istemez.
  * Production'da `SMS_PROVIDER=mock` reddedilir: api açılmaz (NFR-97, ADR-0021).
@@ -79,6 +98,22 @@ export const apiEnvSchema = serverEnvSchema
     JWT_PREVIOUS_KEY_ID: jwtKeyId.optional(),
     /** TOTP sırrı şifreleme anahtarı (F1.6). */
     TOTP_ENCRYPTION_KEY: totpEncryptionKey,
+    /** Dosya deposu (F1.10, ADR-0023): yerel/CI `local`, staging/production `r2`. */
+    STORAGE_PROVIDER: z.enum(STORAGE_PROVIDERS),
+    R2_ACCOUNT_ID: z
+      .string()
+      .regex(/^[A-Za-z0-9]{1,64}$/)
+      .optional(),
+    R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    R2_BUCKET_PUBLIC: bucketName.optional(),
+    R2_BUCKET_PRIVATE: bucketName.optional(),
+    /** Public bucket'ın CDN adresi (sonunda `/` yok). */
+    FILES_PUBLIC_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
+    /** `local` depo klasörü (göreli ise süreç klasörüne göre). */
+    STORAGE_LOCAL_DIR: z.string().min(1).default('.local-storage'),
+    /** `local` deponun imzalı bağlantılarında kullanılan API adresi; yoksa `http://localhost:<PORT>`. */
+    STORAGE_LOCAL_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
   })
   .superRefine((env, ctx) => {
     if ((env.JWT_PREVIOUS_SIGNING_KEY === undefined) !== (env.JWT_PREVIOUS_KEY_ID === undefined)) {
@@ -108,6 +143,23 @@ export const apiEnvSchema = serverEnvSchema
         path: ['SMS_PROVIDER'],
         message: 'production ortamında mock SMS sağlayıcısı kullanılamaz',
       });
+    }
+    if (
+      env.APP_ENV === 'production' &&
+      STORAGE_PROVIDERS_FORBIDDEN_IN_PRODUCTION.has(env.STORAGE_PROVIDER)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['STORAGE_PROVIDER'],
+        message: 'production ortamında yerel dosya deposu kullanılamaz',
+      });
+    }
+    if (env.STORAGE_PROVIDER === 'r2') {
+      for (const key of R2_REQUIRED_KEYS) {
+        if (env[key] === undefined) {
+          ctx.addIssue({ code: 'custom', path: [key], message: 'r2 deposu için zorunlu' });
+        }
+      }
     }
   });
 

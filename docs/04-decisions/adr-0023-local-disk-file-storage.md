@@ -16,9 +16,9 @@ Dosyalar staging ve production'da Cloudflare R2'de (S3 uyumlu) durur (ADR-0012).
 1. `FileStorage` arayüzünün (integrations §4) iki uygulaması vardır: `s3` (R2; `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`) ve `local` (diskteki bir klasör).
 2. Sağlayıcı `STORAGE_PROVIDER` ortam değişkeniyle seçilir: `r2` veya `local`. Yerel geliştirme ve CI `local` kullanır; staging ve production `r2` kullanır.
 3. Production'da `STORAGE_PROVIDER=local` ise süreç başlamaz (ADR-0021 ile aynı kalıp).
-4. `local` uygulamasının imzalı yükleme/indirme URL'leri API'nin `/api/v1/dev/storage/*` uçlarına gider; imza HMAC-SHA256 + bitiş zamanıdır (`Clock`), anahtar süreç açılışında rastgele üretilir. Bu uçlar yalnızca `/api/v1/dev/*` kayıtlı ortamlarda vardır (production'da yok).
+4. `local` uygulamasının imzalı yükleme/indirme URL'leri API'nin `/api/v1/dev/storage?token=…` ucuna gider; imza HMAC-SHA256 + bitiş zamanıdır (`Clock`), anahtar süreç açılışında rastgele üretilir. Bu uç yalnızca `/api/v1/dev/*` kayıtlı ortamlarda ve `STORAGE_PROVIDER=local` iken vardır (production'da yok).
 5. R2'ye özgü imzalı URL davranışı `s3-file-storage` birim testleriyle (imza parametreleri, süre, bucket seçimi) ve staging'de elle doğrulanır.
-6. Yeni Docker imajı veya yeni paket eklenmez.
+6. Yeni Docker imajı eklenmez; yerel depo yeni paket istemez (`@aws-sdk/*` zaten tech-stack listesinde, yalnızca R2 için).
 
 ## Alternatifler
 

@@ -1475,8 +1475,13 @@ paths:
   /api/v1/files/upload-url:
     post:
       tags: [files]
-      summary: Süreli imzalı yükleme URL'si (SF-09)
-      parameters: [ { $ref: '#/components/parameters/BusinessIdOptional' } ]
+      summary: Süreli imzalı yükleme URL'si (SF-09, NFR-49)
+      description: |
+        İzin `purpose`'a göre (F1.10): product_image → catalog.manage; logo → business.manage;
+        delivery_photo → delivery.update_own; dispute_photo → orders.confirm_delivery veya
+        orders.resolve_dispute; import → imports.run. Tür veya boyut sınırı aşılırsa 422 FILE_INVALID.
+        Platform dosyası yüklemesi bu uçta yok (F1.10 kararı); X-Business-Id zorunlu.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
         content:
           application/json:
@@ -1494,19 +1499,42 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [fileId, uploadUrl, method, headers, expiresAt]
                 properties:
                   fileId: { type: string, format: uuid }
                   uploadUrl: { type: string, format: uri }
+                  method: { type: string, enum: [PUT] }
                   headers: { type: object, additionalProperties: { type: string } }
                   expiresAt: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
   /api/v1/files/{id}/complete:
     post:
       tags: [files]
-      summary: Yüklemeyi tamamla ve doğrula
-      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      summary: Yüklemeyi tamamla ve doğrula (boyut + ilk 16 bayt imzası)
+      description: |
+        Dosyayı oluşturan işletmenin bağlamında çağrılır; başka işletmenin dosyası 404.
+        Geçersiz dosya → nesne silinir, satır rejected, 422 FILE_INVALID. Aynı dosya için
+        tekrar çağrı mevcut durumu döner (ready → 200, rejected → 422).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       responses:
-        '200': { description: Hazır }
+        '200':
+          description: Hazır
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fileId, status, contentType, sizeBytes]
+                properties:
+                  fileId: { type: string, format: uuid }
+                  status: { type: string, enum: [ready] }
+                  contentType: { type: string }
+                  sizeBytes: { type: integer }
+                  url: { type: string, format: uri, description: Yalnızca public dosyada CDN adresi }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
 
   # ---------------------------------------------------------------- notifications
@@ -1896,6 +1924,35 @@ paths:
       parameters: [ { name: phone, in: query, schema: { $ref: '#/components/schemas/PhoneE164' } } ]
       responses:
         '200': { description: Son 50 mesaj }
+  /api/v1/dev/storage:
+    put:
+      tags: [dev]
+      summary: Yerel dosya deposuna yükleme (STORAGE_PROVIDER=local, ADR-0023) — production'da yok
+      description: |
+        `token` (sorgu parametresi), `local` deposunun ürettiği imzalı (HMAC) ve süreli yükleme bağlantısıdır. İmza veya süre
+        geçersizse, Content-Type ya da gövde boyutu imzadakinden farklıysa 403 (R2 davranışıyla aynı).
+      security: []
+      parameters: [ { name: token, in: query, required: true, schema: { type: string } } ]
+      requestBody:
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Yüklendi }
+        '403': { $ref: '#/components/responses/Error' }
+    get:
+      tags: [dev]
+      summary: Yerel dosya deposundan okuma (imzalı, süreli) — production'da yok
+      security: []
+      parameters: [ { name: token, in: query, required: true, schema: { type: string } } ]
+      responses:
+        '200':
+          description: Dosya içeriği
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
 
 components:
   securitySchemes:

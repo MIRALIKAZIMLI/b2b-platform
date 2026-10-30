@@ -69,6 +69,10 @@ flowchart LR
     notifications --> access
     notifications --> i18n
 
+    files --> identity
+    files --> access
+    files --> settings
+
     reporting -.->|"salt-okunur"| orders
     reporting -.-> ledger
     reporting -.-> connections

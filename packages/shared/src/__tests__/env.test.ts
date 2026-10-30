@@ -131,7 +131,40 @@ describe('env: api (SMS ve OTP, F1.5a)', () => {
     JWT_SIGNING_KEY,
     JWT_KEY_ID: 'k1',
     TOTP_ENCRYPTION_KEY: TOTP_KEY,
+    STORAGE_PROVIDER: 'local',
   };
+
+  const R2_ENV = {
+    STORAGE_PROVIDER: 'r2',
+    R2_ACCOUNT_ID: 'acc123',
+    R2_ACCESS_KEY_ID: 'r2-access-id',
+    R2_SECRET_ACCESS_KEY: 'r2-secret-value',
+    R2_BUCKET_PUBLIC: 'prod-public',
+    R2_BUCKET_PRIVATE: 'prod-private',
+    FILES_PUBLIC_BASE_URL: 'https://cdn.example.com',
+  };
+
+  it('F1.10-AC5: production + STORAGE_PROVIDER=local reddedilir (ADR-0023)', () => {
+    const message = errorMessage(() => parseApiEnv({ ...API_ENV, APP_ENV: 'production' }));
+
+    expect(message).toMatch(/STORAGE_PROVIDER/);
+    // r2 ile aynı ortamda depo hatası yok (SMS hatası ayrı kural).
+    const r2Message = errorMessage(() =>
+      parseApiEnv({ ...API_ENV, ...R2_ENV, APP_ENV: 'production' }),
+    );
+    expect(r2Message).not.toMatch(/STORAGE_PROVIDER/);
+    expect(r2Message).not.toContain('r2-secret-value');
+  });
+
+  it('F1.10: r2 deposu R2_* ve FILES_PUBLIC_BASE_URL ister', () => {
+    expect(parseApiEnv({ ...API_ENV, ...R2_ENV }).STORAGE_PROVIDER).toBe('r2');
+    expect(() => parseApiEnv({ ...API_ENV, ...R2_ENV, R2_BUCKET_PRIVATE: undefined })).toThrow(
+      /R2_BUCKET_PRIVATE/,
+    );
+    expect(() => parseApiEnv({ ...API_ENV, STORAGE_PROVIDER: 'minio' })).toThrow(
+      /STORAGE_PROVIDER/,
+    );
+  });
 
   it('geçerli değerler okunur', () => {
     expect(parseApiEnv(API_ENV)).toMatchObject({ SMS_PROVIDER: 'mock', OTP_HASH_KEY });
@@ -170,6 +203,7 @@ describe('env: api JWT anahtarları (F1.5b, Mimar kararı K1)', () => {
     JWT_SIGNING_KEY: 'jwt-secret-value-'.padEnd(32, 'x'),
     JWT_KEY_ID: 'k1',
     TOTP_ENCRYPTION_KEY: TOTP_KEY,
+    STORAGE_PROVIDER: 'local',
   };
 
   it('JWT_SIGNING_KEY yoksa veya 32 karakterden kısaysa reddedilir; değer mesajda yok', () => {
@@ -213,6 +247,7 @@ describe('env: TOTP ve seed (F1.6, Mimar kararı K1)', () => {
     JWT_SIGNING_KEY: 'j'.repeat(32),
     JWT_KEY_ID: 'k1',
     TOTP_ENCRYPTION_KEY: TOTP_KEY,
+    STORAGE_PROVIDER: 'local',
   };
 
   it('TOTP_ENCRYPTION_KEY: base64 ve tam 32 bayt olmalı; yoksa api açılmaz, değer mesajda yok', () => {

@@ -16,10 +16,12 @@ import { OutboxModule } from './core/outbox';
 import { RequestIdMiddleware } from './core/request-id.middleware';
 import { RedisModule } from './infrastructure/redis';
 import { SmsModule, type SmsRetryPolicy } from './infrastructure/sms';
+import { StorageModule } from './infrastructure/storage';
 import { AccessModule } from './modules/access';
 import { BillingModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
+import { FilesModule } from './modules/files';
 import { I18nModule } from './modules/i18n';
 import { IdentityModule } from './modules/identity';
 import { NotificationsModule } from './modules/notifications';
@@ -48,6 +50,7 @@ export class AppModule implements NestModule {
           provider: env.SMS_PROVIDER,
           ...(options.smsRetryPolicy === undefined ? {} : { retryPolicy: options.smsRetryPolicy }),
         }),
+        StorageModule.forRoot(env),
         HealthModule,
         SettingsModule,
         I18nModule,
@@ -55,6 +58,7 @@ export class AppModule implements NestModule {
         BillingModule,
         AccessModule,
         NotificationsModule,
+        FilesModule,
         IdentityModule.forRoot({
           otpHashKey: env.OTP_HASH_KEY,
           totpEncryptionKey: Buffer.from(env.TOTP_ENCRYPTION_KEY, 'base64'),
@@ -68,7 +72,9 @@ export class AppModule implements NestModule {
           },
         }),
         // /api/v1/dev/* production'da hiç kaydedilmez (NFR-96, ADR-0021).
-        ...(isDevModuleEnabled(env.APP_ENV) ? [DevModule] : []),
+        ...(isDevModuleEnabled(env.APP_ENV)
+          ? [DevModule.register({ storageProvider: env.STORAGE_PROVIDER })]
+          : []),
         IdempotencyModule,
         OutboxModule,
       ],

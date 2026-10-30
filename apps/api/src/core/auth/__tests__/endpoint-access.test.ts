@@ -22,6 +22,9 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'GET /api/v1/i18n/:lang': 'public',
   'GET /api/v1/catalog/regions': 'public',
   'GET /api/v1/dev/sms-outbox': 'public',
+  // Yerel dosya deposu (ADR-0023): erişim token'daki HMAC imzası ve süreyle.
+  'PUT /api/v1/dev/storage': 'public',
+  'GET /api/v1/dev/storage': 'public',
   'POST /api/v1/auth/otp/request': 'public',
   'POST /api/v1/auth/otp/verify': 'public',
   'POST /api/v1/auth/refresh': 'public',
@@ -35,6 +38,9 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'GET /api/v1/notifications': 'authenticated',
   'POST /api/v1/notifications/read': 'authenticated',
   'PUT /api/v1/notifications/preferences': 'authenticated',
+  // İzin purpose'a göre; bağlam ve izin uç içinde TenantContextService ile (F1.10 S1).
+  'POST /api/v1/files/upload-url': 'authenticated',
+  'POST /api/v1/files/:id/complete': 'authenticated',
 };
 
 function join(...parts: (string | undefined)[]): string {
