@@ -45,6 +45,63 @@ export async function preferredLanguage(userId: string): Promise<string | null> 
   });
 }
 
+/**
+ * Kullanıcıya üyelik (F1.13b): yeni işletme + onaylı yetenek + şablondan rol (izinler kopyalanır) +
+ * aynı kodlu unvan. Seed'deki rol şablonları kullanılır (c4 §5). Platform bağlamında, migrator ile.
+ */
+export async function addMembership(
+  userId: string,
+  templateCode: string,
+  businessName: string,
+): Promise<{ businessId: string }> {
+  const businessId = randomUUID();
+  const roleId = randomUUID();
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    const region = await client.query<{ id: string }>(
+      `insert into regions (country_code, parent_id, type, name)
+       values ('AZ', null, 'city', '{"az": "E2E"}'::jsonb) returning id`,
+    );
+    const template = await client.query<{ id: string; capability: string; job_title_id: string }>(
+      `select t.id, t.capability, j.id as job_title_id
+         from role_templates t join job_titles j on j.role_template_id = t.id and j.code = t.code
+        where t.code = $1`,
+      [templateCode],
+    );
+    const row = template.rows[0];
+    if (row === undefined) throw new Error(`rol şablonu yok: ${templateCode}`);
+    await client.query(
+      `insert into businesses (id, legal_name, country_code, region_id, timezone, created_via)
+       values ($1, $2, 'AZ', $3, 'Asia/Baku', 'self_signup')`,
+      [businessId, businessName, region.rows[0]?.id],
+    );
+    await client.query(
+      `insert into business_capabilities (business_id, capability, status)
+       values ($1, $2, 'approved')`,
+      [businessId, row.capability],
+    );
+    await client.query(
+      `insert into roles (id, business_id, name, capability, is_business_admin, source_template_id)
+       select $1, $2, name, capability, is_business_admin, id from role_templates where id = $3`,
+      [roleId, businessId, row.id],
+    );
+    await client.query(
+      `insert into role_permissions (role_id, permission_code, scope)
+       select $1, permission_code, default_scope from role_template_permissions
+        where template_id = $2`,
+      [roleId, row.id],
+    );
+    await client.query(
+      `insert into memberships (id, user_id, business_id, role_id, job_title_id)
+       values ($1, $2, $3, $4, $5)`,
+      [randomUUID(), userId, businessId, roleId, row.job_title_id],
+    );
+    await client.query('commit');
+  });
+  return { businessId };
+}
+
 async function latestCode(request: APIRequestContext, phone: string): Promise<string> {
   const response = await request.get(`${API_URL}/api/v1/dev/sms-outbox`, { params: { phone } });
   expect(response.ok()).toBe(true);

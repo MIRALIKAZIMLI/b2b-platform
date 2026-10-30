@@ -1,9 +1,10 @@
-import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import HomePage from '../page';
 
 describe('Web ana sayfası', () => {
-  it('F0.3-AC5: web boş sayfa render ediliyor', () => {
-    expect(renderToStaticMarkup(<HomePage />)).toBe('<main></main>');
+  // F1.13b: sayfa artık boş değil; içerik oturuma göre yönlendiren istemci bileşeni.
+  it('F0.3-AC5: web ana sayfası render ediliyor', () => {
+    const element = HomePage();
+    expect(element.type).toBe('main');
   });
 });
