@@ -1,4 +1,10 @@
-// Boş sayfa iskeleti; içerik F1.13 / F1.14'te.
+import { HomeRedirect } from '../../features/shell/home-redirect';
+
+/** Ana sayfa: oturuma ve seçili işletmeye göre açılış sayfasına yönlendirir (F1.13b). */
 export default function HomePage() {
-  return <main />;
+  return (
+    <main>
+      <HomeRedirect />
+    </main>
+  );
 }

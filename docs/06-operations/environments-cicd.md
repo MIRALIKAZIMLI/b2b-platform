@@ -59,6 +59,7 @@ flowchart LR
 | `secrets` | Gizli bilgi taraması (gitleaks) | Herhangi bir bulgu |
 | `unit` | Vitest birim testleri | Başarısız test |
 | `integration` | Vitest + Supertest; PostgreSQL 16 ve Redis 7 servis container'ları; sıra: `db:bootstrap` → `db:migrate` (sıfırdan) → `check-rls` → `test:coverage:backend` (api birim + entegrasyon/izolasyon testleri tek çalıştırmada, kapsam eşikleriyle; F1.5a). Rol şifreleri her çalıştırmada rastgele üretilir ve loglarda maskelenir | Başarısız test; kapsam eşiği (NFR-80/81) altı; `check-rls` hatası (RLS sınıfı yorumu eksik tablo, RLS'siz kiracı tablosu) |
+| `e2e` | Playwright web uçtan uca (E2E-01, F1.13b); PostgreSQL 16 ve Redis 7 servis container'ları; `db:bootstrap` → `db:migrate` → `db:seed`, api (mock SMS, yerel dosya deposu) ve web üretim derlemesi Playwright `webServer` ile açılır. Rol şifreleri ve anahtarlar her çalıştırmada rastgele ve maskeli | Başarısız test |
 | `contract` | API'den OpenAPI üret → `docs/03-architecture/api/openapi.yaml` ile karşılaştır; kırıcı değişiklik denetimi | Fark var veya `/api/v1`'de kırıcı değişiklik |
 | `deps-audit` | `pnpm audit --audit-level=high` | Yüksek / kritik açık |
 | `build` | Tüm uygulamaların derlenmesi | Derleme hatası |

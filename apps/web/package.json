@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@b2b/api-client": "workspace:*",
+    "@b2b/shared": "workspace:*",
     "@tanstack/react-query": "5.105.0",
     "next": "16.4.3",
     "next-intl": "4.14.9",

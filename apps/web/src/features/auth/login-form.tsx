@@ -3,6 +3,7 @@ import type { components } from '@b2b/api-client';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { type SyntheticEvent, useState } from 'react';
+import { errorCodeOf as errorCode } from '../../lib/error-code';
 import { useStartSession, webApi } from '../../lib/session';
 
 type AuthResult = components['schemas']['AuthResult'];
@@ -16,19 +17,6 @@ type Step =
   | { readonly kind: 'register' };
 
 const LOCALES = ['az', 'ru', 'tr', 'en'];
-
-/** Hata kodu → `errors.<KOD>` çeviri anahtarı; kod yoksa genel hata. */
-function errorCode(error: unknown): string {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'string'
-  ) {
-    return error.code;
-  }
-  return 'INTERNAL_ERROR';
-}
 
 export function LoginForm() {
   const t = useTranslations('auth.login');

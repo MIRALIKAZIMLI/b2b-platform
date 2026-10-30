@@ -2,7 +2,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
-import { SESSION_KEY, setApiLanguage, setSessionExpiredHandler } from '../../lib/session';
+import {
+  SESSION_KEY,
+  setActiveBusinessId,
+  setApiLanguage,
+  setSessionExpiredHandler,
+} from '../../lib/session';
 
 /** React Query + oturum bitince giriş ekranı (F1.13-AC3). */
 export function Providers({ locale, children }: { locale: string; children: ReactNode }) {
@@ -12,6 +17,7 @@ export function Providers({ locale, children }: { locale: string; children: Reac
 
   useEffect(() => {
     setSessionExpiredHandler(() => {
+      setActiveBusinessId(undefined);
       queryClient.setQueryData(SESSION_KEY, false);
       queryClient.clear();
       router.replace(`/${locale}/login`);

@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-30 (F1.13a: web giriş, oturum, dil; sıradaki adım F1.13b).
+Son güncelleme: 2026-10-30 (F1.13b: web kabuğu, izinden menü, e2e CI işi; sıradaki adım F1.14a).
 
 ## 1. Mimari özeti
 
@@ -25,7 +25,8 @@ apps/api/src/modules/             access, billing, businesses, dev (yalnız loca
 packages/api-client/              openapi.yaml → src/schema.d.ts (üretilir, elle düzenlenmez), createApiClient
 packages/shared/src/              env, errors, entitlements, permissions, settings, uuidv7, voen, format…
 apps/web/src/                     lib/{api,session,i18n}.ts, i18n/{routing,request}.ts, proxy.ts,
-                                  features/{auth,i18n}, app/[locale]/(auth)/login; e2e/ (Playwright)
+                                  features/{auth,i18n,shell}, app/[locale]/(auth)/login,
+                                  app/[locale]/(admin|seller|buyer)/<alan>; e2e/ (Playwright)
 apps/mobile                       boş kabuk (F0.3b)
 ```
 
@@ -94,9 +95,10 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.11 | `push_tokens`, `notifications`, `notification_preferences` (U), `notification_templates` (G), `push_token_register()`, `PushSender` (expo/mock), `notifications` kuyruğu, `/push-tokens`, `/notifications*`, `0011_notifications.sql` |
 | F1.10 | `files` (T), `FileStorage` (r2/local, ADR-0023), `/files/upload-url`, `/files/{id}/complete`, `FilesService.getReadUrl`, `/dev/storage` (yalnız local), `businesses.logo_file_id` bileşik FK, `0012_files.sql` |
 | F1.10b | yükleme private geçici anahtara, `complete`'te kalıcı anahtara koşullu kopya (`putIfAbsent`) |
+| F1.13b | web kabuğu: işletme seçici, izinden menü (`features/shell/menu.ts`), `/admin`, `/seller`, `/buyer` açılış sayfaları (yer tutucu), CI `e2e` işi (Playwright, E2E-01) |
 | F1.13a | web yenileme cookie'si (`X-Client: web`, `b2b_rt`), `PATCH /me`, web `api.ts`/oturum/`next-intl`, giriş ekranı (telefon → kod → TOTP), dil seçici, Playwright |
 
-**Sıradaki:** F1.13b → F1.14a → F1.14b.
+**Sıradaki:** F1.14a → F1.14b.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
@@ -123,5 +125,6 @@ Kaynak: ilgili kartın "Kararlar" bölümü ve faz spesifikasyonu §4.
 - **Dosya deposu (S9 → C, ADR-0023):** MinIO yok; yerelde ve CI'da `STORAGE_PROVIDER=local` (disk, `STORAGE_LOCAL_DIR`), staging/production'da R2 (`R2_*`, `FILES_PUBLIC_BASE_URL`). Production'da `local` → api açılmaz. Yerel imzalı bağlantılar `/api/v1/dev/storage?token=` (HMAC + süre, Fastify yol parametresi 100 karakter sınırı yüzünden sorguda); uç yalnız DevModule + local'de.
 - **Dosya (F1.10):** `FileStorage` portu integrations §4 ile birebir; `key` alan yöntemler bucket'ı anahtarın `purpose` bölümünden bulur (`fileBucketOfKey`). İzin `purpose`'a göre (`FILE_PURPOSE_PERMISSIONS`; dispute_photo iki koddan biri) → uçlar `@Authenticated()` + `TenantContextService.resolve` + `assertPurposeAllowed`; X-Business-Id zorunlu, platform dosyası yükleme ucu yok. Tür/boyut ihlali `422 FILE_INVALID` (`details.reason`: content_type/size/signature/not_uploaded/rejected). İstemci her zaman private bucket'taki geçici anahtara (`<owner>/upload/<fileId>.<ext>`, `stagingKeyOf`) yükler; `complete` geçici nesneyi bir kez okur, aynı buffer'ı doğrular ve kalıcı anahtara koşullu yazar (`putIfAbsent`; port integrations §4'te genişletildi), satırı `ready` yapar, geçiciyi siler — reddedilen/tamamlanmamış dosya public'e çıkmaz (F1.10b). Yükleme URL'si bildirilen boyutu ve `If-None-Match: *` başlığını imzalar (tek yazım; yerel depoda `putIfAbsent`, PR #28 M1). `complete`: boyut + ilk 16 bayt imza (PNG/JPEG/WebP/ZIP=XLSX); geçersiz → nesne silinir, satır `rejected` (satır silinmez; app_user'da DELETE yok). Okuma: public → `FILES_PUBLIC_BASE_URL/<key>` (yerelde imzalı URL), private → `files.download_url_ttl_minutes`. `businesses.logo_file_id` → `files(owner_business_id, id)` bileşik FK. `pending` temizliği ayrı adım.
 - **Web oturumu (F1.13a):** İstemci `X-Client: web` gönderir; `otp/verify`, `totp/verify`, `refresh` yenileme anahtarını gövde yerine `b2b_rt=…; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=<auth.refresh_token_days>` cookie'sine yazar (`Domain` yok). `refresh`: gövdedeki anahtar (mobil) öncelikli; yoksa cookie, o zaman `X-Requested-With` zorunlu, yoksa anahtar tüketilmeden `401 UNAUTHENTICATED` (TM-21); hata olursa cookie silinir. `logout` cookie'yi her zaman siler. Cookie yardımcıları `modules/identity/refresh-cookie.ts` (yeni paket yok). Web API'yi aynı kökenden çağırır (Next `rewrites` `/api/v1/*` → `API_URL`); erişim anahtarı yalnız `lib/api.ts` belleğinde, `401`'de tek paylaşılan yenileme, başarısızsa giriş ekranı. Sayfa açılışında oturum cookie ile geri alınır.
-- **Web dili (F1.13a):** `next-intl` mesajları sunucuda `GET /api/v1/i18n/{lang}`'tan (ETag önbelleği, `lib/i18n.ts`), düz anahtar → iç içe (`toNested`), eksik anahtar `az`'den. `[locale]` az/ru/tr; `en` yalnız `/i18n/en` 200 ise (US-058 AC4). Dil seçici oturum varsa `PATCH /me` (`preferredLanguage`, pasif dil 422); girişte profildeki dile geçilir. Web metinleri `i18n/seed/ui-messages.ts` (taslak, onay bekliyor). Playwright `apps/web/e2e`, CI işi F1.13b'de.
+- **Web dili (F1.13a):** `next-intl` mesajları sunucuda `GET /api/v1/i18n/{lang}`'tan (ETag önbelleği, `lib/i18n.ts`), düz anahtar → iç içe (`toNested`), eksik anahtar `az`'den. `[locale]` az/ru/tr; `en` yalnız `/i18n/en` 200 ise (US-058 AC4). Dil seçici oturum varsa `PATCH /me` (`preferredLanguage`, pasif dil 422); girişte profildeki dile geçilir. Web metinleri `i18n/seed/ui-messages.ts` (taslak, onay bekliyor). Playwright `apps/web/e2e`, CI `e2e` işi (F1.13b).
+- **Web kabuğu (F1.13b):** Seçili işletme yalnız bellekte (`lib/session.ts`, `localStorage` yok — coding-guidelines §9.6); her istekte `X-Business-Id`. Varsayılan: ilk aktif üyelik (US-003 AC1 "son kullanılan" saklanmıyor; açık nokta). İşletme değişince oturum dışındaki tüm react-query önbelleği silinir; `/me` anahtarı işletmeye göre. Alan = seçili işletmenin yeteneği, yoksa platform rolü → `admin`; yanlış alandaki sayfa kendi açılış sayfasına yönlendirir (asıl kontrol API'de). Menü `MENUS[alan]` öğe → `anyOf` izin kodları (tip `@b2b/shared` `PermissionCode`; web yalnız tip içe aktarır); boş `anyOf` = dashboard. Yapılmamış ekran bağlantısız gösterilir (`ready: false`). Platform menüsü yalnız dashboard (ekran → platform rolü eşlemesi belgede yok). Metinler `shell.*` anahtarları. Dil seçici `PATCH /me` hata verirse dil değişmez, hata gösterilir.
 - **Vitest + NestJS (S8):** kodda bağımlılıklar `@Inject()` ile açık yazılıyor (yeni paket yok); `unplugin-swc` eklenmedi.

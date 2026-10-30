@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Web uçtan uca (F1.13a). API (mock SMS, yerel DB) ve web üretim derlemesi webServer ile açılır;
-// zaten çalışıyorsa yeniden kullanılır. CI işi F1.13b'de (E2E-01 ile).
+// zaten çalışıyorsa yeniden kullanılır. CI: `e2e` işi (F1.13b, E2E-01).
 const API_URL = process.env.API_URL ?? 'http://localhost:3000';
 const WEB_URL = process.env.WEB_URL ?? 'http://localhost:3001';
 
