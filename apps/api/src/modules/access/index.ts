@@ -1,5 +1,5 @@
 export { AccessModule, AccessWorkerModule } from './access.module';
-export { TenantContextService } from './tenant-context.service';
+export { assertAllowed, TenantContextService } from './tenant-context.service';
 export { type MyMembership } from './access.repository';
 export {
   type ChangeRoleInput,

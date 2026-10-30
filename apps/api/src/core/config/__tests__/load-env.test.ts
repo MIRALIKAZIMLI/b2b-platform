@@ -80,6 +80,7 @@ describe('loadApiEnv (api açılışı, F1.5a)', () => {
     JWT_SIGNING_KEY: 'jwt-signing-secret-value-0123456789abcdef',
     JWT_KEY_ID: 'k1',
     TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+    STORAGE_PROVIDER: 'local',
   };
 
   function runApiAndCatch(env: Record<string, string | undefined>, io: EnvExitIo): ExitCalled {
@@ -106,6 +107,14 @@ describe('loadApiEnv (api açılışı, F1.5a)', () => {
     const output = io.output.join('');
     expect(output).toMatch(/SMS_PROVIDER/);
     expect(output).not.toContain('otp-hash-secret-value');
+  });
+
+  it('F1.10-AC5: APP_ENV=production + STORAGE_PROVIDER=local → başlamaz (çıkış kodu 1)', () => {
+    const io = fakeIo();
+    const exit = runApiAndCatch({ ...API_VALID, APP_ENV: 'production' }, io);
+
+    expect(exit.code).toBe(1);
+    expect(io.output.join('')).toMatch(/STORAGE_PROVIDER/);
   });
 
   it('OTP_HASH_KEY yoksa başlamaz', () => {

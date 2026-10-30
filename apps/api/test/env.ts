@@ -14,6 +14,7 @@ export const TEST_SERVER_ENV: ApiEnv = parseApiEnv({
   JWT_KEY_ID: 'test-k1',
   // Her çalıştırmada rastgele (depoda anahtar gibi görünen değer yok).
   TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+  STORAGE_PROVIDER: 'local',
 });
 
 /** Worker birim testleri için sahte ortam (F1.11: push sağlayıcısı mock). */

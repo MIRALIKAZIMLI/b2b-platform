@@ -276,6 +276,10 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `push.retry_delays_minutes` | 1, 5, 15 (geçici push hatasında yeniden deneme beklemeleri; eleman sayısı = deneme sayısı, US-054 AC3, F1.11) | tamsayı listesi (artan, 1–5 eleman) | 1 | 1440 |
 | `push.receipt_check_minutes` | 15 (gönderimden sonra makbuz kontrolü, integrations §3, F1.11) | tamsayı | 1 | 1440 |
 | `push.batch_size` | 100 (Expo isteği başına mesaj; Expo üst sınırı 100, F1.11) | tamsayı | 1 | 100 |
+| `files.upload_url_ttl_minutes` | 10 (imzalı yükleme URL'sinin ömrü, SF-09, F1.10) | tamsayı | 1 | 60 |
+| `files.download_url_ttl_minutes` | 5 (`private` dosya için imzalı okuma URL'sinin ömrü, SF-09, F1.10) | tamsayı | 1 | 60 |
+| `files.image_max_mb` | 5 (JPEG/PNG/WebP üst sınırı, NFR-49, F1.10) | tamsayı | 1 | 20 |
+| `files.xlsx_max_mb` | 10 (.xlsx üst sınırı, NFR-49, F1.10) | tamsayı | 1 | 50 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
 | `i18n.cache_ttl_seconds` | 60 (çeviri ve dil önbelleğinin süreç içi ömrü, F1.3) | tamsayı | 1 | 300 |
 | `feature.*` | Özellik bayrakları; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §6 | evet/hayır | — | — |

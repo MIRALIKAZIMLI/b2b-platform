@@ -95,6 +95,10 @@ export const SETTING_DEFINITIONS = {
   'push.retry_delays_minutes': increasingIntListSetting([1, 5, 15], 1, 1440),
   'push.receipt_check_minutes': intSetting(15, 1, 1440),
   'push.batch_size': intSetting(100, 1, 100),
+  'files.upload_url_ttl_minutes': intSetting(10, 1, 60),
+  'files.download_url_ttl_minutes': intSetting(5, 1, 60),
+  'files.image_max_mb': intSetting(5, 1, 20),
+  'files.xlsx_max_mb': intSetting(10, 1, 50),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
   'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
 } as const satisfies Record<string, SettingDefinition<unknown>>;

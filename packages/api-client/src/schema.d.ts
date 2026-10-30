@@ -4092,12 +4092,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Süreli imzalı yükleme URL'si (SF-09) */
+        /**
+         * Süreli imzalı yükleme URL'si (SF-09, NFR-49)
+         * @description İzin `purpose`'a göre (F1.10): product_image → catalog.manage; logo → business.manage;
+         *     delivery_photo → delivery.update_own; dispute_photo → orders.confirm_delivery veya
+         *     orders.resolve_dispute; import → imports.run. Tür veya boyut sınırı aşılırsa 422 FILE_INVALID.
+         *     Platform dosyası yüklemesi bu uçta yok (F1.10 kararı); X-Business-Id zorunlu.
+         */
         post: {
             parameters: {
                 query?: never;
-                header?: {
-                    "X-Business-Id"?: components["parameters"]["BusinessIdOptional"];
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
                 };
                 path?: never;
                 cookie?: never;
@@ -4121,17 +4127,21 @@ export interface paths {
                     content: {
                         "application/json": {
                             /** Format: uuid */
-                            fileId?: string;
+                            fileId: string;
                             /** Format: uri */
-                            uploadUrl?: string;
-                            headers?: {
+                            uploadUrl: string;
+                            /** @enum {string} */
+                            method: "PUT";
+                            headers: {
                                 [key: string]: string;
                             };
                             /** Format: date-time */
-                            expiresAt?: string;
+                            expiresAt: string;
                         };
                     };
                 };
+                401: components["responses"]["Error"];
+                403: components["responses"]["Error"];
                 422: components["responses"]["Error"];
             };
         };
@@ -4150,11 +4160,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Yüklemeyi tamamla ve doğrula */
+        /**
+         * Yüklemeyi tamamla ve doğrula (boyut + ilk 16 bayt imzası)
+         * @description Dosyayı oluşturan işletmenin bağlamında çağrılır; başka işletmenin dosyası 404.
+         *     Geçersiz dosya → nesne silinir, satır rejected, 422 FILE_INVALID. Aynı dosya için
+         *     tekrar çağrı mevcut durumu döner (ready → 200, rejected → 422).
+         */
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
                 path: {
                     id: components["parameters"]["Id"];
                 };
@@ -4167,8 +4184,25 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            fileId: string;
+                            /** @enum {string} */
+                            status: "ready";
+                            contentType: string;
+                            sizeBytes: number;
+                            /**
+                             * Format: uri
+                             * @description Yalnızca public dosyada CDN adresi
+                             */
+                            url?: string;
+                        };
+                    };
                 };
+                401: components["responses"]["Error"];
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 422: components["responses"]["Error"];
             };
         };
@@ -5295,6 +5329,76 @@ export interface paths {
             };
         };
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dev/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Yerel dosya deposundan okuma (imzalı, süreli) — production'da yok */
+        get: {
+            parameters: {
+                query: {
+                    token: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Dosya içeriği */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/octet-stream": string;
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
+        /**
+         * Yerel dosya deposuna yükleme (STORAGE_PROVIDER=local, ADR-0023) — production'da yok
+         * @description `token` (sorgu parametresi), `local` deposunun ürettiği imzalı (HMAC) ve süreli yükleme bağlantısıdır. İmza veya süre
+         *     geçersizse, Content-Type ya da gövde boyutu imzadakinden farklıysa veya nesne zaten yazılmışsa
+         *     (tek yazım, R2'de `If-None-Match: *`) 403.
+         */
+        put: {
+            parameters: {
+                query: {
+                    token: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            responses: {
+                /** @description Yüklendi */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                403: components["responses"]["Error"];
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;

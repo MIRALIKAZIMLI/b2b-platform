@@ -83,6 +83,7 @@ Teknik yaklaşım: TypeScript modüler monolit (NestJS + Next.js + Expo), Postgr
 | [0020](04-decisions/adr-0020-append-only-ledger-per-pair.md) | Yalnızca eklenen cari |
 | [0021](04-decisions/adr-0021-mock-sms-in-non-production.md) | Mock SMS |
 | [0022](04-decisions/adr-0022-rest-api-versioning-and-contract-first.md) | REST, sürümleme, sözleşme önce |
+| [0023](04-decisions/adr-0023-local-disk-file-storage.md) | Yerelde disk dosya deposu |
 
 ### 05 — Planlama
 
