@@ -1158,7 +1158,7 @@ paths:
               required: [type, description]
               properties:
                 type: { type: string, enum: [missing, damaged, not_received] }
-                description: "{ type: string, maxLength: 1000 }"
+                description: { type: string, maxLength: 1000 }
                 fileId: { type: string, format: uuid }
       responses:
         '201': { description: İtiraz açıldı }
@@ -2242,7 +2242,7 @@ components:
       properties:
         sku: { type: string }
         name: { $ref: '#/components/schemas/LocalizedText' }
-        description: "{ $ref: '#/components/schemas/LocalizedText' }"
+        description: { $ref: '#/components/schemas/LocalizedText' }
         categoryId: { type: string, format: uuid }
         brandId: { type: [string, 'null'], format: uuid }
         baseUnitCode: { type: string }

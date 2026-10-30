@@ -18,3 +18,4 @@
 - F1.8a: erişim tabloları
 - F1.8b: kiracı bağlamı ve PermissionGuard
 - docs: hız ve token kuralları (speed-and-tokens.md), dar yerel test, Usta konuşma sınırı, doğrudan Müfettiş döngüsü
+- F1.12: api-client üretimi ve sözleşme kontrolü
