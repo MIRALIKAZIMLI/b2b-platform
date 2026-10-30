@@ -86,7 +86,7 @@ interface FileStorage {
 | Anahtar yapısı | `<businessId>/<purpose>/<fileId>.<ext>` |
 | Yükleme URL'si ömrü | 10 dk; indirme URL'si (private) 5 dk |
 | Doğrulama | `complete` adımında `head` + ilk 16 bayt imza kontrolü (NFR-49) |
-| Mock | Yerelde MinIO (Docker) veya yerel dosya sistemi uygulaması |
+| Mock | Yerelde ve CI'da yerel dosya sistemi uygulaması (`STORAGE_PROVIDER=local`, ADR-0023); production'da `local` ile süreç başlamaz |
 
 ## 5. Mobil derleme ve dağıtım
 

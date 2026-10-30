@@ -10,7 +10,7 @@
 
 | Ortam | Amaç | Altyapı | Veri | SMS | Dağıtım |
 | --- | --- | --- | --- | --- | --- |
-| `local` | Geliştirme | Geliştirici bilgisayarı; `docker compose -f docker-compose.dev.yml` (PostgreSQL 16, Redis 7, Meilisearch, MinIO) | `seed` + `seed-demo` | `mock` | — |
+| `local` | Geliştirme | Geliştirici bilgisayarı; `docker compose -f docker-compose.dev.yml` (PostgreSQL 16, Redis 7, Meilisearch; dosyalar diskte, ADR-0023) | `seed` + `seed-demo` | `mock` | — |
 | `test` | CI testleri | GitHub Actions; servis container'ları | Test fabrikaları | `mock` | Her PR |
 | `staging` | Uçtan uca, UAT, yük testi | Küçük Lightsail sunucusu; PostgreSQL aynı sunucuda Docker | Demo verisi; **gerçek kişisel veri yok** | `mock` | `main`'e birleştirmede otomatik |
 | `production` | Pilot ve canlı | [infrastructure.md](../03-architecture/infrastructure.md) §2 | Gerçek | Gerçek sağlayıcı (Y2'den itibaren) | Etiketle + manuel onay |

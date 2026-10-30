@@ -4,7 +4,7 @@
 # Bir değeri (ör. dolu bir port) değiştirmek için kök .env dosyasını açıkça ver:
 #   docker compose --env-file .env -f infra/docker-compose.dev.yml up -d
 # Portlar yalnızca 127.0.0.1 adresine açılır.
-# MinIO (yerel R2 karşılığı) eklenmedi: açık Docker imajı yok. Bkz. docs/07-ai-development/tech-stack.md §6.
+# MinIO (yerel R2 karşılığı) eklenmedi: açık Docker imajı yok. Dosyalar diskte (ADR-0023).
 
 name: b2b-dev
 

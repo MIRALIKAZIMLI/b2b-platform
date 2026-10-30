@@ -104,7 +104,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | PostgreSQL | 16 |
 | Redis | 7 |
 | Meilisearch | 1.x |
-| MinIO (yalnızca yerel, R2 yerine) | ⚠️ Açık karar — 2026-10-24 itibarıyla MinIO'nun açık Docker imajı yok (Docker Hub `minio/minio` kaldırılmış). F0.3a'da compose'a eklenmedi; yerel depolama karşılığı, dosya yükleme adımından önce ayrı kararla seçilir. |
+| Yerel dosya deposu (R2 yerine) | MinIO yok (açık Docker imajı kalmadı). Yerelde ve CI'da `STORAGE_PROVIDER=local`: diskteki klasör (`local-file-storage.ts`), yeni imaj/paket yok; staging ve production'da R2 ([ADR-0023](../04-decisions/adr-0023-local-disk-file-storage.md), S9 → C, 2026-10-30) |
 
 ## 7. Test ve kalite
 
@@ -145,7 +145,7 @@ Kesin sürümler `package.json` dosyalarında sabittir; bu tablo onların özeti
 | PostgreSQL imajı | `postgres:16.15-alpine` | |
 | Redis imajı | `redis:7.4.11-alpine` | |
 | Meilisearch imajı | `getmeili/meilisearch:v1.55.0` | |
-| MinIO imajı | — | Eklenmedi, bkz. §6 |
+| MinIO imajı | — | Eklenmedi; yerine disk deposu (ADR-0023) |
 | gitleaks (CI) | `ghcr.io/gitleaks/gitleaks:v8.30.1` | |
 | GitHub Actions | `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0, `pnpm/action-setup` v6.1.0 | Commit SHA ile sabit |
 
