@@ -12,7 +12,7 @@ import { REDIS_CLIENT } from '../../../infrastructure/redis';
 import { TokenService } from '../../identity';
 import { seedI18n } from '../../i18n';
 
-interface UserRow {
+interface UserRow extends Record<string, unknown> {
   full_name: string;
   preferred_language: string | null;
   timezone: string | null;
