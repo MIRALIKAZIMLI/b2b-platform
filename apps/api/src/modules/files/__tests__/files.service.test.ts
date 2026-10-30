@@ -8,6 +8,7 @@ import { UuidV7IdGenerator } from '../../../core/id-generator';
 import { FileStorage, stagingKeyOf } from '../../../core/ports/file-storage';
 import type { TenantContext } from '../../../core/tenant-context';
 import type { FileRow, FilesRepository } from '../files.repository';
+import type { SettingsService } from '../../settings';
 import { FilesService } from '../files.service';
 
 const BUSINESS = '0190f1a0-0000-7000-8000-000000000001';
@@ -97,7 +98,10 @@ function setup() {
   const repository = new FakeRepository();
   const clock = new FixedClock(new Date('2026-10-30T10:00:00.000Z'));
   // Tüm `files.*` ayarları için 5 (MB / dakika); bu testlerde yeterli.
-  const settings = { get: () => Promise.resolve(5) };
+  // Tüm `files.*` ayarları için 5 (MB / dakika); bu testlerde yeterli.
+  const settings = {
+    get: (() => Promise.resolve(5)) as unknown as Pick<SettingsService, 'get'>['get'],
+  };
   const service = new FilesService(
     repository as unknown as FilesRepository,
     storage,
