@@ -11,6 +11,7 @@
 | Müfettiş | Zorunlu / Önerilir / Gerekmez — <gerekçe> |
 | İnceleme odağı | <Müfettiş'in derin bakacağı 2–4 konu veya dosya; `review-guide.md` §4 riskli yollarından> |
 | Tahmin | S / M / L |
+| Boyut | elle yazılmış diff ~2.000 satırı geçecekse a/b'ye bölünür (`speed-and-tokens.md` H7) |
 
 ## Amaç
 
