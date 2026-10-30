@@ -6,6 +6,7 @@
 // identity, access, i18n; businesses değil, c4-component §1).
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   char,
   check,
@@ -13,6 +14,7 @@ import {
   jsonb,
   pgTable,
   primaryKey,
+  uniqueIndex,
   text,
   timestamp,
   uuid,
@@ -53,9 +55,14 @@ export const notifications = pgTable(
     type: text('type').notNull(),
     payload: jsonb('payload').notNull(),
     readAt: timestamp('read_at', { withTimezone: true }),
+    /** Bildirimi doğuran outbox olayı (ADR-0010 §4: aynı olay iki kez işlenirse tek satır). */
+    sourceEventId: bigint('source_event_id', { mode: 'bigint' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('notifications_user_id_idx').on(table.userId, table.id)],
+  (table) => [
+    index('notifications_user_id_idx').on(table.userId, table.id),
+    uniqueIndex('notifications_user_source_event_uq').on(table.userId, table.sourceEventId),
+  ],
 );
 
 export const notificationTemplates = pgTable(

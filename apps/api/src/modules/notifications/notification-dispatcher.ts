@@ -77,27 +77,45 @@ export class NotificationDispatcher {
     @InjectPinoLogger(NotificationDispatcher.name) private readonly log: NotificationLog,
   ) {}
 
-  /** Outbox olayından gelen iş: her alıcı için bildirim. */
-  async handleEvent(type: string, payload: unknown): Promise<void> {
+  /**
+   * Outbox olayından gelen iş: her alıcı için bildirim. `eventId` ile idempotent (ADR-0010 §4):
+   * BullMQ aynı işi yeniden çalıştırırsa (çökme, kilit kaybı) ikinci satır ve ikinci push olmaz.
+   */
+  async handleEvent(type: string, payload: unknown, eventId: string | null): Promise<void> {
     for (const intent of intentsForEvent(type, payload)) {
-      await this.notify(intent);
+      await this.notify(intent, eventId);
     }
   }
 
-  /** Tek alıcı: satırı yazar; tercih açıksa push gönderir. Bildirim kimliğini döner. */
-  async notify(intent: NotificationIntent): Promise<string> {
+  /**
+   * Tek alıcı: satırı yazar; tercih açıksa push gönderir. Bildirim kimliğini döner; aynı olay bu
+   * alıcı için daha önce işlendiyse hiçbir şey yapmaz ve undefined döner.
+   */
+  async notify(
+    intent: NotificationIntent,
+    sourceEventId: string | null = null,
+  ): Promise<string | undefined> {
     const notificationId = this.ids.next();
-    const pushEnabled = await this.repo.asUser(intent.userId, async (tx) => {
-      await this.repo.insert(tx, {
+    const outcome = await this.repo.asUser(intent.userId, async (tx) => {
+      const inserted = await this.repo.insert(tx, {
         id: notificationId,
         userId: intent.userId,
         businessId: intent.businessId,
         type: intent.type,
         payload: { id: intent.subjectId, params: intent.params },
+        sourceEventId,
         now: this.clock.now(),
       });
-      return await this.repo.pushEnabled(tx, intent.type);
+      return inserted ? { pushEnabled: await this.repo.pushEnabled(tx, intent.type) } : undefined;
     });
+    if (outcome === undefined) {
+      this.log.info(
+        { event: 'notification.duplicate_event', sourceEventId, type: intent.type },
+        'olay bu alıcı için zaten işlenmiş, atlandı',
+      );
+      return undefined;
+    }
+    const { pushEnabled } = outcome;
     this.log.info(
       { event: 'notification.created', notificationId, type: intent.type, pushEnabled },
       'bildirim yazıldı',

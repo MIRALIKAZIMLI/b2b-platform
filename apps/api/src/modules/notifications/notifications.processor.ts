@@ -4,8 +4,9 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject } from '@nestjs/common';
 import type { Job } from 'bullmq';
+import { InjectPinoLogger } from 'nestjs-pino';
 import { z } from 'zod';
-import { NotificationDispatcher } from './notification-dispatcher';
+import { NotificationDispatcher, type NotificationLog } from './notification-dispatcher';
 import {
   PUSH_DELIVER_JOB,
   PUSH_RECEIPTS_JOB,
@@ -14,7 +15,12 @@ import {
 } from './notification-jobs';
 import { NOTIFICATION_EVENT_TYPES } from './notification-types';
 
-const outboxJobSchema = z.object({ type: z.string(), payload: z.unknown() });
+const outboxJobSchema = z.object({
+  /** outbox_events.id (bigint, metin); idempotens anahtarı (ADR-0010 §4). */
+  eventId: z.string().regex(/^\d{1,19}$/),
+  type: z.string(),
+  payload: z.unknown(),
+});
 
 @Processor('notifications')
 export class NotificationsProcessor extends WorkerHost {
@@ -24,6 +30,8 @@ export class NotificationsProcessor extends WorkerHost {
       NotificationDispatcher,
       'handleEvent' | 'deliver' | 'checkReceipts'
     >,
+    @InjectPinoLogger(NotificationsProcessor.name)
+    private readonly log: Pick<NotificationLog, 'warn'>,
   ) {
     super();
   }
@@ -39,7 +47,12 @@ export class NotificationsProcessor extends WorkerHost {
     }
     if (NOTIFICATION_EVENT_TYPES.includes(job.name)) {
       const event = outboxJobSchema.parse(job.data);
-      await this.dispatcher.handleEvent(event.type, event.payload);
+      await this.dispatcher.handleEvent(event.type, event.payload, event.eventId);
+      return;
     }
+    this.log.warn(
+      { event: 'notifications.unknown_job', jobName: job.name },
+      'bilinmeyen iş, atlandı',
+    );
   }
 }

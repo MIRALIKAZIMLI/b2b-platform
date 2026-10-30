@@ -25,6 +25,7 @@ CREATE TABLE "notifications" (
 	"type" text NOT NULL,
 	"payload" jsonb NOT NULL,
 	"read_at" timestamp with time zone,
+	"source_event_id" bigint,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -45,6 +46,7 @@ ALTER TABLE "notification_templates" ADD CONSTRAINT "notification_templates_lang
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "push_tokens" ADD CONSTRAINT "push_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "notifications_user_id_idx" ON "notifications" USING btree ("user_id","id");--> statement-breakpoint
+CREATE UNIQUE INDEX "notifications_user_source_event_uq" ON "notifications" USING btree ("user_id","source_event_id");--> statement-breakpoint
 CREATE INDEX "push_tokens_user_idx" ON "push_tokens" USING btree ("user_id");
 --> statement-breakpoint
 -- ===== Elle eklenen bölüm (F1.11) =====

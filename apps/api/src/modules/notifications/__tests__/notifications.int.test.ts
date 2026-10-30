@@ -73,8 +73,16 @@ describe('F1.11 bildirim ve push (entegrasyon)', () => {
     return new NotificationDispatcher(repo, settings, push, jobs, ids, clock, log);
   }
 
+  function processor(target: NotificationDispatcher) {
+    return new NotificationsProcessor(target, log);
+  }
+
   /** Test olayını commit eder, dağıtıcıdan geçirir ve işlemciye verir (outbox → worker). */
-  async function emitTestEvent(userId: string, ref: string, target = dispatcher()): Promise<void> {
+  async function emitTestEvent(
+    userId: string,
+    ref: string,
+    target = dispatcher(),
+  ): Promise<OutboxJob> {
     const writer = new OutboxWriter();
     const businessId = randomUUID();
     await withTenantTx({ businessId, userId }, (tx) =>
@@ -96,7 +104,8 @@ describe('F1.11 bildirim ve push (entegrasyon)', () => {
     const job = queues.jobs.find((item) => item.name === 'notification.test');
     expect(job?.queue).toBe('notifications');
     if (job === undefined) throw new Error('olay kuyruğa eklenmedi');
-    await new NotificationsProcessor(target).process({ name: job.name, data: job.data });
+    await processor(target).process({ name: job.name, data: job.data });
+    return job;
   }
 
   beforeAll(async () => {
@@ -145,6 +154,38 @@ describe('F1.11 bildirim ve push (entegrasyon)', () => {
     expect(push.sent[0]?.title).toBe(NOTIFICATION_TEMPLATES.test?.az.title);
   });
 
+  it('F1.11: aynı outbox işi iki kez işlenince tek bildirim ve tek push (ADR-0010 §4)', async () => {
+    const recipient = await insertRecipient('az');
+    await registerToken(repo, recipient.id, expoToken());
+    const target = dispatcher();
+    const job = await emitTestEvent(recipient.id, randomUUID(), target);
+
+    // BullMQ aynı işi yeniden çalıştırır (çökme, kilit kaybı).
+    await processor(target).process({ name: job.name, data: job.data });
+
+    expect(await notificationsOf(recipient.id)).toHaveLength(1);
+    expect(push.sent).toHaveLength(1);
+    expect(jobs.take().filter((item) => item.job.name === PUSH_RECEIPTS_JOB)).toHaveLength(1);
+    expect(log.info.mock.calls.map(([obj]) => (obj as { event: string }).event)).toContain(
+      'notification.duplicate_event',
+    );
+  });
+
+  it('F1.11: farklı olaylar aynı alıcıya ayrı bildirim olarak yazılır', async () => {
+    const recipient = await insertRecipient('az');
+    await emitTestEvent(recipient.id, randomUUID());
+    await emitTestEvent(recipient.id, randomUUID());
+
+    expect(await notificationsOf(recipient.id)).toHaveLength(2);
+  });
+
+  it('bilinmeyen iş adı atlanır ve uyarı loglanır', async () => {
+    await processor(dispatcher()).process({ name: 'unknown.job', data: {} });
+    expect(log.warn.mock.calls.map(([obj]) => (obj as { event: string }).event)).toContain(
+      'notifications.unknown_job',
+    );
+  });
+
   it('US-054 AC2: tür kapalıysa push gitmez, uygulama içi listede kalır', async () => {
     const recipient = await insertRecipient('az');
     await registerToken(repo, recipient.id, expoToken());
@@ -182,7 +223,7 @@ describe('F1.11 bildirim ve push (entegrasyon)', () => {
       if (retry?.job.name !== PUSH_DELIVER_JOB) throw new Error('yeniden deneme işi yok');
       expect(retry.job.data).toMatchObject({ attempt, tokenIds: [tokenId] });
       delays.push(retry.delayMs);
-      await new NotificationsProcessor(target).process({
+      await processor(target).process({
         name: retry.job.name,
         data: retry.job.data,
       });
@@ -225,7 +266,7 @@ describe('F1.11 bildirim ve push (entegrasyon)', () => {
     const [retry] = jobs.take();
     if (retry?.job.name !== PUSH_DELIVER_JOB) throw new Error('yeniden deneme işi yok');
 
-    await new NotificationsProcessor(target).process({
+    await processor(target).process({
       name: retry.job.name,
       data: retry.job.data,
     });
@@ -257,7 +298,7 @@ describe('F1.11 bildirim ve push (entegrasyon)', () => {
     if (receiptJob?.job.name !== PUSH_RECEIPTS_JOB) throw new Error('makbuz işi yok');
     push.receiptFor = () => ({ status: 'error', error: 'DeviceNotRegistered' });
 
-    await new NotificationsProcessor(target).process({
+    await processor(target).process({
       name: receiptJob.job.name,
       data: receiptJob.job.data,
     });
@@ -279,7 +320,7 @@ describe('F1.11 bildirim ve push (entegrasyon)', () => {
     await registerToken(repo, second.id, token);
     push.receiptFor = () => ({ status: 'error', error: 'DeviceNotRegistered' });
 
-    await new NotificationsProcessor(target).process({
+    await processor(target).process({
       name: receiptJob.job.name,
       data: receiptJob.job.data,
     });

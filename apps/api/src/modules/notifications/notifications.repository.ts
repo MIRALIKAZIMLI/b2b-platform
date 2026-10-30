@@ -33,6 +33,8 @@ export interface NewNotification {
   readonly businessId: string | null;
   readonly type: string;
   readonly payload: StoredPayload;
+  /** Outbox olay kimliği (bigint, metin); aynı olay + alıcı ikinci kez yazılmaz (ADR-0010 §4). */
+  readonly sourceEventId?: string | null;
   readonly now: Date;
 }
 
@@ -69,15 +71,25 @@ export class NotificationsRepository {
     return result.rows[0]?.preferred_language ?? null;
   }
 
-  async insert(tx: Tx, row: NewNotification): Promise<void> {
-    await tx.insert(notifications).values({
-      id: row.id,
-      userId: row.userId,
-      businessId: row.businessId,
-      type: row.type,
-      payload: { id: row.payload.id, params: row.payload.params },
-      createdAt: row.now,
-    });
+  /** Satırı ekler; aynı alıcıya aynı olaydan satır zaten varsa eklemez ve false döner. */
+  async insert(tx: Tx, row: NewNotification): Promise<boolean> {
+    const sourceEventId =
+      row.sourceEventId === undefined || row.sourceEventId === null
+        ? null
+        : BigInt(row.sourceEventId);
+    const result = await tx
+      .insert(notifications)
+      .values({
+        id: row.id,
+        userId: row.userId,
+        businessId: row.businessId,
+        type: row.type,
+        payload: { id: row.payload.id, params: row.payload.params },
+        sourceEventId,
+        createdAt: row.now,
+      })
+      .onConflictDoNothing({ target: [notifications.userId, notifications.sourceEventId] });
+    return (result.rowCount ?? 0) > 0;
   }
 
   async findById(tx: Tx, id: string): Promise<NotificationRow | undefined> {
