@@ -252,6 +252,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `dormant.warning_day` | 90 | tamsayı | 1 | 3650 |
 | `dormant.deactivate_day` | 120 | tamsayı | 1 | 3650 |
 | `dormant.delete_day` | 180 | tamsayı | 1 | 3650 |
+| `invitation.seller_activation_days` | 7 | tamsayı (gün; toptancı aktivasyon davetinin geçerliliği, US-009 AC3) | 1 | 30 |
 | `onboarding.seller_mode` | `manual` | seçenek: `manual` | — | — |
 | `sms.daily_cap` | 500 | tamsayı | 0 | 100000 |
 | `sms.allowed_country_codes` | `["+994"]` | ülke kodu listesi (`+` ve 1–4 rakam, 1–20 eleman) | — | — |

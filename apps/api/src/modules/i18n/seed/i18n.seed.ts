@@ -2,14 +2,16 @@
 // - migrator rolüyle, tek işlemde ve platform bağlamında (`set_config('app.is_platform',
 //   'true', true)`) yazar: tablolar FORCE RLS olduğu için sahibi de politikalara tabidir.
 // - ON CONFLICT DO NOTHING: adminin sonradan yaptığı düzenlemeler ezilmez.
-// - Bölge eklemez: pilot bölge listesi belgede yok (data-model §6 AÇIK SORU, Mimar kararı F1.3).
+// - Pilot bölgeler (F2.1a): docs/tasks/F2-seed-listeleri.md §1. Bölge kimliği veritabanında
+//   üretildiği için eşleşme (ülke, tip, üst bölge, `name->>'az'`) ile yapılır; var olan atlanır.
 import { ERROR_MESSAGES } from './error-messages';
+import { PILOT_REGIONS, type SeedRegionName } from './regions';
 import { SMS_MESSAGES } from './sms-messages';
 import { UI_MESSAGES } from './ui-messages';
 
 /** pg `Client` / `PoolClient` uyar (modüller pg'yi içe aktarmaz; bağlantıyı cli.ts açar). */
 export interface SeedClient {
-  query(text: string, params?: unknown[]): Promise<{ rowCount: number | null }>;
+  query(text: string, params?: unknown[]): Promise<{ rowCount: number | null; rows: unknown[] }>;
 }
 
 const LANGUAGES = [
@@ -53,6 +55,8 @@ async function insertAll(client: SeedClient): Promise<number> {
   );
   inserted += country.rowCount ?? 0;
 
+  inserted += await insertRegions(client);
+
   const keys: string[] = [];
   const langs: string[] = [];
   const values: string[] = [];
@@ -78,6 +82,46 @@ async function insertAll(client: SeedClient): Promise<number> {
   );
   inserted += translations.rowCount ?? 0;
 
+  return inserted;
+}
+
+/** Bölgeyi yoksa ekler; kimliğini döner. */
+async function upsertRegion(
+  client: SeedClient,
+  type: 'city' | 'district',
+  parentId: string | null,
+  name: SeedRegionName,
+): Promise<{ id: string; inserted: number }> {
+  const result = await client.query(
+    `with existing as (
+       select id from regions
+        where country_code = 'AZ' and type = $1
+          and parent_id is not distinct from $2::uuid and name->>'az' = $3
+     ), created as (
+       insert into regions (country_code, parent_id, type, name)
+       select 'AZ', $2::uuid, $1, $4::jsonb
+        where not exists (select 1 from existing)
+       returning id
+     )
+     select id, true as created from created
+     union all
+     select id, false as created from existing`,
+    [type, parentId, name.az, JSON.stringify(name)],
+  );
+  const row = result.rows[0] as { id: string; created: boolean } | undefined;
+  if (row === undefined) throw new Error('bölge seed satırı yazılamadı');
+  return { id: row.id, inserted: row.created ? 1 : 0 };
+}
+
+async function insertRegions(client: SeedClient): Promise<number> {
+  let inserted = 0;
+  for (const city of PILOT_REGIONS) {
+    const parent = await upsertRegion(client, 'city', null, city.name);
+    inserted += parent.inserted;
+    for (const district of city.districts ?? []) {
+      inserted += (await upsertRegion(client, 'district', parent.id, district)).inserted;
+    }
+  }
   return inserted;
 }
 

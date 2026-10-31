@@ -462,16 +462,31 @@ paths:
     post:
       tags: [team]
       summary: Daveti kabul et (OTP ile giriş yapmış kullanıcı)
+      description: >
+        Yalnızca giriş ister (işletme bağlamı yok). Oturumdaki kullanıcının telefonu davetteki
+        telefonla aynı olmalıdır. Geçersiz, süresi dolmuş, kullanılmış, başka telefona ait davet
+        veya kullanıcının zaten o işletmede üyeliği varsa hepsi aynı `404 NOT_FOUND` döner (F2.1a).
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [token]
               properties:
-                token: { type: string }
+                token: { type: string, minLength: 1, maxLength: 256 }
       responses:
-        '200': { description: Üyelik aktif }
+        '200':
+          description: Üyelik aktif
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [businessId]
+                properties:
+                  businessId: { type: string, format: uuid }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/team/roles:
     get:
       tags: [team]
@@ -1721,34 +1736,87 @@ paths:
   /api/v1/admin/sellers:
     get:
       tags: [admin]
-      summary: Toptancılar
+      summary: Toptancılar (platform rolü super_admin, operations)
       parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste (yeniden eskiye)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/AdminSeller' } }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [admin]
-      summary: Toptancı aç (US-009)
+      summary: Toptancı aç (US-009; platform rolü super_admin, operations)
+      description: >
+        Tek işlemde işletme (`created_via = admin`, `active`), `seller` yeteneği (`approved`),
+        satıcı profili, hizmet bölgeleri, seçilen planın aboneliği, işletme admin rolü, yetkilinin
+        kullanıcı kaydı (yoksa) ve aktivasyon daveti (`invitation.seller_activation_days`) oluşur.
+        Aktivasyon SMS'i işlemden sonra gider; gönderilemezse işletme yine oluşur ve
+        `activationSmsSent: false` döner. Aynı VÖEN herhangi bir işletmede kayıtlıysa `409`.
+        `applicationId` bu sürümde desteklenmez (başvurudan açma F2.2) → `422`.
       parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [legalName, voen, regionId, ownerPhone, ownerName, planId, currency, timezone]
               properties:
-                legalName: { type: string }
+                legalName: { type: string, minLength: 1, maxLength: 200 }
                 voen: { $ref: '#/components/schemas/Voen' }
                 regionId: { type: string, format: uuid }
-                addressLine: { type: string }
+                addressLine: { type: string, maxLength: 300 }
                 ownerPhone: { $ref: '#/components/schemas/PhoneE164' }
-                ownerName: { type: string }
+                ownerName: { type: string, minLength: 1, maxLength: 120 }
                 planId: { type: string, format: uuid }
-                serviceAreaRegionIds: { type: array, items: { type: string, format: uuid } }
+                serviceAreaRegionIds: { type: array, maxItems: 200, items: { type: string, format: uuid } }
                 currency: { $ref: '#/components/schemas/CurrencyCode' }
-                timezone: { type: string }
-                applicationId: { type: string, format: uuid }
+                timezone: { type: string, description: IANA saat dilimi adı }
+                applicationId: { type: string, format: uuid, description: F2.2'de; şimdilik verilirse 422 }
       responses:
-        '201': { description: Oluşturuldu; aktivasyon SMS'i gönderildi }
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [businessId, invitationExpiresAt, activationSmsSent]
+                properties:
+                  businessId: { type: string, format: uuid }
+                  invitationExpiresAt: { type: string, format: date-time }
+                  activationSmsSent: { type: boolean }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/sellers/{id}/activation:
+    post:
+      tags: [admin]
+      summary: Yeni aktivasyon daveti gönder (US-009 AC3)
+      description: >
+        İşletmenin açık admin davetleri geçersiz olur, aynı yetkiliye yeni davet ve SMS gider.
+        İşletmede aktif admin üyeliği varsa `409 INVALID_STATE_TRANSITION`; toptancı yoksa `404`.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Yeni davet oluşturuldu
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invitationExpiresAt, activationSmsSent]
+                properties:
+                  invitationExpiresAt: { type: string, format: date-time }
+                  activationSmsSent: { type: boolean }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
   /api/v1/admin/seller-applications:
     get:
@@ -1845,9 +1913,18 @@ paths:
   /api/v1/admin/plans:
     get:
       tags: [admin]
-      summary: Planlar
+      summary: Planlar (yalnız okuma; F2.1a'da toptancı formu için öne alındı, yönetim F6.3)
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/AdminPlan' } }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       tags: [admin]
       summary: Plan oluştur (US-055)
@@ -2605,6 +2682,32 @@ components:
         unit: { type: [string, 'null'] }
         compareValue: { type: [string, 'null'] }
         link: { type: string, description: İstemci yönlendirme yolu ve filtre }
+    AdminSeller:
+      type: object
+      required: [id, legalName, voen, regionId, status, createdAt, activation]
+      properties:
+        id: { type: string, format: uuid }
+        legalName: { type: string }
+        voen: { type: [string, 'null'] }
+        regionId: { type: string, format: uuid }
+        status: { type: string, enum: [active, suspended, dormant, archived] }
+        createdAt: { type: string, format: date-time }
+        activation:
+          type: string
+          enum: [pending, accepted, expired]
+          description: accepted = aktif admin üyeliği var; pending = süresi dolmamış açık davet var
+    AdminPlan:
+      type: object
+      required: [id, code, name, capability, price, currencyCode, period, isActive]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        capability: { type: string, enum: [seller, buyer] }
+        price: { $ref: '#/components/schemas/Decimal' }
+        currencyCode: { $ref: '#/components/schemas/CurrencyCode' }
+        period: { type: string, enum: [month, year] }
+        isActive: { type: boolean }
     PlanInput:
       type: object
       required: [code, name, capability, price, currency, period, entitlements]

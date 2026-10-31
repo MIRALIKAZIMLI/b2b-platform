@@ -8,6 +8,12 @@ export {
 } from './membership.service';
 export { RoleService } from './role.service';
 export {
+  type ActivationStatus,
+  type CreatedInvitation,
+  InvitationService,
+  type NewInvitation,
+} from './invitation.service';
+export {
   MEMBERSHIP_STATUSES,
   type MembershipStatus,
   jobTitles,

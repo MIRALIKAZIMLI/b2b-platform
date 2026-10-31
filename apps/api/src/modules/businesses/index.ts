@@ -3,6 +3,9 @@ export {
   type BusinessRow,
   BusinessesRepository,
   type CapabilityRow,
+  isVoenUniqueViolation,
+  type NewSellerBusiness,
+  type SellerListItem,
 } from './businesses.repository';
 export {
   CAPABILITIES,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidVoen, VOEN_PATTERN, voenSchema } from '../voen';
+import { isValidVoen, legalTypeOfVoen, VOEN_PATTERN, voenSchema } from '../voen';
 
 describe('VÖEN biçim doğrulaması (shared/voen.ts)', () => {
   it('F1.7-AC2: 1234567891 geçerli', () => {
@@ -34,5 +34,11 @@ describe('VÖEN biçim doğrulaması (shared/voen.ts)', () => {
     expect(voenSchema.safeParse('1234567891').success).toBe(true);
     expect(voenSchema.safeParse('1234567893').success).toBe(false);
     expect(VOEN_PATTERN.source).toBe('^[0-9]{9}[12]$');
+  });
+
+  it('F2.1a-AC1: hukuki tip son haneden (1 = tüzel kişi, 2 = fərdi sahibkar)', () => {
+    expect(legalTypeOfVoen('1234567891')).toBe('legal_entity');
+    expect(legalTypeOfVoen('1234567892')).toBe('individual_entrepreneur');
+    expect(legalTypeOfVoen('1234567893')).toBeUndefined();
   });
 });

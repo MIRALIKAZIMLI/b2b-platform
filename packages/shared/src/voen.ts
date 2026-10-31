@@ -10,3 +10,11 @@ export function isValidVoen(value: string): boolean {
 }
 
 export const voenSchema = z.string().regex(VOEN_PATTERN, { message: 'VOEN_INVALID' });
+
+export type LegalType = 'legal_entity' | 'individual_entrepreneur';
+
+/** Hukuki tip VÖEN'in son hanesinden: 1 = tüzel kişi, 2 = fərdi sahibkar (glossary, US-006 AC2). */
+export function legalTypeOfVoen(voen: string): LegalType | undefined {
+  if (!isValidVoen(voen)) return undefined;
+  return voen.endsWith('1') ? 'legal_entity' : 'individual_entrepreneur';
+}

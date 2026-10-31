@@ -6,7 +6,8 @@ export interface SmsMessage {
   /** E.164, ör. `+994501234567`. */
   readonly to: string;
   readonly body: string;
-  readonly purpose: 'otp';
+  /** `invitation`: davet / aktivasyon bağlantısı (F2.1a, D18 güncellemesi). */
+  readonly purpose: 'otp' | 'invitation';
 }
 
 export interface SmsSendResult {

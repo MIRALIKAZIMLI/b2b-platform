@@ -29,6 +29,7 @@ function contractEnv(): ApiEnv {
     TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
     STORAGE_PROVIDER: 'local',
     STORAGE_LOCAL_DIR: '.local-storage',
+    WEB_BASE_URL: 'http://localhost:3000',
   };
 }
 

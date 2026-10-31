@@ -26,3 +26,4 @@
 - F1.13b: web kabuğu
 - F1.14a: mobil giriş, oturum, dil
 - F1.14b: mobil kabuk
+- F2.1a: admin toptancı açma API ve aktivasyon daveti

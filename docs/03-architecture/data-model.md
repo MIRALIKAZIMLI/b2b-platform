@@ -507,10 +507,12 @@ F1.8a uygulaması: `memberships` UPDATE/DELETE ve `roles` UPDATE (`is_business_a
 | role_id | uuid | | |
 | job_title_id | uuid | | |
 | branch_id, warehouse_id | uuid | null | |
-| token_hash | text | unique | |
-| expires_at | timestamptz | | Toptancı aktivasyonu: 7 gün |
+| token_hash | text | unique | SHA-256 (hex); ham token 32 bayt base64url, yalnızca SMS bağlantısında |
+| expires_at | timestamptz | | Toptancı aktivasyonu: ayar `invitation.seller_activation_days` (varsayılan 7 gün); yeniden gönderimde açık davetler `expires_at = now` ile kapanır |
 | accepted_at | timestamptz | null | |
 | created_by | uuid | | |
+
+**Kabul (F2.1a):** `invitation_accept(p_token_hash, p_membership_id, p_now)` (migrator sahipli `SECURITY DEFINER`, `0013_invitation_accept.sql`). Kullanıcı `app.user_id`'den alınır. Davet `FOR UPDATE` kilitlenir; kabul edilmemiş, süresi dolmamış, kullanıcı aktif ve telefonu davetteki telefonla aynı, işletme `active` ve kullanıcının o işletmede üyeliği yoksa aktif üyelik eklenir ve `accepted_at` yazılır; aksi hâlde hiçbir şey yazılmaz (uç `404`). Fonksiyon için yalnız migrator'a açık politikalar: `invitations_definer_select`, `invitations_definer_update`, `businesses_definer_select`, `memberships_definer_insert` (`user_id = app.user_id`).
 
 ### 4.6 `billing`
 

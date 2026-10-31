@@ -248,9 +248,18 @@ describe('F1.8-AC7 kiracı izolasyonu (access)', () => {
       }
       expect(names).toContain('role_permissions.role_permissions_parent');
       expect(names).toContain('membership_regions.membership_regions_parent');
-      const self = policies.find((p) => p.policyname === 'memberships_self_definer');
-      expect(self?.roles).toBe('migrator');
-      for (const p of policies.filter((item) => item.policyname !== 'memberships_self_definer')) {
+      // SECURITY DEFINER fonksiyonları için yalnız migrator'a açık politikalar (bilinçli liste):
+      // list_my_memberships (F1.8a), invitation_accept (F2.1a, 0013).
+      const definerPolicies = [
+        'memberships_self_definer',
+        'memberships_definer_insert',
+        'invitations_definer_select',
+        'invitations_definer_update',
+      ];
+      for (const name of definerPolicies) {
+        expect(policies.find((p) => p.policyname === name)?.roles, name).toBe('migrator');
+      }
+      for (const p of policies.filter((item) => !definerPolicies.includes(item.policyname))) {
         expect(p.roles, p.policyname).toBe('public');
       }
 

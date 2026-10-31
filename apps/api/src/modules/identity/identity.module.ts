@@ -14,6 +14,8 @@ import { TokenService } from './token.service';
 import { TotpController } from './totp/totp.controller';
 import { TotpRepository } from './totp/totp.repository';
 import { TotpService } from './totp/totp.service';
+import { TransactionalSmsService } from './transactional-sms.service';
+import { UserDirectory } from './user-directory';
 
 /**
  * Kimlik: kullanıcılar, OTP (F1.5a), oturum, JWT ve yenileme anahtarı (F1.5b), TOTP ve platform
@@ -39,9 +41,19 @@ export class IdentityModule {
         SessionService,
         TotpRepository,
         TotpService,
+        UserDirectory,
+        TransactionalSmsService,
       ],
       // F1.8b: access modülü (AccessGuard, /me) TokenService, SessionService ve TotpRepository kullanır.
-      exports: [OtpService, TokenService, SessionService, TotpRepository],
+      // F2.1a: access davet servisi UserDirectory ve TransactionalSmsService kullanır.
+      exports: [
+        OtpService,
+        TokenService,
+        SessionService,
+        TotpRepository,
+        UserDirectory,
+        TransactionalSmsService,
+      ],
     };
   }
 }

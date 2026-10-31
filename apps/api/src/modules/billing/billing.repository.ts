@@ -111,6 +111,21 @@ export class BillingRepository implements EntitlementRepositoryPort {
     return rows[0];
   }
 
+  /** Çağıranın işleminde plan (G). */
+  async findPlanTx(tx: Tx, planId: string): Promise<PlanRow | undefined> {
+    const rows = await tx.select().from(plans).where(eq(plans.id, planId));
+    return rows[0];
+  }
+
+  async listPlansTx(tx: Tx): Promise<PlanRow[]> {
+    return await tx.select().from(plans).orderBy(plans.capability, plans.code);
+  }
+
+  /** Çağıranın (platform) işleminde abonelik. */
+  async insertSubscriptionTx(tx: Tx, row: NewSubscriptionRow): Promise<void> {
+    await tx.insert(subscriptions).values(row);
+  }
+
   async insertSubscription(ctx: PlatformTxContext, row: NewSubscriptionRow): Promise<void> {
     await withPlatformTx(ctx, (tx) => tx.insert(subscriptions).values(row));
   }

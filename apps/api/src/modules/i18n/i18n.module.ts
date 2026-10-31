@@ -4,6 +4,7 @@ import { SettingsModule } from '../settings';
 import { I18nController } from './i18n.controller';
 import { I18nRepository } from './i18n.repository';
 import { I18nService } from './i18n.service';
+import { ReferenceLookup } from './reference-lookup';
 
 /**
  * Diller, çeviriler, para birimleri, ülkeler, bölgeler (F1.3). Hata filtresi mesajları
@@ -15,8 +16,9 @@ import { I18nService } from './i18n.service';
   providers: [
     I18nRepository,
     I18nService,
+    ReferenceLookup,
     { provide: ERROR_MESSAGE_RESOLVER, useExisting: I18nService },
   ],
-  exports: [I18nService, ERROR_MESSAGE_RESOLVER],
+  exports: [I18nService, ReferenceLookup, ERROR_MESSAGE_RESOLVER],
 })
 export class I18nModule {}

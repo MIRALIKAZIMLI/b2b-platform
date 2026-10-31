@@ -15,3 +15,4 @@ export {
   type AuditRequestContext,
   AuditService,
 } from './audit.service';
+export { type AuditHttpRequest, requestAuditContext } from './request-context';

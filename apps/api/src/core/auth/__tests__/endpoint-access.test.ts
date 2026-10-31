@@ -45,6 +45,16 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   // İzin purpose'a göre; bağlam ve izin uç içinde TenantContextService ile (F1.10 S1).
   'POST /api/v1/files/upload-url': 'authenticated',
   'POST /api/v1/files/:id/complete': 'authenticated',
+  // F2.1a: davet kabulü; kabul eden henüz üye değil (R17), telefon eşleşmesi fonksiyonda (R16).
+  'POST /api/v1/team/invitations/accept': 'authenticated',
+};
+
+/** Platform uçlarının rolleri (F2.1a S1 = A: toptancıyı süper admin ve operasyon açar). */
+const EXPECTED_PLATFORM: Record<string, readonly string[]> = {
+  'POST /api/v1/admin/sellers': ['super_admin', 'operations'],
+  'GET /api/v1/admin/sellers': ['super_admin', 'operations'],
+  'POST /api/v1/admin/sellers/:id/activation': ['super_admin', 'operations'],
+  'GET /api/v1/admin/plans': ['super_admin', 'operations'],
 };
 
 function join(...parts: (string | undefined)[]): string {
@@ -116,5 +126,13 @@ describe('uç noktası erişim bekçisi (varsayılan reddet)', () => {
       }
     }
     expect(open).toEqual(EXPECTED_OPEN);
+  });
+
+  it('F2.1a-AC6: admin uçları yalnız süper admin ve operasyon rolüne açık', () => {
+    const platform: Record<string, readonly string[]> = {};
+    for (const endpoint of collect(app)) {
+      if (endpoint.rule?.kind === 'platform') platform[endpoint.route] = endpoint.rule.roles;
+    }
+    expect(platform).toEqual(EXPECTED_PLATFORM);
   });
 });

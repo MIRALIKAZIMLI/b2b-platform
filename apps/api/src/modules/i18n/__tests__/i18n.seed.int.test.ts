@@ -1,5 +1,6 @@
 // i18n seed'i (F1.3): idempotent, migrator rolüyle platform bağlamında yazar, admin
-// düzenlemelerini ezmez (ON CONFLICT DO NOTHING), bölge eklemez (Mimar kararı F1.3).
+// düzenlemelerini ezmez (ON CONFLICT DO NOTHING). Pilot bölgeler F2.1a'da eklendi (onaylı liste:
+// docs/tasks/F2-seed-listeleri.md §1); F1.3'teki "bölge eklemez" kararı bununla kapandı.
 import { randomUUID } from 'node:crypto';
 import { ERROR_CODES } from '@b2b/shared';
 import { sql } from 'drizzle-orm';
@@ -8,6 +9,7 @@ import { connectAsMigrator } from '../../../../test/db-clients';
 import { withPlatformTx, withSystemTx } from '../../../core/db';
 import { ERROR_MESSAGES } from '../seed/error-messages';
 import { seedI18n } from '../seed/i18n.seed';
+import { PILOT_REGIONS } from '../seed/regions';
 
 describe('i18n seed', () => {
   let owner: Awaited<ReturnType<typeof connectAsMigrator>>;
@@ -109,15 +111,34 @@ describe('i18n seed', () => {
     }
   });
 
-  it('F1.3: seed bölge eklemez', async () => {
+  it('F2.1a: seed onaylı pilot bölgeleri ekler (4 şehir, Bakı altında 12 rayon); tekrar çalışınca çoğalmaz', async () => {
+    await seedI18n(owner);
     await seedI18n(owner);
 
+    // Diğer test dosyaları kendi AZ bölgelerini açar; yalnızca onaylı listedeki adlar sayılır.
+    const names = PILOT_REGIONS.flatMap((city) => [
+      city.name.az,
+      ...(city.districts ?? []).map((district) => district.az),
+    ]);
     const regions = await withSystemTx((tx) =>
-      tx.execute<{ n: number }>(
-        sql`select count(*)::int as n from regions where country_code = 'AZ'`,
+      tx.execute<{ type: string; parent: string | null; n: number }>(
+        sql`select r.type, p.name->>'az' as parent, count(*)::int as n
+              from regions r left join regions p on p.id = r.parent_id
+             where r.country_code = 'AZ' and r.name->>'az' in ${names}
+             group by r.type, p.name->>'az' order by r.type`,
       ),
     );
-    expect(regions.rows).toEqual([{ n: 0 }]);
+    expect(regions.rows).toEqual([
+      { type: 'city', parent: null, n: 4 },
+      { type: 'district', parent: 'Bakı', n: 12 },
+    ]);
+    const baku = await withSystemTx((tx) =>
+      tx.execute<{ name: unknown }>(
+        sql`select name from regions where country_code = 'AZ' and type = 'city'
+             and name->>'az' = 'Bakı'`,
+      ),
+    );
+    expect(baku.rows).toEqual([{ name: { az: 'Bakı', ru: 'Баку', tr: 'Bakü' } }]);
   });
 
   it('F1.3: seed bağlantıda platform ayarını bırakmaz (set_config işlem içinde)', async () => {
