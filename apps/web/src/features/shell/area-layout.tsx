@@ -55,6 +55,7 @@ export function AreaLayout({ area, children }: { area: ShellArea; children: Reac
       <ShellMenu
         area={area}
         permissions={(me.activeBusiness?.permissions ?? []).map((item) => item.code)}
+        platformRole={me.platformRole ?? null}
       />
       <main>{children}</main>
     </>

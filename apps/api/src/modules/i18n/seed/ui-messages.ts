@@ -1,5 +1,6 @@
 // Web arayüzü başlangıç çevirileri (`ui_translations`, F1.13a: giriş ekranı ve dil seçici;
-// F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi).
+// F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi;
+// F2.1b: admin toptancı ekranları, aktivasyon sayfası).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -111,11 +112,146 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   'shell.menu.team': { az: 'Komanda', ru: 'Команда', tr: 'Ekip' },
   'shell.menu.audit': { az: 'Audit jurnalı', ru: 'Журнал аудита', tr: 'Denetim kaydı' },
   'shell.menu.settings': { az: 'Parametrlər', ru: 'Настройки', tr: 'Ayarlar' },
+  'shell.menu.sellers': { az: 'Topdançılar', ru: 'Оптовики', tr: 'Toptancılar' },
   'shell.menu.profile': {
     az: 'Profil və məxfilik',
     ru: 'Профиль и приватность',
     tr: 'Profil ve gizlilik',
   },
+  'adminSellers.title': { az: 'Topdançılar', ru: 'Оптовики', tr: 'Toptancılar' },
+  'adminSellers.new': { az: 'Yeni topdançı', ru: 'Новый оптовик', tr: 'Yeni toptancı' },
+  'adminSellers.empty': {
+    az: 'Hələ topdançı yoxdur.',
+    ru: 'Оптовиков пока нет.',
+    tr: 'Henüz toptancı yok.',
+  },
+  'adminSellers.load_more': { az: 'Daha çox göstər', ru: 'Показать ещё', tr: 'Daha fazla göster' },
+  'adminSellers.column.legal_name': { az: 'Hüquqi ad', ru: 'Наименование', tr: 'Unvan' },
+  'adminSellers.column.voen': { az: 'VÖEN', ru: 'VÖEN', tr: 'VÖEN' },
+  'adminSellers.column.status': { az: 'Status', ru: 'Статус', tr: 'Durum' },
+  'adminSellers.column.activation': { az: 'Aktivləşmə', ru: 'Активация', tr: 'Aktivasyon' },
+  'adminSellers.column.actions': { az: 'Əməliyyat', ru: 'Действия', tr: 'İşlem' },
+  'adminSellers.status.active': { az: 'Aktiv', ru: 'Активен', tr: 'Aktif' },
+  'adminSellers.status.suspended': { az: 'Dayandırılıb', ru: 'Приостановлен', tr: 'Askıda' },
+  'adminSellers.status.dormant': { az: 'Passiv', ru: 'Неактивен', tr: 'Pasif' },
+  'adminSellers.status.archived': { az: 'Arxivdə', ru: 'В архиве', tr: 'Arşivde' },
+  'adminSellers.activation.pending': { az: 'Gözləyir', ru: 'Ожидает', tr: 'Bekliyor' },
+  'adminSellers.activation.accepted': { az: 'Aktivləşib', ru: 'Активирован', tr: 'Aktifleşti' },
+  'adminSellers.activation.expired': { az: 'Vaxtı keçib', ru: 'Срок истёк', tr: 'Süresi doldu' },
+  'adminSellers.resend': { az: 'Yenidən göndər', ru: 'Отправить повторно', tr: 'Yeniden gönder' },
+  'adminSellers.resend_done': {
+    az: 'Yeni aktivləşmə linki göndərildi.',
+    ru: 'Новая ссылка активации отправлена.',
+    tr: 'Yeni aktivasyon bağlantısı gönderildi.',
+  },
+  'adminSellers.sms_not_sent': {
+    az: 'Aktivləşmə SMS-i göndərilmədi. «Yenidən göndər» ilə təkrar cəhd edin.',
+    ru: 'SMS активации не отправлено. Повторите через «Отправить повторно».',
+    tr: "Aktivasyon SMS'i gönderilemedi. «Yeniden gönder» ile tekrar deneyin.",
+  },
+  'adminSellers.form.title': { az: 'Yeni topdançı', ru: 'Новый оптовик', tr: 'Yeni toptancı' },
+  'adminSellers.form.legal_name': { az: 'Hüquqi ad', ru: 'Наименование', tr: 'Unvan' },
+  'adminSellers.form.voen': { az: 'VÖEN', ru: 'VÖEN', tr: 'VÖEN' },
+  'adminSellers.form.region': { az: 'Region', ru: 'Регион', tr: 'Bölge' },
+  'adminSellers.form.address': { az: 'Ünvan', ru: 'Адрес', tr: 'Adres' },
+  'adminSellers.form.owner_name': {
+    az: 'Səlahiyyətli şəxsin adı',
+    ru: 'Имя уполномоченного лица',
+    tr: 'Yetkili adı',
+  },
+  'adminSellers.form.owner_phone': {
+    az: 'Səlahiyyətli şəxsin telefonu',
+    ru: 'Телефон уполномоченного лица',
+    tr: 'Yetkili telefonu',
+  },
+  'adminSellers.form.plan': { az: 'Plan', ru: 'Тариф', tr: 'Plan' },
+  'adminSellers.form.service_areas': {
+    az: 'Xidmət regionları',
+    ru: 'Регионы обслуживания',
+    tr: 'Hizmet bölgeleri',
+  },
+  'adminSellers.form.currency': { az: 'Valyuta', ru: 'Валюта', tr: 'Para birimi' },
+  'adminSellers.form.timezone': { az: 'Saat qurşağı', ru: 'Часовой пояс', tr: 'Saat dilimi' },
+  'adminSellers.form.choose': { az: 'Seçin', ru: 'Выберите', tr: 'Seçin' },
+  'adminSellers.form.submit': { az: 'Yarat', ru: 'Создать', tr: 'Oluştur' },
+  'adminSellers.form.created': {
+    az: 'Topdançı yaradıldı.',
+    ru: 'Оптовик создан.',
+    tr: 'Toptancı oluşturuldu.',
+  },
+  'adminSellers.form.back_to_list': { az: 'Siyahıya qayıt', ru: 'К списку', tr: 'Listeye dön' },
+  'adminSellers.form.error.required': {
+    az: 'Bu sahə mütləqdir.',
+    ru: 'Обязательное поле.',
+    tr: 'Bu alan zorunlu.',
+  },
+  'adminSellers.form.error.too_long': {
+    az: 'Dəyər çox uzundur.',
+    ru: 'Слишком длинное значение.',
+    tr: 'Değer çok uzun.',
+  },
+  'adminSellers.form.error.VOEN_INVALID': {
+    az: 'VÖEN 10 rəqəmdir, sonuncu rəqəm 1 və ya 2.',
+    ru: 'VÖEN — 10 цифр, последняя 1 или 2.',
+    tr: 'VÖEN 10 hanedir, son hane 1 veya 2.',
+  },
+  'adminSellers.form.error.VOEN_ALREADY_REGISTERED': {
+    az: 'Bu VÖEN ilə biznes artıq qeydiyyatdadır.',
+    ru: 'Компания с этим VÖEN уже зарегистрирована.',
+    tr: 'Bu VÖEN ile kayıtlı bir işletme zaten var.',
+  },
+  'adminSellers.form.error.invalid_phone': {
+    az: 'Telefon nömrəsi yanlışdır (+994…).',
+    ru: 'Неверный номер телефона (+994…).',
+    tr: 'Telefon numarası geçersiz (+994…).',
+  },
+  'adminSellers.form.error.invalid_plan': {
+    az: 'Plan seçimi yanlışdır.',
+    ru: 'Неверный тариф.',
+    tr: 'Plan seçimi geçersiz.',
+  },
+  'adminSellers.form.error.not_found': {
+    az: 'Seçilmiş region tapılmadı.',
+    ru: 'Выбранный регион не найден.',
+    tr: 'Seçilen bölge bulunamadı.',
+  },
+  'adminSellers.form.error.inactive_currency': {
+    az: 'Bu valyuta aktiv deyil.',
+    ru: 'Эта валюта не активна.',
+    tr: 'Bu para birimi etkin değil.',
+  },
+  'adminSellers.form.error.invalid_currency': {
+    az: 'Valyuta kodu 3 böyük hərfdir (AZN).',
+    ru: 'Код валюты — 3 заглавные буквы (AZN).',
+    tr: 'Para birimi kodu 3 büyük harftir (AZN).',
+  },
+  'adminSellers.form.error.invalid_timezone': {
+    az: 'Saat qurşağı yanlışdır.',
+    ru: 'Неверный часовой пояс.',
+    tr: 'Saat dilimi geçersiz.',
+  },
+  'adminSellers.form.error.invalid': {
+    az: 'Dəyər yanlışdır.',
+    ru: 'Неверное значение.',
+    tr: 'Değer geçersiz.',
+  },
+  'activate.title': {
+    az: 'Hesabın aktivləşdirilməsi',
+    ru: 'Активация аккаунта',
+    tr: 'Hesap aktivasyonu',
+  },
+  'activate.intro': {
+    az: 'Davam etmək üçün səlahiyyətli şəxsin telefon nömrəsi ilə daxil olun.',
+    ru: 'Чтобы продолжить, войдите по номеру телефона уполномоченного лица.',
+    tr: 'Devam etmek için yetkilinin telefon numarasıyla giriş yapın.',
+  },
+  'activate.accepting': { az: 'Aktivləşdirilir…', ru: 'Активация…', tr: 'Aktifleştiriliyor…' },
+  'activate.invalid': {
+    az: 'Link etibarsızdır və ya vaxtı keçib; platforma administratorundan yenisini istəyin.',
+    ru: 'Ссылка недействительна или устарела; запросите новую у администратора платформы.',
+    tr: 'Bağlantı geçersiz veya süresi dolmuş; platform yöneticisinden yenisini isteyin.',
+  },
+  'activate.retry': { az: 'Yenidən cəhd et', ru: 'Повторить', tr: 'Yeniden dene' },
   'languages.az': { az: 'Azərbaycanca', ru: 'Azərbaycanca', tr: 'Azərbaycanca' },
   'languages.ru': { az: 'Русский', ru: 'Русский', tr: 'Русский' },
   'languages.tr': { az: 'Türkçe', ru: 'Türkçe', tr: 'Türkçe' },

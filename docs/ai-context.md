@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-31 (F2.1a: admin toptancı açma API ve aktivasyon daveti; sıradaki F2.1b).
+Son güncelleme: 2026-10-31 (F2.1b: admin toptancı ekranları ve aktivasyon sayfası; sıradaki F2.3a).
 
 ## 1. Mimari özeti
 
@@ -102,8 +102,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.13b | web kabuğu: işletme seçici, izinden menü (`features/shell/menu.ts`), `/admin`, `/seller`, `/buyer` açılış sayfaları (yer tutucu), CI `e2e` işi (Playwright, E2E-01) |
 | F1.13a | web yenileme cookie'si (`X-Client: web`, `b2b_rt`), `PATCH /me`, web `api.ts`/oturum/`next-intl`, giriş ekranı (telefon → kod → TOTP), dil seçici, Playwright |
 | F2.1a | `platform-admin` modülü: `POST/GET /admin/sellers`, `POST /admin/sellers/{id}/activation`, `GET /admin/plans`; `POST /team/invitations/accept`; `invitation_accept()` (`0013_invitation_accept.sql`); pilot bölge seed'i; `invitation.seller_activation_days`, `WEB_BASE_URL` |
+| F2.1b | web `/admin/sellers` (liste, yeniden gönder) ve `/admin/sellers/new` (form, Zod, `422`/`409` alan hataları); `/<dil>/activate` (token adresten silinir, yalnız bellekte; `Referrer-Policy: no-referrer`; giriş aynı sayfada `LoginForm onSignedIn`); `MENUS` öğesinde `path` + `platformRoles` (`SELLER_ADMIN_ROLES`); Playwright E2E-02 |
 
-**Sıradaki:** F2.1b (admin toptancı ekranları, aktivasyon sayfası, E2E-02); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
+**Sıradaki:** F2.3a; sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 

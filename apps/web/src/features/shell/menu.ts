@@ -1,2 +1,9 @@
 // Menü tanımı web ve mobilde ortak (F1.14b): `@b2b/shared` `menu.ts`.
-export { MENUS, type MenuItem, type ShellArea, visibleMenu } from '@b2b/shared';
+export {
+  MENUS,
+  type MenuItem,
+  platformRoleAllows,
+  SELLER_ADMIN_ROLES,
+  type ShellArea,
+  visibleMenu,
+} from '@b2b/shared';

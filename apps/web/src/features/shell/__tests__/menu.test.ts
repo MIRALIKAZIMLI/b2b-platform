@@ -1,9 +1,18 @@
 import { PERMISSION_CODES, PERMISSIONS } from '@b2b/shared';
 import { describe, expect, it } from 'vitest';
-import { MENUS, type ShellArea, visibleMenu } from '../menu';
+import {
+  MENUS,
+  platformRoleAllows,
+  SELLER_ADMIN_ROLES,
+  type ShellArea,
+  visibleMenu,
+} from '../menu';
 
-const keys = (area: ShellArea, permissions: readonly string[]) =>
-  visibleMenu(area, permissions).map((item) => item.key);
+const keys = (
+  area: ShellArea,
+  permissions: readonly string[],
+  platformRole: string | null = null,
+) => visibleMenu(area, permissions, platformRole).map((item) => item.key);
 
 describe('İzinden menü', () => {
   it('F1.13-AC5: izni olmayan menü öğesi görünmez (Satış Temsilcisi)', () => {
@@ -73,6 +82,32 @@ describe('İzinden menü', () => {
       'cart',
       'approvals',
       'orders',
+    ]);
+  });
+
+  it('F2.1b-AC5: "Toptancılar" yalnız super_admin ve operations rolüne görünür (S1)', () => {
+    expect(keys('admin', [], 'super_admin')).toEqual(['dashboard', 'sellers']);
+    expect(visibleMenu('admin', [], 'operations').map((item) => item.key)).toEqual([
+      'dashboard',
+      'sellers',
+    ]);
+    for (const role of ['support', 'content', null]) {
+      expect(visibleMenu('admin', [], role).map((item) => item.key)).toEqual(['dashboard']);
+    }
+    expect(MENUS.admin.find((item) => item.key === 'sellers')?.path).toBe('sellers');
+  });
+
+  it('F2.1b-AC5: sayfa düzeyi kontrol aynı rol listesiyle', () => {
+    expect(platformRoleAllows(SELLER_ADMIN_ROLES, 'super_admin')).toBe(true);
+    expect(platformRoleAllows(SELLER_ADMIN_ROLES, 'operations')).toBe(true);
+    expect(platformRoleAllows(SELLER_ADMIN_ROLES, 'support')).toBe(false);
+    expect(platformRoleAllows(SELLER_ADMIN_ROLES, null)).toBe(false);
+  });
+
+  it('F2.1b-AC5: işletme alanlarında platform rolü menüyü değiştirmez', () => {
+    expect(visibleMenu('seller', ['team.manage'], 'super_admin').map((item) => item.key)).toEqual([
+      'dashboard',
+      'team',
     ]);
   });
 });

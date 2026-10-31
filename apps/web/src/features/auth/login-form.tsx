@@ -18,7 +18,11 @@ type Step =
 
 const LOCALES = ['az', 'ru', 'tr', 'en'];
 
-export function LoginForm() {
+/**
+ * `onSignedIn` verilirse oturum açılınca yönlendirme yapılmaz, çağıran devam eder (aktivasyon
+ * sayfası, F2.1b: davet token'ı yalnız o sayfanın belleğindedir).
+ */
+export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
   const t = useTranslations('auth.login');
   const tErrors = useTranslations('errors');
   const locale = useLocale();
@@ -46,6 +50,10 @@ export function LoginForm() {
   /** Oturum açıldı: profildeki dil farklıysa o dile geç (US-058 AC1). */
   async function finish(accessToken: string) {
     startSession(accessToken);
+    if (onSignedIn !== undefined) {
+      onSignedIn();
+      return;
+    }
     const { data } = await webApi.client.GET('/api/v1/me');
     // Kayıtta dil boş olabilir (null); yalnızca bilinen bir dil yönlendirir.
     const preferred: string = data?.preferredLanguage ?? '';
