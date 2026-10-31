@@ -255,6 +255,9 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `invitation.seller_activation_days` | 7 | tamsayı (gün; toptancı aktivasyon davetinin geçerliliği, US-009 AC3) | 1 | 30 |
 | `onboarding.seller_mode` | `manual` | seçenek: `manual` | — | — |
 | `seller_application.ip_max_per_hour` | 5 (IP başına saatte toptancı başvurusu; kimliksiz form, US-008, F2.2) | tamsayı | 1 | 100 |
+| `buyer_registration.ip_max_per_hour` | 10 (IP başına saatte perakendeci kayıt isteği; kimliksiz uç, US-005, F2.3a) | tamsayı | 1 | 100 |
+| `onboarding.buyer_plan_code` | `buyer_free` (kendi kaydolan perakendeciye atanan plan, R14, F2.3a) | seçenek: `buyer_free` | — | — |
+| `legal.data_sharing_version` | `v1` (kayıtta onaylanan veri paylaşım metni sürümü, NFR-63, F2.3a) | seçenek: `v1` | — | — |
 | `sms.daily_cap` | 500 | tamsayı | 0 | 100000 |
 | `sms.allowed_country_codes` | `["+994"]` | ülke kodu listesi (`+` ve 1–4 rakam, 1–20 eleman) | — | — |
 | `otp.code_ttl_minutes` | 5 (NFR-45) | tamsayı | 1 | 30 |

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import {
   type PlatformTxContext,
   type TenantTxContext,
@@ -8,10 +8,15 @@ import {
   withTenantTx,
 } from '../../core/db';
 import {
+  activityTypes,
+  branches,
   businessCapabilities,
   businesses,
+  businessPrivacy,
+  buyerProfiles,
   type Capability,
   type CapabilityStatus,
+  personData,
   sellerProfiles,
   serviceAreas,
 } from './businesses.schema';
@@ -33,6 +38,34 @@ export interface NewSellerBusiness {
   /** Yeteneği onaylayan platform kullanıcısı. */
   readonly approvedBy: string;
   readonly now: Date;
+}
+
+/**
+ * Kendi kaydolan perakendeci (F2.3a, US-005 AC1, SF-02). Kiracı bağlamında yazılır:
+ * `businesses_guard_platform_columns` ve `business_capabilities_tenant_insert` yalnızca
+ * `self_signup` + `active` işletmeye ve `buyer` + `approved` yeteneğe izin verir (F1.7).
+ */
+export interface NewBuyerBusiness {
+  readonly id: string;
+  readonly legalName: string;
+  readonly regionId: string;
+  readonly activityTypeId: string;
+  readonly defaultLanguage: string | null;
+  readonly currencyCode: string;
+  readonly timezone: string;
+  readonly contactName: string;
+  readonly dataConsentVersion: string;
+  readonly profileCompleteness: number;
+  readonly branchId: string;
+  readonly branchName: string;
+  readonly personDataId: string;
+  readonly now: Date;
+}
+
+export interface ActivityTypeItem {
+  readonly id: string;
+  readonly name: unknown;
+  readonly sortOrder: number;
 }
 
 export interface SellerListItem {
@@ -172,6 +205,69 @@ export class BusinessesRepository {
         })),
       );
     }
+  }
+
+  /** F2.3a: işletme, `buyer` yeteneği, profil, gizlilik (hepsi kapalı), kişisel veri, varsayılan şube. */
+  async insertBuyerTx(tx: Tx, input: NewBuyerBusiness): Promise<void> {
+    const stamps = { createdAt: input.now, updatedAt: input.now };
+    await tx.insert(businesses).values({
+      id: input.id,
+      legalName: input.legalName,
+      regionId: input.regionId,
+      defaultLanguage: input.defaultLanguage,
+      currencyCode: input.currencyCode,
+      timezone: input.timezone,
+      status: 'active',
+      createdVia: 'self_signup',
+      dataConsentVersion: input.dataConsentVersion,
+      dataConsentAt: input.now,
+      profileCompleteness: input.profileCompleteness,
+      ...stamps,
+    });
+    await tx
+      .insert(businessCapabilities)
+      .values({ businessId: input.id, capability: 'buyer', status: 'approved', ...stamps });
+    await tx
+      .insert(buyerProfiles)
+      .values({ businessId: input.id, activityTypeId: input.activityTypeId, ...stamps });
+    await tx.insert(businessPrivacy).values({ businessId: input.id, ...stamps });
+    await tx.insert(personData).values({
+      id: input.personDataId,
+      businessId: input.id,
+      contactName: input.contactName,
+      ...stamps,
+    });
+    await tx.insert(branches).values({
+      id: input.branchId,
+      businessId: input.id,
+      name: input.branchName,
+      regionId: input.regionId,
+      approvalRule: 'every_order',
+      status: 'active',
+      ...stamps,
+    });
+  }
+
+  /** Aktif faaliyet türü mü (G tablosu; herkes okur). */
+  async isActiveActivityTypeTx(tx: Tx, id: string): Promise<boolean> {
+    const rows = await tx
+      .select({ id: activityTypes.id })
+      .from(activityTypes)
+      .where(and(eq(activityTypes.id, id), eq(activityTypes.isActive, true)));
+    return rows.length === 1;
+  }
+
+  /** Aktif faaliyet türleri, sıra numarasına göre (GET /catalog/activity-types). */
+  async listActiveActivityTypesTx(tx: Tx): Promise<ActivityTypeItem[]> {
+    return await tx
+      .select({
+        id: activityTypes.id,
+        name: activityTypes.name,
+        sortOrder: activityTypes.sortOrder,
+      })
+      .from(activityTypes)
+      .where(eq(activityTypes.isActive, true))
+      .orderBy(asc(activityTypes.sortOrder), asc(activityTypes.id));
   }
 
   /** `seller` yeteneği olan işletme; yoksa undefined. */

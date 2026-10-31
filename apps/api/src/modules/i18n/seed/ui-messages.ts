@@ -420,4 +420,6 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   'languages.ru': { az: 'Русский', ru: 'Русский', tr: 'Русский' },
   'languages.tr': { az: 'Türkçe', ru: 'Türkçe', tr: 'Türkçe' },
   'languages.en': { az: 'English', ru: 'English', tr: 'English' },
+  // F2.3a: perakendeci kaydında açılan varsayılan şubenin adı (kullanıcının dilinde yazılır).
+  'branch.default_name': { az: 'Əsas filial', ru: 'Основной филиал', tr: 'Ana şube' },
 };

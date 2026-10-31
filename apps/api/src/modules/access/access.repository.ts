@@ -94,6 +94,10 @@ export class AccessRepository {
     await tx.insert(roles).values(role);
   }
 
+  async insertMembership(tx: Tx, row: typeof memberships.$inferInsert): Promise<void> {
+    await tx.insert(memberships).values(row);
+  }
+
   async insertRolePermissions(
     tx: Tx,
     roleId: string,

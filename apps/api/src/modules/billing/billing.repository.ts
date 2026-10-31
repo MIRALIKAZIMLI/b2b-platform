@@ -122,6 +122,30 @@ export class BillingRepository implements EntitlementRepositoryPort {
   }
 
   /** Çağıranın (platform) işleminde abonelik. */
+  async findActivePlanByCodeTx(tx: Tx, code: string): Promise<PlanRow | undefined> {
+    const rows = await tx
+      .select()
+      .from(plans)
+      .where(and(eq(plans.code, code), eq(plans.isActive, true)));
+    return rows[0];
+  }
+
+  /**
+   * Kendi kaydolan perakendecinin ilk aboneliği (F2.3a): kiracı abonelik yazamaz; işletme
+   * bağlamdan (app.business_id) alınır, koşullar `subscription_start_self_signup` içinde.
+   */
+  async insertSelfSignupSubscriptionTx(
+    tx: Tx,
+    row: { id: string; planId: string; start: string; end: string; now: Date },
+  ): Promise<void> {
+    await tx.execute(sql`
+      select subscription_start_self_signup(
+        ${row.id}::uuid, ${row.planId}::uuid, ${row.start}::date, ${row.end}::date,
+        ${row.now.toISOString()}::timestamptz
+      )
+    `);
+  }
+
   async insertSubscriptionTx(tx: Tx, row: NewSubscriptionRow): Promise<void> {
     await tx.insert(subscriptions).values(row);
   }

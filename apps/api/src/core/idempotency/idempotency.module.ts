@@ -11,5 +11,7 @@ import { IdempotencyRepository } from './idempotency.repository';
     IdempotencyRepository,
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
   ],
+  // F2.3a: kimliksiz kayıt telefon kapsamlı arama ve işlem içi yanıt kaydı için kullanır.
+  exports: [IdempotencyRepository],
 })
 export class IdempotencyModule {}

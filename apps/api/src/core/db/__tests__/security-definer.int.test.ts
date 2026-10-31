@@ -16,8 +16,10 @@ const EXPECTED_FUNCTIONS = [
   'dev_sms_outbox_insert',
   'dev_sms_outbox_list',
   'idempotency_complete',
+  'idempotency_lookup_by_phone',
   'idempotency_release',
   'idempotency_reserve',
+  'idempotency_store',
   'identity_record_login',
   'identity_user_by_phone',
   'invitation_accept',
@@ -34,6 +36,8 @@ const EXPECTED_FUNCTIONS = [
   'seller_application_submit',
   'settings_get',
   'settings_put',
+  'subscription_start_self_signup',
+  'user_create_self_signup',
   'user_session_rotate',
 ];
 

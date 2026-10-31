@@ -148,7 +148,12 @@ describe('Outbox (entegrasyon: PostgreSQL + Redis)', () => {
       await writeCommitted(7);
       const dispatcher = new OutboxDispatcher(
         fakeSettings(),
-        new BullOutboxQueues(connection, { test: queue, access: queue, notifications: queue }),
+        new BullOutboxQueues(connection, {
+          test: queue,
+          access: queue,
+          notifications: queue,
+          directory: queue,
+        }),
         clock,
         fakeLog(),
       );
@@ -178,6 +183,7 @@ describe('Outbox (entegrasyon: PostgreSQL + Redis)', () => {
         test: queue,
         access: queue,
         notifications: queue,
+        directory: queue,
       });
       const job: OutboxJob = {
         queue: 'test',

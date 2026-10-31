@@ -254,7 +254,8 @@ export const branches = pgTable(
       .references(() => businesses.id),
     name: text('name').notNull(),
     regionId: uuid('region_id').references(() => regions.id),
-    addressLine: text('address_line').notNull(),
+    // F2.3a: kayıtta açılan varsayılan şubede adres yok; sipariş gönderiminde zorunlu (F4).
+    addressLine: text('address_line'),
     geoLat: numeric('geo_lat', { precision: 9, scale: 6 }),
     geoLng: numeric('geo_lng', { precision: 9, scale: 6 }),
     approvalRule: text('approval_rule').notNull().default('every_order'),

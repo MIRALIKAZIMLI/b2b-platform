@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { SettingsModule } from '../settings';
+import { ActivityTypesController } from './activity-types.controller';
 import { BusinessesRepository } from './businesses.repository';
-import { SellerApplicationRateLimiter } from './seller-application-rate-limiter';
+import { IpHourlyRateLimiter } from './ip-hourly-rate-limiter';
 import { SellerApplicationsController } from './seller-applications.controller';
 import { SellerApplicationsRepository } from './seller-applications.repository';
 import { SellerApplicationsService } from './seller-applications.service';
@@ -12,13 +13,13 @@ import { SellerApplicationsService } from './seller-applications.service';
  */
 @Module({
   imports: [SettingsModule],
-  controllers: [SellerApplicationsController],
+  controllers: [SellerApplicationsController, ActivityTypesController],
   providers: [
     BusinessesRepository,
     SellerApplicationsRepository,
-    SellerApplicationRateLimiter,
+    IpHourlyRateLimiter,
     SellerApplicationsService,
   ],
-  exports: [BusinessesRepository, SellerApplicationsRepository],
+  exports: [BusinessesRepository, SellerApplicationsRepository, IpHourlyRateLimiter],
 })
 export class BusinessesModule {}

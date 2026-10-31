@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 /** Kuyruk adları. Yeni kuyruk, onu tüketen iş (F1.11 ve sonrası) ile birlikte eklenir. */
-export const OUTBOX_QUEUE_NAMES = ['test', 'access', 'notifications'] as const;
+export const OUTBOX_QUEUE_NAMES = ['test', 'access', 'notifications', 'directory'] as const;
 export type OutboxQueueName = (typeof OUTBOX_QUEUE_NAMES)[number];
 
 /** Serbest metin olmayan alan türleri. Kod alanı, seçenek listesiyle (`['a', 'b']`) tanımlanır. */
@@ -28,6 +28,9 @@ export const OUTBOX_EVENTS = {
   },
   // F1.11: bildirim altyapısının test olayı (US-054 AC1 altyapı). `userId` alıcı, `ref` konu kimliği.
   'notification.test': { queue: 'notifications', fields: { userId: 'id', ref: 'id' } },
+  // F2.3a: perakendeci kaydoldu (SF-02). Tüketici F2.11a (dizin indeksi); o zamana kadar iş
+  // `directory` kuyruğunda bekler.
+  'buyer.registered': { queue: 'directory', fields: { businessId: 'id', regionId: 'id' } },
 } as const satisfies Record<string, OutboxEventDefinition>;
 
 export type OutboxEventType = keyof typeof OUTBOX_EVENTS;

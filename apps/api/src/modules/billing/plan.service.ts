@@ -108,6 +108,32 @@ export class PlanService {
     return id;
   }
 
+  /** Aktif plan, koduyla (F2.3a: kayıtta atanan plan ayardan gelir; ADR-0009 §3). */
+  async findActivePlanByCodeTx(tx: Tx, code: string): Promise<Plan | undefined> {
+    const row = await this.repository.findActivePlanByCodeTx(tx, code);
+    return row === undefined ? undefined : toPlan(row);
+  }
+
+  /**
+   * Kendi kaydolan perakendecinin ilk aboneliği, çağıranın kiracı işleminde (F2.3a, R14, R15).
+   * Dönem `startFirstSubscriptionTx` ile aynı kural; işletme işlem bağlamından alınır.
+   */
+  async startSelfSignupSubscriptionTx(
+    tx: Tx,
+    input: { plan: Plan; timeZone: string; now: Date },
+  ): Promise<string> {
+    const id = this.ids.next();
+    const period = firstSubscriptionPeriod(input.now, input.timeZone, input.plan.period);
+    await this.repository.insertSelfSignupSubscriptionTx(tx, {
+      id,
+      planId: input.plan.id,
+      start: period.start,
+      end: period.end,
+      now: input.now,
+    });
+    return id;
+  }
+
   /** Güncel abonelik açar (`active`; state-machines §8 başlangıç durumu). */
   async startSubscription(subscription: NewSubscription, actor: PlanActor): Promise<string> {
     const id = this.ids.next();

@@ -227,7 +227,8 @@ Onayımı bekle.
 ### F2.3 — Perakendeci self-servis kaydı
 
 - **Belgeler:** US-005, SF-02, NFR-63.
-- **Dosyalar:** `m/businesses/buyer-registration.*`, `POST /api/v1/buyers/register`, veri paylaşım metni (3 dil, sürümlü), web + mobil kayıt ekranları.
+- **Dosyalar:** `m/onboarding/buyer-registration.*` (c4 §1: `businesses` rol/abonelik çağıramaz; Mimar onayı F2.3a K1), `POST /api/v1/buyers/register`, veri paylaşım metni (3 dil, sürümlü), web + mobil kayıt ekranları.
+- **Bölündü:** F2.3a (API, migration, seed) · F2.3b (web + mobil ekranlar, E2E-03).
 - **Kabul:** US-005 AC1–AC4; onay sürümü ve zamanı kaydedilir; outbox `buyer.registered`.
 - **Test:** Entegrasyon + E2E-03.
 

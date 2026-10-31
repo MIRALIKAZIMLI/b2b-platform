@@ -79,6 +79,12 @@ export const SETTING_DEFINITIONS = {
   'invitation.seller_activation_days': intSetting(7, 1, 30),
   'onboarding.seller_mode': enumSetting(['manual'] as const, 'manual'),
   'seller_application.ip_max_per_hour': intSetting(5, 1, 100),
+  // F2.3a: kimliksiz perakendeci kaydı (US-005). IP başına saatlik sınır; kayıtta atanan ücretsiz
+  // plan (ADR-0009 §3: kod plan adına dallanmaz, plan ayarla seçilir); güncel veri paylaşım metni
+  // sürümü (NFR-63, docs/legal/data-sharing-v1.md). Yeni sürüm: önce metin, sonra seçenek.
+  'buyer_registration.ip_max_per_hour': intSetting(10, 1, 100),
+  'onboarding.buyer_plan_code': enumSetting(['buyer_free'] as const, 'buyer_free'),
+  'legal.data_sharing_version': enumSetting(['v1'] as const, 'v1'),
   'sms.daily_cap': intSetting(500, 0, 100_000),
   'sms.allowed_country_codes': countryCodeListSetting(['+994']),
   'otp.code_ttl_minutes': intSetting(5, 1, 30),

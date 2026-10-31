@@ -5,7 +5,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
-import { type TenantTxContext, withTenantTx, withUserTx } from '../../core/db';
+import { type TenantTxContext, type Tx, withTenantTx, withUserTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { OutboxWriter } from '../../core/outbox';
 import { AccessRepository, type MyMembership } from './access.repository';
@@ -31,6 +31,37 @@ export class MembershipService {
     @Inject(Clock) private readonly clock: Clock,
     @Inject(PermissionCache) private readonly cache: Pick<PermissionCache, 'invalidate'>,
   ) {}
+
+  /**
+   * İşletmenin ilk admin üyeliği, çağıranın kiracı işleminde (F2.3a perakendeci kaydı, R15).
+   * Rol işletme admini olmalı (`createFromTemplateCodeTx` ile kopyalanan şablon); bileşik FK rolün
+   * aynı işletmeye ait olduğunu garanti eder.
+   */
+  async addFounderAdminTx(
+    tx: Tx,
+    input: {
+      id: string;
+      businessId: string;
+      userId: string;
+      roleId: string;
+      jobTitleId: string;
+      now: Date;
+    },
+  ): Promise<void> {
+    const role = await this.repository.findRole(tx, input.businessId, input.roleId);
+    if (role?.isBusinessAdmin !== true) throw new DomainError('VALIDATION_FAILED');
+    await this.repository.insertMembership(tx, {
+      id: input.id,
+      userId: input.userId,
+      businessId: input.businessId,
+      roleId: input.roleId,
+      jobTitleId: input.jobTitleId,
+      status: 'active',
+      joinedAt: input.now,
+      createdAt: input.now,
+      updatedAt: input.now,
+    });
+  }
 
   async changeRole(ctx: MembershipActorContext, input: ChangeRoleInput): Promise<void> {
     const changed = await withTenantTx(ctx, async (tx) => {
