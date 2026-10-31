@@ -6,6 +6,7 @@ import { sql } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { connectAsAppUser } from '../../../../test/db-clients';
 import { createTestApp } from '../../../../test/http-app';
+import { queryAsOwner } from '../../../../test/isolation';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
 import { randomTestPhone } from '../../../../test/users';
 import { Clock, FixedClock } from '../../../core/clock';
@@ -241,6 +242,22 @@ describe('F2.2 toptancı başvurusu (entegrasyon)', () => {
       await client.end();
     }
     expect((await applicationRow(id))?.status).toBe('pending');
+  });
+
+  it('F2.2 bekçi: elle yazılan politikalar ve rolleri (T6)', async () => {
+    const rows = await queryAsOwner<{ name: string; cmd: string; roles: string }>(
+      `select p.polname as name, p.polcmd::text as cmd,
+              (select string_agg(case when r = 0 then 'public' else pg_get_userbyid(r)::text end, ',')
+                 from unnest(p.polroles) r) as roles
+         from pg_policy p
+        where p.polrelid = 'seller_applications'::regclass
+        order by p.polname`,
+    );
+    expect(rows).toEqual([
+      { name: 'seller_applications_definer_insert', cmd: 'a', roles: 'migrator' },
+      { name: 'seller_applications_platform_select', cmd: 'r', roles: 'public' },
+      { name: 'seller_applications_platform_update', cmd: 'w', roles: 'public' },
+    ]);
   });
 
   it('F2.2 admin listesi: durum filtresi ve imleçle sayfalama (yeniden eskiye)', async () => {

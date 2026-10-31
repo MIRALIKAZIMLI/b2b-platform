@@ -15,6 +15,12 @@ const EXPECTED = [
     table: 'entitlement_overrides',
     column: 'created_by',
   },
+  // F2.2: başvuruyu inceleyen platform kullanıcısı (drizzle/0014_seller_applications.sql).
+  {
+    name: 'seller_applications_reviewed_by_users_id_fk',
+    table: 'seller_applications',
+    column: 'reviewed_by',
+  },
   { name: 'settings_updated_by_users_id_fk', table: 'settings', column: 'updated_by' },
 ];
 
