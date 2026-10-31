@@ -1,7 +1,12 @@
 // Başvurudan toptancı açma (F2.2b): seçilen başvuru, "Yeni toptancı" formuna yalnızca bellekte
 // taşınır. Kişisel veri (yetkili adı, telefon) adrese yazılmaz; adreste yalnızca başvuru kimliği.
 // Sayfa yenilenirse ön doldurma kaybolur, form başvuru kimliğiyle yine gönderilir.
-import { DEFAULT_CURRENCY, DEFAULT_TIMEZONE, type SellerFormValues } from '../admin-sellers/form';
+import {
+  DEFAULT_CURRENCY,
+  DEFAULT_TIMEZONE,
+  emptySellerForm,
+  type SellerFormValues,
+} from '../admin-sellers/form';
 
 export interface ApplicationPrefill {
   readonly id: string;
@@ -41,4 +46,19 @@ export function sellerFormFromApplication(application: ApplicationPrefill): Sell
     currency: DEFAULT_CURRENCY,
     timezone: DEFAULT_TIMEZONE,
   };
+}
+
+/**
+ * "Yeni toptancı" formunun ilk değeri (B1): başvuru bellekte varsa dolu form + `prefilled`;
+ * sayfa yenilenip bellek kaybolduysa boş form ve `prefilled: false` (aksi hâlde "başvuruyla
+ * dolduruldu" yazısı boş forma bakar).
+ */
+export function initialSellerForm(applicationId: string | undefined): {
+  readonly values: SellerFormValues;
+  readonly prefilled: boolean;
+} {
+  const application = applicationId === undefined ? undefined : selectedApplication(applicationId);
+  return application === undefined
+    ? { values: emptySellerForm(), prefilled: false }
+    : { values: sellerFormFromApplication(application), prefilled: true };
 }

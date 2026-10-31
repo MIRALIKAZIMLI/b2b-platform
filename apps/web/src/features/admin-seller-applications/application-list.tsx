@@ -17,6 +17,7 @@ import {
   useRejectApplication,
 } from './api';
 import { handOffApplication } from './handoff';
+import { NOTE_CLASS } from './note-class';
 
 const STATUS_TONE = { pending: 'amber', approved: 'emerald', rejected: 'slate' } as const;
 
@@ -114,7 +115,7 @@ export function ApplicationList() {
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-3">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="truncate text-base font-semibold text-slate-900">
+                    <h2 className="min-w-0 text-base font-semibold [overflow-wrap:anywhere] text-slate-900">
                       {application.legalName}
                     </h2>
                     <Badge tone={STATUS_TONE[application.status]}>
@@ -135,9 +136,7 @@ export function ApplicationList() {
                     />
                   </dl>
                   {application.categoryNote !== null && (
-                    <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                      {application.categoryNote}
-                    </p>
+                    <p className={NOTE_CLASS}>{application.categoryNote}</p>
                   )}
                 </div>
 
@@ -218,7 +217,11 @@ function Detail({ label, value, mono = false }: { label: string; value: string; 
   return (
     <div className="flex gap-2">
       <dt className="text-slate-500">{label}</dt>
-      <dd className={mono ? 'font-mono text-slate-900 tabular-nums' : 'text-slate-900'}>{value}</dd>
+      <dd
+        className={`min-w-0 [overflow-wrap:anywhere] text-slate-900${mono ? ' font-mono tabular-nums' : ''}`}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
