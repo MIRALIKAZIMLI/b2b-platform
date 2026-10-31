@@ -9,7 +9,7 @@ import { expect } from 'vitest';
 import { connectAsMigrator } from '../../../../test/db-clients';
 import { insertTestUser, insertTestUsers, randomTestPhone } from '../../../../test/users';
 import { SystemClock } from '../../../core/clock';
-import { withPlatformTx, withSystemTx } from '../../../core/db';
+import { withPlatformTx } from '../../../core/db';
 import { UuidV7IdGenerator } from '../../../core/id-generator';
 import { seedAccess } from '../../access';
 import { seedBilling } from '../../billing';
@@ -214,14 +214,7 @@ export async function platformQuery<T extends Record<string, unknown>>(
 ): Promise<T[]> {
   const actor = await platformUser(null);
   const result = await withPlatformTx({ userId: actor }, (tx) => tx.execute<T>(query));
-  return result.rows;
-}
-
-/** G tablosundan okuma (bağlamsız). */
-export async function systemQuery<T extends Record<string, unknown>>(
-  query: ReturnType<typeof sql>,
-): Promise<T[]> {
-  return (await withSystemTx((tx) => tx.execute<T>(query))).rows;
+  return result.rows as T[];
 }
 
 /** audit_logs (S): yalnızca migrator okur. */
