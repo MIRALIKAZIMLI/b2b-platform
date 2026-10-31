@@ -128,6 +128,18 @@ describe('F2.1a davet kabulü (entegrasyon)', () => {
           app_exec: true,
         },
       ]);
+      // T6: 0013'teki politikalar yalnız migrator'a açık (app_user yararlanamaz).
+      const policies = await client.query<{ policyname: string; cmd: string; roles: string }>(`
+        select policyname, cmd, array_to_string(roles, ',') as roles from pg_policies
+         where policyname in ('invitations_definer_select', 'invitations_definer_update',
+                              'businesses_definer_select', 'memberships_definer_insert')
+         order by policyname`);
+      expect(policies.rows).toEqual([
+        { policyname: 'businesses_definer_select', cmd: 'SELECT', roles: 'migrator' },
+        { policyname: 'invitations_definer_select', cmd: 'SELECT', roles: 'migrator' },
+        { policyname: 'invitations_definer_update', cmd: 'UPDATE', roles: 'migrator' },
+        { policyname: 'memberships_definer_insert', cmd: 'INSERT', roles: 'migrator' },
+      ]);
       const acl = await client.query<{ acl: string }>(
         `select proacl::text as acl from pg_proc where proname = 'invitation_accept'`,
       );
