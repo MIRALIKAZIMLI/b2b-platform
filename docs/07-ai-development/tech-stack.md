@@ -80,6 +80,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | Formlar | `react-hook-form` + Zod | 7.x |
 | Çok dillilik | `i18next`, `react-i18next` | Güncel |
 | Güvenli depo | `expo-secure-store` | Expo SDK ile |
+| Dosya sistemi (çeviri önbelleği vb., gizli olmayan veri) | `expo-file-system` | Expo SDK ile |
 | Push | `expo-notifications` | Expo SDK ile |
 | Konum | `expo-location` | Expo SDK ile |
 | Kamera ve barkod | `expo-camera` | Expo SDK ile |
@@ -244,6 +245,17 @@ Eklenmeyenler: Zod → OpenAPI dönüştürücüsü (karşılaştırma yol + met
 | `pg`, `@types/pg` | 8.23.1 / 8.23.1 | web (dev; yalnızca `e2e/fixtures.ts` test kullanıcısı; api ile aynı sürüm) |
 
 Eklenmeyenler: `@fastify/cookie` (listede yok; yalnızca `b2b_rt` okunup yazıldığı için `modules/identity/refresh-cookie.ts` yeterli).
+
+## 7.12 Kurulu sürümler (F1.14a, 2026-10-30)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `expo-secure-store` | 58.0.2 | mobil (`lib/session.ts`); yalnızca yenileme anahtarı (ADR-0006 madde 3, TM-04) |
+| `expo-file-system` | 58.0.13 | mobil (`lib/i18n-cache.ts`); çeviri önbelleği ve girişten önce seçilen dil; Expo SDK 58 `bundledNativeModules.json` `~58.0.11`. Mimar onayı F1.14a, 2026-10-30 |
+| `i18next` / `react-i18next` | 26.5.11 / 17.1.9 | mobil (`lib/i18n.ts`); mesajlar API'den (`GET /api/v1/i18n/{lang}`) |
+| `@tanstack/react-query` | 5.105.0 | mobil (web ile aynı) |
+
+Eklenmeyenler: `@testing-library/react-native`, `jest-expo` (listede yok; mantık saf TS modüllerinde Vitest ile test edilir, ekranlar telefonda elle ve F1.14b'de Maestro ile; Mimar kararı F1.14a). `@react-native-async-storage/async-storage` (yenileme anahtarı için yasak; önbellek `expo-file-system`'de).
 
 ## 8. Kullanılmayacak teknolojiler
 

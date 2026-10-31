@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-30 (F1.13b: web kabuğu, izinden menü, e2e CI işi; sıradaki adım F1.14a).
+Son güncelleme: 2026-10-30 (F1.14a: mobil giriş, güvenli oturum, dil; sıradaki adım F1.14b).
 
 ## 1. Mimari özeti
 
@@ -27,7 +27,8 @@ packages/shared/src/              env, errors, entitlements, permissions, settin
 apps/web/src/                     lib/{api,session,i18n}.ts, i18n/{routing,request}.ts, proxy.ts,
                                   features/{auth,i18n,shell}, app/[locale]/(auth)/login,
                                   app/[locale]/(admin|seller|buyer)/<alan>; e2e/ (Playwright)
-apps/mobile                       boş kabuk (F0.3b)
+apps/mobile/src/                  lib/{api,session,config,i18n,i18n-cache}.ts, features/{auth,language};
+                                  app/(auth)/{phone,code,totp}, app/index (yer tutucu)
 ```
 
 Hedef yapı: [coding-guidelines](07-ai-development/coding-guidelines.md) §1.
@@ -95,10 +96,11 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.11 | `push_tokens`, `notifications`, `notification_preferences` (U), `notification_templates` (G), `push_token_register()`, `PushSender` (expo/mock), `notifications` kuyruğu, `/push-tokens`, `/notifications*`, `0011_notifications.sql` |
 | F1.10 | `files` (T), `FileStorage` (r2/local, ADR-0023), `/files/upload-url`, `/files/{id}/complete`, `FilesService.getReadUrl`, `/dev/storage` (yalnız local), `businesses.logo_file_id` bileşik FK, `0012_files.sql` |
 | F1.10b | yükleme private geçici anahtara, `complete`'te kalıcı anahtara koşullu kopya (`putIfAbsent`) |
+| F1.14a | mobil giriş (telefon → kod → TOTP), yenileme anahtarı `expo-secure-store`'da, `lib/api.ts` tek sessiz yenileme, `i18next` + cihazda çeviri önbelleği (`expo-file-system`), dil seçici |
 | F1.13b | web kabuğu: işletme seçici, izinden menü (`features/shell/menu.ts`), `/admin`, `/seller`, `/buyer` açılış sayfaları (yer tutucu), CI `e2e` işi (Playwright, E2E-01) |
 | F1.13a | web yenileme cookie'si (`X-Client: web`, `b2b_rt`), `PATCH /me`, web `api.ts`/oturum/`next-intl`, giriş ekranı (telefon → kod → TOTP), dil seçici, Playwright |
 
-**Sıradaki:** F1.14a → F1.14b.
+**Sıradaki:** F1.14b.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
@@ -127,4 +129,5 @@ Kaynak: ilgili kartın "Kararlar" bölümü ve faz spesifikasyonu §4.
 - **Web oturumu (F1.13a):** İstemci `X-Client: web` gönderir; `otp/verify`, `totp/verify`, `refresh` yenileme anahtarını gövde yerine `b2b_rt=…; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=<auth.refresh_token_days>` cookie'sine yazar (`Domain` yok). `refresh`: gövdedeki anahtar (mobil) öncelikli; yoksa cookie, o zaman `X-Requested-With` zorunlu, yoksa anahtar tüketilmeden `401 UNAUTHENTICATED` (TM-21); hata olursa cookie silinir. `logout` cookie'yi her zaman siler. Cookie yardımcıları `modules/identity/refresh-cookie.ts` (yeni paket yok). Web API'yi aynı kökenden çağırır (Next `rewrites` `/api/v1/*` → `API_URL`); erişim anahtarı yalnız `lib/api.ts` belleğinde, `401`'de tek paylaşılan yenileme, başarısızsa giriş ekranı. Sayfa açılışında oturum cookie ile geri alınır.
 - **Web dili (F1.13a):** `next-intl` mesajları sunucuda `GET /api/v1/i18n/{lang}`'tan (ETag önbelleği, `lib/i18n.ts`), düz anahtar → iç içe (`toNested`), eksik anahtar `az`'den. `[locale]` az/ru/tr; `en` yalnız `/i18n/en` 200 ise (US-058 AC4). Dil seçici oturum varsa `PATCH /me` (`preferredLanguage`, pasif dil 422); girişte profildeki dile geçilir. Web metinleri `i18n/seed/ui-messages.ts` (taslak, onay bekliyor). Playwright `apps/web/e2e`, CI `e2e` işi (F1.13b).
 - **Web kabuğu (F1.13b):** Seçili işletme yalnız bellekte (`lib/session.ts`, `localStorage` yok — coding-guidelines §9.6); her istekte `X-Business-Id`. Varsayılan: ilk aktif üyelik (US-003 AC1 "son kullanılan" saklanmıyor; açık nokta). İşletme değişince oturum dışındaki tüm react-query önbelleği silinir; `/me` anahtarı işletmeye göre. Alan = seçili işletmenin yeteneği, yoksa platform rolü → `admin`; yanlış alandaki sayfa kendi açılış sayfasına yönlendirir (asıl kontrol API'de). Menü `MENUS[alan]` öğe → `anyOf` izin kodları (tip `@b2b/shared` `PermissionCode`; web yalnız tip içe aktarır); boş `anyOf` = dashboard. Yapılmamış ekran bağlantısız gösterilir (`ready: false`). Platform menüsü yalnız dashboard (ekran → platform rolü eşlemesi belgede yok). Metinler `shell.*` anahtarları. Dil seçici `PATCH /me` hata verirse dil değişmez, hata gösterilir.
+- **Mobil oturum ve dil (F1.14a):** Mobil `X-Client` göndermez; yenileme anahtarı gövdede gelir ve gövdeyle yenilenir. Anahtar yalnız `expo-secure-store` (`b2b.refresh_token`); AsyncStorage yok, log/hata mesajına yazılmaz. Erişim anahtarı yalnız `lib/api.ts` belleğinde; `401`'de tek paylaşılan yenileme; yenileme `400/401/403` → anahtar silinir + giriş ekranı; `5xx`/ağ hatası oturumu kapatmaz. Çıkış sunucu hatasında da anahtarı siler. API adresi `EXPO_PUBLIC_API_URL` (`apps/mobile/.env`; telefondan LAN IP, emülatörden `10.0.2.2`). Çeviriler `i18next` (düz anahtar, `{phone}` yer tutucusu), ETag'li sözlük `expo-file-system` önbelleğinde; ağ yoksa önbellek. Girişten önce seçilen dil yalnız cihazda (profile yazılmaz); girişte profildeki dil, oturumda seçim `PATCH /me` (hata → dil değişmez). Mobil testler yalnız saf TS (Vitest); bileşen testi aracı yok, ekranlar elle + F1.14b Maestro.
 - **Vitest + NestJS (S8):** kodda bağımlılıklar `@Inject()` ile açık yazılıyor (yeni paket yok); `unplugin-swc` eklenmedi.

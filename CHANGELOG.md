@@ -24,3 +24,4 @@
 - F1.10b: dosyalar önce private alana
 - F1.13a: web giriş, oturum, dil
 - F1.13b: web kabuğu
+- F1.14a: mobil giriş, oturum, dil
