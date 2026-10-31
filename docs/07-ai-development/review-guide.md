@@ -2,8 +2,8 @@
 
 | Alan | Değer |
 | --- | --- |
-| Sürüm | 1.0 |
-| Tarih | 2026-10-25 |
+| Sürüm | 1.1 |
+| Tarih | 2026-10-31 |
 | Kimin için | Müfettiş (PR'ı inceler), Usta (bulgulara yanıt verir, birleştirir), Mimar (iletir) |
 | İlgili belgeler | [AGENTS.md](../../AGENTS.md) · [ai-context.md](../ai-context.md) · [definition-of-done.md](definition-of-done.md) · [coding-guidelines.md](coding-guidelines.md) |
 
@@ -34,7 +34,10 @@ Başka bir modül, ADR veya belge yalnızca diff'in etkisini anlamak için gerek
   - Kullanıcının bilgisayarında: `gh pr checks <n>`, `gh run view <run-id> --log-failed | tail -n 80`.
   - Bulut oturumunda GraphQL kapalıdır, bu yüzden `gh pr checks` çalışmaz. Durum için: `gh api repos/miralikazimli/b2b-platform/commits/<sha>/check-runs --jq '.check_runs[]|[.name,.conclusion]|@tsv'`. Log için GitHub MCP `get_job_logs` aracı yalnızca hatalı iş için ve son satırlarla kullanılır.
 - CI'ın çalıştırdığı testler yerelde yeniden çalıştırılmaz. Yerelde yalnızca bir şüpheyi doğrulamak için hedefli tek test çalıştırılır.
-- CI kırmızı olsa bile kod incelemesi aynı turda yapılır. Böylece bütün bulgular tek raporda gider.
+- **Müfettiş CI bitince başlar** ([speed-and-tokens.md](speed-and-tokens.md) H8). PR olayı onu uyandırır; beklemek token harcamaz.
+  - `lint`, `typecheck`, `unit` veya `secrets` kırmızıysa (mekanik hata) kod incelemesi **yapılmaz**. PR'a tek satır yazılır: `Müfettiş — CI kırmızı (<iş adı>); düzeltme push'u bekleniyor.` Bu bir tur sayılmaz. Usta düzeltip push eder, inceleme 1. turla başlar.
+  - Yalnızca `integration`, `isolation`, `e2e` veya `contract` kırmızıysa kod incelemesi aynı turda yapılır; bu hatalar tasarım sorunu olabilir ve bulgularla birlikte raporlanır.
+  - PR açıklamasında "Yerel kapı" çıktısı yoksa (H9) inceleme yapılmaz; tek satır: `Müfettiş — Yerel kapı çıktısı eksik.`
 - CI bitmeden ONAYLA verilmez. CI'ı beklemek için kısa aralıklarla sorgu yapılmaz; PR olayları izlenir.
 
 ### Aşama 2: Kod incelemesi (1. tur)
@@ -89,7 +92,7 @@ Kanıtlanmamış şüphe "Muhtemel" diye yazılır. "Muhtemel" bir bulgu tek ba�
 ### Karar
 
 - **ONAYLA:** açık BLOCKER, HIGH veya MEDIUM yok ve CI tamamen yeşil. Karar o anki head SHA için verilir ve başlıkta yazılır.
-- **DÜZELT:** en az bir BLOCKER, HIGH veya MEDIUM bulgu var ya da CI kırmızı. CI sonucu kararı değiştirmeyecekse (zaten DÜZELT), rapor CI bitmeden yayınlanır; Usta hemen başlayabilir.
+- **DÜZELT:** en az bir BLOCKER, HIGH veya MEDIUM bulgu var ya da CI kırmızı (yalnızca §2 Aşama 1'de kod incelemesi yapılan kırmızı işler; mekanik kırmızıda rapor değil tek satır yazılır).
 - **KARAR GEREKLİ:** §6'daki tur sınırı aşıldı veya Usta'yla görüş ayrılığı kanıtla çözülemedi. ONAYLA sayılmaz.
 
 ### Rapor (PR'a tek yorum, turda bir kez)
@@ -169,6 +172,7 @@ Usta PR açmadan önce bu listeyi kendi diff'ine uygular. Müfettiş her turda k
 3. Müfettiş yalnızca şunlara bakar: düzeltme sorunu çözüyor mu, yeni diff bir regresyon getiriyor mu (§2 Aşama 3).
 4. **İtiraz:** Müfettiş yeni bir tam inceleme başlatmaz, yalnızca Usta'nın gösterdiği kanıtı doğrular. Ya bulguyu kapatır (↩) ya da karşı kanıtla korur. İkinci kez anlaşılamazsa karar belgeye göre Mimar'dadır; belgede yoksa kullanıcıya sorulur.
 5. **Tur sınırı:** Aynı bulgu için en fazla iki düzeltme turu yapılır. Üçüncü turda hâlâ açıksa karar KARAR GEREKLİ olur. Müfettiş sorunu ve kanıtı Mimar'a yazar, Mimar kullanıcıdan karar ister. Kritik bir sorun çözülmeden inceleme başarılı sayılmaz.
+6. **Kod değişikliği gerektirmeyen bulgu:** Bulgu yalnızca açıklama, kanıt veya yanıt istiyorsa (kod ve belge değişmeyecekse) Usta PR yorumunda yanıtlar; Müfettiş yeni push olmadığı için aynı SHA üzerinde ONAYLA veya DÜZELT kararını o yorumla verir. Yeniden tam tur açılmaz. Yanıt bir belge veya kod değişikliği gerektiriyorsa normal tur uygulanır.
 7. **Doğrudan döngü:** Müfettiş incelediği PR'ın olaylarına abone olur; yeni push ve CI sonucu onu uyandırır, Mimar'ın aktarmasını beklemez. Usta bulguyu PR yorumundan okur, yanıtı PR'a yazar. Mimar yalnızca ilk inceleme isteğini ve son kararı (ONAYLA / KARAR GEREKLİ) alır ([speed-and-tokens.md](speed-and-tokens.md) H4).
 8. **Yeni mimari sorun:** Adımın kapsamını aşan bir sorun BLOCKER değilse bu PR'da çözülmez; "Açık riskler" bölümüne yazılır, Mimar ayrı kart açar. BLOCKER ise DÜZELT kararıyla raporlanır ve kapsam sorusu Mimar'a iletilir.
 
@@ -185,10 +189,10 @@ Biri eksikse birleştirme yapılmaz, Mimar'a yazılır.
 
 ## 8. Hızlı yol
 
-Diff yalnızca belge veya yapılandırmaysa, §4'teki riskli yollara dokunmuyorsa ve 30 satırı geçmiyorsa inceleme tek turdur. Rapor yalnızca karar, CI ve varsa bulgu tablosundan oluşur. Riskli bir yola dokunan küçük bir değişiklik (ör. `.gitleaksignore`) hızlı yoldan geçmez; normal kurallar uygulanır.
+Diff yalnızca belge veya yapılandırmaysa, §4'teki riskli yollara dokunmuyorsa ve 30 satırı geçmiyorsa inceleme tek turdur ve Sonnet modeliyle yapılabilir (H10). Rapor yalnızca karar, CI ve varsa bulgu tablosundan oluşur. Riskli bir yola dokunan küçük bir değişiklik (ör. `.gitleaksignore`) hızlı yoldan geçmez; normal kurallar uygulanır.
 
 ## 9. Bağlam
 
-- Müfettiş her faz için, ya da bir konuşmada yaklaşık 8 PR incelendikten sonra, yeni konuşmada başlar. Önceki konuşmadan yalnızca `ai-context.md` ve açık PR'ların son raporu taşınır.
+- Müfettiş her **2 PR**'da bir yeni konuşmada başlar (ölçüm: 18 PR'lık ilk Müfettiş konuşması 95M token, PR başına ~5,3M; 2 PR'lık konuşmalar PR başına ~4–6M ve konuşma başına 8–14M). Belge PR'ları ve hızlı yol incelemeleri bu sayıya girmez. Önceki konuşmadan yalnızca `ai-context.md` ve açık PR'ların son raporu taşınır.
 - Açık riskler ve sonraki adımlara notlar PR yorumunda bir kez yazılır; Mimar bunları karta veya `ai-context.md`'ye taşır.
 - Büyük log ve test çıktıları aktarılmaz; yalnızca hatalı bölüm alıntılanır.

@@ -11,9 +11,9 @@
 | ---------- | --------------------------------------- | ----- |
 | `<ID>-AC1` | `…/__tests__/….test.ts` › `<ID>-AC1: …` | ✅    |
 
-## Komut çıktısı
+## Yerel kapı
 
-<!-- AGENTS.md "Token ve süre kuralları" madde 5: yalnızca hatalar ve özet satırı. -->
+<!-- Zorunlu (speed-and-tokens.md H9). Son push'tan önce çalıştırıldı; yalnızca hatalar ve özet satırı. Bu bölüm boşsa Müfettiş incelemeye başlamaz. -->
 
 ```text
 pnpm -s lint && pnpm -s typecheck

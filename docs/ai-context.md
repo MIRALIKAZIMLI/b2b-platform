@@ -72,7 +72,7 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 
 **Hata kodları:** İş kuralı ihlali `DomainError(code, details?)`; `code` yalnızca `packages/shared/src/errors.ts` `ErrorCode` listesinden. Kod → HTTP eşlemesinin tek kaynağı `core/errors/http-map.ts`. Yeni kod: `ErrorCode` + `openapi.yaml` + `http-map.ts` + çeviri anahtarı birlikte. Başka kiracının kaydı her zaman `404`.
 
-**Çalışma hızı:** yerel test dar, bir Usta konuşması = bir adım/a-b çifti, Müfettiş PR olayıyla doğrudan ([speed-and-tokens.md](07-ai-development/speed-and-tokens.md)).
+**Çalışma hızı ve token:** yerel test dar ve her push'tan önce zorunlu (PR'da "Yerel kapı"), bir Usta konuşması = bir adım/a-b çifti, Müfettiş PR olayıyla doğrudan ve yalnız CI bitince (mekanik kırmızıda incelemez), her 2 PR'da yeni Müfettiş, model kartın "Model" satırına göre (Opus riskli, Sonnet belge/düşük risk), araç çağrıları az ve toplu, bu dosya ≤ 15 KB, Usta çalışırken yan konuşma yok (H1–H13, [speed-and-tokens.md](07-ai-development/speed-and-tokens.md)).
 
 **Diğer:** Para `numeric` + `decimal.js` (`core/money.ts`); saat `Clock`; kimlik `IdGenerator` (UUIDv7, `packages/shared/src/uuidv7.ts`). Testler `app_user` rolüyle bağlanır (süper kullanıcı RLS'i atlar, R1).
 
