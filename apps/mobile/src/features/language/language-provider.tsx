@@ -33,6 +33,8 @@ async function init(): Promise<Loaded> {
   return { i18n, load };
 }
 
+export const I18N_INIT_KEY = ['i18n-init'] as const;
+
 const LanguageContext = createContext<LanguageController | undefined>(undefined);
 
 export function useLanguageController(): LanguageController {
@@ -43,7 +45,7 @@ export function useLanguageController(): LanguageController {
 
 export function LanguageProvider({ children }: { readonly children: ReactNode }) {
   const { data } = useQuery({
-    queryKey: ['i18n-init'],
+    queryKey: I18N_INIT_KEY,
     queryFn: init,
     staleTime: Infinity,
     gcTime: Infinity,
@@ -56,6 +58,12 @@ export function LanguageProvider({ children }: { readonly children: ReactNode })
     return createLanguageController({
       client: mobileApi().client,
       hasSession: () => mobileApi().hasSession(),
+      // Ağ hatası (önbellek de yok) → false: profil değiştirilmez (Müfettiş #33 L3).
+      preload: (lang) =>
+        data.load(lang).then(
+          (result) => result.status === 'ok',
+          () => false,
+        ),
       apply: (lang) => applyLanguage(data.i18n, data.load, lang),
       setApiLanguage,
       remember: writeDeviceLanguage,

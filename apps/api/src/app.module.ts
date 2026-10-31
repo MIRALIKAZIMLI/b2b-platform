@@ -18,6 +18,7 @@ import { RedisModule } from './infrastructure/redis';
 import { SmsModule, type SmsRetryPolicy } from './infrastructure/sms';
 import { StorageModule } from './infrastructure/storage';
 import { AccessModule } from './modules/access';
+import { AppConfigModule } from './modules/app-config';
 import { BillingModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
@@ -53,6 +54,7 @@ export class AppModule implements NestModule {
         StorageModule.forRoot(env),
         HealthModule,
         SettingsModule,
+        AppConfigModule,
         I18nModule,
         BusinessesModule,
         BillingModule,

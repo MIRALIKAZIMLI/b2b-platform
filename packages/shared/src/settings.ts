@@ -28,6 +28,12 @@ function versionSetting(defaultValue: string): SettingDefinition<string> {
   return { schema: z.string().regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}$/), default: defaultValue };
 }
 
+/** Boş metin (ayarlanmamış) veya `https://` adresi. */
+function httpsUrlSetting(defaultValue: string): SettingDefinition<string> {
+  const schema = z.union([z.literal(''), z.url({ protocol: /^https$/ }).max(500)]);
+  return { schema, default: defaultValue };
+}
+
 /** Artan sırada (tekrarsız) tamsayı listesi. */
 function increasingIntListSetting(
   defaultValue: number[],
@@ -86,6 +92,10 @@ export const SETTING_DEFINITIONS = {
   'security.require_admin_2fa': boolSetting(false),
   'mobile.min_version.ios': versionSetting('0.0.0'),
   'mobile.min_version.android': versionSetting('0.0.0'),
+  'mobile.recommended_version.ios': versionSetting('0.0.0'),
+  'mobile.recommended_version.android': versionSetting('0.0.0'),
+  'mobile.store_url.ios': httpsUrlSetting(''),
+  'mobile.store_url.android': httpsUrlSetting(''),
   'system.maintenance': boolSetting(false),
   'idempotency.ttl_hours': intSetting(24, 1, 168),
   'idempotency.lock_seconds': intSetting(60, 5, 600),

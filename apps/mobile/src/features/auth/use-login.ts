@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { mobileApi, useStartSession } from '../../lib/session';
 import { useLanguageController } from '../language/language-provider';
+import { markProfileLanguageApplied } from '../shell/use-shell';
 import { type LoginFlow, type LoginOutcome, type LoginStep, createLoginFlow } from './login-flow';
 
 let current: { readonly phone: string; readonly step: LoginStep } | undefined;
@@ -51,6 +52,7 @@ export function useLoginOutcome(phone: string, onStep?: (step: LoginStep) => boo
       // Girişte profildeki dil geçerli olur (US-058 AC1).
       const { data } = await mobileApi().client.GET('/api/v1/me');
       await language.applyProfile(data?.preferredLanguage);
+      markProfileLanguageApplied(data?.id);
       router.replace('/');
       return;
     }

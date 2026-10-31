@@ -267,6 +267,8 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `access.permission_cache_seconds` | 60 (üyelik başına izin önbelleği ömrü; rol değişikliğinde silinir, F1.8b) | tamsayı | 1 | 3600 |
 | `security.require_admin_2fa` | `false` (işletme ayarı: `true` ise işletme admini TOTP kurmadan işletme bağlamlı uçları kullanamaz, US-002 AC3, F1.8b) | evet/hayır | — | — |
 | `mobile.min_version.ios`, `mobile.min_version.android` | `0.0.0` (ilk yayında ilk yayın sürümü yazılır, US-060) | sürüm metni (`X.Y.Z`) | — | — |
+| `mobile.recommended_version.ios`, `mobile.recommended_version.android` | `0.0.0` (bu sürümün altındaki uygulamaya kapatılabilir güncelleme önerisi, US-060 AC2, F1.14b) | sürüm metni (`X.Y.Z`) | — | — |
+| `mobile.store_url.ios`, `mobile.store_url.android` | boş (mağaza veya test dağıtım bağlantısı; boşken "Güncelle" düğmesi gösterilmez, adres F6'da yazılır, US-060 AC1, F1.14b) | boş veya `https://` adresi | — | — |
 | `system.maintenance` | `false` (RB-08, RB-13) | evet/hayır | — | — |
 | `idempotency.ttl_hours` | 24 | tamsayı | 1 | 168 |
 | `idempotency.lock_seconds` | 60 | tamsayı | 5 | 600 |

@@ -31,10 +31,12 @@ export default function CodeScreen() {
         autoComplete="sms-otp"
         textContentType="oneTimeCode"
         accessibilityLabel={t('auth.login.code_label')}
+        testID="code-input"
       />
       <Pressable
         style={styles.button}
         accessibilityRole="button"
+        testID="verify-code"
         disabled={busy || code.trim() === ''}
         onPress={() => void run(() => flow.verifyCode(challengeId, code))}
       >

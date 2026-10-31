@@ -257,6 +257,15 @@ Eklenmeyenler: `@fastify/cookie` (listede yok; yalnızca `b2b_rt` okunup yazıld
 
 Eklenmeyenler: `@testing-library/react-native`, `jest-expo` (listede yok; mantık saf TS modüllerinde Vitest ile test edilir, ekranlar telefonda elle ve F1.14b'de Maestro ile; Mimar kararı F1.14a). `@react-native-async-storage/async-storage` (yenileme anahtarı için yasak; önbellek `expo-file-system`'de).
 
+## 7.13 Kurulu sürümler (F1.14b, 2026-10-31)
+
+| Paket / araç | Kurulu sürüm | Not |
+| --- | --- | --- |
+| `expo-notifications` | 58.1.6 | mobil (`lib/push-device.ts`, gerektiğinde yüklenir); Expo SDK 58 `bundledNativeModules.json` `~58.1.6`. Android Expo Go uzaktan push vermez; gerçek cihazda push EAS derlemesiyle F6'da |
+| `@b2b/shared` | workspace | mobil artık çalışma zamanında da kullanır (ortak menü `menu.ts`, `compareVersions`); mobil `typecheck` önce shared'i derler |
+
+Eklenmeyenler: `semver` (listede yok; `X.Y.Z` için `packages/shared/src/version.ts`), `expo-device` (Expo Go tespiti `expo-constants` `executionEnvironment` ile).
+
 ## 8. Kullanılmayacak teknolojiler
 
 | Kullanılmaz | Yerine | Neden |

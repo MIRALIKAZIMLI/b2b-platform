@@ -25,3 +25,4 @@
 - F1.13a: web giriş, oturum, dil
 - F1.13b: web kabuğu
 - F1.14a: mobil giriş, oturum, dil
+- F1.14b: mobil kabuk

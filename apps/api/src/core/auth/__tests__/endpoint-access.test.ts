@@ -19,6 +19,8 @@ interface Endpoint {
 /** Bilinçli olarak kimliksiz (Public) veya yalnızca girişli (Authenticated) uçlar. */
 const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'GET /api/health': 'public',
+  // F1.14b: mobil açılışta, girişten önce sürüm kontrolü (US-060).
+  'GET /api/app-config': 'public',
   'GET /api/v1/i18n/:lang': 'public',
   'GET /api/v1/catalog/regions': 'public',
   'GET /api/v1/dev/sms-outbox': 'public',

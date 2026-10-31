@@ -1704,8 +1704,10 @@ paths:
                   minVersion: { type: string }
                   recommendedVersion: { type: string }
                   updateRequired: { type: boolean }
-                  storeUrl: { type: string, format: uri }
+                  storeUrl: { type: string, format: uri, description: 'Mağaza veya test dağıtım bağlantısı; ayarlanmamışsa alan yok (F1.14b)' }
                   maintenance: { type: boolean }
+                required: [minVersion, recommendedVersion, updateRequired, maintenance]
+        '422': { $ref: '#/components/responses/Error' }
   /api/health:
     get:
       tags: [system]
