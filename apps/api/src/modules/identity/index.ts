@@ -22,6 +22,7 @@ export {
   type VerifiedChallenge,
   type VerifyChallengeInput,
 } from './otp.service';
+export { IpKeyService } from './ip-key.service';
 export { parsePhoneE164, type ParsedPhone } from './phone';
 export { type TransactionalSms, TransactionalSmsService } from './transactional-sms.service';
 export { type DirectoryUser, UserDirectory } from './user-directory';

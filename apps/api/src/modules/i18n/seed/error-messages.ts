@@ -130,6 +130,11 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, ErrorMessageText>> = {
     ru: 'Для продолжения укажите VÖEN.',
     tr: 'Devam etmek için VÖEN girin.',
   },
+  SELLER_APPLICATION_ALREADY_PENDING: {
+    az: 'Bu VÖEN ilə baxılmaqda olan müraciət artıq var.',
+    ru: 'Заявка с этим VÖEN уже находится на рассмотрении.',
+    tr: 'Bu VÖEN ile incelenmekte olan bir başvuru zaten var.',
+  },
   LAST_ADMIN_PROTECTED: {
     az: 'Müəssisənin yeganə adminini silmək və ya rolunu dəyişmək olmaz.',
     ru: 'Нельзя удалить единственного администратора предприятия или изменить его роль.',

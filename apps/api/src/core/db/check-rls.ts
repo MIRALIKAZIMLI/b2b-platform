@@ -30,6 +30,8 @@ export interface RlsPolicyInfo {
   readonly using: string | null;
   /** WITH CHECK ifadesi (pg_get_expr); yoksa null. */
   readonly withCheck: string | null;
+  /** Politikanın rolleri (`TO ...`); PUBLIC `public` olarak gelir. Verilmezse PUBLIC sayılır. */
+  readonly roles?: readonly string[];
 }
 
 export interface RlsTableInfo {
@@ -87,9 +89,22 @@ const REQUIRED_EXPRESSIONS: Record<Exclude<PolicyCommand, 'r'>, ('using' | 'with
 
 const EXPRESSION_NAMES = { using: 'USING', withCheck: 'WITH CHECK' } as const;
 
+/**
+ * Yalnızca `migrator` rolüne verilmiş politika: app_user bu rolü üstlenemez, politika yalnızca
+ * migrator sahipli SECURITY DEFINER fonksiyonların içinde etkilidir (fonksiyonlar
+ * security-definer.int.test.ts ile ayrıca denetlenir; F2.1a, F2.2).
+ */
+function isDefinerOnly(policy: RlsPolicyInfo): boolean {
+  return (
+    policy.roles !== undefined &&
+    policy.roles.length > 0 &&
+    policy.roles.every((r) => r === 'migrator')
+  );
+}
+
 /** G sınıfı: herkes okur, yalnızca platform bağlamı yazar (F1.3). */
 function evaluateGlobalPolicies(policies: readonly RlsPolicyInfo[]): string[] {
-  const writes = policies.filter((p) => p.cmd !== 'r');
+  const writes = policies.filter((p) => p.cmd !== 'r' && !isDefinerOnly(p));
   if (writes.length === 0) {
     return [`G sınıfı tabloda ${PLATFORM_SETTING} koşullu yazma politikası yok`];
   }
@@ -134,7 +149,12 @@ interface CatalogRow {
   row_security: boolean;
   force_row_security: boolean;
   policy_count: number;
-  policies: { cmd: PolicyCommand; using: string | null; with_check: string | null }[];
+  policies: {
+    cmd: PolicyCommand;
+    using: string | null;
+    with_check: string | null;
+    roles: string[];
+  }[];
   app_user_can_select: boolean;
 }
 
@@ -148,7 +168,11 @@ const CATALOG_QUERY = `
          (select coalesce(json_agg(json_build_object(
                    'cmd', p.polcmd,
                    'using', pg_get_expr(p.polqual, p.polrelid),
-                   'with_check', pg_get_expr(p.polwithcheck, p.polrelid)) order by p.polname), '[]')
+                   'with_check', pg_get_expr(p.polwithcheck, p.polrelid),
+                   'roles', (select coalesce(json_agg(case when r.oid = 0 then 'public'
+                                                           else pg_get_userbyid(r.oid)::text end
+                                                      order by 1), '[]')
+                               from unnest(p.polroles) as r(oid))) order by p.polname), '[]')
             from pg_policy p where p.polrelid = c.oid) as policies,
          -- Kolon düzeyindeki GRANT'ları da yakalar (has_table_privilege yakalamaz).
          has_any_column_privilege('app_user', c.oid, 'SELECT') as app_user_can_select
@@ -187,7 +211,12 @@ export async function readRlsTables(
     rowSecurity: row.row_security,
     forceRowSecurity: row.force_row_security,
     policyCount: row.policy_count,
-    policies: row.policies.map((p) => ({ cmd: p.cmd, using: p.using, withCheck: p.with_check })),
+    policies: row.policies.map((p) => ({
+      cmd: p.cmd,
+      using: p.using,
+      withCheck: p.with_check,
+      roles: p.roles,
+    })),
     appUserCanSelect: row.app_user_can_select,
   }));
 }

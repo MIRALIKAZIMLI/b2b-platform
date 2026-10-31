@@ -427,7 +427,8 @@ describe('F2.1a admin toptancı açma (entegrasyon)', () => {
       [{ timezone: 'Mars/Olympus' }, 'timezone'],
       [{ voen: '1234567893' }, 'voen'],
       [{ ownerPhone: '+99412' }, 'ownerPhone'],
-      [{ applicationId: '0190f0a0-0000-7000-8000-000000000003' }, 'applicationId'],
+      // applicationId F2.2'de desteklendi (seller-applications.int.test.ts: olmayan başvuru 404).
+      [{ applicationId: 'not-a-uuid' }, 'applicationId'],
     ];
     for (const [override, field] of cases) {
       const body = await sellerBody(override);

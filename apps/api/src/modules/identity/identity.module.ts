@@ -4,6 +4,7 @@ import { I18nModule } from '../i18n';
 import { SettingsModule } from '../settings';
 import { AuthController } from './auth.controller';
 import { IDENTITY_CONFIG, type IdentityConfig } from './identity.config';
+import { IpKeyService } from './ip-key.service';
 import { OtpRateLimiter } from './otp-rate-limiter';
 import { OtpController } from './otp.controller';
 import { OtpRepository } from './otp.repository';
@@ -43,6 +44,7 @@ export class IdentityModule {
         TotpService,
         UserDirectory,
         TransactionalSmsService,
+        IpKeyService,
       ],
       // F1.8b: access modülü (AccessGuard, /me) TokenService, SessionService ve TotpRepository kullanır.
       // F2.1a: access davet servisi UserDirectory ve TransactionalSmsService kullanır.
@@ -53,6 +55,8 @@ export class IdentityModule {
         TotpRepository,
         UserDirectory,
         TransactionalSmsService,
+        // F2.2: kimliksiz toptancı başvurusunun IP hız sınırı (businesses).
+        IpKeyService,
       ],
     };
   }

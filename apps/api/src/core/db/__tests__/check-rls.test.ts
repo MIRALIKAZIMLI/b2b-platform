@@ -130,4 +130,22 @@ describe('evaluateRlsTable — G sınıfı (F1.3)', () => {
   it('F1.3-AC7: USING (true) yalnızca SELECT politikasında kabul', () => {
     expect(evaluateRlsTable(gTable([...G_POLICIES, policy('r', 'true', null)]))).toEqual([]);
   });
+
+  it('F2.2: yalnızca migrator rolüne verilmiş (SECURITY DEFINER) yazma politikası G kuralından muaf', () => {
+    const definer = { ...policy('a', null, "status = 'pending'"), roles: ['migrator'] };
+    expect(evaluateRlsTable(gTable([...G_POLICIES, definer]))).toEqual([]);
+  });
+
+  it('F2.2: migrator dışında rol taşıyan veya PUBLIC yazma politikası muaf değil', () => {
+    const mixed = { ...policy('a', null, 'true'), roles: ['app_user', 'migrator'] };
+    const open = { ...policy('a', null, 'true'), roles: ['public'] };
+    expect(evaluateRlsTable(gTable([...G_POLICIES, mixed]))).not.toEqual([]);
+    expect(evaluateRlsTable(gTable([...G_POLICIES, open]))).not.toEqual([]);
+  });
+
+  it('F2.2: yalnızca migrator yazma politikası olan G tablosu → platform yazma politikası yok hatası', () => {
+    const definer = { ...policy('a', null, 'true'), roles: ['migrator'] };
+    const problems = evaluateRlsTable(gTable([policy('r', 'true', null), definer]));
+    expect(problems.join(' ')).toContain('yazma politikası');
+  });
 });

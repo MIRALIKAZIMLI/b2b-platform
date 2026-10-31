@@ -47,6 +47,8 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'POST /api/v1/files/:id/complete': 'authenticated',
   // F2.1a: davet kabulü; kabul eden henüz üye değil (R17), telefon eşleşmesi fonksiyonda (R16).
   'POST /api/v1/team/invitations/accept': 'authenticated',
+  // F2.2: kimliksiz toptancı başvuru formu (US-008); IP hız sınırı serviste.
+  'POST /api/v1/seller-applications': 'public',
 };
 
 /** Platform uçlarının rolleri (F2.1a S1 = A: toptancıyı süper admin ve operasyon açar). */
@@ -55,6 +57,8 @@ const EXPECTED_PLATFORM: Record<string, readonly string[]> = {
   'GET /api/v1/admin/sellers': ['super_admin', 'operations'],
   'POST /api/v1/admin/sellers/:id/activation': ['super_admin', 'operations'],
   'GET /api/v1/admin/plans': ['super_admin', 'operations'],
+  'GET /api/v1/admin/seller-applications': ['super_admin', 'operations'],
+  'POST /api/v1/admin/seller-applications/:id/reject': ['super_admin', 'operations'],
 };
 
 function join(...parts: (string | undefined)[]): string {

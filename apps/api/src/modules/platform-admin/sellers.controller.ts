@@ -23,25 +23,20 @@ function isTimeZone(value: string): boolean {
 }
 
 /** openapi `POST /api/v1/admin/sellers` gövdesi. */
-const createBodySchema = z
-  .strictObject({
-    legalName: z.string().trim().min(1).max(200),
-    voen: voenSchema,
-    regionId: z.uuid(),
-    addressLine: z.string().trim().min(1).max(300).optional(),
-    ownerPhone: z.string().max(20),
-    ownerName: z.string().trim().min(1).max(120),
-    planId: z.uuid(),
-    serviceAreaRegionIds: z.array(z.uuid()).max(200).default([]),
-    currency: z.string().regex(/^[A-Z]{3}$/),
-    timezone: z.string().max(64).refine(isTimeZone, { message: 'invalid_timezone' }),
-    // Başvurudan açma F2.2'de; bu adımda alan reddedilir (Mimar kararı, plan §7 soru 3).
-    applicationId: z.uuid().optional(),
-  })
-  .refine((body) => body.applicationId === undefined, {
-    path: ['applicationId'],
-    message: 'not_supported',
-  });
+const createBodySchema = z.strictObject({
+  legalName: z.string().trim().min(1).max(200),
+  voen: voenSchema,
+  regionId: z.uuid(),
+  addressLine: z.string().trim().min(1).max(300).optional(),
+  ownerPhone: z.string().max(20),
+  ownerName: z.string().trim().min(1).max(120),
+  planId: z.uuid(),
+  serviceAreaRegionIds: z.array(z.uuid()).max(200).default([]),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  timezone: z.string().max(64).refine(isTimeZone, { message: 'invalid_timezone' }),
+  // F2.2: başvurudan açma; başvuru aynı işlemde `approved` olur.
+  applicationId: z.uuid().optional(),
+});
 
 const listQuerySchema = z.object({
   cursor: z.uuid().optional(),
@@ -49,7 +44,7 @@ const listQuerySchema = z.object({
 });
 
 /** S1 = A (platform sahibi, 2026-10-31): toptancıyı süper admin ve operasyon ekibi açar. */
-const SELLER_ADMINS = ['super_admin', 'operations'] as const;
+export const SELLER_ADMINS = ['super_admin', 'operations'] as const;
 
 /** openapi `/api/v1/admin/sellers*` ve `GET /api/v1/admin/plans` (F2.1a, US-009). */
 @Controller('api/v1/admin')

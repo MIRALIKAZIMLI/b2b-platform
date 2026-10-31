@@ -99,6 +99,13 @@
       "when": 1793442886154,
       "tag": "0013_invitation_accept",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793457740080,
+      "tag": "0014_seller_applications",
+      "breakpoints": true
     }
   ]
 }
