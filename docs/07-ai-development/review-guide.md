@@ -30,14 +30,15 @@ Başka bir modül, ADR veya belge yalnızca diff'in etkisini anlamak için gerek
 
 ### Aşama 1: Otomatik kontroller
 
-- CI durumuna bakılır. 9 kontrol vardır: CI'ın 8 işi ve GitGuardian. Kırmızı iş varsa yalnızca hatalı bölüm okunur, logun tamamı okunmaz.
+- CI durumuna bakılır. 10 kontrol vardır: CI'ın 9 işi (`lint`, `typecheck`, `secrets`, `unit`, `integration`, `contract`, `e2e`, `deps-audit`, `build`) ve GitGuardian. Kırmızı iş varsa yalnızca hatalı bölüm okunur, logun tamamı okunmaz.
   - Kullanıcının bilgisayarında: `gh pr checks <n>`, `gh run view <run-id> --log-failed | tail -n 80`.
   - Bulut oturumunda GraphQL kapalıdır, bu yüzden `gh pr checks` çalışmaz. Durum için: `gh api repos/miralikazimli/b2b-platform/commits/<sha>/check-runs --jq '.check_runs[]|[.name,.conclusion]|@tsv'`. Log için GitHub MCP `get_job_logs` aracı yalnızca hatalı iş için ve son satırlarla kullanılır.
 - CI'ın çalıştırdığı testler yerelde yeniden çalıştırılmaz. Yerelde yalnızca bir şüpheyi doğrulamak için hedefli tek test çalıştırılır.
 - **Müfettiş CI bitince başlar** ([speed-and-tokens.md](speed-and-tokens.md) H8). PR olayı onu uyandırır; beklemek token harcamaz.
-  - `lint`, `typecheck`, `unit` veya `secrets` kırmızıysa (mekanik hata) kod incelemesi **yapılmaz**. PR'a tek satır yazılır: `Müfettiş — CI kırmızı (<iş adı>); düzeltme push'u bekleniyor.` Bu bir tur sayılmaz. Usta düzeltip push eder, inceleme 1. turla başlar.
-  - Yalnızca `integration`, `isolation`, `e2e` veya `contract` kırmızıysa kod incelemesi aynı turda yapılır; bu hatalar tasarım sorunu olabilir ve bulgularla birlikte raporlanır.
-  - PR açıklamasında "Yerel kapı" çıktısı yoksa (H9) inceleme yapılmaz; tek satır: `Müfettiş — Yerel kapı çıktısı eksik.`
+  - `lint`, `typecheck`, `unit`, `secrets`, `deps-audit`, `build` veya GitGuardian kırmızıysa (mekanik hata) kod incelemesi **yapılmaz**. PR'a tek satır yazılır: `Müfettiş — CI kırmızı (<iş adı>); düzeltme push'u bekleniyor.` Bu bir tur sayılmaz. Usta düzeltip push eder, inceleme 1. turla başlar.
+  - Yalnızca `integration` (izolasyon testleri dahil), `e2e` veya `contract` kırmızıysa kod incelemesi aynı turda yapılır; bu hatalar tasarım sorunu olabilir ve bulgularla birlikte raporlanır.
+  - `unit` kırmızısı bir AC mantığı hatasını gösteriyorsa Müfettiş, Usta'nın düzeltmesini 1. turda bu testle birlikte dikkatle inceler.
+  - PR açıklamasında "Yerel kapı" çıktısı yoksa (H9) inceleme yapılmaz; tek satır: `Müfettiş — Yerel kapı çıktısı eksik.` Diff yalnızca `docs/`, `*.md` veya şablon dosyalarıysa "Yerel kapı: yalnız belge" yazmak yeter.
 - CI bitmeden ONAYLA verilmez. CI'ı beklemek için kısa aralıklarla sorgu yapılmaz; PR olayları izlenir.
 
 ### Aşama 2: Kod incelemesi (1. tur)
@@ -181,7 +182,7 @@ Usta PR açmadan önce bu listeyi kendi diff'ine uygular. Müfettiş her turda k
 Usta yalnızca aşağıdakilerin hepsi doğruysa birleştirir:
 
 1. Müfettiş'in son yorumu **ONAYLA** ve başlıktaki SHA, PR'ın şu anki head SHA'sı (`gh pr view <n> --json headRefOid`). ONAYLA'dan sonra yeni push gelmişse onay geçersizdir ve yeniden inceleme gerekir.
-2. `gh pr checks <n>`: 9/9 yeşil.
+2. `gh pr checks <n>`: 10/10 yeşil.
 3. Çakışma yok (`gh pr view <n> --json mergeable` → `MERGEABLE`).
 4. Komut: `gh pr merge <n> --squash`. `--merge` veya `--rebase` kullanılmaz.
 

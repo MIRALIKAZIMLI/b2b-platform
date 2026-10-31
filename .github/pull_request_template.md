@@ -13,7 +13,7 @@
 
 ## Yerel kapı
 
-<!-- Zorunlu (speed-and-tokens.md H9). Son push'tan önce çalıştırıldı; yalnızca hatalar ve özet satırı. Bu bölüm boşsa Müfettiş incelemeye başlamaz. -->
+<!-- Zorunlu (speed-and-tokens.md H9). Son push'tan önce çalıştırıldı; yalnızca hatalar ve özet satırı. Bu bölüm boşsa Müfettiş incelemeye başlamaz. Yalnız belge/şablon PR'ında "Yerel kapı: yalnız belge" yazmak yeter. -->
 
 ```text
 pnpm -s lint && pnpm -s typecheck
