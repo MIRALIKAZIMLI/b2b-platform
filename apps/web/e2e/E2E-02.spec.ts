@@ -1,5 +1,6 @@
 // E2E-02 (test-strategy §5) ve F2.1b kabul testleri: platform admini toptancı açar → yetkili SMS'teki
 // aktivasyon bağlantısıyla OTP girişi yapar → işletme admini olarak `/seller` açılır (US-009).
+import { randomBytes } from 'node:crypto';
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import {
   addMembership,
@@ -155,7 +156,8 @@ test('F2.1b-AC3: aynı VÖEN → VÖEN alanında hata, kayıt yok', async ({ bro
 test('F2.1b-AC4: token yüklemeden sonra adres çubuğunda yok; sayfa Referrer-Policy: no-referrer', async ({
   page,
 }) => {
-  const response = await page.goto('/az/activate?token=e2e-sadece-bicim-denemesi');
+  // Biçimce token gibi, gerçek bir daveti olmayan rastgele değer (T2: testte sabit token yok).
+  const response = await page.goto(`/az/activate?token=${randomBytes(32).toString('base64url')}`);
   expect(response?.headers()['referrer-policy']).toBe('no-referrer');
   await expect(page.locator('meta[name="referrer"]')).toHaveAttribute('content', 'no-referrer');
   await expect(page.locator('input[name="phone"]')).toBeVisible();
