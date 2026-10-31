@@ -262,6 +262,7 @@ Eklenmeyenler: `@testing-library/react-native`, `jest-expo` (listede yok; mantı
 | Paket / araç | Kurulu sürüm | Not |
 | --- | --- | --- |
 | `expo-notifications` | 58.1.6 | mobil (`lib/push-device.ts`, gerektiğinde yüklenir); Expo SDK 58 `bundledNativeModules.json` `~58.1.6`. Android Expo Go uzaktan push vermez; gerçek cihazda push EAS derlemesiyle F6'da |
+| `node-forge` (geçişli: `expo > @expo/cli`) | 1.4.2 (kök `pnpm.overrides`) | 2026-10-30'da yayımlanan 5 yüksek açık (`<=1.4.0`, GHSA-5x38-2vff-x55p vb.) main'de `deps-audit`'i kırdı; `@expo/cli` `^1.4.0` istediği için yama sürümü uyumlu. Expo kendi bağımlılığını güncelleyince override kaldırılır |
 | `@b2b/shared` | workspace | mobil artık çalışma zamanında da kullanır (ortak menü `menu.ts`, `compareVersions`); mobil `typecheck` önce shared'i derler |
 
 Eklenmeyenler: `semver` (listede yok; `X.Y.Z` için `packages/shared/src/version.ts`), `expo-device` (Expo Go tespiti `expo-constants` `executionEnvironment` ile).
