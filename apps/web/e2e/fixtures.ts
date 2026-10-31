@@ -1,6 +1,7 @@
 // Uçtan uca test yardımcıları (F1.13a): test kullanıcısı (migrator, platform bağlamı; users FORCE
 // RLS) ve mock SMS kutusundan kod okuma (`/api/v1/dev/sms-outbox`, yalnız local/test).
-import { randomInt, randomUUID } from 'node:crypto';
+// F2.1b: platform ekibi kullanıcısı + TOTP kurulumu, test bölgesi, SMS'teki aktivasyon bağlantısı.
+import { createHmac, randomInt, randomUUID } from 'node:crypto';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import pg from 'pg';
@@ -17,11 +18,20 @@ async function withMigrator<T>(fn: (client: pg.Client) => Promise<T>): Promise<T
   }
 }
 
+export function randomPhone(): string {
+  return `+99455${randomInt(0, 10_000_000).toString().padStart(7, '0')}`;
+}
+
+/** Biçimce geçerli VÖEN (10 rakam, son hane 1 = tüzel kişi). */
+export function randomVoen(): string {
+  return `${randomInt(0, 1_000_000_000).toString().padStart(9, '0')}1`;
+}
+
 export async function createUser(
   preferred: string | null = null,
 ): Promise<{ id: string; phone: string }> {
   const id = randomUUID();
-  const phone = `+99455${randomInt(0, 10_000_000).toString().padStart(7, '0')}`;
+  const phone = randomPhone();
   await withMigrator(async (client) => {
     await client.query('begin');
     await client.query("select set_config('app.is_platform', 'true', true)");
@@ -102,20 +112,109 @@ export async function addMembership(
   return { businessId };
 }
 
-async function latestCode(request: APIRequestContext, phone: string): Promise<string> {
+/** Platform ekibi kullanıcısı (`platform_staff` S tablosu). TOTP girişte kurulur. */
+export async function createPlatformStaff(role: string): Promise<{ id: string; phone: string }> {
+  const user = await createUser();
+  await withMigrator(async (client) => {
+    await client.query('insert into platform_staff (user_id, role) values ($1, $2)', [
+      user.id,
+      role,
+    ]);
+  });
+  return user;
+}
+
+/** Test bölgesi (şehir): adı benzersiz, formda seçilir. */
+export async function createRegion(): Promise<{ id: string; name: string }> {
+  const name = `E2E şəhər ${randomUUID().slice(0, 8)}`;
+  const id = await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    const result = await client.query<{ id: string }>(
+      `insert into regions (country_code, parent_id, type, name)
+       values ('AZ', null, 'city', jsonb_build_object('az', $1::text)) returning id`,
+      [name],
+    );
+    await client.query('commit');
+    return result.rows[0]?.id ?? '';
+  });
+  return { id, name };
+}
+
+async function smsBodies(request: APIRequestContext, phone: string): Promise<string[]> {
   const response = await request.get(`${API_URL}/api/v1/dev/sms-outbox`, { params: { phone } });
   expect(response.ok()).toBe(true);
   const json = (await response.json()) as { items: { body: string }[] };
-  return /\b(\d{6})\b/.exec(json.items[0]?.body ?? '')?.[1] ?? '';
+  return json.items.map((item) => item.body);
 }
 
-/** Giriş ekranında telefon → SMS kodu; oturum açılınca dönen adres beklenir. */
-export async function loginThroughUi(page: Page, locale: string, phone: string): Promise<void> {
-  await page.goto(`/${locale}/login`);
+async function latestCode(request: APIRequestContext, phone: string): Promise<string> {
+  const [latest] = await smsBodies(request, phone);
+  return /\b(\d{6})\b/.exec(latest ?? '')?.[1] ?? '';
+}
+
+/** Son aktivasyon SMS'indeki bağlantının yolu (`/<dil>/activate?token=…`; web köküne göre). */
+export async function latestActivationPath(
+  request: APIRequestContext,
+  phone: string,
+): Promise<string> {
+  const body = (await smsBodies(request, phone)).find((text) => text.includes('/activate?token='));
+  const link = /(https?:\/\/\S+\/activate\?token=[^\s]+)/.exec(body ?? '')?.[1];
+  expect(link, 'aktivasyon SMS bağlantısı').toBeDefined();
+  const url = new URL(link ?? '');
+  return `${url.pathname}${url.search}`;
+}
+
+/** RFC 6238 TOTP (SHA-1, 6 hane, 30 sn); `offsetSteps` sonraki adımın kodu için. */
+export function totpCode(base32Secret: string, offsetSteps = 0): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const char of base32Secret.replace(/=+$/, '').toUpperCase()) {
+    bits += alphabet.indexOf(char).toString(2).padStart(5, '0');
+  }
+  const bytes = Buffer.from((bits.match(/.{8}/g) ?? []).map((byte) => parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000) + offsetSteps));
+  const hmac = createHmac('sha1', bytes).update(counter).digest();
+  const offset = (hmac[hmac.length - 1] ?? 0) & 0x0f;
+  const value = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+  return value.toString().padStart(6, '0');
+}
+
+/** Ekrandaki telefon → SMS kodu adımları (giriş formu hangi sayfada olursa). */
+export async function completeOtpLogin(page: Page, phone: string): Promise<void> {
   await page.locator('input[name="phone"]').fill(phone);
   await page.locator('button[type="submit"]').click();
   await expect(page.locator('input[name="code"]')).toBeVisible();
   const code = await latestCode(page.request, phone);
   await page.locator('input[name="code"]').fill(code);
   await page.locator('button[type="submit"]').click();
+}
+
+/** Giriş ekranında telefon → SMS kodu; oturum açılınca dönen adres beklenir. */
+export async function loginThroughUi(page: Page, locale: string, phone: string): Promise<void> {
+  await page.goto(`/${locale}/login`);
+  await completeOtpLogin(page, phone);
+}
+
+/**
+ * Platform ekibi girişi (US-002): SMS kodu → TOTP kurulumu (ekrandaki anahtarla) → kurtarma
+ * kodları → TOTP. Kurulum onayı bir adımı kullandığı için girişte sonraki adımın kodu girilir
+ * (sunucu ±1 adım kabul eder, aynı adımı ikinci kez kabul etmez).
+ */
+export async function loginPlatformThroughUi(
+  page: Page,
+  locale: string,
+  phone: string,
+): Promise<void> {
+  await loginThroughUi(page, locale, phone);
+  const uri = await page.locator('form code').first().textContent();
+  const secret = new URL(uri ?? '').searchParams.get('secret') ?? '';
+  await page.locator('input[name="code"]').fill(totpCode(secret));
+  await page.locator('button[type="submit"]').click();
+  await expect(page.locator('form li code').first()).toBeVisible();
+  await page.locator('button[type="submit"]').click();
+  await page.locator('input[name="code"]').fill(totpCode(secret, 1));
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL(`**/${locale}/admin`);
 }

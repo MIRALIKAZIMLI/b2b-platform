@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@b2b/api-client'],
   // Aynı köken: yenileme cookie'si (`Path=/api/v1/auth`, `Domain` yok) web host'unda kalır,
   // CORS gerekmez (F1.13a, kart emin olunmayan nokta 2).
+  // Aktivasyon sayfasının adresinde davet token'ı var (F2.1b-AC4): referrer hiç gönderilmez.
+  headers() {
+    return Promise.resolve([
+      {
+        source: '/:locale/activate',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+    ]);
+  },
   rewrites() {
     return Promise.resolve([{ source: '/api/v1/:path*', destination: `${apiUrl}/api/v1/:path*` }]);
   },

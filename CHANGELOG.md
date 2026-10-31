@@ -27,4 +27,5 @@
 - F1.14a: mobil giriş, oturum, dil
 - F1.14b: mobil kabuk
 - F2.1a: admin toptancı açma API ve aktivasyon daveti
+- F2.1b: admin toptancı ekranları ve aktivasyon sayfası
 - docs: token kuralları H8–H13 (CI bitince Müfettiş, zorunlu yerel kapı, model seçimi, toplu araç çağrısı, sabit yük sınırı, konuşma hijyeni), review-guide 1.1
