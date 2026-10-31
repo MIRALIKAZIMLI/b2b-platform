@@ -215,6 +215,8 @@ Onayımı bekle.
 - **Kabul:** US-009 AC1–AC4.
 - **Test:** Entegrasyon + Playwright E2E-02.
 
+> **Bölündü (Mimar, 2026-10-31):** F2.1a — API: toptancı açma (tek platform işlemi), aktivasyon daveti ve yeniden gönderme, davet kabulü (`invitation_accept` SECURITY DEFINER), `GET /admin/plans` (yalnız okuma). F2.1b — admin toptancı ekranları, aktivasyon sayfası, platform menüsü, Playwright E2E-02. Kartlar: `docs/tasks/F2.1a.md`, `docs/tasks/F2.1b.md`. F2 sırası ve açık sorular: `docs/tasks/F2-faz-spesifikasyonu.md`.
+
 ### F2.2 — Toptancı başvuru formu
 
 - **Belgeler:** US-008.
