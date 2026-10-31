@@ -82,6 +82,8 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 8. **Bulgu döngüsü:** Usta PR açmadan önce `review-guide.md` §5'teki bilinen tuzakları kendi diff'inde kontrol eder. Müfettiş raporuna PR'da tek yorumla yanıt verir: her bulgu için "düzeltildi" ya da "itiraz + kanıt". Aynı bulgu için en fazla iki düzeltme turu yapılır, sonra karar Mimar'a gider (§6). Usta birleştirmeden önce §7'deki birleştirme kapısını uygular.
 9. **Doğrudan döngü ve limit:** Müfettiş PR olaylarıyla uyanır, Usta bulguyu PR yorumundan okur; Mimar yalnızca ilk inceleme isteğini ve son kararı görür (`review-guide.md` §6 madde 7). Kullanıcı Usta çalışırken bilgisayarın uyumasını kapatır. Ayrıntı ve ölçüm: `docs/07-ai-development/speed-and-tokens.md`.
 10. **PR boyutu:** elle yazılmış diff ~2.000 satırı geçecekse (üretilmiş dosyalar hariç) planda a/b bölmeyi öner (`speed-and-tokens.md` H7).
+11. **Yerel kapı ve CI sırası:** Usta her push'tan önce lint + typecheck + değişen modül testini çalıştırır ve PR açıklamasının "Yerel kapı" bölümüne yazar (yalnız belge PR'ında "yalnız belge"). Müfettiş CI bitmeden ve yerel kapı çıktısı olmadan incelemeye başlamaz; mekanik kırmızıda (lint, typecheck, unit, secrets) tek satır yazar (H8, H9).
+12. **Model ve araç kullanımı:** Model kartın "Model" satırına göre seçilir (Opus riskli adımlar, Sonnet belge ve düşük riskli işler; H10). Araç çağrıları az ve topludur: dosya bir kez, bölümüyle okunur; çıktılar sessiz modda (H11). `ai-context.md` ≤ 15 KB, kart ≤ 8 KB (H12). Usta çalışırken yan konuşma açılmaz (H13).
 
 ## Yapma
 

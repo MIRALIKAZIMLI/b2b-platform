@@ -9,6 +9,7 @@
 | PR başlığı | `<ID> <kısa açıklama>` |
 | Bağımlılık | <bitmiş olması gereken adımlar> |
 | Müfettiş | Zorunlu / Önerilir / Gerekmez — <gerekçe> |
+| Model | Opus / Sonnet — Opus: Risk yüksek veya Müfettiş Zorunlu; Sonnet: belge, düşük riskli ekran (`speed-and-tokens.md` H10) |
 | İnceleme odağı | <Müfettiş'in derin bakacağı 2–4 konu veya dosya; `review-guide.md` §4 riskli yollarından> |
 | Tahmin | S / M / L |
 | Boyut | elle yazılmış diff ~2.000 satırı geçecekse a/b'ye bölünür (`speed-and-tokens.md` H7) |
@@ -54,7 +55,7 @@ Her satır en az bir test. Test adı AC kimliğiyle başlar.
 
 ## Yerel kontrol (Usta)
 
-Usta yerelde yalnızca bunu çalıştırır (`speed-and-tokens.md` H1). Tam takım yerelde çalışmaz.
+Usta yerelde yalnızca bunu çalıştırır (`speed-and-tokens.md` H1) ve **her push'tan önce** çalıştırır; özet satırı PR açıklamasının "Yerel kapı" bölümüne yazılır (H9). Tam takım yerelde çalışmaz.
 
 ```bash
 pnpm -s lint && pnpm -s typecheck
