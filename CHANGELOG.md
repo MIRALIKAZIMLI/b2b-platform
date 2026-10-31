@@ -31,3 +31,4 @@
 - docs: token kuralları H8–H13 (CI bitince Müfettiş, zorunlu yerel kapı, model seçimi, toplu araç çağrısı, sabit yük sınırı, konuşma hijyeni), review-guide 1.1
 - F2.2a: toptancı başvurusu API (kimliksiz form, admin liste/ret, başvurudan toptancı açma); docs: UI/UX kuralları (ui-guidelines.md)
 - F2.2b: web Tailwind kurulumu, toptancı başvuru sayfası, giriş ekranında başvuru bağlantısı, admin başvuru ekranı
+- F2.3a: perakendeci kayıt API'si (onboarding, pendingToken, telefon kapsamlı idempotens), faaliyet türleri
