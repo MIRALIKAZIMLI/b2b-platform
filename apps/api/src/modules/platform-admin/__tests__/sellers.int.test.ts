@@ -387,7 +387,10 @@ describe('F2.1a admin toptancı açma (entegrasyon)', () => {
 
     const ownerToken = await api.loginWithOtp(body.ownerPhone);
     expect((await accept(ownerToken, 'uydurma-token')).status).toBe(404);
-    expect((await accept(ownerToken, `${token.slice(0, -1)}A`)).status).toBe(404);
+    // Son karakter kesin farklı (Müfettiş M1: sabit "A" 1/64 ihtimalle aynı olurdu).
+    const tampered = `${token.slice(0, -1)}${token.endsWith('A') ? 'B' : 'A'}`;
+    expect(tampered).not.toBe(token);
+    expect((await accept(ownerToken, tampered)).status).toBe(404);
     expect((await accept(ownerToken, token)).status).toBe(200);
     const reused = await accept(ownerToken, token);
     expect(reused.status).toBe(404);
