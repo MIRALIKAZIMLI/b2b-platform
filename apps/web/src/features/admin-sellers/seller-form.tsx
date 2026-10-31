@@ -7,11 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, type SyntheticEvent, useState } from 'react';
 import { errorCodeOf } from '../../lib/error-code';
-import {
-  clearSelectedApplication,
-  selectedApplication,
-  sellerFormFromApplication,
-} from '../admin-seller-applications/handoff';
+import { clearSelectedApplication, initialSellerForm } from '../admin-seller-applications/handoff';
 import {
   type Option,
   useCreateSeller,
@@ -21,7 +17,6 @@ import {
 } from './api';
 import {
   apiFormErrors,
-  emptySellerForm,
   type FieldErrors,
   type SellerField,
   type SellerFormValues,
@@ -41,11 +36,8 @@ export function SellerForm({ applicationId }: { applicationId?: string } = {}) {
   const plans = usePlanOptions(locale);
   const create = useCreateSeller();
   const resend = useResendActivation();
-  const [values, setValues] = useState<SellerFormValues>(() => {
-    const application =
-      applicationId === undefined ? undefined : selectedApplication(applicationId);
-    return application === undefined ? emptySellerForm() : sellerFormFromApplication(application);
-  });
+  const [initial] = useState(() => initialSellerForm(applicationId));
+  const [values, setValues] = useState<SellerFormValues>(initial.values);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [general, setGeneral] = useState<string | undefined>();
   /** SMS gitmedi: işletme açıldı, admin yeniden gönderir. */
@@ -172,7 +164,7 @@ export function SellerForm({ applicationId }: { applicationId?: string } = {}) {
   return (
     <form onSubmit={onSubmit} aria-busy={create.isPending} noValidate>
       <h1>{t('title')}</h1>
-      {applicationId !== undefined && <p role="status">{t('from_application')}</p>}
+      {initial.prefilled && <p role="status">{t('from_application')}</p>}
       {text('legalName', t('legal_name'), { autoComplete: 'organization' })}
       {text('voen', t('voen'))}
       {choice('regionId', t('region'), regionList)}

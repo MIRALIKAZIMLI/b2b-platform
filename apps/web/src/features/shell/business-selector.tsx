@@ -23,10 +23,11 @@ export function BusinessSelector({
   const select = useSelectBusiness();
   if (memberships.length === 0) return null;
   return (
-    <label>
+    <label className="flex items-center gap-3 text-sm font-medium text-slate-500">
       {t('business_label')}
       <select
         name="business"
+        className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-all duration-200 hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
         value={activeBusinessId ?? ''}
         onChange={(event) => {
           select(event.target.value);

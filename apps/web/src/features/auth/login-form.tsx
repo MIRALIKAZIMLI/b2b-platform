@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { type SyntheticEvent, useState } from 'react';
 import { errorCodeOf as errorCode } from '../../lib/error-code';
 import { useStartSession, webApi } from '../../lib/session';
+import { Button, Field, TextInput } from '../ui/primitives';
 
 type AuthResult = components['schemas']['AuthResult'];
 
@@ -143,9 +144,9 @@ export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
   }
 
   const codeField = (label: string, autoComplete: string) => (
-    <label>
-      {label}
-      <input
+    <Field id="login-code" label={label}>
+      <TextInput
+        id="login-code"
         name="code"
         value={code}
         onChange={(event) => {
@@ -153,19 +154,22 @@ export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
         }}
         inputMode={step.kind === 'code' ? 'numeric' : 'text'}
         autoComplete={autoComplete}
+        className="tabular-nums tracking-widest"
         required
       />
-    </label>
+    </Field>
   );
 
+  const hint = 'text-sm font-normal text-slate-500';
+
   return (
-    <form onSubmit={onSubmit} aria-busy={busy}>
-      <h1>{t('title')}</h1>
+    <form onSubmit={onSubmit} aria-busy={busy} className="space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{t('title')}</h1>
       {step.kind === 'phone' && (
         <>
-          <label>
-            {t('phone_label')}
-            <input
+          <Field id="login-phone" label={t('phone_label')}>
+            <TextInput
+              id="login-phone"
               name="phone"
               type="tel"
               value={phone}
@@ -175,58 +179,74 @@ export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
               autoComplete="tel"
               required
             />
-          </label>
-          <button type="submit" disabled={busy}>
+          </Field>
+          <Button type="submit" className="w-full" disabled={busy}>
             {t('send_code')}
-          </button>
+          </Button>
         </>
       )}
       {step.kind === 'code' && (
         <>
-          <p>{t('code_sent', { phone })}</p>
+          <p className={hint}>{t('code_sent', { phone })}</p>
           {codeField(t('code_label'), 'one-time-code')}
-          <button type="submit" disabled={busy}>
-            {t('verify')}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setStep({ kind: 'phone' });
-            }}
-          >
-            {t('change_phone')}
-          </button>
+          <div className="flex flex-col gap-2">
+            <Button type="submit" disabled={busy}>
+              {t('verify')}
+            </Button>
+            <Button
+              variant="quiet-danger"
+              className="hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+              onClick={() => {
+                setStep({ kind: 'phone' });
+              }}
+            >
+              {t('change_phone')}
+            </Button>
+          </div>
         </>
       )}
       {(step.kind === 'totp' || step.kind === 'totp_setup') && (
         <>
           {step.kind === 'totp_setup' && (
-            <>
-              <p>{t('totp_setup_hint')}</p>
-              <code>{step.otpauthUri}</code>
-            </>
+            <div className="space-y-2">
+              <p className={hint}>{t('totp_setup_hint')}</p>
+              <code className="block rounded-xl bg-slate-50 px-3 py-2 font-mono text-xs break-all text-slate-700 ring-1 ring-slate-200/80">
+                {step.otpauthUri}
+              </code>
+            </div>
           )}
           {codeField(t('totp_label'), 'one-time-code')}
-          <button type="submit" disabled={busy}>
+          <Button type="submit" className="w-full" disabled={busy}>
             {t('verify')}
-          </button>
+          </Button>
         </>
       )}
       {step.kind === 'recovery' && (
         <>
-          <p>{t('recovery_codes_title')}</p>
-          <ul>
+          <p className="text-sm font-semibold text-slate-900">{t('recovery_codes_title')}</p>
+          <ul className="grid grid-cols-2 gap-2">
             {step.codes.map((recovery) => (
               <li key={recovery}>
-                <code>{recovery}</code>
+                <code className="block rounded-xl bg-slate-50 px-3 py-2 text-center font-mono text-sm tabular-nums text-slate-900 ring-1 ring-slate-200/80">
+                  {recovery}
+                </code>
               </li>
             ))}
           </ul>
-          <button type="submit">{t('continue')}</button>
+          <Button type="submit" className="w-full">
+            {t('continue')}
+          </Button>
         </>
       )}
-      {step.kind === 'register' && <p>{t('register_soon')}</p>}
-      {error !== undefined && <p role="alert">{tErrors(error)}</p>}
+      {step.kind === 'register' && <p className={hint}>{t('register_soon')}</p>}
+      {error !== undefined && (
+        <p
+          role="alert"
+          className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-700 ring-1 ring-rose-600/10"
+        >
+          {tErrors(error)}
+        </p>
+      )}
     </form>
   );
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   clearSelectedApplication,
   handOffApplication,
+  initialSellerForm,
   selectedApplication,
   sellerFormFromApplication,
 } from '../handoff';
@@ -38,5 +39,16 @@ describe('başvurudan toptancı açma (F2.2b)', () => {
       currency: 'AZN',
       timezone: 'Asia/Baku',
     });
+  });
+
+  it('B1 bellekte başvuru yoksa (sayfa yenilendi) form boş ve "dolduruldu" bayrağı kapalı', () => {
+    handOffApplication(APPLICATION);
+    expect(initialSellerForm(APPLICATION.id).prefilled).toBe(true);
+    expect(initialSellerForm(APPLICATION.id).values.legalName).toBe(APPLICATION.legalName);
+    clearSelectedApplication();
+    const reloaded = initialSellerForm(APPLICATION.id);
+    expect(reloaded.prefilled).toBe(false);
+    expect(reloaded.values.legalName).toBe('');
+    expect(initialSellerForm(undefined).prefilled).toBe(false);
   });
 });
