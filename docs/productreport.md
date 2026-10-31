@@ -8,7 +8,7 @@ Platform, Azerbaycan'dan başlayan **çok kiracılı (multi-tenant) bir B2B SaaS
 
 Bu sürüm (v4, onaylanmış) tüm kararları kesinleştirir. Önceki turda önerilen ve onaylanan üç önemli değişiklik şunlardır:
 
-1. **Giriş kodu (OTP) için SMS ilk günden gerekli.** Push bildirimi, henüz giriş yapmamış bir telefona gönderilemez. Bu yüzden "önce yalnızca push" kararı, giriş ekranında uygulanamaz. SMS yalnızca OTP için kullanılır, diğer bildirimler push ile gider (D18).
+1. **Giriş kodu (OTP) için SMS ilk günden gerekli.** Push bildirimi, henüz giriş yapmamış bir telefona gönderilemez. Bu yüzden "önce yalnızca push" kararı, giriş ekranında uygulanamaz. SMS yalnızca OTP ve davet/aktivasyon bağlantısı için kullanılır, diğer bildirimler push ile gider (D18).
 2. **Dizinde ad ve faaliyet alanına şehir/rayon da eklenmeli.** Yalnızca ad ve faaliyet alanı görünürse, toptancı hizmet verdiği bölgedeki dükkanları bulamaz ve dizin işe yaramaz. Tam adres kapalı kalır (D7).
 3. **Uygulama içi teslim onayı, perakendeci o anda çevrimdışıysa çalışmaz.** Bu yüzden "teslim edildi, onay bekliyor" ara durumu ve süre dolunca otomatik onay kuralı ekledim (D23).
 
@@ -60,7 +60,7 @@ Bu tablo projenin karar hafızasıdır. Bir karar değişirse eski satır silinm
 | D15 | Sipariş onayı | Şube admini onaylar; kural şube bazında ayarlanır | ✅ |
 | D16 | Ortak sepet | Tek sepet; toptancı başına ayrı sipariş, belge ve cari | ✅ |
 | D17 | Para birimi ve saat dilimi | Dinamik; varsayılan AZN ve Asia/Baku | ✅ |
-| D18 | Bildirim | Push varsayılan; WhatsApp ve SMS bildirimleri sonradan. **SMS ilk günden yalnızca OTP için.** | ✅ |
+| D18 | Bildirim | Push varsayılan; WhatsApp ve SMS bildirimleri sonradan. **SMS ilk günden yalnızca OTP ve davet/aktivasyon bağlantısı için** (toptancı aktivasyonu US-009, ekip daveti US-013; platform sahibi kararı 2026-10-31, F2 S2). | ✅ |
 | D19 | Kod deposu | GitHub + GitHub Actions | ✅ |
 | D20 | Çift rollü işletmeler | Tek işletme kaydı; yetenekler (`business_capabilities`) kendi onay durumlarıyla; role özel profil tabloları; siparişte satıcı ve alıcı tarafları; yetkiler yeteneğe göre. Özellik ileride açılır. | ✅ |
 | D21 | Barındırma | Yurt dışında, AWS üzerinde. Bölge ve servis seçimi "Teknik mimari" bölümünde. Hukuki uygunluk doğrulanacak. | ✅ (hukuki teyit bekliyor) |
