@@ -86,15 +86,24 @@ describe('İzinden menü', () => {
   });
 
   it('F2.1b-AC5: "Toptancılar" yalnız super_admin ve operations rolüne görünür (S1)', () => {
-    expect(keys('admin', [], 'super_admin')).toEqual(['dashboard', 'sellers']);
+    // F2.2b: "Başvurular" aynı rollerle eklendi.
+    expect(keys('admin', [], 'super_admin')).toEqual([
+      'dashboard',
+      'sellers',
+      'seller_applications',
+    ]);
     expect(visibleMenu('admin', [], 'operations').map((item) => item.key)).toEqual([
       'dashboard',
       'sellers',
+      'seller_applications',
     ]);
     for (const role of ['support', 'content', null]) {
       expect(visibleMenu('admin', [], role).map((item) => item.key)).toEqual(['dashboard']);
     }
     expect(MENUS.admin.find((item) => item.key === 'sellers')?.path).toBe('sellers');
+    expect(MENUS.admin.find((item) => item.key === 'seller_applications')?.path).toBe(
+      'seller-applications',
+    );
   });
 
   it('F2.1b-AC5: sayfa düzeyi kontrol aynı rol listesiyle', () => {

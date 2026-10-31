@@ -8,6 +8,11 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode, type SyntheticEvent, useState } from 'react';
 import { errorCodeOf } from '../../lib/error-code';
 import {
+  clearSelectedApplication,
+  selectedApplication,
+  sellerFormFromApplication,
+} from '../admin-seller-applications/handoff';
+import {
   type Option,
   useCreateSeller,
   usePlanOptions,
@@ -25,7 +30,8 @@ import {
 
 type TextField = Exclude<SellerField, 'serviceAreaRegionIds'>;
 
-export function SellerForm() {
+/** `applicationId` (F2.2b): başvurudan açma; başvuru bellekte varsa form onunla dolar. */
+export function SellerForm({ applicationId }: { applicationId?: string } = {}) {
   const t = useTranslations('adminSellers.form');
   const tList = useTranslations('adminSellers');
   const tErrors = useTranslations('errors');
@@ -35,7 +41,11 @@ export function SellerForm() {
   const plans = usePlanOptions(locale);
   const create = useCreateSeller();
   const resend = useResendActivation();
-  const [values, setValues] = useState<SellerFormValues>(emptySellerForm);
+  const [values, setValues] = useState<SellerFormValues>(() => {
+    const application =
+      applicationId === undefined ? undefined : selectedApplication(applicationId);
+    return application === undefined ? emptySellerForm() : sellerFormFromApplication(application);
+  });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [general, setGeneral] = useState<string | undefined>();
   /** SMS gitmedi: işletme açıldı, admin yeniden gönderir. */
@@ -54,8 +64,10 @@ export function SellerForm() {
       return;
     }
     setErrors({});
-    create.mutate(result.body, {
+    const body = applicationId === undefined ? result.body : { ...result.body, applicationId };
+    create.mutate(body, {
       onSuccess: (created) => {
+        clearSelectedApplication();
         if (created.activationSmsSent) router.push(`/${locale}/admin/sellers`);
         else setUnsent({ businessId: created.businessId, resent: false });
       },
@@ -160,6 +172,7 @@ export function SellerForm() {
   return (
     <form onSubmit={onSubmit} aria-busy={create.isPending} noValidate>
       <h1>{t('title')}</h1>
+      {applicationId !== undefined && <p role="status">{t('from_application')}</p>}
       {text('legalName', t('legal_name'), { autoComplete: 'organization' })}
       {text('voen', t('voen'))}
       {choice('regionId', t('region'), regionList)}

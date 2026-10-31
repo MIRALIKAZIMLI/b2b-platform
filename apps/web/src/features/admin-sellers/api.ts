@@ -115,7 +115,12 @@ export function useCreateSeller() {
       if (data === undefined) fail(error, response.status);
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: SELLERS_KEY }),
+    // F2.2b: başvurudan açılışta başvuru listesi de değişir.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: SELLERS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'seller-applications'] }),
+      ]),
   });
 }
 

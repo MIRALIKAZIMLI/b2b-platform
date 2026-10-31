@@ -1,0 +1,23 @@
+/* Tailwind CSS 4 giriş noktası (ui-guidelines.md). Ekranlar yardımcı sınıflarla yazılır; burada
+   yalnızca sayfa zemini ve henüz tasarlanmamış eski ekranların okunur kalması için taban stiller. */
+@import 'tailwindcss';
+
+@layer base {
+  html {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+
+  /* Preflight düğme ve alanların çerçevesini siler; sınıfsız (F1/F2.1 ekranları) öğeler kullanılabilir
+     kalsın diye ölçülü bir varsayılan. Sınıf taşıyan öğeler kendi stilini kullanır. */
+  :where(button, input, select, textarea):not([class]) {
+    @apply rounded-lg border border-slate-300 bg-white px-3 py-1.5;
+  }
+
+  :where(button):not([class]) {
+    @apply cursor-pointer hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  :where(h1):not([class]) {
+    @apply text-2xl font-semibold;
+  }
+}

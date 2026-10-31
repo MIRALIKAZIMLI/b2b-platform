@@ -62,7 +62,7 @@ Bu liste **kapalı bir listedir**. AI asistanı burada olmayan bir paketi ekleme
 | React tipleri | `@types/react`, `@types/react-dom` | React ile aynı (19.x) |
 | Sunucu durumu | `@tanstack/react-query` | 5.x |
 | Formlar | `react-hook-form` + `@hookform/resolvers` (Zod) | 7.x |
-| Stil | `tailwindcss` | 4.x |
+| Stil | `tailwindcss`, `@tailwindcss/postcss`, `postcss` (Next.js derleme eklentisi; platform sahibi onayı 2026-10-31, F2.2b) | 4.x (postcss 8.x) |
 | Bileşenler | shadcn/ui (Radix UI tabanlı; kod depoya kopyalanır) | — |
 | Çok dillilik | `next-intl` | Güncel |
 | API istemcisi | `openapi-fetch` + `openapi-typescript` (üretim) | Güncel |
