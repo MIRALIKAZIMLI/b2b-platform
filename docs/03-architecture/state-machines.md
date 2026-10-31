@@ -213,3 +213,22 @@ stateDiagram-v2
     done --> [*]
     failed --> [*]
 ```
+
+## 12. Toptancı başvurusu (`seller_applications.status`)
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: ziyaretçi başvurur
+    pending --> approved: admin başvurudan toptancı açar
+    pending --> rejected: admin reddeder
+    approved --> [*]
+    rejected --> [*]
+```
+
+| Geçiş | Kim | Koşul (guard) | Yan etki |
+| --- | --- | --- | --- |
+| → pending | Kimliksiz ziyaretçi (`POST /seller-applications`) | IP hız sınırı (`seller_application.ip_max_per_hour`); aynı VÖEN ile `pending` başvuru yok (yoksa `409 SELLER_APPLICATION_ALREADY_PENDING`) | Yok (başvuru admin listesinde görünür, US-008 AC1) |
+| pending → approved | Platform rolü `super_admin`, `operations` (`POST /admin/sellers` + `applicationId`) | Toptancı açılışı aynı işlemde başarılı (US-009) | `business_id`, `reviewed_by` yazılır; audit `seller_application.approved` |
+| pending → rejected | Platform rolü `super_admin`, `operations` | — | `reviewed_by` yazılır; audit `seller_application.rejected` |
+
+`approved` ve `rejected` son durumlardır; başka geçiş `409 INVALID_STATE_TRANSITION`. Reddedilen başvurudan sonra aynı VÖEN ile yeni başvuru yapılabilir.

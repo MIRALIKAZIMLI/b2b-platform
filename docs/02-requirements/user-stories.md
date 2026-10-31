@@ -254,6 +254,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `dormant.delete_day` | 180 | tamsayı | 1 | 3650 |
 | `invitation.seller_activation_days` | 7 | tamsayı (gün; toptancı aktivasyon davetinin geçerliliği, US-009 AC3) | 1 | 30 |
 | `onboarding.seller_mode` | `manual` | seçenek: `manual` | — | — |
+| `seller_application.ip_max_per_hour` | 5 (IP başına saatte toptancı başvurusu; kimliksiz form, US-008, F2.2) | tamsayı | 1 | 100 |
 | `sms.daily_cap` | 500 | tamsayı | 0 | 100000 |
 | `sms.allowed_country_codes` | `["+994"]` | ülke kodu listesi (`+` ve 1–4 rakam, 1–20 eleman) | — | — |
 | `otp.code_ttl_minutes` | 5 (NFR-45) | tamsayı | 1 | 30 |

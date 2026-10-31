@@ -276,3 +276,52 @@ export const branches = pgTable(
     unique('branches_business_id_id_uq').on(table.businessId, table.id),
   ],
 );
+
+export const SELLER_APPLICATION_STATUSES = ['pending', 'approved', 'rejected'] as const;
+export type SellerApplicationStatus = (typeof SELLER_APPLICATION_STATUSES)[number];
+
+/**
+ * Toptancı başvurusu (data-model §4.4, F2.2, US-008). G sınıfının istisnası: okuma ve güncelleme
+ * yalnızca platform; kimliksiz ekleme `seller_application_submit` SECURITY DEFINER fonksiyonuyla
+ * (drizzle/0014_seller_applications.sql). `reviewed_by` → users FK'sı migration'da elle eklenir.
+ */
+export const sellerApplications = pgTable(
+  'seller_applications',
+  {
+    id: uuid('id').primaryKey(),
+    legalName: text('legal_name').notNull(),
+    voen: char('voen', { length: 10 }).notNull(),
+    contactName: text('contact_name').notNull(),
+    phoneE164: text('phone_e164').notNull(),
+    regionId: uuid('region_id')
+      .notNull()
+      .references(() => regions.id),
+    categoryNote: text('category_note'),
+    status: text('status').$type<SellerApplicationStatus>().notNull().default('pending'),
+    reviewedBy: uuid('reviewed_by'),
+    businessId: uuid('business_id').references(() => businesses.id),
+    ...timestamps,
+  },
+  (table) => [
+    // US-008 AC3: aynı VÖEN ile tek açık başvuru.
+    uniqueIndex('seller_applications_voen_pending_uq')
+      .on(table.voen)
+      .where(sql`${table.status} = 'pending'`),
+    index('seller_applications_status_id_idx').on(table.status, table.id),
+    check('seller_applications_voen_format_check', sql`${table.voen} ~ '^[0-9]{9}[12]$'`),
+    check(
+      'seller_applications_status_check',
+      sql`${table.status} in ('pending', 'approved', 'rejected')`,
+    ),
+    check(
+      'seller_applications_category_note_check',
+      sql`${table.categoryNote} is null or char_length(${table.categoryNote}) <= 500`,
+    ),
+    check(
+      'seller_applications_review_check',
+      sql`(${table.status} = 'pending' and ${table.reviewedBy} is null and ${table.businessId} is null)
+        or (${table.status} = 'approved' and ${table.reviewedBy} is not null and ${table.businessId} is not null)
+        or (${table.status} = 'rejected' and ${table.reviewedBy} is not null and ${table.businessId} is null)`,
+    ),
+  ],
+);

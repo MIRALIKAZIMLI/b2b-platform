@@ -13,7 +13,11 @@ import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
 import { type ActivationStatus, InvitationService, RoleService } from '../access';
 import { type Plan, PlanService } from '../billing';
-import { BusinessesRepository, isVoenUniqueViolation } from '../businesses';
+import {
+  BusinessesRepository,
+  isVoenUniqueViolation,
+  SellerApplicationsRepository,
+} from '../businesses';
 import { I18nService, ReferenceLookup } from '../i18n';
 import { SettingsService } from '../settings';
 import { activationLink, WEB_BASE_URL } from './activation-link';
@@ -38,6 +42,8 @@ export interface CreateSellerInput {
   readonly serviceAreaRegionIds: readonly string[];
   readonly currency: string;
   readonly timezone: string;
+  /** Başvurudan açma (F2.2): başvuru aynı işlemde `approved` olur. */
+  readonly applicationId?: string | undefined;
 }
 
 export interface ActivationResult {
@@ -85,6 +91,8 @@ function invalid(field: string, reason: string): DomainError {
 export class SellersService {
   constructor(
     @Inject(BusinessesRepository) private readonly businesses: BusinessesRepository,
+    @Inject(SellerApplicationsRepository)
+    private readonly applications: SellerApplicationsRepository,
     @Inject(PlanService) private readonly plans: PlanService,
     @Inject(RoleService) private readonly roles: RoleService,
     @Inject(InvitationService) private readonly invitations: InvitationService,
@@ -97,7 +105,7 @@ export class SellersService {
     @Inject(WEB_BASE_URL) private readonly webBaseUrl: string,
   ) {}
 
-  /** US-009 AC1, AC4; F2.1a-AC1, AC4, AC5, AC9, AC10. */
+  /** US-009 AC1, AC4; F2.1a-AC1, AC4, AC5, AC9, AC10; başvurudan açma F2.2. */
   async create(
     actor: PlatformActor,
     input: CreateSellerInput,
@@ -115,6 +123,17 @@ export class SellersService {
     let pending: PendingSms;
     try {
       pending = await withPlatformTx(actor, async (tx) => {
+        // F2.2: başvuru kilitlenir; yoksa 404, `pending` değilse 409 (state-machines §12).
+        const application =
+          input.applicationId === undefined
+            ? undefined
+            : await this.applications.lockTx(tx, input.applicationId);
+        if (input.applicationId !== undefined && application === undefined) {
+          throw new DomainError('NOT_FOUND');
+        }
+        if (application !== undefined && application.status !== 'pending') {
+          throw new DomainError('INVALID_STATE_TRANSITION');
+        }
         const plan = await this.plans.findPlanTx(tx, input.planId);
         if (plan === undefined || !plan.isActive || plan.capability !== 'seller') {
           throw invalid('planId', 'invalid_plan');
@@ -194,9 +213,29 @@ export class SellersService {
             },
             invitationId: invitation.invitationId,
             invitationExpiresAt: invitation.expiresAt.toISOString(),
+            ...(application === undefined ? {} : { applicationId: application.id }),
           },
           context,
         });
+        if (application !== undefined) {
+          await this.applications.reviewTx(
+            tx,
+            application,
+            { to: 'approved', businessId },
+            actor.userId,
+            now,
+          );
+          await this.audit.record(tx, {
+            actor: { type: 'platform', userId: actor.userId },
+            businessId,
+            action: 'seller_application.approved',
+            targetType: 'seller_application',
+            targetId: application.id,
+            before: { status: application.status },
+            after: { status: 'approved', businessId },
+            context,
+          });
+        }
         return { phoneE164, token: invitation.token, language, expiresAt: invitation.expiresAt };
       });
     } catch (error) {

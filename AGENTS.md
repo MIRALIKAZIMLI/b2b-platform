@@ -114,4 +114,5 @@ Yerelde SMS gönderilmez: OTP kodu `GET /api/v1/dev/sms-outbox` adresinde.
 | CI/CD, ortam değişkenleri | `docs/06-operations/environments-cicd.md` |
 | "Bitti" mi? | `docs/07-ai-development/definition-of-done.md` |
 | PR incelemesi, bulgu biçimi, birleştirme kapısı | `docs/07-ai-development/review-guide.md` |
+| Web ve mobil ekran tasarımı (UI/UX kuralları, zorunlu) | `docs/07-ai-development/ui-guidelines.md` |
 | Hız, token, yerel test sınırı | `docs/07-ai-development/speed-and-tokens.md` |

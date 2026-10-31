@@ -509,7 +509,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Toptancı başvuru formu (US-008) */
+        /**
+         * Toptancı başvuru formu (US-008)
+         * @description Kimliksiz. Başvuru `pending` durumunda kaydedilir ve admin başvuru listesine düşer (US-008 AC1). IP başına saatte `seller_application.ip_max_per_hour` başvuru; aşılırsa `429 RATE_LIMITED` (`details.retryAfter`, `Retry-After`). Aynı VÖEN ile `pending` başvuru varsa `409 SELLER_APPLICATION_ALREADY_PENDING` (AC3). Bilinmeyen bölge `422` (`regionId: not_found`).
+         */
         post: {
             parameters: {
                 query?: never;
@@ -536,9 +539,18 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            status: "pending";
+                        };
+                    };
                 };
                 409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+                429: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -4663,7 +4675,7 @@ export interface paths {
         put?: never;
         /**
          * Toptancı aç (US-009; platform rolü super_admin, operations)
-         * @description Tek işlemde işletme (`created_via = admin`, `active`), `seller` yeteneği (`approved`), satıcı profili, hizmet bölgeleri, seçilen planın aboneliği, işletme admin rolü, yetkilinin kullanıcı kaydı (yoksa) ve aktivasyon daveti (`invitation.seller_activation_days`) oluşur. Aktivasyon SMS'i işlemden sonra gider; gönderilemezse işletme yine oluşur ve `activationSmsSent: false` döner. Aynı VÖEN herhangi bir işletmede kayıtlıysa `409`. `applicationId` bu sürümde desteklenmez (başvurudan açma F2.2) → `422`.
+         * @description Tek işlemde işletme (`created_via = admin`, `active`), `seller` yeteneği (`approved`), satıcı profili, hizmet bölgeleri, seçilen planın aboneliği, işletme admin rolü, yetkilinin kullanıcı kaydı (yoksa) ve aktivasyon daveti (`invitation.seller_activation_days`) oluşur. Aktivasyon SMS'i işlemden sonra gider; gönderilemezse işletme yine oluşur ve `activationSmsSent: false` döner. Aynı VÖEN herhangi bir işletmede kayıtlıysa `409`. `applicationId` verilirse (F2.2) başvuru aynı işlemde `approved` olur ve işletmeye bağlanır; başvuru yoksa `404`, `pending` değilse `409 INVALID_STATE_TRANSITION`.
          */
         post: {
             parameters: {
@@ -4692,7 +4704,7 @@ export interface paths {
                         timezone: string;
                         /**
                          * Format: uuid
-                         * @description F2.2'de; şimdilik verilirse 422
+                         * @description Başvurudan açma (F2.2
                          */
                         applicationId?: string;
                     };
@@ -4715,6 +4727,7 @@ export interface paths {
                     };
                 };
                 403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 409: components["responses"]["Error"];
                 422: components["responses"]["Error"];
             };
@@ -4780,23 +4793,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Toptancı başvuruları */
+        /** Toptancı başvuruları (US-008 AC1; platform rolü super_admin, operations) */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    status?: "pending" | "approved" | "rejected";
+                    cursor?: components["parameters"]["Cursor"];
+                    limit?: components["parameters"]["Limit"];
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Liste */
+                /** @description Liste (yeniden eskiye) */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["SellerApplication"][];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -4816,7 +4840,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Başvuruyu reddet */
+        /**
+         * Başvuruyu reddet (platform rolü super_admin, operations)
+         * @description Yalnızca `pending` başvuru; değilse `409 INVALID_STATE_TRANSITION`, yoksa `404`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -4833,8 +4860,13 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["SellerApplication"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -5538,7 +5570,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "LAST_ADMIN_PROTECTED" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "LAST_ADMIN_PROTECTED" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "INTERNAL_ERROR";
         /** @example +994501234567 */
         PhoneE164: string;
         Voen: string;
@@ -6073,6 +6105,27 @@ export interface components {
              * @enum {string}
              */
             activation: "pending" | "accepted" | "expired";
+        };
+        /** @description Toptancı başvurusu (US-008). contactName ve phone kişisel veridir (yalnız platform). */
+        SellerApplication: {
+            /** Format: uuid */
+            id: string;
+            legalName: string;
+            voen: components["schemas"]["Voen"];
+            contactName: string;
+            phone: components["schemas"]["PhoneE164"];
+            /** Format: uuid */
+            regionId: string;
+            categoryNote: string | null;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            /**
+             * Format: uuid
+             * @description Onayda açılan işletme
+             */
+            businessId: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
         AdminPlan: {
             /** Format: uuid */

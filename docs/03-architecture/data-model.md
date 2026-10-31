@@ -437,11 +437,13 @@ Benzersiz `(business_id, id)`: memberships / invitations bileşik FK hedefi (F1.
 | voen | char(10) | | Açık başvurularda unique |
 | contact_name | text | | 🔒 |
 | phone_e164 | text | | 🔒 |
-| region_id | uuid | | |
-| category_note | text | | |
-| status | text | `pending` / `approved` / `rejected` | |
-| reviewed_by | uuid | null | |
-| business_id | uuid | null | Onayda oluşan işletme |
+| region_id | uuid | FK | |
+| category_note | text | null, ≤ 500 | |
+| status | text | `pending` / `approved` / `rejected` | default `pending`; geçişler [state-machines.md](state-machines.md) §12 |
+| reviewed_by | uuid | null, FK `users` | Onaylayan / reddeden platform kullanıcısı |
+| business_id | uuid | null, FK `businesses` | Onayda oluşan işletme |
+
+**Kurallar (F2.2):** `id` UUIDv7 (uygulama), `created_at`, `updated_at`. VÖEN tekilliği kısmi benzersiz indeksle: `voen WHERE status = 'pending'` (US-008 AC3). Tutarlılık `CHECK`'i: `pending` iken `reviewed_by` ve `business_id` boş; `approved` iken ikisi dolu; `rejected` iken `reviewed_by` dolu, `business_id` boş. **RLS:** G sınıfının istisnası: okuma ve güncelleme yalnızca `app.is_platform = 'true'` (kişisel veri; herkes okumaz). Kimliksiz başvuru yalnızca `seller_application_submit(...)` `SECURITY DEFINER` fonksiyonuyla eklenir (`withSystemTx`); fonksiyon yalnızca `pending` satır yazar, migrator'a özel (`TO migrator`) ekleme politikası yalnızca bu fonksiyonun içinde etkilidir. Silme yok.
 
 #### `activity_types` (G) — `name jsonb`, `is_active bool`, `sort_order int`. `id` `default gen_random_uuid()` (G tablosu istisnası, `regions` gibi; S5). Seed boştur; liste platform sahibinden gelir.
 
@@ -1005,6 +1007,6 @@ Silme / anonimleştirme talebinde (NFR-64): `users.full_name` → `Silinmiş kul
 3. Her yeni kiracı tablosu, aynı migration içinde RLS politikasıyla gelir. CI, RLS'si olmayan T/P sınıfı tabloyu reddeder (bkz. [test-strategy.md](../05-planning/test-strategy.md)).
 4. Başlangıç verileri (birimler, diller, para birimleri, AZ bölgeleri, izinler, rol şablonları, platform ayarları) `seed` betikleriyle yüklenir ve idempotendir.
 5. Veritabanı rolleri (`app_user`, `migrator`, `readonly`) migration dışında `pnpm db:bootstrap` ile süper kullanıcıyla oluşturulur; şifreler depoda tutulmaz, ortam değişkenlerinden atanır. `ALTER DEFAULT PRIVILEGES` kullanılmaz; her migration tablo izinlerini `GRANT` ile verir. RLS politikaları elle SQL ile yazılır (ADR-0005) ve bağlamı `nullif(current_setting('app.business_id', true), '')::uuid` kalıbıyla okur. Yalnızca testte kullanılan tablolar migration'a girmez.
-6. Her tablo, oluşturulduğu migration'da RLS sınıfını tablo yorumu olarak taşır: `COMMENT ON TABLE <tablo> IS 'rls:<sınıf>'` (sınıf: T, P, G, U, S, D; birden fazlaysa virgülle, örn. `rls:T,D`). `pnpm check-rls` (apps/api/src/core/db/check-rls.ts) bu yorumu okur; yorumsuz tablo, RLS'i/`FORCE`'u/politikası eksik T, P, U tablosu ve `app_user`'ın SELECT izni olan S tablosu CI'ı kırar.
+6. Her tablo, oluşturulduğu migration'da RLS sınıfını tablo yorumu olarak taşır: `COMMENT ON TABLE <tablo> IS 'rls:<sınıf>'` (sınıf: T, P, G, U, S, D; birden fazlaysa virgülle, örn. `rls:T,D`). `pnpm check-rls` (apps/api/src/core/db/check-rls.ts) bu yorumu okur; yorumsuz tablo, RLS'i/`FORCE`'u/politikası eksik T, P, U tablosu ve `app_user`'ın SELECT izni olan S tablosu CI'ı kırar. G tablosunun her yazma politikası `app.is_platform` koşulu taşır; tek istisna yalnızca `migrator` rolüne verilmiş (`TO migrator`) politikalardır, çünkü bunlar yalnızca `SECURITY DEFINER` fonksiyonların içinde etkilidir ve fonksiyonlar `security-definer.int.test.ts` ile ayrıca denetlenir (F2.2).
 
 ✅ ÇÖZÜLDÜ (2026-10-31): Pilot `regions` ve `activity_types` listeleri platform sahibince onaylandı: [docs/tasks/F2-seed-listeleri.md](../tasks/F2-seed-listeleri.md). Tam ülke listesi sonra, aynı onay yoluyla eklenir.
