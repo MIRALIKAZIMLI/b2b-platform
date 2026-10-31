@@ -11,10 +11,14 @@ import {
   isPermissionScope,
 } from '@b2b/shared';
 import { Clock } from '../../core/clock';
-import { type TenantTxContext, withTenantTx } from '../../core/db';
+import { type TenantTxContext, type Tx, withTenantTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
-import { AccessRepository, type TemplatePermission } from './access.repository';
+import {
+  AccessRepository,
+  type RoleTemplateRow,
+  type TemplatePermission,
+} from './access.repository';
 
 @Injectable()
 export class RoleService {
@@ -31,29 +35,58 @@ export class RoleService {
       if (template === undefined) {
         throw new DomainError('NOT_FOUND');
       }
-      const capability = template.capability === 'buyer' ? 'buyer' : 'seller';
-      // Rolün yeteneği işletmenin yeteneği olmalı (data-model §4.5; Müfettiş PR #23 notu 1).
-      if (!(await this.repository.businessHasCapability(tx, ctx.businessId, capability))) {
-        throw new DomainError('CAPABILITY_REQUIRED');
-      }
-      const items = await this.repository.templatePermissions(tx, templateId);
-      assertPermissionsValid(capability, items);
-      const roleId = this.ids.next();
-      const now = this.clock.now();
-      await this.repository.insertRole(tx, {
-        id: roleId,
-        businessId: ctx.businessId,
-        name: template.name,
-        capability,
-        isBusinessAdmin: template.isBusinessAdmin,
-        sourceTemplateId: template.id,
-        sourceTemplateVersion: template.version,
-        createdAt: now,
-        updatedAt: now,
-      });
-      await this.repository.insertRolePermissions(tx, roleId, items);
-      return roleId;
+      return await this.copyTemplate(tx, ctx.businessId, template);
     });
+  }
+
+  /**
+   * Çağıranın işleminde (F2.1a: platform-admin toptancı açılışı, R15) şablonu koduyla kopyalar;
+   * rol ve şablona bağlı unvan (aynı kod) kimliklerini döner.
+   */
+  async createFromTemplateCodeTx(
+    tx: Tx,
+    businessId: string,
+    templateCode: string,
+  ): Promise<{ roleId: string; jobTitleId: string }> {
+    const template = await this.repository.findTemplateByCode(tx, templateCode);
+    const jobTitleId =
+      template === undefined
+        ? undefined
+        : await this.repository.findTemplateJobTitle(tx, template.id, template.code);
+    if (template === undefined || jobTitleId === undefined) {
+      throw new DomainError('NOT_FOUND');
+    }
+    const roleId = await this.copyTemplate(tx, businessId, template);
+    return { roleId, jobTitleId };
+  }
+
+  private async copyTemplate(
+    tx: Tx,
+    businessId: string,
+    template: RoleTemplateRow,
+  ): Promise<string> {
+    const capability = template.capability === 'buyer' ? 'buyer' : 'seller';
+    // Rolün yeteneği işletmenin yeteneği olmalı (data-model §4.5; Müfettiş PR #23 notu 1).
+    if (!(await this.repository.businessHasCapability(tx, businessId, capability))) {
+      throw new DomainError('CAPABILITY_REQUIRED');
+    }
+    const items = await this.repository.templatePermissions(tx, template.id);
+    assertPermissionsValid(capability, items);
+    const roleId = this.ids.next();
+    const now = this.clock.now();
+    await this.repository.insertRole(tx, {
+      id: roleId,
+      businessId,
+      name: template.name,
+      capability,
+      isBusinessAdmin: template.isBusinessAdmin,
+      sourceTemplateId: template.id,
+      sourceTemplateVersion: template.version,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await this.repository.insertRolePermissions(tx, roleId, items);
+    return roleId;
   }
 }
 

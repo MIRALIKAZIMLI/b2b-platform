@@ -76,6 +76,7 @@ export const SETTING_DEFINITIONS = {
   'dormant.warning_day': intSetting(90, 1, 3650),
   'dormant.deactivate_day': intSetting(120, 1, 3650),
   'dormant.delete_day': intSetting(180, 1, 3650),
+  'invitation.seller_activation_days': intSetting(7, 1, 30),
   'onboarding.seller_mode': enumSetting(['manual'] as const, 'manual'),
   'sms.daily_cap': intSetting(500, 0, 100_000),
   'sms.allowed_country_codes': countryCodeListSetting(['+994']),

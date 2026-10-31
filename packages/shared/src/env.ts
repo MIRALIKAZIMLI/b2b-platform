@@ -114,6 +114,11 @@ export const apiEnvSchema = serverEnvSchema
     STORAGE_LOCAL_DIR: z.string().min(1).default('.local-storage'),
     /** `local` deponun imzalı bağlantılarında kullanılan API adresi; yoksa `http://localhost:<PORT>`. */
     STORAGE_LOCAL_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
+    /** Web uygulamasının adresi (sonunda `/` yok); SMS'teki davet bağlantısı (F2.1a). */
+    WEB_BASE_URL: z
+      .url({ protocol: /^https?$/ })
+      .refine((value) => !value.endsWith('/'), { message: 'sonunda / olmamalı' })
+      .default('http://localhost:3000'),
   })
   .superRefine((env, ctx) => {
     if ((env.JWT_PREVIOUS_SIGNING_KEY === undefined) !== (env.JWT_PREVIOUS_KEY_ID === undefined)) {
@@ -152,6 +157,13 @@ export const apiEnvSchema = serverEnvSchema
         code: 'custom',
         path: ['STORAGE_PROVIDER'],
         message: 'production ortamında yerel dosya deposu kullanılamaz',
+      });
+    }
+    if (env.APP_ENV === 'production' && !env.WEB_BASE_URL.startsWith('https://')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_BASE_URL'],
+        message: 'production ortamında https web adresi zorunlu',
       });
     }
     if (env.STORAGE_PROVIDER === 'r2') {

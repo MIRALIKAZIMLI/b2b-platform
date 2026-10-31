@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-31 (F1.14b: mobil kabuk, app-config, push kaydı; sıradaki faz F2).
+Son güncelleme: 2026-10-31 (F2.1a: admin toptancı açma API ve aktivasyon daveti; sıradaki F2.1b).
 
 ## 1. Mimari özeti
 
@@ -15,13 +15,13 @@ Son güncelleme: 2026-10-31 (F1.14b: mobil kabuk, app-config, push kaydı; sıra
 ## 2. Klasör yapısı (şu anki durum)
 
 ```
-apps/api/drizzle/                 0000_settings … 0012_files
+apps/api/drizzle/                 0000_settings … 0013_invitation_accept
 apps/api/db/bootstrap/roles.sql   app_user, migrator, readonly (şifresiz; pnpm db:bootstrap)
 apps/api/src/core/                audit, bootstrap, config, db, errors, health, idempotency,
                                   logging, outbox, clock.ts, id-generator.ts, money.ts
 apps/api/src/core/ports/          sms-sender, push-sender, file-storage (dış servis portları)
 apps/api/src/infrastructure/      push (expo, mock), queue, redis, sms (mock → dev_sms_outbox), storage (r2, local)
-apps/api/src/modules/             access, app-config, billing, businesses, dev (yalnız local/test/staging), files, i18n, identity, notifications, settings
+apps/api/src/modules/             access, app-config, billing, businesses, dev (yalnız local/test/staging), files, i18n, identity, notifications, platform-admin, settings
 packages/api-client/              openapi.yaml → src/schema.d.ts (üretilir, elle düzenlenmez), createApiClient
 packages/shared/src/              env, errors, entitlements, menu, permissions, settings, uuidv7, version, voen, format…
 apps/web/src/                     lib/{api,session,i18n}.ts, i18n/{routing,request}.ts, proxy.ts,
@@ -101,8 +101,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.14a | mobil giriş (telefon → kod → TOTP), yenileme anahtarı `expo-secure-store`'da, `lib/api.ts` tek sessiz yenileme, `i18next` + cihazda çeviri önbelleği (`expo-file-system`), dil seçici |
 | F1.13b | web kabuğu: işletme seçici, izinden menü (`features/shell/menu.ts`), `/admin`, `/seller`, `/buyer` açılış sayfaları (yer tutucu), CI `e2e` işi (Playwright, E2E-01) |
 | F1.13a | web yenileme cookie'si (`X-Client: web`, `b2b_rt`), `PATCH /me`, web `api.ts`/oturum/`next-intl`, giriş ekranı (telefon → kod → TOTP), dil seçici, Playwright |
+| F2.1a | `platform-admin` modülü: `POST/GET /admin/sellers`, `POST /admin/sellers/{id}/activation`, `GET /admin/plans`; `POST /team/invitations/accept`; `invitation_accept()` (`0013_invitation_accept.sql`); pilot bölge seed'i; `invitation.seller_activation_days`, `WEB_BASE_URL` |
 
-**Sıradaki:** F2 — sıra, riskler ve açık sorular [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md); ilk kart [F2.1a](tasks/F2.1a.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
+**Sıradaki:** F2.1b (admin toptancı ekranları, aktivasyon sayfası, E2E-02); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
@@ -134,3 +135,5 @@ Kaynak: ilgili kartın "Kararlar" bölümü ve faz spesifikasyonu §4.
 - **Mobil oturum ve dil (F1.14a):** Mobil `X-Client` göndermez; yenileme anahtarı gövdede gelir ve gövdeyle yenilenir. Anahtar yalnız `expo-secure-store` (`b2b.refresh_token`); AsyncStorage yok, log/hata mesajına yazılmaz. Erişim anahtarı yalnız `lib/api.ts` belleğinde; `401`'de tek paylaşılan yenileme; yenileme `400/401/403` → anahtar silinir + giriş ekranı; `5xx`/ağ hatası oturumu kapatmaz. Çıkış sunucu hatasında da anahtarı siler. API adresi `EXPO_PUBLIC_API_URL` (`apps/mobile/.env`; telefondan LAN IP, emülatörden `10.0.2.2`). Çeviriler `i18next` (düz anahtar, `{phone}` yer tutucusu), ETag'li sözlük `expo-file-system` önbelleğinde; ağ yoksa önbellek. Girişten önce seçilen dil yalnız cihazda (profile yazılmaz); girişte profildeki dil, oturumda seçim `PATCH /me` (hata → dil değişmez). Mobil testler yalnız saf TS (Vitest); bileşen testi aracı yok, ekranlar elle + F1.14b Maestro.
 - **Vitest + NestJS (S8):** kodda bağımlılıklar `@Inject()` ile açık yazılıyor (yeni paket yok); `unplugin-swc` eklenmedi.
 - **Mobil kabuk (F1.14b):** Açılış: `GET /api/app-config?platform=&version=` (sürümsüz, `@Public`; `mobile.min_version.*`, `mobile.recommended_version.*`, `mobile.store_url.*`, `system.maintenance`; sürüm `X.Y.Z`, `@b2b/shared` `compareVersions`, `semver` yok). Minimum altı → yalnız "Lütfen güncelleyin" (kök düzende, başka ekran açılmaz); önerilen daha yeni → kapatılabilir öneri (uygulama ömründe). `storeUrl` boşsa alan dönmez, düğme yok (adres F6'da). Yanıt gelmezse uygulama engellenmez. `maintenance` henüz arayüzde kullanılmıyor. Oturum geri alınırken ağ hatası → "Yeniden dene" (giriş değil). Alan = seçili işletmenin yeteneği → `/seller` veya `/buyer` (`app/(seller)`, `app/(buyer)`); mobilde platform alanı yok (yalnız platform rolü → "web'den girin"). Menü `@b2b/shared` `MENUS`/`visibleMenu` (web de oradan). `/me` sorgu anahtarı işletmeye göre; işletme değişince oturum, çeviri ve app-config dışındaki önbellek silinir. Profildeki dil açılışta da uygulanır; dil değişiminde sözlük önce indirilir, indirilemezse `PATCH /me` gönderilmez. Push: `lib/push.ts` (saf) + `push-device.ts` (`expo-notifications` gerektiğinde yüklenir); `projectId` yoksa veya Expo Go'daysa atlanır; oturum açılınca ve anahtar değişince `POST /api/v1/push-tokens`. Gerçek cihaz push denemesi F6 (EAS). Maestro `apps/mobile/.maestro/E2E-01.yaml` (Expo Go, `host.exp.exponent`); bulutta emülatör yok, CI'da çalışmaz → mobil E2E yayın öncesi elle kontrol listesi (test-strategy VARSAYIM).
+- **Toptancı açılışı (F2.1a):** Platform bağlamı yalnız `platform-admin`'de; açılış tek `withPlatformTx` (R15). Diğer modüller `tx` alan fonksiyon açar (`*Tx` adı): `BusinessesRepository.voenTakenTx/insertSellerTx/findSellerTx/listSellersTx`, `PlanService.findPlanTx/listPlansTx/startFirstSubscriptionTx`, `RoleService.createFromTemplateCodeTx`, `InvitationService.*Tx`, `ReferenceLookup` (i18n). platform-admin identity'ye doğrudan bağlanmaz (c4 §1): kullanıcı oluşturma (`UserDirectory`) ve SMS (`TransactionalSmsService`: `sms.allowed_country_codes` + OTP ile ortak `sms.daily_cap`) `access.InvitationService` üzerinden. Aynı VÖEN herhangi bir işletmede → `409 VOEN_ALREADY_REGISTERED` (ön kontrol + `businesses_voen_uq`, S7). Abonelik dönemi: işletme saat diliminde bugün → +1 ay/yıl −1 gün (VARSAYIM, Mimar). `default_language` = platform varsayılan dili. `applicationId` → `422` (F2.2). Bölgede `is_active` yok: "pasif bölge" = olmayan bölge. Mevcut kullanıcının adı değişmez (S3).
+- **Davet (F2.1a):** Token 32 bayt base64url, saklanan SHA-256 (hex); token yalnız SMS bağlantısında (`WEB_BASE_URL/<dil>/activate?token=`), log/audit/outbox/yanıtta yok. SMS commit'ten sonra; hata işlemi geri almaz (`activationSmsSent: false`). Kabul `@Authenticated()` + `withUserTx` + `invitation_accept()` (kullanıcı `app.user_id`'den, `FOR UPDATE`); her başarısız durum aynı `404`. Yeniden gönderim açık admin davetlerini `expires_at = now` yapar; aktif admin varsa `409 INVALID_STATE_TRANSITION`. Liste `activation`: `accepted` (aktif admin üyelik) / `pending` (açık davet) / `expired`. Audit: `seller.created`, `seller.activation_resent`, `invitation.accepted`. Platform uç ↔ rol tablosu c4 §5 = `endpoint-access.test.ts` `EXPECTED_PLATFORM`.

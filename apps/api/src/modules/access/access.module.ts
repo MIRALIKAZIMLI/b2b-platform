@@ -7,6 +7,8 @@ import { SettingsModule } from '../settings';
 import { AccessEventsProcessor } from './access-events.processor';
 import { AccessGuard, PLATFORM_ROLE } from './access.guard';
 import { AccessRepository } from './access.repository';
+import { InvitationService } from './invitation.service';
+import { InvitationsController } from './invitations.controller';
 import { MeController } from './me.controller';
 import { MeService } from './me.service';
 import { MembershipService } from './membership.service';
@@ -21,7 +23,7 @@ import { TenantContextService, TOTP_STATUS } from './tenant-context.service';
  */
 @Module({
   imports: [AuditModule, OutboxModule, SettingsModule],
-  controllers: [MeController],
+  controllers: [MeController, InvitationsController],
   providers: [
     AccessRepository,
     RoleService,
@@ -30,11 +32,12 @@ import { TenantContextService, TOTP_STATUS } from './tenant-context.service';
     TenantContextRepository,
     TenantContextService,
     MeService,
+    InvitationService,
     { provide: TOTP_STATUS, useExisting: TotpRepository },
     { provide: PLATFORM_ROLE, useExisting: TotpRepository },
     { provide: APP_GUARD, useClass: AccessGuard },
   ],
-  exports: [RoleService, MembershipService, TenantContextService],
+  exports: [RoleService, MembershipService, TenantContextService, InvitationService],
 })
 export class AccessModule {}
 

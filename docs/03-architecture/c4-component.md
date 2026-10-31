@@ -221,3 +221,14 @@ flowchart LR
 | 7 | `documents.generate` raporda geçmiyor. | Yalnız İşletme Admini (iki taraf) ve Muhasebe (iki taraf). |
 
 📌 VARSAYIM: Analiz raporundaki "maliyeti gör" izni MVP'de yoktur, çünkü veri modelinde alış maliyeti alanı bulunmaz. Maliyet ve kâr marjı takibi istenirse önce veri modeline eklenir, sonra `pricing.view_cost` izni tanımlanır.
+
+### Platform rolleri ve admin uçları
+
+Platform uçları `@RequirePlatformRole(...)` ile korunur; izin kodu kullanmaz. Rol `platform_staff.role` (`super_admin`, `operations`, `support`, `content`). Tablo `endpoint-access.test.ts` bekçisiyle birebir aynıdır; yeni admin ucu önce buraya eklenir.
+
+| Uç | Roller | Karar |
+| --- | --- | --- |
+| `POST /api/v1/admin/sellers` | `super_admin`, `operations` | S1 = A (platform sahibi, 2026-10-31; F2.1a) |
+| `GET /api/v1/admin/sellers` | `super_admin`, `operations` | S1 = A |
+| `POST /api/v1/admin/sellers/{id}/activation` | `super_admin`, `operations` | S1 = A |
+| `GET /api/v1/admin/plans` (yalnız okuma) | `super_admin`, `operations` | S1 = A; plan yönetimi F6.3 |

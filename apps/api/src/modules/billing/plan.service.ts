@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { LocalizedText } from '@b2b/shared';
+import type { Tx } from '../../core/db';
 import { IdGenerator } from '../../core/id-generator';
 import { fromDecimalString, LINE_TOTAL_SCALE, type Money, toDecimalString } from '../../core/money';
-import { BillingRepository } from './billing.repository';
+import { BillingRepository, type PlanRow } from './billing.repository';
 import type { PlanPeriod } from './billing.schema';
+import { firstSubscriptionPeriod } from './subscription-period';
 
 export type PlanCapability = 'seller' | 'buyer';
 
@@ -68,17 +70,42 @@ export class PlanService {
 
   async findPlan(planId: string): Promise<Plan | undefined> {
     const row = await this.repository.findPlan(planId);
-    if (row === undefined) return undefined;
-    return {
-      id: row.id,
-      code: row.code,
-      name: row.name as LocalizedText,
-      capability: row.capability as PlanCapability,
-      price: fromDecimalString(row.price),
-      currencyCode: row.currencyCode,
-      period: row.period as PlanPeriod,
-      isActive: row.isActive,
-    };
+    return row === undefined ? undefined : toPlan(row);
+  }
+
+  /** Çağıranın işleminde plan (F2.1a, R15). */
+  async findPlanTx(tx: Tx, planId: string): Promise<Plan | undefined> {
+    const row = await this.repository.findPlanTx(tx, planId);
+    return row === undefined ? undefined : toPlan(row);
+  }
+
+  /** Tüm planlar (yalnız okuma; GET /admin/plans, F2.1a K5). */
+  async listPlansTx(tx: Tx): Promise<Plan[]> {
+    return (await this.repository.listPlansTx(tx)).map(toPlan);
+  }
+
+  /**
+   * Çağıranın platform işleminde ilk dönem aboneliği (F2.1a, R14): başlangıç işletme saat
+   * diliminde bugün, bitiş +1 dönem −1 gün (subscription-period.ts). `now` çağıranın Clock'undan.
+   */
+  async startFirstSubscriptionTx(
+    tx: Tx,
+    input: { businessId: string; plan: Plan; timeZone: string; now: Date },
+  ): Promise<string> {
+    const id = this.ids.next();
+    const period = firstSubscriptionPeriod(input.now, input.timeZone, input.plan.period);
+    await this.repository.insertSubscriptionTx(tx, {
+      id,
+      businessId: input.businessId,
+      planId: input.plan.id,
+      status: 'active',
+      currentPeriodStart: period.start,
+      currentPeriodEnd: period.end,
+      paymentNote: null,
+      createdAt: input.now,
+      updatedAt: input.now,
+    });
+    return id;
   }
 
   /** Güncel abonelik açar (`active`; state-machines §8 başlangıç durumu). */
@@ -95,4 +122,17 @@ export class PlanService {
     });
     return id;
   }
+}
+
+function toPlan(row: PlanRow): Plan {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name as LocalizedText,
+    capability: row.capability as PlanCapability,
+    price: fromDecimalString(row.price),
+    currencyCode: row.currencyCode,
+    period: row.period as PlanPeriod,
+    isActive: row.isActive,
+  };
 }

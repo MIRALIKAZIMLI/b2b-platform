@@ -990,7 +990,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Daveti kabul et (OTP ile giriş yapmış kullanıcı) */
+        /**
+         * Daveti kabul et (OTP ile giriş yapmış kullanıcı)
+         * @description Yalnızca giriş ister (işletme bağlamı yok). Oturumdaki kullanıcının telefonu davetteki telefonla aynı olmalıdır. Geçersiz, süresi dolmuş, kullanılmış, başka telefona ait davet veya kullanıcının zaten o işletmede üyeliği varsa hepsi aynı `404 NOT_FOUND` döner (F2.1a).
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1011,8 +1014,15 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            businessId: string;
+                        };
+                    };
                 };
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -4621,7 +4631,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Toptancılar */
+        /** Toptancılar (platform rolü super_admin, operations) */
         get: {
             parameters: {
                 query?: {
@@ -4634,17 +4644,27 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Liste */
+                /** @description Liste (yeniden eskiye) */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["AdminSeller"][];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
-        /** Toptancı aç (US-009) */
+        /**
+         * Toptancı aç (US-009; platform rolü super_admin, operations)
+         * @description Tek işlemde işletme (`created_via = admin`, `active`), `seller` yeteneği (`approved`), satıcı profili, hizmet bölgeleri, seçilen planın aboneliği, işletme admin rolü, yetkilinin kullanıcı kaydı (yoksa) ve aktivasyon daveti (`invitation.seller_activation_days`) oluşur. Aktivasyon SMS'i işlemden sonra gider; gönderilemezse işletme yine oluşur ve `activationSmsSent: false` döner. Aynı VÖEN herhangi bir işletmede kayıtlıysa `409`. `applicationId` bu sürümde desteklenmez (başvurudan açma F2.2) → `422`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -4668,20 +4688,82 @@ export interface paths {
                         planId: string;
                         serviceAreaRegionIds?: string[];
                         currency: components["schemas"]["CurrencyCode"];
+                        /** @description IANA saat dilimi adı */
                         timezone: string;
-                        /** Format: uuid */
+                        /**
+                         * Format: uuid
+                         * @description F2.2'de; şimdilik verilirse 422
+                         */
                         applicationId?: string;
                     };
                 };
             };
             responses: {
-                /** @description Oluşturuldu; aktivasyon SMS'i gönderildi */
+                /** @description Oluşturuldu */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            businessId: string;
+                            /** Format: date-time */
+                            invitationExpiresAt: string;
+                            activationSmsSent: boolean;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sellers/{id}/activation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Yeni aktivasyon daveti gönder (US-009 AC3)
+         * @description İşletmenin açık admin davetleri geçersiz olur, aynı yetkiliye yeni davet ve SMS gider. İşletmede aktif admin üyeliği varsa `409 INVALID_STATE_TRANSITION`; toptancı yoksa `404`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Yeni davet oluşturuldu */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: date-time */
+                            invitationExpiresAt: string;
+                            activationSmsSent: boolean;
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 409: components["responses"]["Error"];
             };
         };
@@ -5005,7 +5087,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Planlar */
+        /** Planlar (yalnız okuma; F2.1a'da toptancı formu için öne alındı, yönetim F6.3) */
         get: {
             parameters: {
                 query?: never;
@@ -5020,8 +5102,13 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["AdminPlan"][];
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -5969,6 +6056,36 @@ export interface components {
             compareValue?: string | null;
             /** @description İstemci yönlendirme yolu ve filtre */
             link?: string;
+        };
+        AdminSeller: {
+            /** Format: uuid */
+            id: string;
+            legalName: string;
+            voen: string | null;
+            /** Format: uuid */
+            regionId: string;
+            /** @enum {string} */
+            status: "active" | "suspended" | "dormant" | "archived";
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * @description accepted = aktif admin üyeliği var; pending = süresi dolmamış açık davet var
+             * @enum {string}
+             */
+            activation: "pending" | "accepted" | "expired";
+        };
+        AdminPlan: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: components["schemas"]["LocalizedText"];
+            /** @enum {string} */
+            capability: "seller" | "buyer";
+            price: components["schemas"]["Decimal"];
+            currencyCode: components["schemas"]["CurrencyCode"];
+            /** @enum {string} */
+            period: "month" | "year";
+            isActive: boolean;
         };
         PlanInput: {
             code: string;

@@ -135,6 +135,7 @@ flowchart TB
 | `STORAGE_PROVIDER` | Yalnızca api: `r2` (staging, production) / `local` (yerel, CI). `APP_ENV=production` + `local` → api açılmaz (ADR-0023, F1.10) |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_PUBLIC`, `R2_BUCKET_PRIVATE`, `FILES_PUBLIC_BASE_URL` | `STORAGE_PROVIDER=r2` iken zorunlu; biri eksikse api açılmaz. `FILES_PUBLIC_BASE_URL` public bucket'ın CDN adresi (F1.10) |
 | `STORAGE_LOCAL_DIR`, `STORAGE_LOCAL_BASE_URL` | Yalnızca `local`: depo klasörü (varsayılan `.local-storage`) ve imzalı bağlantıların API adresi (varsayılan `http://localhost:<PORT>`; telefondan denerken bilgisayarın ağ adresi) (F1.10) |
+| `WEB_BASE_URL` | Web uygulamasının adresi (sonunda `/` yok); SMS'teki toptancı aktivasyon bağlantısı `WEB_BASE_URL/<dil>/activate?token=…`. Varsayılan `http://localhost:3000`; production'da `https://` zorunlu (F2.1a) |
 | `SMS_PROVIDER` | `mock` (production'da yasak; `APP_ENV=production` + `mock` → api açılmaz) / gerçek sağlayıcı adı (F6.5'e kadar yalnızca `mock` kabul edilir) |
 | `SMS_API_KEY` | Gerçek sağlayıcıda |
 | `OTP_HASH_KEY` | OTP kod özeti (HMAC-SHA256) anahtarı; en az 32 karakter, ortam başına ayrı ve rastgele. Yoksa veya kısaysa api açılmaz (F1.5a) |
