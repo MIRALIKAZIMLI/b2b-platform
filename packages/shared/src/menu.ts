@@ -46,6 +46,14 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
       path: 'sellers',
       platformRoles: SELLER_ADMIN_ROLES,
     },
+    // F2.2b: toptancı başvuruları (US-008), aynı roller.
+    {
+      key: 'seller_applications',
+      anyOf: [],
+      ready: true,
+      path: 'seller-applications',
+      platformRoles: SELLER_ADMIN_ROLES,
+    },
   ],
   // productreport "Toptancı — Web"; `audit` c4 §5 (`audit.view`, US-057).
   seller: [

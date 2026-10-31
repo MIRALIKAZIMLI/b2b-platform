@@ -104,8 +104,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F2.1a | `platform-admin` modülü: `POST/GET /admin/sellers`, `POST /admin/sellers/{id}/activation`, `GET /admin/plans`; `POST /team/invitations/accept`; `invitation_accept()` (`0013_invitation_accept.sql`); pilot bölge seed'i; `invitation.seller_activation_days`, `WEB_BASE_URL` |
 | F2.1b | web `/admin/sellers` (liste, yeniden gönder) ve `/admin/sellers/new` (form, Zod, `422`/`409` alan hataları); `/<dil>/activate` (token adresten silinir, yalnız bellekte; `Referrer-Policy: no-referrer`; giriş aynı sayfada `LoginForm onSignedIn`); `MENUS` öğesinde `path` + `platformRoles` (`SELLER_ADMIN_ROLES`); Playwright E2E-02 |
 | F2.2a | `seller_applications` (G istisnası: platform okur; kimliksiz ekleme `seller_application_submit()`), `POST /seller-applications` (`@Public`, IP sınırı `seller_application.ip_max_per_hour`), `GET /admin/seller-applications`, `POST …/{id}/reject`, `POST /admin/sellers` + `applicationId`; `SellerApplicationStateMachine`; check-rls `TO migrator` politikası muaf |
+| F2.2b | web Tailwind 4 (`postcss.config.mjs`, `app/globals.css`; sınıfsız eski öğelere taban stil), ortak parçalar `features/ui/primitives.tsx` ([ui-guidelines](07-ai-development/ui-guidelines.md)); `/<dil>/seller-application` (kimliksiz form), girişte yalnız başvuru bağlantısı (US-008 AC2, `features/seller-application/entry.ts`); `/admin/seller-applications` (sekmeler, ret onayı, "Toptancı aç" → `/admin/sellers/new?application=<id>`, ön doldurma yalnız bellekte) |
 
-**Sıradaki:** F2.2b (web başvuru formu ve admin başvuru ekranı), sonra F2.3a (S6 metni bekliyor); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
+**Sıradaki:** F2.3a (S6 metni bekliyor); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
