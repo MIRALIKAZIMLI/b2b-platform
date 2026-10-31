@@ -2,6 +2,7 @@
 // - Oturum varsa seçim önce profile yazılır (`PATCH /me`); hata olursa dil değişmez.
 // - Girişten önceki seçim yalnızca cihazda saklanır, profile yazılmaz; girişte profildeki dil
 //   geçerli olur (Mimar kararı, F1.14a planı madde 3).
+// - Sözlük profile yazmadan önce indirilir; indirilemezse profil de değişmez (Müfettiş #33 L3).
 import type { ApiClient } from '@b2b/api-client';
 import { errorCodeOf } from '../auth/login-flow';
 import { type SupportedLanguage, isSupportedLanguage } from '../../lib/i18n';
@@ -11,6 +12,8 @@ export type ChangeResult = { readonly ok: true } | { readonly ok: false; readonl
 export interface LanguageControllerOptions {
   readonly client: ApiClient;
   readonly hasSession: () => boolean;
+  /** Sözlüğü yalnızca indirir (önbelleğe alır, uygulamaz); dil yoksa veya ağ yoksa `false`. */
+  readonly preload: (lang: SupportedLanguage) => Promise<boolean>;
   /** Sözlüğü yükleyip uygular (`applyLanguage`); dil yoksa `false`. */
   readonly apply: (lang: SupportedLanguage) => Promise<boolean>;
   /** İstek başlığındaki dil (`Accept-Language`). */
@@ -31,6 +34,7 @@ export function createLanguageController(options: LanguageControllerOptions) {
     /** Kullanıcı seçiciden dil seçti. */
     async change(lang: SupportedLanguage): Promise<ChangeResult> {
       if (options.hasSession()) {
+        if (!(await options.preload(lang))) return { ok: false, code: 'NOT_FOUND' };
         const { error, response } = await options.client.PATCH('/api/v1/me', {
           body: { preferredLanguage: lang },
         });

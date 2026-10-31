@@ -84,6 +84,8 @@ describe('ayar kaydı (shared/settings.ts)', () => {
     expect(settingDefault('sms.allowed_country_codes')).toEqual(['+994']);
     expect(settingDefault('mobile.min_version.ios')).toBe('0.0.0');
     expect(settingDefault('system.maintenance')).toBe(false);
+    expect(settingDefault('mobile.recommended_version.android')).toBe('0.0.0');
+    expect(settingDefault('mobile.store_url.android')).toBe('');
     expect(settingDefault('idempotency.ttl_hours')).toBe(24);
     expect(settingDefault('outbox.max_attempts')).toBe(10);
     expect(settingDefault('outbox.poll_interval_ms')).toBe(1000);
@@ -108,6 +110,9 @@ describe('ayar kaydı (shared/settings.ts)', () => {
     expect(parseSettingValue('system.maintenance', 'false')).toEqual({ ok: false });
     expect(parseSettingValue('onboarding.seller_mode', 'auto')).toEqual({ ok: false });
     expect(parseSettingValue('mobile.min_version.android', '1.2')).toEqual({ ok: false });
+    expect(parseSettingValue('mobile.store_url.ios', 'http://example.com')).toEqual({ ok: false });
+    expect(parseSettingValue('mobile.store_url.ios', 'javascript:alert(1)')).toEqual({ ok: false });
+    expect(parseSettingValue('mobile.store_url.ios', 'https://example.com/app').ok).toBe(true);
     expect(parseSettingValue('sms.allowed_country_codes', ['994'])).toEqual({ ok: false });
     expect(parseSettingValue('sms.allowed_country_codes', [])).toEqual({ ok: false });
     expect(parseSettingValue('dormant.reminder_days', [30, 7])).toEqual({ ok: false });

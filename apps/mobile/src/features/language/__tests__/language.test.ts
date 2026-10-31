@@ -4,7 +4,7 @@ import { createLanguageController } from '../language';
 
 const BASE = 'http://mobile.test';
 
-function setup(options: { session: boolean; patchStatus?: number }) {
+function setup(options: { session: boolean; patchStatus?: number; loadable?: boolean }) {
   const patches: unknown[] = [];
   const fetch = vi.fn(async (request: Request): Promise<Response> => {
     patches.push(await request.json());
@@ -19,11 +19,13 @@ function setup(options: { session: boolean; patchStatus?: number }) {
     active = lang;
     return Promise.resolve(true);
   });
+  const preload = vi.fn(() => Promise.resolve(options.loadable ?? true));
   const setApiLanguage = vi.fn();
   const remember = vi.fn(() => Promise.resolve());
   const controller = createLanguageController({
     client: createApiClient({ baseUrl: BASE, fetch }),
     hasSession: () => options.session,
+    preload,
     apply,
     setApiLanguage,
     remember,
@@ -44,6 +46,14 @@ describe('mobil dil seçimi', () => {
   it('US-058 AC1: profil kaydı başarısızsa dil değişmez', async () => {
     const t = setup({ session: true, patchStatus: 422 });
     expect(await t.controller.change('tr')).toEqual({ ok: false, code: 'VALIDATION_FAILED' });
+    expect(t.apply).not.toHaveBeenCalled();
+    expect(t.active()).toBe('az');
+  });
+
+  it('US-058 AC1: sözlük indirilemezse profil de değişmez (PATCH gönderilmez)', async () => {
+    const t = setup({ session: true, loadable: false });
+    expect(await t.controller.change('ru')).toEqual({ ok: false, code: 'NOT_FOUND' });
+    expect(t.patches).toEqual([]);
     expect(t.apply).not.toHaveBeenCalled();
     expect(t.active()).toBe('az');
   });

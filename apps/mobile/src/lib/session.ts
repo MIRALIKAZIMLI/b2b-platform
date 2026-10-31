@@ -1,7 +1,7 @@
 // Mobil oturum (F1.14a). Yenileme anahtarı yalnızca `expo-secure-store`'da (Android Keystore /
 // iOS Keychain; ADR-0006 madde 3, TM-04). AsyncStorage veya düz dosya kullanılmaz; anahtar loga ve
 // hata mesajına yazılmaz. Erişim anahtarı yalnızca `MobileApi` belleğinde.
-// Seçili işletme yalnızca bellekte; seçici F1.14b'de.
+// Seçili işletme yalnızca bellekte (web ile aynı, coding-guidelines §9.6); seçici F1.14b.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
 import { type MobileApi, type RefreshTokenStore, type TokenPair, createMobileApi } from './api';
@@ -27,6 +27,7 @@ export function createSecureRefreshTokenStore(
 
 let language = 'az';
 let businessId: string | undefined;
+const businessListeners = new Set<() => void>();
 let expiredHandler: (() => void) | undefined;
 let instance: MobileApi | undefined;
 
@@ -47,7 +48,20 @@ export function setApiLanguage(next: string): void {
 }
 
 export function setActiveBusinessId(next: string | undefined): void {
+  if (next === businessId) return;
   businessId = next;
+  for (const listener of businessListeners) listener();
+}
+
+export function activeBusinessId(): string | undefined {
+  return businessId;
+}
+
+export function subscribeActiveBusiness(listener: () => void): () => void {
+  businessListeners.add(listener);
+  return () => {
+    businessListeners.delete(listener);
+  };
 }
 
 export function setSessionExpiredHandler(handler: (() => void) | undefined): void {
@@ -67,9 +81,10 @@ export function useSession() {
   });
 }
 
-export function useMe(enabled: boolean) {
+/** İşletme değişince sorgu anahtarı da değişir: menü yeni işletmenin izinleriyle gelir (F1.14-AC5). */
+export function useMe(enabled: boolean, business?: string) {
   return useQuery({
-    queryKey: ME_KEY,
+    queryKey: [...ME_KEY, business ?? null],
     enabled,
     retry: false,
     queryFn: async () => {

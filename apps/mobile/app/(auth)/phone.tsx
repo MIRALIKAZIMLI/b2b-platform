@@ -26,10 +26,12 @@ export default function PhoneScreen() {
         autoComplete="tel"
         textContentType="telephoneNumber"
         accessibilityLabel={t('auth.login.phone_label')}
+        testID="phone-input"
       />
       <Pressable
         style={styles.button}
         accessibilityRole="button"
+        testID="send-code"
         disabled={busy || phone.trim() === ''}
         onPress={() => void run(() => flow.requestCode(phone))}
       >

@@ -1,5 +1,5 @@
 // Web arayüzü başlangıç çevirileri (`ui_translations`, F1.13a: giriş ekranı ve dil seçici;
-// F1.13b: kabuk, işletme seçici, menü).
+// F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -51,6 +51,39 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Ваш аккаунт пока не привязан ни к одной компании.',
     tr: 'Hesabınız henüz bir işletmeye bağlı değil.',
   },
+  'shell.platform_on_web': {
+    az: 'Platform paneli yalnız veb versiyada açılır.',
+    ru: 'Панель платформы доступна только в веб-версии.',
+    tr: 'Platform paneli yalnızca web sürümünde açılır.',
+  },
+  'shell.update.required_title': {
+    az: 'Zəhmət olmasa, tətbiqi yeniləyin',
+    ru: 'Пожалуйста, обновите приложение',
+    tr: 'Lütfen uygulamayı güncelleyin',
+  },
+  'shell.update.required_body': {
+    az: 'Bu versiya artıq dəstəklənmir. Davam etmək üçün yeni versiyanı yükləyin.',
+    ru: 'Эта версия больше не поддерживается. Установите новую версию, чтобы продолжить.',
+    tr: 'Bu sürüm artık desteklenmiyor. Devam etmek için yeni sürümü yükleyin.',
+  },
+  'shell.update.recommended_body': {
+    az: 'Tətbiqin yeni versiyası var.',
+    ru: 'Доступна новая версия приложения.',
+    tr: 'Uygulamanın yeni bir sürümü var.',
+  },
+  'shell.update.open_store': { az: 'Yenilə', ru: 'Обновить', tr: 'Güncelle' },
+  'shell.update.dismiss': { az: 'Sonra', ru: 'Позже', tr: 'Sonra' },
+  'shell.offline.title': {
+    az: 'Serverə qoşulmaq mümkün olmadı',
+    ru: 'Не удалось подключиться к серверу',
+    tr: 'Sunucuya bağlanılamadı',
+  },
+  'shell.offline.body': {
+    az: 'İnternet bağlantısını yoxlayın və yenidən cəhd edin.',
+    ru: 'Проверьте подключение к интернету и попробуйте снова.',
+    tr: 'İnternet bağlantınızı kontrol edip yeniden deneyin.',
+  },
+  'shell.offline.retry': { az: 'Yenidən cəhd et', ru: 'Повторить', tr: 'Yeniden dene' },
   'shell.dashboard_soon': {
     az: 'İdarə paneli kartları tezliklə əlavə olunacaq.',
     ru: 'Карточки панели скоро появятся.',

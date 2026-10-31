@@ -1,0 +1,43 @@
+# E2E-01 (mobil, Android): mock SMS kutusundan kodla giriş (test-strategy §E2E-01, F1.14b).
+# Expo Go'da çalışır (hesap gerekmez). Ön koşul: `pnpm dev` (SMS_PROVIDER=mock) ve
+# `pnpm --filter @b2b/mobile start` açık; telefon/emülatör ve bilgisayar aynı ağda.
+# Çalıştırma:
+#   maestro test -e EXPO_URL=exp://<LAN IP>:8081 -e API_URL=http://<LAN IP>:3000 \
+#     -e PHONE=+99450xxxxxxx apps/mobile/.maestro/E2E-01.yaml
+# PHONE: seed'deki bir test kullanıcısının numarası (gerçek numara değil).
+appId: host.exp.exponent
+name: E2E-01 mobil giriş (mock SMS)
+---
+- launchApp:
+    clearState: true
+- openLink: ${EXPO_URL}
+- extendedWaitUntil:
+    visible:
+      id: phone-input
+    timeout: 60000
+- tapOn:
+    id: phone-input
+- inputText: ${PHONE}
+- hideKeyboard
+- tapOn:
+    id: send-code
+- extendedWaitUntil:
+    visible:
+      id: code-input
+    timeout: 15000
+- runScript:
+    file: read-otp.js
+    env:
+      API_URL: ${API_URL}
+      PHONE: ${PHONE}
+- tapOn:
+    id: code-input
+- inputText: ${output.otp}
+- hideKeyboard
+- tapOn:
+    id: verify-code
+# Giriş sonrası alanın açılış sayfası (seller veya buyer) ya da işletmesiz bilgi ekranı.
+- extendedWaitUntil:
+    visible:
+      id: shell-.*
+    timeout: 20000

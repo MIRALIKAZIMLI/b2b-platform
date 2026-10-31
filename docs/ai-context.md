@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-10-30 (F1.14a: mobil giriş, güvenli oturum, dil; sıradaki adım F1.14b).
+Son güncelleme: 2026-10-31 (F1.14b: mobil kabuk, app-config, push kaydı; sıradaki faz F2).
 
 ## 1. Mimari özeti
 
@@ -21,14 +21,15 @@ apps/api/src/core/                audit, bootstrap, config, db, errors, health, 
                                   logging, outbox, clock.ts, id-generator.ts, money.ts
 apps/api/src/core/ports/          sms-sender, push-sender, file-storage (dış servis portları)
 apps/api/src/infrastructure/      push (expo, mock), queue, redis, sms (mock → dev_sms_outbox), storage (r2, local)
-apps/api/src/modules/             access, billing, businesses, dev (yalnız local/test/staging), files, i18n, identity, notifications, settings
+apps/api/src/modules/             access, app-config, billing, businesses, dev (yalnız local/test/staging), files, i18n, identity, notifications, settings
 packages/api-client/              openapi.yaml → src/schema.d.ts (üretilir, elle düzenlenmez), createApiClient
-packages/shared/src/              env, errors, entitlements, permissions, settings, uuidv7, voen, format…
+packages/shared/src/              env, errors, entitlements, menu, permissions, settings, uuidv7, version, voen, format…
 apps/web/src/                     lib/{api,session,i18n}.ts, i18n/{routing,request}.ts, proxy.ts,
                                   features/{auth,i18n,shell}, app/[locale]/(auth)/login,
                                   app/[locale]/(admin|seller|buyer)/<alan>; e2e/ (Playwright)
-apps/mobile/src/                  lib/{api,session,config,i18n,i18n-cache}.ts, features/{auth,language};
-                                  app/(auth)/{phone,code,totp}, app/index (yer tutucu)
+apps/mobile/src/                  lib/{api,session,config,i18n,i18n-cache,app-config,app-info,push,push-device}.ts,
+                                  features/{auth,language,shell}; app/(auth)/{phone,code,totp},
+                                  app/(seller)/seller, app/(buyer)/buyer, app/index (açılış); .maestro/E2E-01.yaml
 ```
 
 Hedef yapı: [coding-guidelines](07-ai-development/coding-guidelines.md) §1.
@@ -96,11 +97,12 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F1.11 | `push_tokens`, `notifications`, `notification_preferences` (U), `notification_templates` (G), `push_token_register()`, `PushSender` (expo/mock), `notifications` kuyruğu, `/push-tokens`, `/notifications*`, `0011_notifications.sql` |
 | F1.10 | `files` (T), `FileStorage` (r2/local, ADR-0023), `/files/upload-url`, `/files/{id}/complete`, `FilesService.getReadUrl`, `/dev/storage` (yalnız local), `businesses.logo_file_id` bileşik FK, `0012_files.sql` |
 | F1.10b | yükleme private geçici anahtara, `complete`'te kalıcı anahtara koşullu kopya (`putIfAbsent`) |
+| F1.14b | mobil kabuk: `GET /api/app-config` (sürüm kontrolü), izinden menü (ortak `@b2b/shared` `menu.ts`), işletme seçici, "Lütfen güncelleyin" + kapatılabilir öneri, push anahtarı kaydı, açılışta "Yeniden dene", Maestro E2E-01 dosyası |
 | F1.14a | mobil giriş (telefon → kod → TOTP), yenileme anahtarı `expo-secure-store`'da, `lib/api.ts` tek sessiz yenileme, `i18next` + cihazda çeviri önbelleği (`expo-file-system`), dil seçici |
 | F1.13b | web kabuğu: işletme seçici, izinden menü (`features/shell/menu.ts`), `/admin`, `/seller`, `/buyer` açılış sayfaları (yer tutucu), CI `e2e` işi (Playwright, E2E-01) |
 | F1.13a | web yenileme cookie'si (`X-Client: web`, `b2b_rt`), `PATCH /me`, web `api.ts`/oturum/`next-intl`, giriş ekranı (telefon → kod → TOTP), dil seçici, Playwright |
 
-**Sıradaki:** F1.14b.
+**Sıradaki:** F2. M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
@@ -131,3 +133,4 @@ Kaynak: ilgili kartın "Kararlar" bölümü ve faz spesifikasyonu §4.
 - **Web kabuğu (F1.13b):** Seçili işletme yalnız bellekte (`lib/session.ts`, `localStorage` yok — coding-guidelines §9.6); her istekte `X-Business-Id`. Varsayılan: ilk aktif üyelik (US-003 AC1 "son kullanılan" saklanmıyor; açık nokta). İşletme değişince oturum dışındaki tüm react-query önbelleği silinir; `/me` anahtarı işletmeye göre. Alan = seçili işletmenin yeteneği, yoksa platform rolü → `admin`; yanlış alandaki sayfa kendi açılış sayfasına yönlendirir (asıl kontrol API'de). Menü `MENUS[alan]` öğe → `anyOf` izin kodları (tip `@b2b/shared` `PermissionCode`; web yalnız tip içe aktarır); boş `anyOf` = dashboard. Yapılmamış ekran bağlantısız gösterilir (`ready: false`). Platform menüsü yalnız dashboard (ekran → platform rolü eşlemesi belgede yok). Metinler `shell.*` anahtarları. Dil seçici `PATCH /me` hata verirse dil değişmez, hata gösterilir.
 - **Mobil oturum ve dil (F1.14a):** Mobil `X-Client` göndermez; yenileme anahtarı gövdede gelir ve gövdeyle yenilenir. Anahtar yalnız `expo-secure-store` (`b2b.refresh_token`); AsyncStorage yok, log/hata mesajına yazılmaz. Erişim anahtarı yalnız `lib/api.ts` belleğinde; `401`'de tek paylaşılan yenileme; yenileme `400/401/403` → anahtar silinir + giriş ekranı; `5xx`/ağ hatası oturumu kapatmaz. Çıkış sunucu hatasında da anahtarı siler. API adresi `EXPO_PUBLIC_API_URL` (`apps/mobile/.env`; telefondan LAN IP, emülatörden `10.0.2.2`). Çeviriler `i18next` (düz anahtar, `{phone}` yer tutucusu), ETag'li sözlük `expo-file-system` önbelleğinde; ağ yoksa önbellek. Girişten önce seçilen dil yalnız cihazda (profile yazılmaz); girişte profildeki dil, oturumda seçim `PATCH /me` (hata → dil değişmez). Mobil testler yalnız saf TS (Vitest); bileşen testi aracı yok, ekranlar elle + F1.14b Maestro.
 - **Vitest + NestJS (S8):** kodda bağımlılıklar `@Inject()` ile açık yazılıyor (yeni paket yok); `unplugin-swc` eklenmedi.
+- **Mobil kabuk (F1.14b):** Açılış: `GET /api/app-config?platform=&version=` (sürümsüz, `@Public`; `mobile.min_version.*`, `mobile.recommended_version.*`, `mobile.store_url.*`, `system.maintenance`; sürüm `X.Y.Z`, `@b2b/shared` `compareVersions`, `semver` yok). Minimum altı → yalnız "Lütfen güncelleyin" (kök düzende, başka ekran açılmaz); önerilen daha yeni → kapatılabilir öneri (uygulama ömründe). `storeUrl` boşsa alan dönmez, düğme yok (adres F6'da). Yanıt gelmezse uygulama engellenmez. `maintenance` henüz arayüzde kullanılmıyor. Oturum geri alınırken ağ hatası → "Yeniden dene" (giriş değil). Alan = seçili işletmenin yeteneği → `/seller` veya `/buyer` (`app/(seller)`, `app/(buyer)`); mobilde platform alanı yok (yalnız platform rolü → "web'den girin"). Menü `@b2b/shared` `MENUS`/`visibleMenu` (web de oradan). `/me` sorgu anahtarı işletmeye göre; işletme değişince oturum, çeviri ve app-config dışındaki önbellek silinir. Profildeki dil açılışta da uygulanır; dil değişiminde sözlük önce indirilir, indirilemezse `PATCH /me` gönderilmez. Push: `lib/push.ts` (saf) + `push-device.ts` (`expo-notifications` gerektiğinde yüklenir); `projectId` yoksa veya Expo Go'daysa atlanır; oturum açılınca ve anahtar değişince `POST /api/v1/push-tokens`. Gerçek cihaz push denemesi F6 (EAS). Maestro `apps/mobile/.maestro/E2E-01.yaml` (Expo Go, `host.exp.exponent`); bulutta emülatör yok, CI'da çalışmaz → mobil E2E yayın öncesi elle kontrol listesi (test-strategy VARSAYIM).

@@ -4550,15 +4550,19 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            minVersion?: string;
-                            recommendedVersion?: string;
-                            updateRequired?: boolean;
-                            /** Format: uri */
+                            minVersion: string;
+                            recommendedVersion: string;
+                            updateRequired: boolean;
+                            /**
+                             * Format: uri
+                             * @description Mağaza veya test dağıtım bağlantısı; ayarlanmamışsa alan yok (F1.14b)
+                             */
                             storeUrl?: string;
-                            maintenance?: boolean;
+                            maintenance: boolean;
                         };
                     };
                 };
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
