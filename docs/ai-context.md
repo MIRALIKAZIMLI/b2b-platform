@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-01 (F2.4: VÖEN girişi; sıradaki F2.6).
+Son güncelleme: 2026-11-01 (F2.6: depolar, satıcı profili, hizmet bölgeleri; sıradaki F2.7).
 
 ## 1. Mimari özeti
 
@@ -108,6 +108,7 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F2.3a | `onboarding` modülü: `POST /buyers/register` (Bearer `pendingToken`, IP sınırı `buyer_registration.ip_max_per_hour`, tek `withTenantTx`), `GET /catalog/activity-types`, `activity_types` seed, `0015_buyer_signup.sql` (`user_create_self_signup`, `subscription_start_self_signup`, `idempotency_lookup_by_phone`, `idempotency_store`), `branches.address_line` null, `IpHourlyRateLimiter` |
 | F2.3b | `GET /business` (`business.manage`); web `/<dil>/register` (`LoginForm intent=register` → OTP sonrası `BuyerRegistrationForm`, kayıt anahtarı yalnız bellekte), perakendeci ana sayfasında profil doluluk kartı + boş durum; mobil `(auth)/register` + `BuyerHomeCards`, tema `apps/mobile/src/lib/theme.ts`; ortak form mantığı `@b2b/shared` `buyer-registration.ts` (`DATA_SHARING_TEXT_VERSION`); veri paylaşım metni `dataSharing.v1.*` çevirilerinde; Playwright E2E-03 (VÖEN adımı F2.4) |
 | F2.4 | `PATCH /business` (`business.manage`; K1 yalnız `businesses` alanları, kişisel veri + logo F2.10'a kadar 422; VARSAYIM K2 VÖEN yalnız `buyer`'da değişir → 403; VARSAYIM K3 VÖEN silinmez), `0016_voen_reset.sql` (tetikleyici `legal_type`'ı VÖEN'den türetir, VÖEN değişince rozeti sıfırlar, R20), `requireVoen()` (`businesses/index.ts`; F4 sepet gönderimi çağırır, US-006 AC4/AC5), audit `business.voen_changed` / `business.profile_updated`; web `/<dil>/buyer/profile`, mobil `(buyer)/business-profile`, ortak form `@b2b/shared` `business-profile.ts`; E2E-03 VÖEN adımı |
+| F2.6 | `GET/POST /warehouses`, `PATCH /warehouses/{id}` (ilk depo varsayılan, `seller_profiles.default_warehouse_id` eşitlenir; silme yok, pasifleştirme; varsayılan depo pasifleşemez → 409), `GET/PATCH /business/seller-profile` (tanıtım metni, `minOrderAmount` metin para, teslim fotoğrafı; stok modu F3), `GET/PUT /business/service-areas`; hepsi `business.manage` + `seller` yeteneği (yoksa 403 `CAPABILITY_REQUIRED`). `warehouses.max` = aktif depo sayısı: `businesses` billing'i içe aktaramaz (c4 §1) → soyut `WarehouseLimitGate` (businesses) + global `WarehouseLimitGateModule` (billing, sayacı da kaydeder); eşzamanlılık işletme satırı kilidiyle. Audit `warehouse.*`, `seller_profile.updated`, `service_areas.updated`; web `/<dil>/seller/settings` (menü `settings` hazır), ortak form `@b2b/shared` `seller-setup.ts` |
 
 **Sıradaki:** F2.6 (depolar, satıcı profili, hizmet bölgeleri); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 

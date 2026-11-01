@@ -70,7 +70,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     soon('reports', ['reports.view']),
     soon('team', ['team.manage']),
     soon('audit', ['audit.view']),
-    soon('settings', ['business.manage']),
+    // F2.6: satıcı profili, depolar, hizmet bölgeleri (US-011).
+    { key: 'settings', anyOf: ['business.manage'], ready: true, path: 'settings' },
   ],
   // productreport "Perakendeci — Mobil" (web'de aynısı).
   buyer: [

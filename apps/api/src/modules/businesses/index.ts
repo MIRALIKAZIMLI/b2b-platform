@@ -39,3 +39,5 @@ export {
   type IpRateScope,
 } from './ip-hourly-rate-limiter';
 export { requireVoen, type VoenHolder } from './voen-guard';
+export { SellerSetupRepository } from './seller-setup.repository';
+export { WarehouseLimitGate } from './warehouse-limit.gate';

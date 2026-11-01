@@ -1,6 +1,7 @@
 // Web arayüzü başlangıç çevirileri (`ui_translations`, F1.13a: giriş ekranı ve dil seçici;
 // F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi;
-// F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni).
+// F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni;
+// F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -807,5 +808,265 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Yuxarıdakı mətni oxudum və məlumatlarımın bu şəkildə paylaşılmasına razıyam.',
     ru: 'Я прочитал(а) текст выше и согласен(на) на передачу моих данных в указанном порядке.',
     tr: 'Yukarıdaki metni okudum ve verilerimin bu şekilde paylaşılmasını kabul ediyorum.',
+  },
+  'sellerSettings.title': {
+    az: 'Parametrlər',
+    ru: 'Настройки',
+    tr: 'Ayarlar',
+  },
+  'sellerSettings.description': {
+    az: 'Satıcı profili, anbarlar və xidmət bölgələri.',
+    ru: 'Профиль продавца, склады и регионы обслуживания.',
+    tr: 'Satıcı profili, depolar ve hizmet bölgeleri.',
+  },
+  'sellerSettings.tab.profile': {
+    az: 'Satıcı profili',
+    ru: 'Профиль продавца',
+    tr: 'Satıcı profili',
+  },
+  'sellerSettings.tab.warehouses': {
+    az: 'Anbarlar',
+    ru: 'Склады',
+    tr: 'Depolar',
+  },
+  'sellerSettings.tab.areas': {
+    az: 'Xidmət bölgələri',
+    ru: 'Регионы обслуживания',
+    tr: 'Hizmet bölgeleri',
+  },
+  'sellerSettings.load_failed': {
+    az: 'Məlumat yüklənmədi.',
+    ru: 'Не удалось загрузить данные.',
+    tr: 'Bilgiler yüklenemedi.',
+  },
+  'sellerSettings.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Tekrar dene',
+  },
+  'sellerSettings.saved': {
+    az: 'Yadda saxlanıldı',
+    ru: 'Сохранено',
+    tr: 'Kaydedildi',
+  },
+  'sellerSettings.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'sellerSettings.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'sellerSettings.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'sellerSettings.error.required': {
+    az: 'Bu sahə məcburidir.',
+    ru: 'Обязательное поле.',
+    tr: 'Bu alan zorunludur.',
+  },
+  'sellerSettings.error.too_long': {
+    az: 'Mətn çox uzundur.',
+    ru: 'Слишком длинный текст.',
+    tr: 'Metin çok uzun.',
+  },
+  'sellerSettings.error.invalid_amount': {
+    az: 'Məbləği düzgün yazın (məs. 150 və ya 150.50).',
+    ru: 'Введите сумму правильно (напр. 150 или 150.50).',
+    tr: 'Tutarı doğru yazın (ör. 150 veya 150.50).',
+  },
+  'sellerSettings.error.not_found': {
+    az: 'Seçim tapılmadı.',
+    ru: 'Выбранное значение не найдено.',
+    tr: 'Seçim bulunamadı.',
+  },
+  'sellerSettings.error.plan_limit': {
+    az: 'Planınızın anbar limitinə çatdınız. Daha çox anbar üçün planınızı yüksəldin.',
+    ru: 'Достигнут лимит складов по вашему тарифу. Чтобы добавить склад, повысьте тариф.',
+    tr: 'Planınızın depo sınırına ulaştınız. Daha fazla depo için planınızı yükseltin.',
+  },
+  'sellerSettings.error.default_rule': {
+    az: 'Əsas anbar deaktiv edilə bilməz; əvvəlcə başqa anbarı əsas edin.',
+    ru: 'Основной склад нельзя деактивировать; сначала сделайте основным другой склад.',
+    tr: 'Varsayılan depo pasifleştirilemez; önce başka bir depoyu varsayılan yapın.',
+  },
+  'sellerSettings.profile.title': {
+    az: 'Satıcı profili',
+    ru: 'Профиль продавца',
+    tr: 'Satıcı profili',
+  },
+  'sellerSettings.profile.description': {
+    az: 'Pərakəndəçilərin bağlantı sorğusunda gördüyü məlumatlar və sifariş qaydaları.',
+    ru: 'Информация, которую видят розничные клиенты в запросе на связь, и правила заказа.',
+    tr: 'Perakendecilerin bağlantı isteğinde gördüğü bilgiler ve sipariş kuralları.',
+  },
+  'sellerSettings.profile.about': {
+    az: 'Tanıtım mətni',
+    ru: 'Описание компании',
+    tr: 'Tanıtım metni',
+  },
+  'sellerSettings.profile.about_placeholder': {
+    az: 'Məhsullarınız, çatdırılma və iş qaydanız haqqında qısa məlumat',
+    ru: 'Кратко о товарах, доставке и условиях работы',
+    tr: 'Ürünleriniz, teslimat ve çalışma şekliniz hakkında kısa bilgi',
+  },
+  'sellerSettings.profile.about_hint': {
+    az: 'Hər dil üçün ayrıca yazın; boş dil göstərilmir.',
+    ru: 'Заполните для каждого языка; пустой язык не показывается.',
+    tr: 'Her dil için ayrı yazın; boş dil gösterilmez.',
+  },
+  'sellerSettings.profile.min_order': {
+    az: 'Minimum sifariş məbləği',
+    ru: 'Минимальная сумма заказа',
+    tr: 'Minimum sipariş tutarı',
+  },
+  'sellerSettings.profile.min_order_hint': {
+    az: 'Boş buraxsanız limit olmur.',
+    ru: 'Оставьте пустым, чтобы не ограничивать.',
+    tr: 'Boş bırakırsanız sınır olmaz.',
+  },
+  'sellerSettings.profile.delivery_photo': {
+    az: 'Təhvil fotosu məcburidir',
+    ru: 'Фото при доставке обязательно',
+    tr: 'Teslim fotoğrafı zorunlu',
+  },
+  'sellerSettings.profile.delivery_photo_hint': {
+    az: 'Kuryer sifarişi fotosuz təhvil verə bilməz.',
+    ru: 'Курьер не сможет завершить доставку без фото.',
+    tr: 'Kargocu siparişi fotoğrafsız teslim edemez.',
+  },
+  'sellerSettings.warehouses.title': {
+    az: 'Anbarlar',
+    ru: 'Склады',
+    tr: 'Depolar',
+  },
+  'sellerSettings.warehouses.count': {
+    az: '{count} anbar',
+    ru: 'Складов: {count}',
+    tr: '{count} depo',
+  },
+  'sellerSettings.warehouses.new_title': {
+    az: 'Yeni anbar',
+    ru: 'Новый склад',
+    tr: 'Yeni depo',
+  },
+  'sellerSettings.warehouses.first_hint': {
+    az: 'İlk anbarınız əsas anbar olacaq; stok anbar üzrə saxlanılır.',
+    ru: 'Первый склад станет основным; остатки ведутся по складам.',
+    tr: 'İlk deponuz varsayılan depo olur; stok depo bazında tutulur.',
+  },
+  'sellerSettings.warehouses.new_hint': {
+    az: 'Anbar sayı planınızın limitindən asılıdır.',
+    ru: 'Количество складов зависит от тарифа.',
+    tr: 'Depo sayısı planınızın sınırına bağlıdır.',
+  },
+  'sellerSettings.warehouses.name': {
+    az: 'Anbarın adı',
+    ru: 'Название склада',
+    tr: 'Depo adı',
+  },
+  'sellerSettings.warehouses.address': {
+    az: 'Ünvan',
+    ru: 'Адрес',
+    tr: 'Adres',
+  },
+  'sellerSettings.warehouses.address_hint': {
+    az: 'İstəyə bağlı',
+    ru: 'Необязательно',
+    tr: 'İsteğe bağlı',
+  },
+  'sellerSettings.warehouses.add': {
+    az: 'Anbar əlavə et',
+    ru: 'Добавить склад',
+    tr: 'Depo ekle',
+  },
+  'sellerSettings.warehouses.empty': {
+    az: 'Hələ anbar yoxdur',
+    ru: 'Складов пока нет',
+    tr: 'Henüz depo yok',
+  },
+  'sellerSettings.warehouses.empty_hint': {
+    az: 'Yuxarıdakı formdan ilk anbarınızı əlavə edin.',
+    ru: 'Добавьте первый склад с помощью формы выше.',
+    tr: 'Yukarıdaki formdan ilk deponuzu ekleyin.',
+  },
+  'sellerSettings.warehouses.default': {
+    az: 'Əsas',
+    ru: 'Основной',
+    tr: 'Varsayılan',
+  },
+  'sellerSettings.warehouses.inactive': {
+    az: 'Deaktiv',
+    ru: 'Неактивен',
+    tr: 'Pasif',
+  },
+  'sellerSettings.warehouses.no_address': {
+    az: 'Ünvan yoxdur',
+    ru: 'Адрес не указан',
+    tr: 'Adres yok',
+  },
+  'sellerSettings.warehouses.edit': {
+    az: 'Düzəlt',
+    ru: 'Изменить',
+    tr: 'Düzenle',
+  },
+  'sellerSettings.warehouses.make_default': {
+    az: 'Əsas et',
+    ru: 'Сделать основным',
+    tr: 'Varsayılan yap',
+  },
+  'sellerSettings.warehouses.activate': {
+    az: 'Aktivləşdir',
+    ru: 'Активировать',
+    tr: 'Etkinleştir',
+  },
+  'sellerSettings.warehouses.deactivate': {
+    az: 'Deaktiv et',
+    ru: 'Деактивировать',
+    tr: 'Pasifleştir',
+  },
+  'sellerSettings.warehouses.no_delete_note': {
+    az: 'Anbarlar silinmir, yalnız deaktiv edilir; keçmiş stok və sifariş qeydləri qorunur.',
+    ru: 'Склады не удаляются, только деактивируются; история остатков и заказов сохраняется.',
+    tr: 'Depolar silinmez, yalnızca pasifleştirilir; geçmiş stok ve sipariş kayıtları korunur.',
+  },
+  'sellerSettings.areas.title': {
+    az: 'Xidmət bölgələri',
+    ru: 'Регионы обслуживания',
+    tr: 'Hizmet bölgeleri',
+  },
+  'sellerSettings.areas.description': {
+    az: 'Mal çatdırdığınız bölgələri seçin; pərakəndəçi kataloqu bu bölgələrə görə süzülür.',
+    ru: 'Выберите регионы, куда вы доставляете; каталог розничных клиентов фильтруется по ним.',
+    tr: 'Mal teslim ettiğiniz bölgeleri seçin; perakendeci dizini bu bölgelere göre süzülür.',
+  },
+  'sellerSettings.areas.selected': {
+    az: '{count} seçilib',
+    ru: 'Выбрано: {count}',
+    tr: '{count} seçili',
+  },
+  'sellerSettings.areas.selected_list': {
+    az: 'Seçilmiş bölgələr',
+    ru: 'Выбранные регионы',
+    tr: 'Seçili bölgeler',
+  },
+  'sellerSettings.areas.remove': {
+    az: '{name} çıxar',
+    ru: 'Убрать {name}',
+    tr: '{name} kaldır',
+  },
+  'sellerSettings.areas.search': {
+    az: 'Bölgə axtar',
+    ru: 'Поиск региона',
+    tr: 'Bölge ara',
+  },
+  'sellerSettings.areas.no_match': {
+    az: 'Uyğun bölgə tapılmadı.',
+    ru: 'Регион не найден.',
+    tr: 'Eşleşen bölge yok.',
   },
 };

@@ -1,4 +1,5 @@
 export { BillingModule } from './billing.module';
+export { WarehouseLimitGateModule } from './warehouse-limit-gate.module';
 export { type EntitlementActor, EntitlementService } from './entitlement.service';
 export {
   type EntitlementUsageCounter,
