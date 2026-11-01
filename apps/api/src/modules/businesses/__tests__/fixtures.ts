@@ -26,9 +26,11 @@ export async function createRefs(): Promise<Refs> {
     const region = await tx.execute<{ id: string }>(sql`
       insert into regions (country_code, parent_id, type, name)
       values ('XB', null, 'city', '{"az": "Test"}'::jsonb) returning id`);
+    // sort_order seed listesinin sonrasında: aynı veritabanını paylaşan katalog sırası testi
+    // (F2.3a) seed'in ilk türünü bekler; 0'da eşitlik rastgele kimlik sırasına kalıyordu.
     const activity = await tx.execute<{ id: string }>(sql`
       insert into activity_types (name, is_active, sort_order)
-      values ('{"az": "Test"}'::jsonb, true, 0) returning id`);
+      values ('{"az": "Test"}'::jsonb, true, 1000) returning id`);
     const regionId = region.rows[0]?.id;
     const activityTypeId = activity.rows[0]?.id;
     if (regionId === undefined || activityTypeId === undefined) {

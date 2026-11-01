@@ -35,6 +35,18 @@ export function mobileMenu(me: Pick<Me, 'activeBusiness'>, area: MobileArea): Me
   return visibleMenu(area, codes);
 }
 
+/**
+ * Hazır menü öğesinin mobil adresi (expo-router; grup adı adreste yoktur). Yalnız mobilde ekranı
+ * olan öğeler; diğerleri bağlantısız kalır. F2.4: perakendeci profili.
+ */
+const MOBILE_ROUTES: Readonly<Record<string, '/business-profile'>> = {
+  'buyer:profile': '/business-profile',
+};
+
+export function mobileHref(area: MobileArea, item: MenuItem): '/business-profile' | undefined {
+  return item.ready ? MOBILE_ROUTES[`${area}:${item.key}`] : undefined;
+}
+
 export type SessionState = 'pending' | 'error' | 'signed_in' | 'signed_out';
 
 export type StartupScreen =

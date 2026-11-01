@@ -1,22 +1,37 @@
 // Perakendeci açılış kartları (US-005 AC2; F2.3b): "Profilinizi tamamlayın" doluluk yüzdesiyle
 // (yalnız `business.manage` izniyle ve %100 değilken) ve toptancı/ürün olmadığını anlatan boş durum.
 // UX: Indigo zeminli yumuşak kart, kalın yüzde, ince ilerleme çubuğu; boş durum sakin, kesik kenarlı.
+// F2.4: kart dokunulabilir, profil ekranına götürür (basılı durumda ölçek geri bildirimi).
 import type { components } from '@b2b/api-client';
 import { clampPercent } from '@b2b/shared';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, softShadow, space } from '../../lib/theme';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors, pressed, radius, softShadow, space } from '../../lib/theme';
 import { canManageBusiness } from './options';
 import { useBusinessProfile } from './queries';
 
 type Me = components['schemas']['Me'];
 
-export function ProfileCompletionCard({ percent }: { readonly percent: number }) {
+export function ProfileCompletionCard({
+  percent,
+  onPress,
+}: {
+  readonly percent: number;
+  readonly onPress?: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const value = clampPercent(percent);
   const label = new Intl.NumberFormat(i18n.language, { style: 'percent' }).format(value / 100);
   return (
-    <View style={styles.profile} testID="profile-completion">
+    <Pressable
+      accessibilityRole="button"
+      accessibilityHint={t('businessProfile.open')}
+      disabled={onPress === undefined}
+      onPress={onPress}
+      style={({ pressed: isPressed }) => [styles.profile, isPressed && pressed]}
+      testID="profile-completion"
+    >
       <View style={styles.profileHeader}>
         <View style={styles.profileText}>
           <Text style={styles.title} accessibilityRole="header">
@@ -34,7 +49,8 @@ export function ProfileCompletionCard({ percent }: { readonly percent: number })
       >
         <View style={[styles.fill, { width: `${String(value)}%` }]} />
       </View>
-    </View>
+      {onPress !== undefined && <Text style={styles.link}>{t('businessProfile.open')} →</Text>}
+    </Pressable>
   );
 }
 
@@ -46,11 +62,19 @@ export function BuyerHomeCards({
   readonly activeBusinessId: string | undefined;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const profile = useBusinessProfile(activeBusinessId, canManageBusiness(me));
   const percent = profile.data?.profileCompleteness;
   return (
     <View style={styles.stack}>
-      {percent !== undefined && percent < 100 && <ProfileCompletionCard percent={percent} />}
+      {percent !== undefined && percent < 100 && (
+        <ProfileCompletionCard
+          percent={percent}
+          onPress={() => {
+            router.push('/business-profile');
+          }}
+        />
+      )}
       <View style={styles.empty}>
         <Text style={styles.title}>{t('buyer.home.empty_title')}</Text>
         <Text style={styles.body}>{t('buyer.home.empty_body')}</Text>
@@ -87,6 +111,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   fill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.accent },
+  link: { fontSize: 14, fontWeight: '700', color: colors.accent },
   empty: {
     borderRadius: radius.xl,
     borderWidth: 1,

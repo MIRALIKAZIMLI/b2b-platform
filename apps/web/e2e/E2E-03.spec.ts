@@ -1,10 +1,11 @@
 // E2E-03 (web, F2.3b): perakendeci kendi kaydolur (US-005 AC1–AC4, SF-02, NFR-63). Telefon SMS
 // koduyla doğrulanır, işletme formu + veri paylaşım onayı → oturum açılır, perakendeci alanında
-// "Profilinizi tamamlayın" kartı ve boş durum görünür. Senaryonun "VÖEN girer" adımı F2.4'te eklenir.
+// "Profilinizi tamamlayın" kartı ve boş durum görünür. F2.4: karttan profile geçer, VÖEN girer
+// (US-006 AC1 geçersiz → mesaj; AC2 geçerli → hukuki tip, "doğrulama bekliyor", doluluk %50).
 import { expect, test } from '@playwright/test';
 import { addMembership, completeOtpLogin, createRegion, createUser, randomPhone } from './fixtures';
 
-test('E2E-03: perakendeci kaydolur → perakendeci alanı, profil doluluğu %40', async ({ page }) => {
+test('E2E-03: perakendeci kaydolur → VÖEN girer (profil %40 → %50)', async ({ page }) => {
   const region = await createRegion();
   await page.goto('/az/login');
   await page.getByTestId('buyer-register-link').click();
@@ -38,6 +39,27 @@ test('E2E-03: perakendeci kaydolur → perakendeci alanı, profil doluluğu %40'
   await expect(page.getByTestId('profile-completion')).toContainText('Profilinizi tamamlayın');
   await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '40');
   await expect(page.getByText('Hələ bağlı topdansatışçınız yoxdur')).toBeVisible();
+
+  // F2.4: VÖEN girer. US-006-AC1: geçersiz VÖEN reddedilir, mesaj alanın altında.
+  await page.getByTestId('profile-completion-link').click();
+  await page.waitForURL('**/az/buyer/profile');
+  await expect(page.getByTestId('voen-status')).toHaveText('VÖEN daxil edilməyib');
+  const voen = page.locator('input[name="voen"]');
+  await voen.fill('1234567893');
+  await page.getByRole('button', { name: 'Yadda saxla' }).click();
+  await expect(page.getByText('VÖEN yanlışdır.')).toBeVisible();
+  await expect(voen).toHaveAttribute('aria-invalid', 'true');
+
+  // US-006-AC2: geçerli VÖEN → hukuki tip son haneden, "doğrulama bekliyor".
+  const valid = `${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}2`;
+  await voen.fill(valid);
+  await expect(page.getByTestId('voen-legal-type')).toHaveText('Fərdi sahibkar');
+  await page.getByRole('button', { name: 'Yadda saxla' }).click();
+  await expect(page.getByText('Yadda saxlanıldı')).toBeVisible();
+  await expect(page.getByTestId('voen-status')).toHaveText('Təsdiq gözləyir');
+
+  await page.goto('/az/buyer');
+  await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
 });
 
 test('US-005-AC4: kayıtlı numara kayıt sayfasında yeni işletme açmaz, mevcut üyeliğine girer', async ({

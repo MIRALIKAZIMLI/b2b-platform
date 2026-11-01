@@ -1,4 +1,4 @@
-// F1.7 entegrasyon testleri: activity_types G kuralı (AC1; check-rls testi core/db/__tests__/check-rls.int.test.ts), seller yeteneği kuralı K1 (AC3), businesses alan
+// F1.7 entegrasyon testleri (+ F2.4 R20 rozet sıfırlama, 0016): activity_types G kuralı (AC1; check-rls testi core/db/__tests__/check-rls.int.test.ts), seller yeteneği kuralı K1 (AC3), businesses alan
 // koruma tetikleyicisi ve bileşik depo FK'sı. Bağlantı RLS'e tabi
 // app_user'dır (F1 faz spesifikasyonu §6.12).
 import { randomUUID } from 'node:crypto';
@@ -237,6 +237,112 @@ describe('F1.7 işletme çekirdek tabloları', () => {
       expect(row?.proconfig).toContain('search_path=pg_catalog, public, pg_temp');
       expect(row?.prosecdef).toBe(false);
       expect(row?.public_exec).toBe(false);
+    });
+  });
+
+  describe('F2.4 R20: VÖEN değişince doğrulama rozeti ve hukuki tip (0016)', () => {
+    /** Her çağrıda benzersiz, biçimi geçerli VÖEN (son hane 1 veya 2). */
+    function voen(last: '1' | '2'): string {
+      return `${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}${last}`;
+    }
+
+    async function row(tenant: TenantTxContext) {
+      const result = await withPlatformTx(PLATFORM, (tx) =>
+        tx.execute<{
+          voen: string | null;
+          legal_type: string | null;
+          verified_at: Date | null;
+          verified_by: string | null;
+        }>(sql`select voen, legal_type, verified_at, verified_by
+                 from businesses where id = ${tenant.businessId}`),
+      );
+      return result.rows[0];
+    }
+
+    /** Kiracı VÖEN girer, platform doğrular (moderasyon, F2.18 öncesi doğrudan SQL). */
+    async function verifiedBusiness(): Promise<{ tenant: TenantTxContext; voen: string }> {
+      const tenant = newTenant();
+      await createBusiness(tenant, refs);
+      const value = voen('1');
+      await withTenantTx(tenant, (tx) =>
+        tx.execute(sql`update businesses set voen = ${value} where id = ${tenant.businessId}`),
+      );
+      await withPlatformTx(PLATFORM, (tx) =>
+        tx.execute(sql`update businesses set verified_at = now(), verified_by = ${PLATFORM.userId}
+                        where id = ${tenant.businessId}`),
+      );
+      expect((await row(tenant))?.verified_at).not.toBeNull();
+      return { tenant, voen: value };
+    }
+
+    it('F2.4-R20: kiracı VÖEN değiştirince verified_at / verified_by null olur', async () => {
+      const { tenant } = await verifiedBusiness();
+      const next = voen('2');
+      await withTenantTx(tenant, (tx) =>
+        tx.execute(sql`update businesses set voen = ${next} where id = ${tenant.businessId}`),
+      );
+      expect(await row(tenant)).toMatchObject({
+        voen: next,
+        legal_type: 'individual_entrepreneur',
+        verified_at: null,
+        verified_by: null,
+      });
+    });
+
+    it('F2.4-R20: aynı VÖEN veya başka alan güncellenince rozet kalır', async () => {
+      const { tenant, voen: same } = await verifiedBusiness();
+      await withTenantTx(tenant, (tx) =>
+        tx.execute(sql`update businesses set voen = ${same}, legal_name = 'Başka Ünvan'
+                        where id = ${tenant.businessId}`),
+      );
+      const after = await row(tenant);
+      expect(after?.verified_at).not.toBeNull();
+      expect(after?.verified_by).toBe(PLATFORM.userId);
+    });
+
+    it('F2.4-R20: kiracı VÖEN ile birlikte verified_at yazamaz (42501), rozet değişmez', async () => {
+      const { tenant } = await verifiedBusiness();
+      const attempts = [
+        sql`update businesses set voen = ${voen('1')}, verified_at = now() where id = ${tenant.businessId}`,
+        sql`update businesses set voen = ${voen('1')}, verified_by = null where id = ${tenant.businessId}`,
+      ];
+      for (const attempt of attempts) {
+        await expect(withTenantTx(tenant, (tx) => tx.execute(attempt))).rejects.toSatisfy(
+          hasCode(PG_INSUFFICIENT_PRIVILEGE),
+        );
+      }
+      expect((await row(tenant))?.verified_at).not.toBeNull();
+    });
+
+    it('F2.4-R20: platform aynı ifadede VÖEN + doğrulama yazarsa rozet korunur; yalnız VÖEN → sıfırlanır', async () => {
+      const { tenant } = await verifiedBusiness();
+      const next = voen('1');
+      await withPlatformTx(PLATFORM, (tx) =>
+        tx.execute(sql`update businesses
+                          set voen = ${next}, verified_at = now(), verified_by = ${PLATFORM.userId}
+                        where id = ${tenant.businessId}`),
+      );
+      expect((await row(tenant))?.verified_at).not.toBeNull();
+
+      await withPlatformTx(PLATFORM, (tx) =>
+        tx.execute(sql`update businesses set voen = ${voen('2')} where id = ${tenant.businessId}`),
+      );
+      expect(await row(tenant)).toMatchObject({ verified_at: null, verified_by: null });
+    });
+
+    it('US-006-AC2: legal_type VÖEN son hanesinden türetilir; istemci değeri yok sayılır', async () => {
+      const tenant = newTenant();
+      await createBusiness(tenant, refs);
+      expect((await row(tenant))?.legal_type).toBeNull();
+      await withTenantTx(tenant, (tx) =>
+        tx.execute(sql`update businesses set voen = ${voen('1')}, legal_type = 'individual_entrepreneur'
+                        where id = ${tenant.businessId}`),
+      );
+      expect((await row(tenant))?.legal_type).toBe('legal_entity');
+      await withTenantTx(tenant, (tx) =>
+        tx.execute(sql`update businesses set voen = ${voen('2')} where id = ${tenant.businessId}`),
+      );
+      expect((await row(tenant))?.legal_type).toBe('individual_entrepreneur');
     });
   });
 

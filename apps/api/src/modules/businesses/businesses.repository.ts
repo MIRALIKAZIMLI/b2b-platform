@@ -20,6 +20,7 @@ import {
   sellerProfiles,
   serviceAreas,
 } from './businesses.schema';
+import { regions } from '../i18n';
 
 export type BusinessRow = typeof businesses.$inferSelect;
 
@@ -60,6 +61,15 @@ export interface NewBuyerBusiness {
   readonly branchName: string;
   readonly personDataId: string;
   readonly now: Date;
+}
+
+/** `PATCH /api/v1/business` ile değişen `businesses` alanları (F2.4, K1). Yalnız verilenler yazılır. */
+export interface OwnProfilePatch {
+  readonly voen?: string | undefined;
+  readonly legalName?: string | undefined;
+  readonly regionId?: string | undefined;
+  readonly addressLine?: string | undefined;
+  readonly businessPhone?: string | undefined;
 }
 
 export interface ActivityTypeItem {
@@ -150,6 +160,82 @@ export class BusinessesRepository {
         )
         .returning({ businessId: businessCapabilities.businessId }),
     );
+    return rows.length === 1;
+  }
+
+  // --- F2.4: profil düzenleme, çağıranın kiracı işlemi içinde ---
+
+  /** Bağlamdaki işletmenin satırı, işlem sonuna kadar kilitli (eşzamanlı PATCH sırayla). */
+  async lockOwnTx(tx: Tx, businessId: string): Promise<BusinessRow | undefined> {
+    const rows = await tx
+      .select()
+      .from(businesses)
+      .where(eq(businesses.id, businessId))
+      .for('update');
+    return rows[0];
+  }
+
+  /**
+   * Profil alanlarını yazar; dönen satır tetikleyiciden sonraki hâldir: `legal_type` VÖEN'den
+   * türetilir, VÖEN değiştiyse `verified_at/by` null olur (0016, R20). VÖEN başka işletmedeyse
+   * `businesses_voen_uq` 23505 verir (`isVoenUniqueViolation`).
+   */
+  async updateOwnTx(
+    tx: Tx,
+    businessId: string,
+    patch: OwnProfilePatch,
+    profileCompleteness: number,
+    now: Date,
+  ): Promise<BusinessRow | undefined> {
+    const rows = await tx
+      .update(businesses)
+      .set({ ...patch, profileCompleteness, updatedAt: now })
+      .where(eq(businesses.id, businessId))
+      .returning();
+    return rows[0];
+  }
+
+  /** Doluluk için `businesses` dışındaki alanlar: faaliyet türü, yetkili adı, e-posta, şube adresi. */
+  async profileExtrasTx(
+    tx: Tx,
+    businessId: string,
+  ): Promise<{
+    activityType: boolean;
+    contactName: boolean;
+    email: boolean;
+    branchAddress: boolean;
+  }> {
+    const result = await tx.execute<{
+      activity_type: boolean;
+      contact_name: boolean;
+      email: boolean;
+      branch_address: boolean;
+    }>(sql`
+      select
+        exists (select 1 from ${buyerProfiles}
+                 where ${buyerProfiles.businessId} = ${businessId}
+                   and ${buyerProfiles.activityTypeId} is not null) as activity_type,
+        exists (select 1 from ${personData}
+                 where ${personData.businessId} = ${businessId}
+                   and ${personData.contactName} <> '') as contact_name,
+        exists (select 1 from ${personData}
+                 where ${personData.businessId} = ${businessId}
+                   and ${personData.email} is not null) as email,
+        exists (select 1 from ${branches}
+                 where ${branches.businessId} = ${businessId}
+                   and ${branches.addressLine} is not null) as branch_address`);
+    const row = result.rows[0];
+    return {
+      activityType: row?.activity_type === true,
+      contactName: row?.contact_name === true,
+      email: row?.email === true,
+      branchAddress: row?.branch_address === true,
+    };
+  }
+
+  /** Bölge var mı (G tablosu; herkes okur). */
+  async regionExistsTx(tx: Tx, regionId: string): Promise<boolean> {
+    const rows = await tx.select({ id: regions.id }).from(regions).where(eq(regions.id, regionId));
     return rows.length === 1;
   }
 

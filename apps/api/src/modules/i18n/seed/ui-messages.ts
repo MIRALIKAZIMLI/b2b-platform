@@ -546,6 +546,167 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Заполнено на {percent}%',
     tr: '%{percent} tamamlandı',
   },
+  // F2.4: işletme profili ve VÖEN (US-006). Çeviriler taslak; toplu onay platform sahibinde.
+  'businessProfile.title': {
+    az: 'Müəssisə profili',
+    ru: 'Профиль предприятия',
+    tr: 'İşletme profili',
+  },
+  'businessProfile.description': {
+    az: 'VÖEN və müəssisə məlumatları sifariş və çatdırılma üçün istifadə olunur.',
+    ru: 'VÖEN и данные предприятия используются для заказов и доставки.',
+    tr: 'VÖEN ve işletme bilgileri sipariş ve teslimat için kullanılır.',
+  },
+  'businessProfile.section.voen': {
+    az: 'VÖEN',
+    ru: 'VÖEN',
+    tr: 'VÖEN',
+  },
+  'businessProfile.section.business': {
+    az: 'Müəssisə',
+    ru: 'Предприятие',
+    tr: 'İşletme',
+  },
+  'businessProfile.field.voen': {
+    az: 'VÖEN',
+    ru: 'VÖEN (ИНН)',
+    tr: 'VÖEN',
+  },
+  'businessProfile.field.legalName': {
+    az: 'Müəssisənin adı',
+    ru: 'Название предприятия',
+    tr: 'İşletme ünvanı',
+  },
+  'businessProfile.field.regionId': {
+    az: 'Şəhər / rayon',
+    ru: 'Город / район',
+    tr: 'Şehir / rayon',
+  },
+  'businessProfile.field.addressLine': {
+    az: 'Ünvan',
+    ru: 'Адрес',
+    tr: 'Adres',
+  },
+  'businessProfile.field.businessPhone': {
+    az: 'Müəssisə telefonu',
+    ru: 'Телефон предприятия',
+    tr: 'İşletme telefonu',
+  },
+  'businessProfile.voen_hint': {
+    az: '10 rəqəm; sonuncu rəqəm 1 (hüquqi şəxs) və ya 2 (fərdi sahibkar).',
+    ru: '10 цифр; последняя 1 (юридическое лицо) или 2 (индивидуальный предприниматель).',
+    tr: '10 rakam; son hane 1 (tüzel kişi) veya 2 (fərdi sahibkar).',
+  },
+  'businessProfile.voen_change_warning': {
+    az: 'VÖEN dəyişsə, təsdiq yenidən aparılır.',
+    ru: 'При изменении VÖEN проверка проводится заново.',
+    tr: 'VÖEN değişirse doğrulama yeniden yapılır.',
+  },
+  'businessProfile.voen_needed': {
+    az: 'Sifariş göndərmək üçün VÖEN lazımdır.',
+    ru: 'VÖEN нужен для отправки заказов.',
+    tr: 'Sipariş göndermek için VÖEN gerekir.',
+  },
+  'businessProfile.status.missing': {
+    az: 'VÖEN daxil edilməyib',
+    ru: 'VÖEN не указан',
+    tr: 'VÖEN girilmedi',
+  },
+  'businessProfile.status.pending': {
+    az: 'Təsdiq gözləyir',
+    ru: 'Ожидает проверки',
+    tr: 'Doğrulama bekliyor',
+  },
+  'businessProfile.status.verified': {
+    az: 'Təsdiqlənib',
+    ru: 'Проверен',
+    tr: 'Doğrulandı',
+  },
+  'businessProfile.legal_type.legal_entity': {
+    az: 'Hüquqi şəxs',
+    ru: 'Юридическое лицо',
+    tr: 'Tüzel kişi',
+  },
+  'businessProfile.legal_type.individual_entrepreneur': {
+    az: 'Fərdi sahibkar',
+    ru: 'Индивидуальный предприниматель',
+    tr: 'Fərdi sahibkar (şahıs)',
+  },
+  'businessProfile.choose': {
+    az: 'Seçin',
+    ru: 'Выберите',
+    tr: 'Seçin',
+  },
+  'businessProfile.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'businessProfile.saved': {
+    az: 'Yadda saxlanıldı',
+    ru: 'Сохранено',
+    tr: 'Kaydedildi',
+  },
+  'businessProfile.open': {
+    az: 'Profili tamamla',
+    ru: 'Заполнить профиль',
+    tr: 'Profili tamamla',
+  },
+  'businessProfile.back': {
+    az: 'Geri',
+    ru: 'Назад',
+    tr: 'Geri',
+  },
+  'businessProfile.load_failed': {
+    az: 'Profil yüklənmədi. Yenidən cəhd edin.',
+    ru: 'Не удалось загрузить профиль. Попробуйте ещё раз.',
+    tr: 'Profil yüklenemedi. Tekrar deneyin.',
+  },
+  'businessProfile.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Tekrar dene',
+  },
+  'businessProfile.error.required': {
+    az: 'Bu sahəni doldurun.',
+    ru: 'Заполните это поле.',
+    tr: 'Bu alanı doldurun.',
+  },
+  'businessProfile.error.too_long': {
+    az: 'Mətn çox uzundur.',
+    ru: 'Слишком длинный текст.',
+    tr: 'Metin çok uzun.',
+  },
+  'businessProfile.error.voen_invalid': {
+    az: 'VÖEN yanlışdır.',
+    ru: 'Неверный VÖEN (ИНН).',
+    tr: 'VÖEN geçersiz.',
+  },
+  'businessProfile.error.voen_taken': {
+    az: 'Bu VÖEN ilə qeydiyyatdan keçmiş müəssisə var; onun rəhbərindən dəvət istəyin.',
+    ru: 'Предприятие с этим VÖEN уже зарегистрировано; попросите приглашение у его руководителя.',
+    tr: 'Bu VÖEN ile kayıtlı bir işletme var; yöneticisinden davet isteyin.',
+  },
+  'businessProfile.error.voen_locked': {
+    az: 'Topdansatışçının VÖEN nömrəsini yalnız platforma dəyişir.',
+    ru: 'VÖEN оптовика меняет только платформа.',
+    tr: 'Toptancı VÖEN numarasını yalnızca platform değiştirir.',
+  },
+  'businessProfile.error.phone_invalid': {
+    az: 'Telefon nömrəsi yanlışdır.',
+    ru: 'Неверный номер телефона.',
+    tr: 'Telefon numarası geçersiz.',
+  },
+  'businessProfile.error.not_found': {
+    az: 'Seçim tapılmadı; yenidən seçin.',
+    ru: 'Значение не найдено; выберите снова.',
+    tr: 'Seçim bulunamadı; yeniden seçin.',
+  },
+  'businessProfile.error.invalid': {
+    az: 'Dəyər yanlışdır.',
+    ru: 'Неверное значение.',
+    tr: 'Değer geçersiz.',
+  },
   'buyer.home.empty_title': {
     az: 'Hələ bağlı topdansatışçınız yoxdur',
     ru: 'Пока нет связанных оптовиков',

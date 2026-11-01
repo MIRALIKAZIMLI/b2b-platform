@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-01 (F2.3b: perakendeci kayıt ekranları; sıradaki F2.4).
+Son güncelleme: 2026-11-01 (F2.4: VÖEN girişi; sıradaki F2.6).
 
 ## 1. Mimari özeti
 
@@ -107,8 +107,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F2.2b | web Tailwind 4 (`postcss.config.mjs`, `app/globals.css`; sınıfsız eski öğelere taban stil), ortak parçalar `features/ui/primitives.tsx` ([ui-guidelines](07-ai-development/ui-guidelines.md)); `/<dil>/seller-application` (kimliksiz form), girişte yalnız başvuru bağlantısı (US-008 AC2, `features/seller-application/entry.ts`); `/admin/seller-applications` (sekmeler, ret onayı, "Toptancı aç" → `/admin/sellers/new?application=<id>`, ön doldurma yalnız bellekte) |
 | F2.3a | `onboarding` modülü: `POST /buyers/register` (Bearer `pendingToken`, IP sınırı `buyer_registration.ip_max_per_hour`, tek `withTenantTx`), `GET /catalog/activity-types`, `activity_types` seed, `0015_buyer_signup.sql` (`user_create_self_signup`, `subscription_start_self_signup`, `idempotency_lookup_by_phone`, `idempotency_store`), `branches.address_line` null, `IpHourlyRateLimiter` |
 | F2.3b | `GET /business` (`business.manage`); web `/<dil>/register` (`LoginForm intent=register` → OTP sonrası `BuyerRegistrationForm`, kayıt anahtarı yalnız bellekte), perakendeci ana sayfasında profil doluluk kartı + boş durum; mobil `(auth)/register` + `BuyerHomeCards`, tema `apps/mobile/src/lib/theme.ts`; ortak form mantığı `@b2b/shared` `buyer-registration.ts` (`DATA_SHARING_TEXT_VERSION`); veri paylaşım metni `dataSharing.v1.*` çevirilerinde; Playwright E2E-03 (VÖEN adımı F2.4) |
+| F2.4 | `PATCH /business` (`business.manage`; K1 yalnız `businesses` alanları, kişisel veri + logo F2.10'a kadar 422; VARSAYIM K2 VÖEN yalnız `buyer`'da değişir → 403; VARSAYIM K3 VÖEN silinmez), `0016_voen_reset.sql` (tetikleyici `legal_type`'ı VÖEN'den türetir, VÖEN değişince rozeti sıfırlar, R20), `requireVoen()` (`businesses/index.ts`; F4 sepet gönderimi çağırır, US-006 AC4/AC5), audit `business.voen_changed` / `business.profile_updated`; web `/<dil>/buyer/profile`, mobil `(buyer)/business-profile`, ortak form `@b2b/shared` `business-profile.ts`; E2E-03 VÖEN adımı |
 
-**Sıradaki:** F2.4 (VÖEN girişi; E2E-03'e VÖEN adımı eklenir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
+**Sıradaki:** F2.6 (depolar, satıcı profili, hizmet bölgeleri); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 

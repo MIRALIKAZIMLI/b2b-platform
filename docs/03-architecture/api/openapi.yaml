@@ -380,13 +380,28 @@ paths:
     patch:
       tags: [business]
       summary: İşletme profilini güncelle (VÖEN dahil, US-006)
+      description: >-
+        İzin `business.manage` (F2.4). Yalnız gönderilen alanlar değişir; boş gövde `422`.
+        F2.4'te desteklenen alanlar `voen`, `legalName`, `regionId`, `addressLine`,
+        `businessPhone`; `contactName`, `personalPhone`, `email` ve `logoFileId` F2.10'a kadar
+        `422 VALIDATION_FAILED`. Biçimi hatalı VÖEN `422 VALIDATION_FAILED`,
+        `details.voen = [VOEN_INVALID]` (US-006 AC1). Başka işletmede kayıtlı VÖEN
+        `409 VOEN_ALREADY_REGISTERED` (AC3). `legalType` VÖEN'in son hanesinden türetilir; VÖEN
+        değişince `verified` false olur (AC2, R20). VARSAYIM (F2.4 K2): VÖEN yalnız `buyer`
+        yeteneği olan işletmede değişir, aksi `403 CAPABILITY_REQUIRED`. VARSAYIM (K3): VÖEN
+        silinemez; aynı değer değişiklik sayılmaz.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/BusinessUpdate' }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Güncellendi; güncel işletme
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Business' }
+        '403': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
   /api/v1/business/privacy:

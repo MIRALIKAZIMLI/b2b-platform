@@ -13,6 +13,8 @@ export const AUDIT_ACTIONS = [
   'seller_application.approved',
   'seller_application.rejected',
   'buyer.registered',
+  'business.voen_changed',
+  'business.profile_updated',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -20,7 +22,7 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // session_family: hedef kimliği oturum ailesi (family_id), F1.5b.
 // membership: hedef kimliği üyelik (memberships.id); kime = before/after.userId (F1.8a, US-013 AC4).
 // business: hedef kimliği işletme (businesses.id; F2.1a toptancı açılışı, aktivasyon yeniden gönderimi;
-// F2.3a perakendeci kaydı).
+// F2.3a perakendeci kaydı; F2.4 VÖEN ve profil düzenleme).
 // invitation: hedef kimliği davet (invitations.id); token ve özeti audit'e yazılmaz (F2.1a).
 // seller_application: hedef kimliği başvuru (seller_applications.id; F2.2 onay / ret).
 export const AUDIT_TARGET_TYPES = [
