@@ -7,6 +7,7 @@ export {
   type CapabilityRow,
   isVoenUniqueViolation,
   type NewSellerBusiness,
+  type OwnProfilePatch,
   type SellerListItem,
 } from './businesses.repository';
 export {
@@ -37,3 +38,4 @@ export {
   type IpRateDecision,
   type IpRateScope,
 } from './ip-hourly-rate-limiter';
+export { requireVoen, type VoenHolder } from './voen-guard';

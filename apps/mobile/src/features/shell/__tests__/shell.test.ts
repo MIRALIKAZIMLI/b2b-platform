@@ -1,6 +1,12 @@
 import type { components } from '@b2b/api-client';
 import { describe, expect, it } from 'vitest';
-import { defaultBusinessId, mobileAreaOf, mobileMenu, startupScreen } from '../shell-state';
+import {
+  defaultBusinessId,
+  mobileAreaOf,
+  mobileHref,
+  mobileMenu,
+  startupScreen,
+} from '../shell-state';
 
 type Me = components['schemas']['Me'];
 type Membership = components['schemas']['MembershipSummary'];
@@ -45,6 +51,20 @@ describe('mobil kabuk', () => {
     expect(mobileAreaOf({ activeBusiness: { capability: null }, platformRole: null })).toEqual({
       kind: 'none',
     });
+  });
+
+  it('F2.4: perakendeci profil öğesi business.manage ile görünür ve profil ekranına gider', () => {
+    const admin: Me = {
+      activeBusiness: { capability: 'buyer', permissions: perms('business.manage') },
+    };
+    const items = mobileMenu(admin, 'buyer');
+    const profile = items.find((item) => item.key === 'profile');
+    expect(profile?.ready).toBe(true);
+    expect(profile === undefined ? undefined : mobileHref('buyer', profile)).toBe(
+      '/business-profile',
+    );
+    const dashboard = items.find((item) => item.key === 'dashboard');
+    expect(dashboard === undefined ? 'x' : mobileHref('buyer', dashboard)).toBeUndefined();
   });
 
   it('US-003 AC1: varsayılan işletme ilk aktif üyelik', () => {

@@ -1,4 +1,4 @@
-// F2.3b: aktif işletmenin profili (`GET /api/v1/business`, US-005 AC2 doluluk kartı) ve kiracı
+// F2.3b / F2.4: aktif işletmenin profili (`GET /api/v1/business`, US-005 AC2 doluluk kartı) ve kiracı
 // izolasyonu. İşletmeler kayıt ucuyla açılır (F2.3a; bu yüzden onboarding testlerinde); uygulama
 // bağlantısı RLS'e tabi app_user.
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -82,6 +82,45 @@ describe('F2.3b işletme profili (GET /api/v1/business)', () => {
     expect((await get(a)).status).toBe(422);
     expect(
       (await api.http().get('/api/v1/business').set('X-Business-Id', a.businessId)).status,
+    ).toBe(401);
+  });
+
+  const patch = (who: Registered, body: object, businessId?: string) => {
+    const req = api
+      .http()
+      .patch('/api/v1/business')
+      .set('Authorization', `Bearer ${who.accessToken}`);
+    return (businessId === undefined ? req : req.set('X-Business-Id', businessId)).send(body);
+  };
+
+  it("F2.4-ISO perakendeci B, A işletmesinin profilini/VÖEN'ini değiştiremez (403); A değişmez", async () => {
+    const response = await patch(
+      b,
+      { legalName: 'B tarafından', voen: '9876543211' },
+      a.businessId,
+    );
+    expect(response.status).toBe(403);
+    const own = await get(a, a.businessId);
+    expect(own.body).toMatchObject({ legalName: a.legalName, voen: null });
+  });
+
+  it('F2.4-ISO B kendi işletmesini günceller; A etkilenmez', async () => {
+    const response = await patch(b, { legalName: 'B Yeni Ünvan' }, b.businessId);
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ id: b.businessId, legalName: 'B Yeni Ünvan' });
+    expect((await get(a, a.businessId)).body).toMatchObject({ legalName: a.legalName });
+  });
+
+  it('F2.4-ISO X-Business-Id olmadan 422, oturumsuz 401', async () => {
+    expect((await patch(a, { legalName: 'X' })).status).toBe(422);
+    expect(
+      (
+        await api
+          .http()
+          .patch('/api/v1/business')
+          .set('X-Business-Id', a.businessId)
+          .send({ legalName: 'X' })
+      ).status,
     ).toBe(401);
   });
 });

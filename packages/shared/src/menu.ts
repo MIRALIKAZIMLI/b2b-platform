@@ -84,7 +84,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     soon('ledger', ['ledger.view']),
     soon('team', ['team.manage']),
     soon('audit', ['audit.view']),
-    soon('profile', ['business.manage']),
+    // F2.4: işletme profili ve VÖEN (US-006); gizlilik ayarları F2.10'da aynı sayfaya eklenir.
+    { key: 'profile', anyOf: ['business.manage'], ready: true, path: 'profile' },
   ],
 };
 

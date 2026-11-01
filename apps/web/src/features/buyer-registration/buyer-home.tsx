@@ -3,9 +3,10 @@
 // durum kartı neden boş olduğunu anlatır. "Profilinizi tamamlayın" kartı doluluk yüzdesiyle,
 // yalnız profili düzenleyebilene (`business.manage`) ve profil %100 değilken görünür.
 // UX: kart Indigo→Violet yumuşak zeminli, ilerleme çubuğu ince ve animasyonlu; boş durum sakin,
-// kesik kenarlıklı. Dashboard kartları US-056 (F6).
+// kesik kenarlıklı. Kart profil sayfasına bağlanır (F2.4). Dashboard kartları US-056 (F6).
 import { clampPercent } from '@b2b/shared';
-import { useFormatter, useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useShell } from '../shell/use-shell';
 import { Card, PageHeader } from '../ui/primitives';
 import { useBusinessProfile } from './api';
@@ -16,8 +17,9 @@ export function canManageBusiness(
   return (permissions ?? []).some((permission) => permission.code === 'business.manage');
 }
 
-export function ProfileCompletionCard({ percent }: { percent: number }) {
+export function ProfileCompletionCard({ percent, href }: { percent: number; href?: string }) {
   const t = useTranslations('profile');
+  const tProfile = useTranslations('businessProfile');
   const format = useFormatter();
   const value = clampPercent(percent);
   return (
@@ -54,6 +56,16 @@ export function ProfileCompletionCard({ percent }: { percent: number }) {
           style={{ width: `${String(value)}%` }}
         />
       </div>
+      {href !== undefined && (
+        <Link
+          href={href}
+          data-testid="profile-completion-link"
+          className="relative mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 transition-colors duration-200 hover:text-indigo-500"
+        >
+          {tProfile('open')}
+          <span aria-hidden="true">→</span>
+        </Link>
+      )}
     </section>
   );
 }
@@ -61,6 +73,7 @@ export function ProfileCompletionCard({ percent }: { percent: number }) {
 export function BuyerHome() {
   const tShell = useTranslations('shell');
   const tHome = useTranslations('buyer.home');
+  const locale = useLocale();
   const { me, activeBusinessId } = useShell();
   const canManage = canManageBusiness(me?.activeBusiness?.permissions);
   const profile = useBusinessProfile(activeBusinessId, canManage);
@@ -69,7 +82,9 @@ export function BuyerHome() {
   return (
     <div className="space-y-6 px-4 py-8 sm:px-6 lg:py-10">
       <PageHeader title={tShell('menu.dashboard')} />
-      {percent !== undefined && percent < 100 && <ProfileCompletionCard percent={percent} />}
+      {percent !== undefined && percent < 100 && (
+        <ProfileCompletionCard percent={percent} href={`/${locale}/buyer/profile`} />
+      )}
       <Card className="border-dashed p-8 text-center hover:shadow-sm">
         <h2 className="text-base font-semibold text-slate-900">{tHome('empty_title')}</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">{tHome('empty_body')}</p>

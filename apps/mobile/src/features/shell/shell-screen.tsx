@@ -1,13 +1,14 @@
 // Alan açılış sayfası (dashboard yer tutucusu) + izinden menü + işletme seçici + dil + çıkış.
-// Menü yalnızca görünümdür; asıl yetki kontrolü API'dedir. Yapılmamış ekran bağlantısız (F2+).
+// Menü yalnızca görünümdür; asıl yetki kontrolü API'dedir. Mobil ekranı olmayan öğe bağlantısız.
 import type { components } from '@b2b/api-client';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useLogout } from '../../lib/session';
 import { LanguagePicker } from '../language/language-picker';
 import { BuyerHomeCards } from '../registration/buyer-home-cards';
 import { BusinessSelector } from './business-selector';
-import { type MobileArea, mobileMenu } from './shell-state';
+import { type MobileArea, mobileHref, mobileMenu } from './shell-state';
 import { shellStyles } from './shell-styles';
 import { UpdateBanner } from './update-banner';
 
@@ -23,6 +24,7 @@ export function ShellScreen({
   readonly activeBusinessId: string | undefined;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const logout = useLogout();
   const items = mobileMenu(me, area);
   return (
@@ -39,15 +41,27 @@ export function ShellScreen({
       <View accessibilityLabel={t('shell.menu_label')}>
         {items
           .filter((item) => item.key !== 'dashboard')
-          .map((item) => (
-            <View
-              key={item.key}
-              style={[shellStyles.item, !item.ready && shellStyles.disabled]}
-              testID={`menu-${item.key}`}
-            >
-              <Text>{t(`shell.menu.${item.key}`)}</Text>
-            </View>
-          ))}
+          .map((item) => {
+            const href = mobileHref(area, item);
+            return (
+              <Pressable
+                key={item.key}
+                accessibilityRole={href === undefined ? 'text' : 'link'}
+                disabled={href === undefined}
+                onPress={() => {
+                  if (href !== undefined) router.push(href);
+                }}
+                style={({ pressed }) => [
+                  shellStyles.item,
+                  href === undefined && shellStyles.disabled,
+                  pressed && { opacity: 0.7 },
+                ]}
+                testID={`menu-${item.key}`}
+              >
+                <Text>{t(`shell.menu.${item.key}`)}</Text>
+              </Pressable>
+            );
+          })}
       </View>
       <LanguagePicker />
       <Pressable
