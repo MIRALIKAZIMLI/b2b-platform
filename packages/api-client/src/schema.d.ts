@@ -453,12 +453,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Perakendeci self-servis kaydı (US-005) */
+        /**
+         * Perakendeci self-servis kaydı (US-005)
+         * @description Kimliksiz uç; yetki `Authorization: Bearer <pendingToken>` ile (otp/verify yanıtında `nextStep = register`; F2.3a K5). Erişim anahtarı veya TOTP ön oturumu kabul edilmez → `401`. Tek işlemde kullanıcı, işletme (`created_via = self_signup`), `buyer` yeteneği (`approved`), perakendeci profili, gizlilik (hepsi kapalı), varsayılan şube (`approval_rule = every_order`, adres boş), işletme admini rolü ve üyeliği, `onboarding.buyer_plan_code` planıyla abonelik ve `buyer.registered` olayı yazılır (R15). Para birimi ve saat dilimi bölgenin ülkesinden; dil `preferredLanguage` veya platform varsayılanı. `consentVersion` güncel veri paylaşım metni sürümü (`legal.data_sharing_version`) olmalı, aksi `422` (`consentVersion: outdated`); onay sürümü ve zamanı işletmeye yazılır (NFR-63). Bilinmeyen bölge, pasif faaliyet türü veya pasif dil `422` (`<alan>: not_found`). Telefon zaten kayıtlıysa `409 PHONE_ALREADY_REGISTERED` (US-005 AC4; istemci girişe yönlendirir). İdempotens kapsamı kayıt anahtarındaki telefondur (R13): aynı `Idempotency-Key` ve aynı gövde saklanan 201 gövdesini döner (oturum alanları olmadan); aynı anahtar farklı gövde `409 IDEMPOTENCY_CONFLICT`. Eşzamanlı ikinci istek ilkinin bitmesini bekler ve aynı yanıtı alır. Yanıt kayıtla aynı işlemde saklanır (R12). Kayıt anahtarı fiilen tek kullanımlıktır. İlk başarılı yanıtta oturum açılır (K6): `accessToken`, `expiresIn` ve mobilde `refreshToken`; `X-Client: web` ise yenileme anahtarı httpOnly cookie'de. IP başına saatte `buyer_registration.ip_max_per_hour` istek; aşılırsa `429 RATE_LIMITED` (`Retry-After`).
+         */
         post: {
             parameters: {
                 query?: never;
                 header?: {
                     "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                    "X-Client"?: "web";
                 };
                 path?: never;
                 cookie?: never;
@@ -472,8 +476,10 @@ export interface paths {
                         activityTypeId: string;
                         /** Format: uuid */
                         regionId: string;
+                        /** @example v1 */
                         consentVersion: string;
                         preferredLanguage?: components["schemas"]["LanguageCode"];
+                        device?: components["schemas"]["DeviceInfo"];
                     };
                 };
             };
@@ -486,12 +492,21 @@ export interface paths {
                     content: {
                         "application/json": {
                             /** Format: uuid */
-                            businessId?: string;
-                            profileCompleteness?: number;
+                            businessId: string;
+                            profileCompleteness: number;
+                            /** @description Yalnızca ilk başarılı yanıtta */
+                            accessToken?: string;
+                            /** @description saniye */
+                            expiresIn?: number;
+                            /** @description Yalnızca mobil */
+                            refreshToken?: string;
                         };
                     };
                 };
+                401: components["responses"]["Error"];
+                409: components["responses"]["Error"];
                 422: components["responses"]["Error"];
+                429: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -1779,7 +1794,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Faaliyet alanları */
+        /**
+         * Faaliyet alanları (F2.3a; kayıt formu)
+         * @description Yalnızca aktif türler, `sortOrder` sırasıyla.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1794,7 +1812,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ActivityType"][];
+                    };
                 };
             };
         };
@@ -5570,7 +5590,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "LAST_ADMIN_PROTECTED" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "INTERNAL_ERROR";
         /** @example +994501234567 */
         PhoneE164: string;
         Voen: string;
@@ -5583,6 +5603,12 @@ export interface components {
         Money: {
             amount: components["schemas"]["Decimal"];
             currency: components["schemas"]["CurrencyCode"];
+        };
+        ActivityType: {
+            /** Format: uuid */
+            id: string;
+            name: components["schemas"]["LocalizedText"];
+            sortOrder: number;
         };
         Region: {
             /** Format: uuid */

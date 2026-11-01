@@ -27,6 +27,13 @@ flowchart LR
     billing --> businesses
     billing --> settings
 
+    onboarding --> businesses
+    onboarding --> access
+    onboarding --> billing
+    onboarding --> identity
+    onboarding --> i18n
+    onboarding --> settings
+
     connections --> businesses
     connections --> billing
     connections --> settings
@@ -100,6 +107,7 @@ flowchart LR
 | `businesses` | İşletme, yetenek, profiller, kişisel veri, gizlilik, şubeler, depolar, toptancı başvurusu, faaliyet alanları | `businesses`, `business_capabilities`, `seller_profiles`, `buyer_profiles`, `person_data`, `business_privacy`, `branches`, `warehouses`, `seller_applications`, `activity_types`, `service_areas` | US-005–US-011 |
 | `access` | Unvanlar, rol şablonları, roller, izinler, üyelikler, davetler; `PermissionGuard` | `job_titles`, `role_templates`, `role_template_permissions`, `roles`, `role_permissions`, `permissions`, `memberships`, `membership_regions`, `invitations` | US-012–US-014 |
 | `billing` | Planlar, haklar, abonelikler, istisnalar; hak kontrolü | `plans`, `plan_entitlements`, `subscriptions`, `entitlement_overrides` | US-055 |
+| `onboarding` | Kimliksiz perakendeci kaydının düzenleyicisi (F2.3a): kayıt anahtarı, IP hız sınırı, telefon kapsamlı idempotens; `businesses`, `access`, `billing`, `identity`'nin `tx` alan fonksiyonlarını tek kiracı işleminde çağırır (R15). `access → businesses`, `billing → businesses` yönü nedeniyle `businesses` içinde olamaz (§3.3) | — | US-005 |
 | `connections` | İstek, yanıt, engel, iptal, bekleme süresi, kota, süre dolumu, bağlantı koşulları | `connection_requests`, `connections`, `blocks` | US-021–US-026 |
 | `directory` | Perakendeci dizini (Meilisearch), görünürlük filtresi, tam eşleşme araması, bağlantısız hesap politikası | — (indeks) | US-019, US-020, US-027 |
 | `catalog` | Birimler, kategoriler, markalar, ürünler, varyantlar, ambalaj, görseller, görünürlük, ürün araması | `units`, `unit_conversions`, `categories`, `brands`, `products`, `product_variants`, `product_packaging`, `product_images`, `product_visibility` | US-028–US-030, US-032, US-033 |

@@ -8,7 +8,7 @@ import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
 import { IpKeyService, parsePhoneE164 } from '../identity';
 import { SettingsService } from '../settings';
-import { SellerApplicationRateLimiter } from './seller-application-rate-limiter';
+import { IpHourlyRateLimiter } from './ip-hourly-rate-limiter';
 import {
   isPendingVoenViolation,
   isUnknownRegionViolation,
@@ -39,7 +39,7 @@ function invalid(field: string, reason: string): DomainError {
 export class SellerApplicationsService {
   constructor(
     @Inject(SellerApplicationsRepository) private readonly repository: SellerApplicationsRepository,
-    @Inject(SellerApplicationRateLimiter) private readonly limiter: SellerApplicationRateLimiter,
+    @Inject(IpHourlyRateLimiter) private readonly limiter: IpHourlyRateLimiter,
     @Inject(IpKeyService) private readonly ipKeys: IpKeyService,
     @Inject(SettingsService) private readonly settings: SettingsService,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
@@ -56,6 +56,7 @@ export class SellerApplicationsService {
     const ipKey = this.ipKeys.keyOf(input.ip);
     if (ipKey !== undefined) {
       const decision = await this.limiter.reserve({
+        scope: 'seller_app',
         ipKey,
         nowMs: now.getTime(),
         maxPerHour: await this.settings.get('seller_application.ip_max_per_hour'),

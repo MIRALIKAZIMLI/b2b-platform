@@ -64,16 +64,16 @@ sequenceDiagram
 
     Note over U,API: SF-01 ile OTP doğrulandı, nextStep = register
     U->>App: Ad soyad, ünvan, faaliyet alanı, şehir/rayon, onay
-    App->>API: POST /api/v1/buyers/register (Idempotency-Key)
+    App->>API: POST /api/v1/buyers/register (Bearer pendingToken, Idempotency-Key)
     API->>DB: BEGIN
     API->>DB: users (yoksa), businesses (created_via = self_signup)
     API->>DB: business_capabilities (buyer, approved)
     API->>DB: buyer_profiles, business_privacy (hepsi false), person_data
-    API->>DB: branches (varsayılan, approval_rule = every_order), carts
+    API->>DB: branches (varsayılan, approval_rule = every_order); carts F4
     API->>DB: roles (buyer_admin şablonundan), memberships
     API->>DB: outbox: buyer.registered
     API->>DB: COMMIT
-    API-->>App: 201 {businessId, profileCompleteness}
+    API-->>App: 201 {businessId, profileCompleteness, accessToken, refreshToken}
     W->>W: buyer.registered → Meilisearch buyer_directory indeksine ekle
     U->>App: VÖEN gir (daha sonra)
     App->>API: PATCH /api/v1/business {voen}
@@ -84,7 +84,9 @@ sequenceDiagram
 
 | Hata senaryosu | Davranış |
 | --- | --- |
-| Aynı istek iki kez (zayıf ağ) | `Idempotency-Key` aynı yanıtı döner; ikinci işletme oluşmaz. İkinci eşzamanlı istek `409 IDEMPOTENCY_CONFLICT` (`details.reason: in_progress`) alır; yeniden denemede ilk yanıtı alır |
+| Aynı istek iki kez (zayıf ağ) | Kapsam kayıt anahtarındaki telefon (F2.3a, R13). `Idempotency-Key` aynı yanıtı döner (oturum alanları olmadan); ikinci işletme oluşmaz. İkinci eşzamanlı istek `users_phone_e164_uq` satırında ilkini bekler ve aynı 201'i alır. Yanıt kayıtla aynı işlemde saklanır (R12) |
+| Telefon zaten kayıtlı (US-005 AC4) | `409 PHONE_ALREADY_REGISTERED`; istemci girişe yönlendirir, girişte üyelikler listelenir |
+| Kayıt anahtarı yok / geçersiz / erişim anahtarı | `401 UNAUTHENTICATED` |
 | VÖEN formatı hatalı | `422 VOEN_INVALID` |
 | VÖEN başka bir alıcı işletmede kayıtlı | `409 VOEN_ALREADY_REGISTERED` |
 | Zorunlu alan eksik | `422 VALIDATION_FAILED` + alan listesi |

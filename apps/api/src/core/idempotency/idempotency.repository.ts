@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
-import { withSystemTx } from '../db';
+import { type Tx, withSystemTx } from '../db';
 
 export interface IdempotencyLock {
   readonly key: string;
@@ -21,6 +21,30 @@ export type ReserveResult =
   | { readonly result: 'conflict' }
   | { readonly result: 'in_progress' }
   | { readonly result: 'replay'; readonly statusCode: number; readonly body: unknown };
+
+/** Kimliksiz kayıt (F2.3a, R13): kapsam telefon. */
+export type PhoneLookupResult =
+  | { readonly result: 'new' }
+  | { readonly result: 'registered' }
+  | { readonly result: 'conflict' }
+  | { readonly result: 'replay'; readonly statusCode: number; readonly body: unknown };
+
+export interface PhoneLookupInput {
+  readonly phoneE164: string;
+  readonly key: string | undefined;
+  readonly endpoint: string;
+  readonly requestHash: string;
+  readonly now: Date;
+}
+
+export interface StoreInput {
+  readonly key: string;
+  readonly endpoint: string;
+  readonly requestHash: string;
+  readonly statusCode: number;
+  readonly body: unknown;
+  readonly expiresAt: Date;
+}
 
 interface ReserveRow extends Record<string, unknown> {
   result: string;
@@ -82,5 +106,46 @@ export class IdempotencyRepository {
         )
       `),
     );
+  }
+
+  /**
+   * Telefon kapsamlı arama (F2.3a, R13): kullanıcı yok → `new`; aynı anahtar + aynı istek →
+   * saklanan yanıt; aynı anahtar + farklı istek → `conflict`; aksi → `registered`.
+   */
+  async lookupByPhone(input: PhoneLookupInput): Promise<PhoneLookupResult> {
+    const result = await withSystemTx((tx) =>
+      tx.execute<ReserveRow>(sql`
+        select result, stored_status, stored_body
+          from idempotency_lookup_by_phone(
+            ${input.phoneE164}, ${input.key ?? null}, ${input.endpoint}, ${input.requestHash},
+            ${input.now.toISOString()}::timestamptz
+          )
+      `),
+    );
+    const row = result.rows[0];
+    switch (row?.result) {
+      case 'new':
+      case 'registered':
+      case 'conflict':
+        return { result: row.result };
+      case 'replay':
+        return { result: 'replay', statusCode: row.stored_status ?? 200, body: row.stored_body };
+      default:
+        throw new Error('idempotency_lookup_by_phone beklenmeyen sonuç döndürdü');
+    }
+  }
+
+  /**
+   * Tamamlanmış yanıtı çağıranın işleminde yazar (R12 çözümü, F2.3a): işlem geri alınırsa yanıt
+   * da yoktur. Kullanıcı işlem bağlamından (app.user_id).
+   */
+  async storeTx(tx: Tx, input: StoreInput): Promise<void> {
+    const json = JSON.stringify(input.body ?? null);
+    await tx.execute(sql`
+      select idempotency_store(
+        ${input.key}, ${input.endpoint}, ${input.requestHash}, ${input.statusCode},
+        ${json}::jsonb, ${input.expiresAt.toISOString()}::timestamptz
+      )
+    `);
   }
 }

@@ -419,7 +419,7 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | business_id | uuid | FK | |
 | name | text | not null | |
 | region_id | uuid | FK | |
-| address_line | text | not null (sipariş için) | |
+| address_line | text | null | Kayıtta açılan varsayılan şubede boş (F2.3a); sepet onayı / sipariş gönderiminde zorunlu (F4) |
 | geo_lat, geo_lng | numeric(9,6) | null | Konum uyuşmazlığı hesabı |
 | approval_rule | text | `every_order` / `above_amount` / `none` | default `every_order` |
 | approval_threshold | numeric(14,2) | null | `above_amount` için zorunlu |
@@ -445,7 +445,20 @@ Benzersiz `(business_id, id)`: memberships / invitations bileşik FK hedefi (F1.
 
 **Kurallar (F2.2):** `id` UUIDv7 (uygulama), `created_at`, `updated_at`. VÖEN tekilliği kısmi benzersiz indeksle: `voen WHERE status = 'pending'` (US-008 AC3). Tutarlılık `CHECK`'i: `pending` iken `reviewed_by` ve `business_id` boş; `approved` iken ikisi dolu; `rejected` iken `reviewed_by` dolu, `business_id` boş. **RLS:** G sınıfının istisnası: okuma ve güncelleme yalnızca `app.is_platform = 'true'` (kişisel veri; herkes okumaz). Kimliksiz başvuru yalnızca `seller_application_submit(...)` `SECURITY DEFINER` fonksiyonuyla eklenir (`withSystemTx`); fonksiyon yalnızca `pending` satır yazar, migrator'a özel (`TO migrator`) ekleme politikası yalnızca bu fonksiyonun içinde etkilidir. Silme yok.
 
-#### `activity_types` (G) — `name jsonb`, `is_active bool`, `sort_order int`. `id` `default gen_random_uuid()` (G tablosu istisnası, `regions` gibi; S5). Seed boştur; liste platform sahibinden gelir.
+#### Perakendeci kaydı (F2.3a, SF-02)
+
+Kayıt tek kiracı işlemidir: `withTenantTx({ businessId: yeni, userId: yeni })` (R15). İşletme, yetenek, profiller, kişisel veri, gizlilik, şube, rol ve üyelik mevcut kiracı politikalarıyla yazılır (F1.7 tetikleyicisi ve `business_capabilities_tenant_insert` yalnızca `self_signup` + `active` / `buyer` + `approved` kabul eder). Kiracının yazamadığı satırlar migrator sahipli `SECURITY DEFINER` fonksiyonlarla (`0015_buyer_signup.sql`); kimlikler parametreden değil bağlamdan alınır:
+
+| Fonksiyon | Yazdığı | Koşul |
+| --- | --- | --- |
+| `user_create_self_signup(phone, full_name, preferred_language, now)` | `users` (`id = app.user_id`) | Kiracı ve kullanıcı bağlamı dolu; telefon kayıtlıysa `users_phone_e164_uq` 23505 (eşzamanlı ikinci kayıt bu satırda bekler) |
+| `subscription_start_self_signup(id, plan_id, start, end, now)` | `subscriptions` (`business_id = app.business_id`, `active`) | İşletme `self_signup` + `active`, `buyer` yeteneği `approved`, hiç aboneliği yok; plan aktif, `buyer`, fiyatı 0. Aksi 42501 |
+| `idempotency_lookup_by_phone(phone, key, endpoint, hash, now)` | — (okur) | Kimliksiz kayıt idempotensi, kapsam telefon (R13): `new` / `registered` / `conflict` / `replay` |
+| `idempotency_store(key, endpoint, hash, status, body, expires_at)` | `idempotency_keys` (`user_id = app.user_id`) | Yanıt kayıt işleminin içinde yazılır (R12 çözümü) |
+
+Yalnız bu fonksiyonların içinde etkili politikalar: `users_definer_insert`, `subscriptions_definer_insert` (`TO migrator`). Plan ayardan seçilir (`onboarding.buyer_plan_code`); para birimi ve saat dilimi bölgenin ülkesinden (`countries.default_currency/default_timezone`). `profile_completeness` VARSAYIM (K10): 10 alan × %10, kayıtta 40.
+
+#### `activity_types` (G) — `name jsonb`, `is_active bool`, `sort_order int`. `id` `default gen_random_uuid()` (G tablosu istisnası, `regions` gibi; S5). Seed F2.3a'da: onaylı liste [F2-seed-listeleri.md](../tasks/F2-seed-listeleri.md) §2 (`seedBusinesses`, ada göre tekrar çalışır). Liste `GET /api/v1/catalog/activity-types` ile (yalnız aktifler).
 
 ### 4.5 `access`
 

@@ -49,6 +49,11 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'POST /api/v1/team/invitations/accept': 'authenticated',
   // F2.2: kimliksiz toptancı başvuru formu (US-008); IP hız sınırı serviste.
   'POST /api/v1/seller-applications': 'public',
+  // F2.3a: kayıt formu listesi (G tablosu, herkes okur).
+  'GET /api/v1/catalog/activity-types': 'public',
+  // F2.3a: kimliksiz perakendeci kaydı; yetki kayıt anahtarı (pendingToken) ile serviste, IP hız
+  // sınırı serviste (F2 spesifikasyonu §6 kural 6).
+  'POST /api/v1/buyers/register': 'public',
 };
 
 /** Platform uçlarının rolleri (F2.1a S1 = A: toptancıyı süper admin ve operasyon açar). */

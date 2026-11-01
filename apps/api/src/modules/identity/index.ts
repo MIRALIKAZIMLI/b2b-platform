@@ -2,9 +2,15 @@ export { CurrentSession } from './current-session';
 export { IdentityModule } from './identity.module';
 export { type SuperAdminSeedResult, seedSuperAdmin } from './seed/super-admin.seed';
 export { type IdentityConfig, type JwtKey } from './identity.config';
-export { type MeView, type SessionAuth, SessionService } from './session.service';
+export {
+  type AuthResult,
+  type DeviceInput,
+  type MeView,
+  type SessionAuth,
+  SessionService,
+} from './session.service';
 export { TotpRepository } from './totp/totp.repository';
-export { PLATFORM_ROLES, type PlatformRole } from './identity.schema';
+export { DEVICE_TYPES, PLATFORM_ROLES, type PlatformRole } from './identity.schema';
 export { TokenService } from './token.service';
 export {
   OTP_PURPOSES,
@@ -25,4 +31,5 @@ export {
 export { IpKeyService } from './ip-key.service';
 export { parsePhoneE164, type ParsedPhone } from './phone';
 export { type TransactionalSms, TransactionalSmsService } from './transactional-sms.service';
-export { type DirectoryUser, UserDirectory } from './user-directory';
+export { type DirectoryUser, isPhoneTakenError, UserDirectory } from './user-directory';
+export { type CookieReply, deliverRefreshToken, isWebClient } from './refresh-cookie';

@@ -26,6 +26,7 @@ import { FilesModule } from './modules/files';
 import { I18nModule } from './modules/i18n';
 import { IdentityModule } from './modules/identity';
 import { NotificationsModule } from './modules/notifications';
+import { OnboardingModule } from './modules/onboarding';
 import { PlatformAdminModule } from './modules/platform-admin';
 import { SettingsModule } from './modules/settings';
 
@@ -62,6 +63,7 @@ export class AppModule implements NestModule {
         AccessModule,
         NotificationsModule,
         FilesModule,
+        OnboardingModule,
         PlatformAdminModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         IdentityModule.forRoot({
           otpHashKey: env.OTP_HASH_KEY,

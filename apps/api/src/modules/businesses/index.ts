@@ -1,7 +1,9 @@
 export { BusinessesModule } from './businesses.module';
 export {
+  type ActivityTypeItem,
   type BusinessRow,
   BusinessesRepository,
+  type NewBuyerBusiness,
   type CapabilityRow,
   isVoenUniqueViolation,
   type NewSellerBusiness,
@@ -23,3 +25,15 @@ export {
 // Başka modüllerin FK'ları için tablo tanımı (ör. subscriptions.business_id, F1.4b;
 // memberships.branch_id / warehouse_id, F1.8a).
 export { branches, businesses, warehouses } from './businesses.schema';
+export {
+  profileCompleteness,
+  PROFILE_FIELDS,
+  type ProfileField,
+  SIGNUP_FILLED_FIELDS,
+} from './profile-completeness';
+export { type BusinessesSeedResult, seedBusinesses } from './seed/businesses.seed';
+export {
+  IpHourlyRateLimiter,
+  type IpRateDecision,
+  type IpRateScope,
+} from './ip-hourly-rate-limiter';
