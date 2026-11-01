@@ -9,22 +9,39 @@ import { IpHourlyRateLimiter } from './ip-hourly-rate-limiter';
 import { SellerApplicationsController } from './seller-applications.controller';
 import { SellerApplicationsRepository } from './seller-applications.repository';
 import { SellerApplicationsService } from './seller-applications.service';
+import { SellerProfileController, WarehousesController } from './seller-setup.controller';
+import { SellerSetupRepository } from './seller-setup.repository';
+import { SellerSetupService } from './seller-setup.service';
 
 /**
  * İşletme çekirdek tabloları (F1.7), kimliksiz toptancı başvurusu (F2.2) ve işletme profili
- * okuma ucu (F2.3b), profil düzenleme (F2.4). IpKeyService global
- * IdentityModule'den, Redis istemcisi global RedisModule'den gelir.
+ * okuma ucu (F2.3b), profil düzenleme (F2.4), depolar / satıcı profili / hizmet bölgeleri (F2.6).
+ * IpKeyService global IdentityModule'den, Redis istemcisi global RedisModule'den,
+ * WarehouseLimitGate global WarehouseLimitGateModule'den (billing) gelir.
  */
 @Module({
   imports: [AuditModule, SettingsModule],
-  controllers: [SellerApplicationsController, ActivityTypesController, BusinessProfileController],
+  controllers: [
+    SellerApplicationsController,
+    ActivityTypesController,
+    BusinessProfileController,
+    WarehousesController,
+    SellerProfileController,
+  ],
   providers: [
     BusinessesRepository,
     BusinessProfileService,
     SellerApplicationsRepository,
     IpHourlyRateLimiter,
     SellerApplicationsService,
+    SellerSetupRepository,
+    SellerSetupService,
   ],
-  exports: [BusinessesRepository, SellerApplicationsRepository, IpHourlyRateLimiter],
+  exports: [
+    SellerSetupRepository,
+    BusinessesRepository,
+    SellerApplicationsRepository,
+    IpHourlyRateLimiter,
+  ],
 })
 export class BusinessesModule {}

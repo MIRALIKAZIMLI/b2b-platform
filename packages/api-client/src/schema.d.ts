@@ -813,6 +813,149 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/business/seller-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Satıcı profili (F2.6; yalnız `seller` yeteneği)
+         * @description İzin `business.manage`; işletmenin `seller` yeteneği yoksa `403 CAPABILITY_REQUIRED`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Profil */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SellerProfile"];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Satıcı profilini güncelle (F2.6)
+         * @description Yalnız gönderilen alanlar yazılır. `minOrderAmount: null` alt sınırı kaldırır. Stok modu ve düşük stok eşiği stok adımında (F3), varsayılan fiyat listesi F3.6'da; varsayılan depo `PATCH /api/v1/warehouses/{id}` (`isDefault: true`) ile değişir.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SellerProfileUpdate"];
+                };
+            };
+            responses: {
+                /** @description Güncellendi; güncel profil */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SellerProfile"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/business/service-areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hizmet bölgeleri (F2.6; yalnız `seller` yeteneği) */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bölgeler */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ServiceAreas"];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        /**
+         * Hizmet bölgelerini değiştir (F2.6)
+         * @description Listenin tamamı gönderilir; eski liste bununla değişir (boş liste = hizmet bölgesi yok). Bilinmeyen bölge `422` (`details.regionIds = ['not_found']`).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ServiceAreas"];
+                };
+            };
+            responses: {
+                /** @description Güncellendi; güncel liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ServiceAreas"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/warehouses": {
         parameters: {
             query?: never;
@@ -820,7 +963,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Depolar */
+        /**
+         * Depolar (US-011; yalnız `seller` yeteneği)
+         * @description Varsayılan depo önce, sonra ada göre; pasif depolar da döner.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -837,12 +983,18 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Warehouse"][];
+                    };
                 };
+                403: components["responses"]["Error"];
             };
         };
         put?: never;
-        /** Depo oluştur (US-011) */
+        /**
+         * Depo oluştur (US-011)
+         * @description İlk depo varsayılan depo olur (AC1). Aktif depo sayısı `warehouses.max` hakkını aşacaksa `403 ENTITLEMENT_LIMIT_REACHED` (AC2; `details.key`, `details.limit`).
+         */
         post: {
             parameters: {
                 query?: never;
@@ -866,15 +1018,76 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Warehouse"];
+                    };
                 };
                 403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/warehouses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Depo güncelle, varsayılan yap, pasifleştir / etkinleştir (US-011)
+         * @description Depo silinmez, yalnızca pasifleştirilir (AC3). Varsayılan depo pasifleştirilemez ve pasif depo varsayılan yapılamaz (`409 INVALID_STATE_TRANSITION`); önce başka depo varsayılan yapılır. `isDefault` yalnız `true` alır. Pasif depoyu etkinleştirmek `warehouses.max` hakkına tabidir (`403 ENTITLEMENT_LIMIT_REACHED`). Başka işletmenin deposu `404`.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        addressLine?: string | null;
+                        /** @enum {boolean} */
+                        isDefault?: true;
+                        /** @enum {string} */
+                        status?: "active" | "inactive";
+                    };
+                };
+            };
+            responses: {
+                /** @description Güncellendi; güncel depo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Warehouse"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
         trace?: never;
     };
     "/api/v1/team/members": {
@@ -5782,6 +5995,33 @@ export interface components {
             approvalThreshold?: components["schemas"]["Decimal"];
             /** @enum {string} */
             status?: "active" | "inactive";
+        };
+        Warehouse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            addressLine: string | null;
+            isDefault: boolean;
+            /** @enum {string} */
+            status: "active" | "inactive";
+        };
+        SellerProfile: {
+            description: components["schemas"]["LocalizedText"] | null;
+            /** @description İşletmenin para biriminde; yoksa alt sınır yok. */
+            minOrderAmount: components["schemas"]["Decimal"] | null;
+            requireDeliveryPhoto: boolean;
+            /** Format: uuid */
+            defaultWarehouseId: string | null;
+        };
+        SellerProfileUpdate: {
+            /** @description Dil başına en çok 2000 karakter; `null` metni siler. */
+            description?: components["schemas"]["LocalizedText"] | null;
+            /** @description 0 veya pozitif, en çok 2 ondalık (`numeric(14,2)`); `null` kaldırır. */
+            minOrderAmount?: string | null;
+            requireDeliveryPhoto?: boolean;
+        };
+        ServiceAreas: {
+            regionIds: string[];
         };
         /** @description Yalnızca görünürlük ayarına göre açık alanlar dolu döner. Diğer bağlantılar asla dönmez. */
         DirectoryBuyer: {

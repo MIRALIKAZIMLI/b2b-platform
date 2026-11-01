@@ -9,6 +9,7 @@ export * from './localized-text';
 export * from './menu';
 export * from './permissions';
 export * from './platform-roles';
+export * from './seller-setup';
 export * from './settings';
 export * from './uuidv7';
 export * from './version';

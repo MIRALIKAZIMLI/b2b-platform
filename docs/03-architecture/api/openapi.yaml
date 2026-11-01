@@ -457,29 +457,141 @@ paths:
             schema: { $ref: '#/components/schemas/BranchInput' }
       responses:
         '200': { description: Güncellendi }
+  /api/v1/business/seller-profile:
+    get:
+      tags: [business]
+      summary: Satıcı profili (F2.6; yalnız `seller` yeteneği)
+      description: >
+        İzin `business.manage`; işletmenin `seller` yeteneği yoksa `403 CAPABILITY_REQUIRED`.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SellerProfile' }
+        '403': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [business]
+      summary: Satıcı profilini güncelle (F2.6)
+      description: >
+        Yalnız gönderilen alanlar yazılır. `minOrderAmount: null` alt sınırı kaldırır. Stok modu ve
+        düşük stok eşiği stok adımında (F3), varsayılan fiyat listesi F3.6'da; varsayılan depo
+        `PATCH /api/v1/warehouses/{id}` (`isDefault: true`) ile değişir.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SellerProfileUpdate' }
+      responses:
+        '200':
+          description: Güncellendi; güncel profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SellerProfile' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/business/service-areas:
+    get:
+      tags: [business]
+      summary: Hizmet bölgeleri (F2.6; yalnız `seller` yeteneği)
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Bölgeler
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceAreas' }
+        '403': { $ref: '#/components/responses/Error' }
+    put:
+      tags: [business]
+      summary: Hizmet bölgelerini değiştir (F2.6)
+      description: >
+        Listenin tamamı gönderilir; eski liste bununla değişir (boş liste = hizmet bölgesi yok).
+        Bilinmeyen bölge `422` (`details.regionIds = ['not_found']`).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ServiceAreas' }
+      responses:
+        '200':
+          description: Güncellendi; güncel liste
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceAreas' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/warehouses:
     get:
       tags: [business]
-      summary: Depolar
+      summary: Depolar (US-011; yalnız `seller` yeteneği)
+      description: Varsayılan depo önce, sonra ada göre; pasif depolar da döner.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Warehouse' } }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       tags: [business]
       summary: Depo oluştur (US-011)
+      description: >
+        İlk depo varsayılan depo olur (AC1). Aktif depo sayısı `warehouses.max` hakkını aşacaksa
+        `403 ENTITLEMENT_LIMIT_REACHED` (AC2; `details.key`, `details.limit`).
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [name]
               properties:
-                name: { type: string }
-                addressLine: { type: string }
+                name: { type: string, minLength: 1, maxLength: 120 }
+                addressLine: { type: string, maxLength: 300 }
       responses:
-        '201': { description: Oluşturuldu }
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Warehouse' }
         '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/warehouses/{id}:
+    patch:
+      tags: [business]
+      summary: Depo güncelle, varsayılan yap, pasifleştir / etkinleştir (US-011)
+      description: >
+        Depo silinmez, yalnızca pasifleştirilir (AC3). Varsayılan depo pasifleştirilemez ve pasif
+        depo varsayılan yapılamaz (`409 INVALID_STATE_TRANSITION`); önce başka depo varsayılan
+        yapılır. `isDefault` yalnız `true` alır. Pasif depoyu etkinleştirmek `warehouses.max`
+        hakkına tabidir (`403 ENTITLEMENT_LIMIT_REACHED`). Başka işletmenin deposu `404`.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                name: { type: string, minLength: 1, maxLength: 120 }
+                addressLine: { type: [string, 'null'], maxLength: 300 }
+                isDefault: { type: boolean, enum: [true] }
+                status: { type: string, enum: [active, inactive] }
+      responses:
+        '200':
+          description: Güncellendi; güncel depo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Warehouse' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
 
   # ---------------------------------------------------------------- team
   /api/v1/team/members:
@@ -2479,6 +2591,53 @@ components:
         approvalRule: { type: string, enum: [every_order, above_amount, none] }
         approvalThreshold: { $ref: '#/components/schemas/Decimal' }
         status: { type: string, enum: [active, inactive] }
+    Warehouse:
+      type: object
+      required: [id, name, addressLine, isDefault, status]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        addressLine: { type: [string, 'null'] }
+        isDefault: { type: boolean }
+        status: { type: string, enum: [active, inactive] }
+    SellerProfile:
+      type: object
+      required: [description, minOrderAmount, requireDeliveryPhoto, defaultWarehouseId]
+      properties:
+        description:
+          oneOf:
+            - $ref: '#/components/schemas/LocalizedText'
+            - type: 'null'
+        minOrderAmount:
+          description: İşletmenin para biriminde; yoksa alt sınır yok.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        requireDeliveryPhoto: { type: boolean }
+        defaultWarehouseId: { type: [string, 'null'], format: uuid }
+    SellerProfileUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        description:
+          description: Dil başına en çok 2000 karakter; `null` metni siler.
+          oneOf:
+            - $ref: '#/components/schemas/LocalizedText'
+            - type: 'null'
+        minOrderAmount:
+          description: '0 veya pozitif, en çok 2 ondalık (`numeric(14,2)`); `null` kaldırır.'
+          oneOf:
+            - type: string
+              pattern: '^[0-9]{1,12}(\.[0-9]{1,2})?$'
+            - type: 'null'
+        requireDeliveryPhoto: { type: boolean }
+    ServiceAreas:
+      type: object
+      additionalProperties: false
+      required: [regionIds]
+      properties:
+        regionIds: { type: array, maxItems: 200, uniqueItems: true, items: { type: string, format: uuid } }
     DirectoryBuyer:
       type: object
       description: Yalnızca görünürlük ayarına göre açık alanlar dolu döner. Diğer bağlantılar asla dönmez.

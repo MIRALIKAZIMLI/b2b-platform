@@ -15,6 +15,10 @@ export const AUDIT_ACTIONS = [
   'buyer.registered',
   'business.voen_changed',
   'business.profile_updated',
+  'warehouse.created',
+  'warehouse.updated',
+  'seller_profile.updated',
+  'service_areas.updated',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -25,6 +29,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // F2.3a perakendeci kaydı; F2.4 VÖEN ve profil düzenleme).
 // invitation: hedef kimliği davet (invitations.id); token ve özeti audit'e yazılmaz (F2.1a).
 // seller_application: hedef kimliği başvuru (seller_applications.id; F2.2 onay / ret).
+// warehouse: hedef kimliği depo (warehouses.id; F2.6). Satıcı profili ve hizmet bölgeleri
+// (F2.6) hedef olarak `business` kullanır.
 export const AUDIT_TARGET_TYPES = [
   'setting',
   'otp_challenge',
@@ -33,6 +39,7 @@ export const AUDIT_TARGET_TYPES = [
   'business',
   'invitation',
   'seller_application',
+  'warehouse',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

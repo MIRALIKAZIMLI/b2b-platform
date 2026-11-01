@@ -19,7 +19,7 @@ import { SmsModule, type SmsRetryPolicy } from './infrastructure/sms';
 import { StorageModule } from './infrastructure/storage';
 import { AccessModule } from './modules/access';
 import { AppConfigModule } from './modules/app-config';
-import { BillingModule } from './modules/billing';
+import { BillingModule, WarehouseLimitGateModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
 import { FilesModule } from './modules/files';
@@ -60,6 +60,7 @@ export class AppModule implements NestModule {
         I18nModule,
         BusinessesModule,
         BillingModule,
+        WarehouseLimitGateModule,
         AccessModule,
         NotificationsModule,
         FilesModule,
