@@ -366,6 +366,10 @@ paths:
     get:
       tags: [business]
       summary: Aktif işletmenin profili
+      description: >-
+        İzin `business.manage` (F2.3b, Mimar onayı). Perakendeci ana sayfasındaki "Profilinizi
+        tamamlayın" kartı `profileCompleteness`'i buradan okur (US-005 AC2). Logo adresi profil
+        düzenlemesine kadar `null`.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       responses:
         '200':

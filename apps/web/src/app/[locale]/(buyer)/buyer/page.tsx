@@ -1,6 +1,6 @@
-import { DashboardPlaceholder } from '../../../../features/shell/dashboard-placeholder';
+import { BuyerHome } from '../../../../features/buyer-registration/buyer-home';
 
-/** buyer açılış sayfası: dashboard yer tutucusu (kartlar F6, US-056). */
+/** buyer açılış sayfası: profil doluluk kartı ve boş durum (US-005 AC2, F2.3b); kartlar F6 (US-056). */
 export default function BuyerHomePage() {
-  return <DashboardPlaceholder />;
+  return <BuyerHome />;
 }

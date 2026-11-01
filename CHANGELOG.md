@@ -32,3 +32,4 @@
 - F2.2a: toptancı başvurusu API (kimliksiz form, admin liste/ret, başvurudan toptancı açma); docs: UI/UX kuralları (ui-guidelines.md)
 - F2.2b: web Tailwind kurulumu, toptancı başvuru sayfası, giriş ekranında başvuru bağlantısı, admin başvuru ekranı
 - F2.3a: perakendeci kayıt API'si (onboarding, pendingToken, telefon kapsamlı idempotens), faaliyet türleri
+- F2.3b: perakendeci kayıt ekranları (web + mobil), profil doluluk kartı, GET /business, E2E-03

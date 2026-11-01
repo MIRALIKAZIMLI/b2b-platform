@@ -39,7 +39,6 @@ export function useLoginOutcome(phone: string, onStep?: (step: LoginStep) => boo
   const language = useLanguageController();
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
-  const [unregistered, setUnregistered] = useState(false);
 
   async function handle(outcome: LoginOutcome) {
     if (outcome.kind === 'error') {
@@ -59,7 +58,8 @@ export function useLoginOutcome(phone: string, onStep?: (step: LoginStep) => boo
     current = { phone, step: outcome.step };
     if (onStep?.(outcome.step) === true) return;
     if (outcome.step.kind === 'code') router.push('/code');
-    else if (outcome.step.kind === 'register') setUnregistered(true);
+    // Kayıtsız numara → perakendeci kaydı (F2.3b); kayıt anahtarı yalnız bellekte (`current`).
+    else if (outcome.step.kind === 'register') router.replace('/register');
     else router.replace('/totp');
   }
 
@@ -76,5 +76,5 @@ export function useLoginOutcome(phone: string, onStep?: (step: LoginStep) => boo
     }
   }
 
-  return { run, error, busy, unregistered };
+  return { run, error, busy };
 }

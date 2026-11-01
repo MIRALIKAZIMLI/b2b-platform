@@ -1,6 +1,8 @@
-// Mobil giriş akışı (F1.14a, US-001): telefon → SMS kodu → (gerekirse) TOTP. Ekranlardan bağımsız,
-// birim testli. Ekranlar yalnızca sonucu (`LoginOutcome`) gösterir. Kod ve anahtarlar loglanmaz.
+// Mobil giriş akışı (F1.14a, US-001): telefon → SMS kodu → (gerekirse) TOTP; kayıtsız numara →
+// perakendeci kaydı (F2.3b, US-005). Ekranlardan bağımsız, birim testli. Ekranlar yalnızca sonucu
+// gösterir. Kod ve anahtarlar loglanmaz.
 import type { ApiClient, components } from '@b2b/api-client';
+import { type BuyerRegisterBody, type RegistrationFailure, registrationFailure } from '@b2b/shared';
 import type { TokenPair } from '../../lib/api';
 
 type AuthResult = components['schemas']['AuthResult'];
@@ -11,13 +13,19 @@ export type LoginStep =
   | { readonly kind: 'totp'; readonly pendingToken: string }
   | { readonly kind: 'totp_setup'; readonly pendingToken: string; readonly otpauthUri: string }
   | { readonly kind: 'recovery'; readonly pendingToken: string; readonly codes: readonly string[] }
-  | { readonly kind: 'register' };
+  | { readonly kind: 'register'; readonly pendingToken: string };
 
 export type LoginOutcome =
   | { readonly kind: 'step'; readonly step: LoginStep }
   | { readonly kind: 'signed_in'; readonly tokens: TokenPair }
   /** `errors.<code>` çeviri anahtarının kodu. */
   | { readonly kind: 'error'; readonly code: string };
+
+export type RegisterOutcome =
+  | { readonly kind: 'signed_in'; readonly tokens: TokenPair }
+  /** Aynı anahtarla tekrar (zayıf ağ): kayıt var, oturum yalnız ilk yanıtta (F2.3a K6) → giriş. */
+  | { readonly kind: 'registered' }
+  | { readonly kind: 'failed'; readonly failure: RegistrationFailure };
 
 /** API hata gövdesi → hata kodu; kod yoksa genel hata. */
 export function errorCodeOf(error: unknown): string {
@@ -70,8 +78,10 @@ export function createLoginFlow({ client, device }: LoginFlowOptions) {
     if (result.nextStep === 'totp_setup' && result.pendingToken !== undefined) {
       return setupTotp(result.pendingToken);
     }
-    // Kayıt F2.3'te; burada yalnızca bilgi gösterilir.
-    return { kind: 'step', step: { kind: 'register' } };
+    if (result.nextStep === 'register' && result.pendingToken !== undefined) {
+      return { kind: 'step', step: { kind: 'register', pendingToken: result.pendingToken } };
+    }
+    return { kind: 'error', code: 'INTERNAL_ERROR' };
   }
 
   return {
@@ -97,6 +107,31 @@ export function createLoginFlow({ client, device }: LoginFlowOptions) {
       });
       if (data === undefined) return fail(error);
       return next(data);
+    },
+
+    /**
+     * Perakendeci kaydı (`POST /api/v1/buyers/register`): yetki kayıt anahtarıyla, aynı
+     * `Idempotency-Key` yeniden denemede tek işletme açar. Ağ hatası istisna olarak çağırana gider.
+     */
+    async registerBuyer(
+      pendingToken: string,
+      body: BuyerRegisterBody,
+      idempotencyKey: string,
+    ): Promise<RegisterOutcome> {
+      const { data, error } = await client.POST('/api/v1/buyers/register', {
+        params: { header: { 'Idempotency-Key': idempotencyKey } },
+        headers: { Authorization: `Bearer ${pendingToken}` },
+        body,
+      });
+      if (data === undefined) return { kind: 'failed', failure: registrationFailure(error) };
+      if (data.accessToken === undefined) return { kind: 'registered' };
+      return {
+        kind: 'signed_in',
+        tokens: {
+          accessToken: data.accessToken,
+          ...(data.refreshToken === undefined ? {} : { refreshToken: data.refreshToken }),
+        },
+      };
     },
 
     /** TOTP kurulumu onayı: kurtarma kodları bir kez gösterilir, sonra TOTP ile giriş. */

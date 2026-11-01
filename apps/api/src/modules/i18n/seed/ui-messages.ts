@@ -1,6 +1,6 @@
 // Web arayüzü başlangıç çevirileri (`ui_translations`, F1.13a: giriş ekranı ve dil seçici;
 // F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi;
-// F2.1b: admin toptancı ekranları, aktivasyon sayfası).
+// F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -37,11 +37,6 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Kurtarma kodları (yalnızca bir kez gösterilir, güvenli bir yerde saklayın)',
   },
   'auth.login.continue': { az: 'Davam et', ru: 'Продолжить', tr: 'Devam et' },
-  'auth.login.register_soon': {
-    az: 'Bu nömrə ilə hesab yoxdur. Qeydiyyat tezliklə əlçatan olacaq.',
-    ru: 'Аккаунт с этим номером не найден. Регистрация скоро станет доступна.',
-    tr: 'Bu numarayla hesap yok. Kayıt yakında açılacak.',
-  },
   'common.loading': { az: 'Yüklənir…', ru: 'Загрузка…', tr: 'Yükleniyor…' },
   'common.language': { az: 'Dil', ru: 'Язык', tr: 'Dil' },
   'common.logout': { az: 'Çıxış', ru: 'Выйти', tr: 'Çıkış' },
@@ -422,4 +417,234 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   'languages.en': { az: 'English', ru: 'English', tr: 'English' },
   // F2.3a: perakendeci kaydında açılan varsayılan şubenin adı (kullanıcının dilinde yazılır).
   'branch.default_name': { az: 'Əsas filial', ru: 'Основной филиал', tr: 'Ana şube' },
+  // F2.3b: perakendeci kayıt ekranları (web + mobil), profil kartı (US-005).
+  'register.entry_title': {
+    az: 'Mağazanız var? Pulsuz qeydiyyatdan keçin',
+    ru: 'У вас магазин? Зарегистрируйтесь бесплатно',
+    tr: 'Mağazanız mı var? Ücretsiz kaydolun',
+  },
+  'register.entry_body': {
+    az: 'Telefonunuzla başlayın; topdansatışçılar sizi tapsın və sifarişləri bir yerdən verin.',
+    ru: 'Начните с номера телефона: оптовики найдут вас, а заказы будут в одном месте.',
+    tr: 'Telefonunuzla başlayın; toptancılar sizi bulsun, siparişleri tek yerden verin.',
+  },
+  'register.title': { az: 'Qeydiyyat', ru: 'Регистрация', tr: 'Kayıt ol' },
+  'register.intro': {
+    az: 'Əvvəlcə telefon nömrənizi SMS kodla təsdiqləyin.',
+    ru: 'Сначала подтвердите номер телефона кодом из SMS.',
+    tr: 'Önce telefon numaranızı SMS koduyla doğrulayın.',
+  },
+  'register.eyebrow': { az: 'Son addım', ru: 'Последний шаг', tr: 'Son adım' },
+  'register.form_title': {
+    az: 'Müəssisənizi tanıdın',
+    ru: 'Расскажите о своём бизнесе',
+    tr: 'İşletmenizi tanıtın',
+  },
+  'register.form_subtitle': {
+    az: '{phone} təsdiqləndi. Bu məlumatlarla hesabınız açılır.',
+    ru: 'Номер {phone} подтверждён. По этим данным будет создан аккаунт.',
+    tr: '{phone} doğrulandı. Hesabınız bu bilgilerle açılır.',
+  },
+  'register.section_you': { az: 'Siz', ru: 'Вы', tr: 'Siz' },
+  'register.section_business': { az: 'Müəssisə', ru: 'Бизнес', tr: 'İşletme' },
+  'register.field.fullName': { az: 'Ad və soyad', ru: 'Имя и фамилия', tr: 'Ad soyad' },
+  'register.field.legalName': {
+    az: 'Müəssisənin adı',
+    ru: 'Название бизнеса',
+    tr: 'İşletme ünvanı',
+  },
+  'register.field.activityTypeId': {
+    az: 'Fəaliyyət sahəsi',
+    ru: 'Сфера деятельности',
+    tr: 'Faaliyet alanı',
+  },
+  'register.field.regionId': { az: 'Şəhər / rayon', ru: 'Город / район', tr: 'Şehir / rayon' },
+  'register.choose': { az: 'Seçin', ru: 'Выберите', tr: 'Seçin' },
+  'register.consent_read': {
+    az: 'Məlumat paylaşımı mətnini oxuyun',
+    ru: 'Прочитать текст о передаче данных',
+    tr: 'Veri paylaşım metnini okuyun',
+  },
+  'register.consent_hide': { az: 'Mətni gizlət', ru: 'Скрыть текст', tr: 'Metni gizle' },
+  'register.consent_version': {
+    az: 'Mətn versiyası: {version}',
+    ru: 'Версия текста: {version}',
+    tr: 'Metin sürümü: {version}',
+  },
+  'register.submit': { az: 'Hesabı yarat', ru: 'Создать аккаунт', tr: 'Hesabı oluştur' },
+  'register.submitting': { az: 'Yaradılır…', ru: 'Создаём…', tr: 'Oluşturuluyor…' },
+  'register.error.required': {
+    az: 'Bu sahə məcburidir.',
+    ru: 'Обязательное поле.',
+    tr: 'Bu alan zorunlu.',
+  },
+  'register.error.too_long': { az: 'Çox uzundur.', ru: 'Слишком длинно.', tr: 'Çok uzun.' },
+  'register.error.consent_required': {
+    az: 'Davam etmək üçün mətni təsdiqləyin.',
+    ru: 'Чтобы продолжить, подтвердите согласие.',
+    tr: 'Devam etmek için metni onaylayın.',
+  },
+  'register.error.not_found': {
+    az: 'Bu seçim artıq keçərli deyil; yenidən seçin.',
+    ru: 'Этот вариант больше недоступен; выберите снова.',
+    tr: 'Bu seçim artık geçerli değil; yeniden seçin.',
+  },
+  'register.error.outdated': {
+    az: 'Mətn yenilənib; səhifəni yeniləyin və yenidən təsdiqləyin.',
+    ru: 'Текст обновлён; обновите страницу и подтвердите снова.',
+    tr: 'Metin güncellendi; sayfayı yenileyip yeniden onaylayın.',
+  },
+  'register.error.invalid': {
+    az: 'Yanlış dəyər.',
+    ru: 'Неверное значение.',
+    tr: 'Geçersiz değer.',
+  },
+  'register.already_title': {
+    az: 'Bu nömrə artıq qeydiyyatdadır',
+    ru: 'Этот номер уже зарегистрирован',
+    tr: 'Bu numara zaten kayıtlı',
+  },
+  'register.already_body': {
+    az: 'Daxil olun; mövcud müəssisələriniz göstəriləcək.',
+    ru: 'Войдите — мы покажем ваши компании.',
+    tr: 'Giriş yapın; mevcut işletmeleriniz gösterilir.',
+  },
+  'register.expired': {
+    az: 'Təsdiqin vaxtı keçib. Nömrənizi yenidən təsdiqləyin.',
+    ru: 'Время подтверждения истекло. Подтвердите номер ещё раз.',
+    tr: 'Doğrulamanın süresi doldu. Numaranızı yeniden doğrulayın.',
+  },
+  'register.done_title': {
+    az: 'Qeydiyyat tamamlandı',
+    ru: 'Регистрация завершена',
+    tr: 'Kaydınız tamamlandı',
+  },
+  'register.done_body': {
+    az: 'Bağlantı kəsildiyi üçün sessiya açılmadı. Eyni nömrə ilə daxil olun.',
+    ru: 'Из-за обрыва связи сессия не открылась. Войдите с тем же номером.',
+    tr: 'Bağlantı kesildiği için oturum açılamadı. Aynı numarayla giriş yapın.',
+  },
+  'register.go_login': { az: 'Daxil ol', ru: 'Войти', tr: 'Giriş yap' },
+  'register.restart': { az: 'Yenidən başla', ru: 'Начать заново', tr: 'Yeniden başla' },
+  'register.have_account': {
+    az: 'Hesabınız var?',
+    ru: 'Уже есть аккаунт?',
+    tr: 'Hesabınız var mı?',
+  },
+  'profile.complete_title': {
+    az: 'Profilinizi tamamlayın',
+    ru: 'Заполните профиль',
+    tr: 'Profilinizi tamamlayın',
+  },
+  'profile.complete_body': {
+    az: 'VÖEN, ünvan və loqo əlavə edin ki, topdansatışçılar sizi asan tapsın.',
+    ru: 'Добавьте VÖEN, адрес и логотип, чтобы оптовикам было проще вас найти.',
+    tr: 'VÖEN, adres ve logo ekleyin; toptancılar sizi daha kolay bulsun.',
+  },
+  'profile.complete_percent': {
+    az: '{percent}% tamamlanıb',
+    ru: 'Заполнено на {percent}%',
+    tr: '%{percent} tamamlandı',
+  },
+  'buyer.home.empty_title': {
+    az: 'Hələ bağlı topdansatışçınız yoxdur',
+    ru: 'Пока нет связанных оптовиков',
+    tr: 'Henüz bağlı toptancınız yok',
+  },
+  'buyer.home.empty_body': {
+    az: 'Topdansatışçı sizə bağlantı sorğusu göndərib siz qəbul etdikdə məhsulları burada görünəcək.',
+    ru: 'Когда оптовик отправит запрос на связь и вы его примете, его товары появятся здесь.',
+    tr: 'Bir toptancı bağlantı isteği gönderip siz kabul ettiğinizde ürünleri burada görünür.',
+  },
+  // F2.3b: veri paylaşım metni v1 (docs/legal/data-sharing-v1.md; NFR-63). Değişirse yeni sürüm anahtarı.
+  'dataSharing.v1.title': {
+    az: 'Məlumatlarınızın paylaşılması haqqında',
+    ru: 'О передаче ваших данных',
+    tr: 'Verilerinizin paylaşımı hakkında',
+  },
+  'dataSharing.v1.item1_title': {
+    az: 'Hansı məlumatları toplayırıq?',
+    ru: 'Какие данные мы собираем?',
+    tr: 'Hangi verileri topluyoruz?',
+  },
+  'dataSharing.v1.item1_body': {
+    az: 'Telefon nömrəniz, ad və soyadınız, müəssisənin adı, fəaliyyət növü, şəhər/rayon. Sonradan: VÖEN, filial və çatdırılma ünvanı; könüllü olaraq e-poçt, loqo, iş saatları.',
+    ru: 'Номер телефона, имя и фамилия, название бизнеса, вид деятельности, город/район. Позже: VÖEN, филиал и адрес доставки; по желанию — e-mail, логотип, часы работы.',
+    tr: 'Telefon numaranız, adınız soyadınız, işletme ünvanı, faaliyet türü, şehir/rayon. Sonradan: VÖEN, şube ve teslimat adresi; isteğe bağlı e-posta, logo, çalışma saatleri.',
+  },
+  'dataSharing.v1.item2_title': {
+    az: 'Əlaqəsiz topdansatışçılar nəyi görür?',
+    ru: 'Что видят оптовики без связи с вами?',
+    tr: 'Bağlantısız toptancılar ne görür?',
+  },
+  'dataSharing.v1.item2_body': {
+    az: 'Susmaya görə yalnız müəssisənin adı, fəaliyyət növü və şəhər/rayon. Loqo, tam ünvan, müəssisənin telefonu, VÖEN, səlahiyyətli şəxsin adı, şəxsi telefon və e-poçt bağlıdır; Məxfilik ayarlarından tək-tək aça bilərsiniz. "Kataloqda görünmə"ni tamamilə söndürə bilərsiniz; bu halda yalnız tam telefon və ya tam VÖEN ilə tapılırsınız və nəticədə yalnız açıq sahələr görünür.',
+    ru: 'По умолчанию только название бизнеса, вид деятельности и город/район. Логотип, полный адрес, рабочий телефон, VÖEN, имя уполномоченного лица, личный телефон и e-mail скрыты; вы можете открыть их по одному в настройках конфиденциальности. Можно полностью отключить «показ в каталоге»: тогда вас найдут только по точному телефону или точному VÖEN, и в результате будут видны только открытые поля.',
+    tr: 'Varsayılan olarak yalnızca işletme ünvanı, faaliyet türü ve şehir/rayon. Logo, tam adres, işletme telefonu, VÖEN, yetkili adı, kişisel telefon ve e-posta kapalıdır; Gizlilik ayarlarından tek tek açabilirsiniz. "Dizinde görünme"yi tamamen kapatabilirsiniz; bu durumda yalnızca tam telefon veya tam VÖEN ile bulunursunuz ve sonuçta yalnızca açık alanlar görünür.',
+  },
+  'dataSharing.v1.item3_title': {
+    az: 'Bağlı topdansatışçılar nəyi görür?',
+    ru: 'Что видят связанные оптовики?',
+    tr: 'Bağlı toptancılar ne görür?',
+  },
+  'dataSharing.v1.item3_body': {
+    az: 'Əlaqəni qəbul etdiyiniz topdansatışçı sifariş və çatdırılma üçün lazım olan çatdırılma və əlaqə məlumatlarınızı görür.',
+    ru: 'Оптовик, чью связь вы приняли, видит ваши данные доставки и контакты, необходимые для заказов и доставки.',
+    tr: 'Bağlantıyı kabul ettiğiniz toptancı, sipariş ve teslimat için gereken teslimat ve iletişim bilgilerinizi görür.',
+  },
+  'dataSharing.v1.item4_title': {
+    az: 'Heç kim görmür:',
+    ru: 'Не видит никто:',
+    tr: 'Kimse göremez:',
+  },
+  'dataSharing.v1.item4_body': {
+    az: 'Digər topdansatışçılarla əlaqələriniz və alış həcminiz heç bir topdansatışçıya göstərilmir.',
+    ru: 'ваши связи с другими оптовиками и объём закупок не показываются ни одному оптовику.',
+    tr: 'Başka toptancılarla bağlantılarınız ve alım hacminiz hiçbir toptancıya gösterilmez.',
+  },
+  'dataSharing.v1.item5_title': {
+    az: 'Məqsəd:',
+    ru: 'Цель:',
+    tr: 'Amaç:',
+  },
+  'dataSharing.v1.item5_body': {
+    az: 'Topdansatışçıların sizi tapması, əlaqə qurulması, sifariş, çatdırılma və cari hesab izlənməsi. [Başqa məqsəd varsa yazılacaq.]',
+    ru: 'чтобы оптовики могли вас найти, установить связь, оформлять заказы, доставку и вести учёт взаиморасчётов. [Другие цели, если есть.]',
+    tr: 'Toptancıların sizi bulması, bağlantı kurması, sipariş, teslimat ve cari takibi. [Başka amaç varsa yazılacak.]',
+  },
+  'dataSharing.v1.item6_title': {
+    az: 'Saxlama və silmə:',
+    ru: 'Хранение и удаление:',
+    tr: 'Saklama ve silme:',
+  },
+  'dataSharing.v1.item6_body': {
+    az: 'Silmə sorğunuz 30 gün ərzində icra olunur. Sifariş və cari qeydlər qanuni saxlama üçün anonimləşdirilərək qorunur [saxlama müddəti: hüquqşünas təsdiqi]. Heç bir əlaqəsi olmayan hesablar passiv olduqda xəbərdarlıq edilir, deaktiv edilir və [180-ci gündə] şəxsi məlumatlar silinir və ya anonimləşdirilir.',
+    ru: 'запрос на удаление выполняется в течение 30 дней. Записи заказов и взаиморасчётов сохраняются в обезличенном виде для законного хранения [срок хранения: подтверждение юриста]. Неактивные аккаунты без связей предупреждаются, деактивируются, а на [180-й день] персональные данные удаляются или обезличиваются.',
+    tr: 'Silme talebiniz 30 gün içinde uygulanır. Sipariş ve cari kayıtları yasal saklama için anonimleştirilerek korunur [saklama süresi: hukukçu onayı]. Hiç bağlantısı olmayan hesaplar hareketsizse uyarılır, pasifleştirilir ve [180. günde] kişisel veriler silinir veya anonimleştirilir.',
+  },
+  'dataSharing.v1.item7_title': {
+    az: 'Hüquqlarınız:',
+    ru: 'Ваши права:',
+    tr: 'Haklarınız:',
+  },
+  'dataSharing.v1.item7_body': {
+    az: 'Məxfilik ayarlarını istədiyiniz vaxt dəyişə, məlumatlarınıza çıxış və silmə tələb edə bilərsiniz. [Qanuni hüquqlar siyahısı: hüquqşünas təsdiqi]',
+    ru: 'вы можете в любой момент менять настройки конфиденциальности, запрашивать доступ к данным и их удаление. [Перечень прав по закону: подтверждение юриста]',
+    tr: 'Gizlilik ayarlarını istediğiniz zaman değiştirebilir, verilerinize erişim ve silme talep edebilirsiniz. [Yasal haklar listesi: hukukçu onayı]',
+  },
+  'dataSharing.v1.item8_title': {
+    az: 'Əlaqə:',
+    ru: 'Контакты:',
+    tr: 'İletişim:',
+  },
+  'dataSharing.v1.item8_body': {
+    az: '[məlumat operatorunun adı, e-poçt, ünvan]',
+    ru: '[наименование оператора данных, e-mail, адрес]',
+    tr: '[veri sorumlusu unvanı, e-posta, adres]',
+  },
+  'dataSharing.v1.accept': {
+    az: 'Yuxarıdakı mətni oxudum və məlumatlarımın bu şəkildə paylaşılmasına razıyam.',
+    ru: 'Я прочитал(а) текст выше и согласен(на) на передачу моих данных в указанном порядке.',
+    tr: 'Yukarıdaki metni okudum ve verilerimin bu şekilde paylaşılmasını kabul ediyorum.',
+  },
 };

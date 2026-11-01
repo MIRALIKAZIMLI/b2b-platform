@@ -581,7 +581,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Aktif işletmenin profili */
+        /**
+         * Aktif işletmenin profili
+         * @description İzin `business.manage` (F2.3b, Mimar onayı). Perakendeci ana sayfasındaki "Profilinizi tamamlayın" kartı `profileCompleteness`'i buradan okur (US-005 AC2). Logo adresi profil düzenlemesine kadar `null`.
+         */
         get: {
             parameters: {
                 query?: never;

@@ -62,7 +62,12 @@ test('US-008-AC2: giriş ekranında toptancı için kayıt seçeneği yok, yaln�
   const link = page.getByTestId('seller-application-link');
   await expect(link).toHaveAttribute('href', '/az/seller-application');
   await expect(link).toContainText('Topdançı olmaq istəyirəm');
-  await expect(page.getByRole('link', { name: /qeydiyyat/i })).toHaveCount(0);
+  // F2.3b: girişteki tek kayıt bağlantısı perakendeci kaydıdır (US-005); toptancıya giden tek
+  // bağlantı başvurudur, toptancı kayıt seçeneği yoktur.
+  const registration = page.getByRole('link', { name: /qeydiyyat/i });
+  await expect(registration).toHaveCount(1);
+  await expect(registration).toHaveAttribute('href', '/az/register');
+  await expect(page.locator('a[href*="seller"]')).toHaveCount(1);
 });
 
 test('US-008-AC1, AC3: başvuru gönderilir; aynı VÖEN ile ikinci başvuru VÖEN alanında reddedilir', async ({

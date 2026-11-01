@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { type SyntheticEvent, useState } from 'react';
 import { errorCodeOf as errorCode } from '../../lib/error-code';
 import { useStartSession, webApi } from '../../lib/session';
+import { BuyerRegistrationForm } from '../buyer-registration/registration-form';
 import { Button, Field, TextInput } from '../ui/primitives';
 
 type AuthResult = components['schemas']['AuthResult'];
@@ -15,16 +16,22 @@ type Step =
   | { readonly kind: 'totp'; readonly pendingToken: string }
   | { readonly kind: 'totp_setup'; readonly pendingToken: string; readonly otpauthUri: string }
   | { readonly kind: 'recovery'; readonly pendingToken: string; readonly codes: readonly string[] }
-  | { readonly kind: 'register' };
+  | { readonly kind: 'register'; readonly pendingToken: string };
 
 const LOCALES = ['az', 'ru', 'tr', 'en'];
 
 /**
  * `onSignedIn` verilirse oturum açılınca yönlendirme yapılmaz, çağıran devam eder (aktivasyon
- * sayfası, F2.1b: davet token'ı yalnız o sayfanın belleğindedir).
+ * sayfası, F2.1b: davet token'ı yalnız o sayfanın belleğindedir). `intent = 'register'` kayıt
+ * sayfasının başlığını gösterir (F2.3b); akış aynıdır: kayıtsız numara OTP'den sonra kayıt
+ * formuna, kayıtlı numara doğrudan oturuma geçer.
  */
-export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
+export function LoginForm({
+  onSignedIn,
+  intent = 'login',
+}: { onSignedIn?: () => void; intent?: 'login' | 'register' } = {}) {
   const t = useTranslations('auth.login');
+  const tRegister = useTranslations('register');
   const tErrors = useTranslations('errors');
   const locale = useLocale();
   const router = useRouter();
@@ -79,8 +86,11 @@ export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
         return;
       }
       setStep({ kind: 'totp_setup', pendingToken, otpauthUri: data.otpauthUri });
+    } else if (result.nextStep === 'register' && result.pendingToken !== undefined) {
+      // Kayıt anahtarı yalnız bu bileşenin belleğinde (coding-guidelines §9.6).
+      setStep({ kind: 'register', pendingToken: result.pendingToken });
     } else {
-      setStep({ kind: 'register' });
+      setError('INTERNAL_ERROR');
     }
   }
 
@@ -90,7 +100,7 @@ export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
       switch (step.kind) {
         case 'phone': {
           const { data, error: e } = await webApi.client.POST('/api/v1/auth/otp/request', {
-            body: { phone: phone.trim(), purpose: 'login' },
+            body: { phone: phone.trim(), purpose: intent },
           });
           if (data === undefined) {
             setError(errorCode(e));
@@ -162,9 +172,30 @@ export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
 
   const hint = 'text-sm font-normal text-slate-500';
 
+  if (step.kind === 'register') {
+    return (
+      <BuyerRegistrationForm
+        pendingToken={step.pendingToken}
+        phone={phone.trim()}
+        onSignedIn={finish}
+        onRestart={() => {
+          setCode('');
+          setStep({ kind: 'phone' });
+        }}
+      />
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} aria-busy={busy} className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{t('title')}</h1>
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+          {intent === 'register' ? tRegister('title') : t('title')}
+        </h1>
+        {intent === 'register' && step.kind === 'phone' && (
+          <p className={hint}>{tRegister('intro')}</p>
+        )}
+      </div>
       {step.kind === 'phone' && (
         <>
           <Field id="login-phone" label={t('phone_label')}>
@@ -238,7 +269,6 @@ export function LoginForm({ onSignedIn }: { onSignedIn?: () => void } = {}) {
           </Button>
         </>
       )}
-      {step.kind === 'register' && <p className={hint}>{t('register_soon')}</p>}
       {error !== undefined && (
         <p
           role="alert"
