@@ -1,10 +1,12 @@
-// Giriş 1/3: telefon numarası (US-001).
+// Giriş 1/3: telefon numarası (US-001). Kayıtsız numara SMS kodundan sonra kayda geçer (F2.3b);
+// alttaki bilgi kartı bunu perakendeciye söyler.
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { authStyles as styles } from '../../src/features/auth/auth-styles';
 import { useLoginFlow, useLoginOutcome } from '../../src/features/auth/use-login';
 import { LanguagePicker } from '../../src/features/language/language-picker';
+import { colors, radius, softShadow, space } from '../../src/lib/theme';
 
 export default function PhoneScreen() {
   const { t } = useTranslation();
@@ -38,7 +40,25 @@ export default function PhoneScreen() {
         <Text>{t('auth.login.send_code')}</Text>
       </Pressable>
       {error !== undefined && <Text accessibilityRole="alert">{t(`errors.${error}`)}</Text>}
+      <View style={entry.card} testID="register-entry">
+        <Text style={entry.title}>{t('register.entry_title')}</Text>
+        <Text style={entry.body}>{t('register.entry_body')}</Text>
+      </View>
       <LanguagePicker />
     </View>
   );
 }
+
+const entry = StyleSheet.create({
+  card: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(199, 210, 254, 0.8)',
+    padding: space.lg,
+    gap: space.xs,
+    ...softShadow(1),
+  },
+  title: { fontSize: 15, fontWeight: '700', color: colors.text },
+  body: { fontSize: 14, lineHeight: 20, color: colors.textMuted },
+});

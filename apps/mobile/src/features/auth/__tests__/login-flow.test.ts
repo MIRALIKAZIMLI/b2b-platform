@@ -115,11 +115,11 @@ describe('mobil giriş akışı', () => {
     });
   });
 
-  it('F1.14-AC1: kayıtsız numara oturum açmaz, kayıt bilgisi gösterilir', async () => {
+  it('F1.14-AC1: kayıtsız numara oturum açmaz, kayıt adımına geçer (F2.3b: kayıt anahtarıyla)', async () => {
     const { flow } = setup('register');
     expect(await flow.verifyCode(CHALLENGE, '123456')).toEqual({
       kind: 'step',
-      step: { kind: 'register' },
+      step: { kind: 'register', pendingToken: 'pending-1' },
     });
   });
 });

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useLogout } from '../../lib/session';
 import { LanguagePicker } from '../language/language-picker';
+import { BuyerHomeCards } from '../registration/buyer-home-cards';
 import { BusinessSelector } from './business-selector';
 import { type MobileArea, mobileMenu } from './shell-state';
 import { shellStyles } from './shell-styles';
@@ -29,7 +30,12 @@ export function ShellScreen({
       <UpdateBanner />
       <BusinessSelector memberships={me.memberships ?? []} activeBusinessId={activeBusinessId} />
       <Text style={shellStyles.title}>{t('shell.menu.dashboard')}</Text>
-      <Text>{t('shell.dashboard_soon')}</Text>
+      {/* F2.3b: perakendecide profil doluluk kartı ve boş durum (US-005 AC2). */}
+      {area === 'buyer' ? (
+        <BuyerHomeCards me={me} activeBusinessId={activeBusinessId} />
+      ) : (
+        <Text>{t('shell.dashboard_soon')}</Text>
+      )}
       <View accessibilityLabel={t('shell.menu_label')}>
         {items
           .filter((item) => item.key !== 'dashboard')

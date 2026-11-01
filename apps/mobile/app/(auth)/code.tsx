@@ -1,4 +1,4 @@
-// Giriş 2/3: SMS kodu (US-001). Kayıtsız numara → bilgi (kayıt F2.3).
+// Giriş 2/3: SMS kodu (US-001). Kayıtsız numara → perakendeci kaydı (`/register`, F2.3b).
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +12,7 @@ export default function CodeScreen() {
   const flow = useLoginFlow();
   const login = currentLogin();
   const [code, setCode] = useState('');
-  const { run, error, busy, unregistered } = useLoginOutcome(login?.phone ?? '');
+  const { run, error, busy } = useLoginOutcome(login?.phone ?? '');
 
   if (login?.step.kind !== 'code') return <Redirect href="/phone" />;
   const { challengeId } = login.step;
@@ -51,7 +51,6 @@ export default function CodeScreen() {
       >
         <Text>{t('auth.login.change_phone')}</Text>
       </Pressable>
-      {unregistered && <Text>{t('auth.login.register_soon')}</Text>}
       {error !== undefined && <Text accessibilityRole="alert">{t(`errors.${error}`)}</Text>}
     </View>
   );
