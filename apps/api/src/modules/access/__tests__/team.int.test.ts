@@ -482,6 +482,60 @@ describe('F2.7a ekip yönetimi (US-013)', () => {
     });
   });
 
+  describe('iki yetenekli işletme (Müfettiş #48 M1)', () => {
+    it('US-013 AC1: seller + buyer onaylı işletmede seller admin seller rolüyle davet eder; listeler tek değere indirilmez', async () => {
+      const who = await admin('seller');
+      await platformRows(
+        `insert into business_capabilities (business_id, capability, status)
+         values ($1, 'buyer', 'approved')`,
+        [who.businessId],
+      );
+      const sellerRole = await role(who.businessId, 'seller_sales_manager');
+      const buyerRole = await role(who.businessId, 'buyer_purchaser');
+
+      const ok = await invite(who, { phone: randomTestPhone(), fullName: 'S', ...sellerRole });
+      expect(ok.status, JSON.stringify(ok.body)).toBe(201);
+      // Unvan rolle aynı yetenekte olmalı.
+      const mixed = await invite(who, {
+        phone: randomTestPhone(),
+        fullName: 'S',
+        roleId: sellerRole.roleId,
+        jobTitleId: buyerRole.jobTitleId,
+      });
+      expect(mixed.status).toBe(422);
+      expect((mixed.body as ErrorJson).details).toMatchObject({ jobTitleId: ['capability'] });
+
+      // Bağlamın yetenekleri = onaylı yetenekler ∩ çağıranın rol yeteneği (F1.8b guard):
+      // seller admin seller rollerini ve unvanlarını görür, buyer rolüyle davet edemez.
+      const roles = (await http().get('/api/v1/team/roles').set(who.auth)).body as {
+        id: string;
+        capability: string;
+      }[];
+      expect(roles.map((r) => r.id)).toContain(sellerRole.roleId);
+      expect(roles.every((r) => r.capability === 'seller')).toBe(true);
+      const titles = (await http().get('/api/v1/team/job-titles').set(who.auth)).body as {
+        capability: string;
+      }[];
+      expect(titles.length).toBeGreaterThan(0);
+      expect(titles.every((t) => t.capability === 'seller')).toBe(true);
+      const buyer = await invite(who, { phone: randomTestPhone(), fullName: 'B', ...buyerRole });
+      expect(buyer.status).toBe(422);
+      expect((buyer.body as ErrorJson).details).toMatchObject({ roleId: ['capability'] });
+    });
+
+    it('US-013 AC3: çıkarılan üye bir sonraki istekte 403 alır', async () => {
+      const who = await admin();
+      const userId = await addMemberFromTemplate(who.businessId, 'seller_business_admin');
+      const member = await as(userId, who.businessId);
+      expect((await members(member)).status).toBe(200);
+      const row = ((await members(who)).body as MemberJson[]).find((m) => m.userId === userId);
+      expect((await patchMember(who, row?.id ?? '', { status: 'removed' })).status).toBe(200);
+      const after = await members(member);
+      expect(after.status).toBe(403);
+      expect((after.body as ErrorJson).code).toBe('PERMISSION_DENIED');
+    });
+  });
+
   describe('user_ensure_for_invitation (SECURITY DEFINER)', () => {
     async function callAsApp(
       context: { businessId?: string; userId?: string },

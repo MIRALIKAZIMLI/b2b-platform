@@ -178,7 +178,11 @@ export class TeamRepository {
     return new Set(rows.map((row) => row.scope));
   }
 
-  async listRoles(tx: Tx, businessId: string, capability: string): Promise<TeamRoleRow[]> {
+  async listRoles(
+    tx: Tx,
+    businessId: string,
+    capabilities: readonly string[],
+  ): Promise<TeamRoleRow[]> {
     const rows = await tx
       .select({
         id: roles.id,
@@ -188,7 +192,7 @@ export class TeamRepository {
         sourceTemplateId: roles.sourceTemplateId,
       })
       .from(roles)
-      .where(and(eq(roles.businessId, businessId), eq(roles.capability, capability)))
+      .where(and(eq(roles.businessId, businessId), inArray(roles.capability, [...capabilities])))
       .orderBy(asc(roles.createdAt), asc(roles.id));
     if (rows.length === 0) return [];
     const perms = await tx
@@ -213,7 +217,7 @@ export class TeamRepository {
     }));
   }
 
-  async listJobTitles(tx: Tx, capability: string): Promise<JobTitleRow[]> {
+  async listJobTitles(tx: Tx, capabilities: readonly string[]): Promise<JobTitleRow[]> {
     return await tx
       .select({
         id: jobTitles.id,
@@ -223,7 +227,7 @@ export class TeamRepository {
         roleTemplateId: jobTitles.roleTemplateId,
       })
       .from(jobTitles)
-      .where(and(eq(jobTitles.capability, capability), eq(jobTitles.isActive, true)))
+      .where(and(inArray(jobTitles.capability, [...capabilities]), eq(jobTitles.isActive, true)))
       .orderBy(asc(jobTitles.code));
   }
 

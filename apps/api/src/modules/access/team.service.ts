@@ -72,11 +72,17 @@ function invalid(field: string, reason: string): DomainError {
   return new DomainError('VALIDATION_FAILED', { [field]: [reason] });
 }
 
-/** Bağlamdaki işletmenin yeteneği (team.manage `any`; guard en az bir onaylı yetenek ister). */
-function capabilityOf(tenant: TenantContext): 'seller' | 'buyer' {
-  const capability = tenant.capabilities[0];
-  if (capability === undefined) throw new DomainError('CAPABILITY_REQUIRED');
-  return capability;
+/**
+ * Bağlamın yetenekleri (team.manage `any`; guard en az bir onaylı yetenek ister). Yetenek tek
+ * değere indirilmez (AGENTS kural 2; Müfettiş #48 M1): her kontrol listenin tamamıyla yapılır.
+ */
+function capabilitiesOf(tenant: TenantContext): readonly ('seller' | 'buyer')[] {
+  if (tenant.capabilities.length === 0) throw new DomainError('CAPABILITY_REQUIRED');
+  return tenant.capabilities;
+}
+
+function hasCapability(tenant: TenantContext, capability: string): boolean {
+  return tenant.capabilities.some((item) => item === capability);
 }
 
 @Injectable()
@@ -143,7 +149,7 @@ export class TeamService {
       const roleId = input.roleId ?? member.roleId;
       const role = await this.access.findRole(tx, tenant.businessId, roleId);
       if (role === undefined) throw new DomainError('NOT_FOUND', { roleId: ['not_found'] });
-      if (!tenant.capabilities.includes(role.capability as 'seller' | 'buyer')) {
+      if (!hasCapability(tenant, role.capability)) {
         throw invalid('roleId', 'capability');
       }
       const scopes = await this.repository.roleScopes(tx, role.id);
@@ -240,15 +246,15 @@ export class TeamService {
   }
 
   async listRoles(tenant: TenantContext): Promise<TeamRoleRow[]> {
-    const capability = capabilityOf(tenant);
+    const capabilities = capabilitiesOf(tenant);
     return await withTenantTx(tenant, (tx) =>
-      this.repository.listRoles(tx, tenant.businessId, capability),
+      this.repository.listRoles(tx, tenant.businessId, capabilities),
     );
   }
 
   async listJobTitles(tenant: TenantContext): Promise<JobTitleRow[]> {
-    const capability = capabilityOf(tenant);
-    return await withTenantTx(tenant, (tx) => this.repository.listJobTitles(tx, capability));
+    const capabilities = capabilitiesOf(tenant);
+    return await withTenantTx(tenant, (tx) => this.repository.listJobTitles(tx, capabilities));
   }
 
   // --- Davet oluşturma için, çağıranın (onboarding) kiracı işleminde ---
@@ -262,13 +268,14 @@ export class TeamService {
     tenant: TenantContext,
     target: InvitationTarget,
   ): Promise<{ branchId: string | null; warehouseId: string | null }> {
-    const capability = capabilityOf(tenant);
-    const jobTitle = await this.repository.findActiveJobTitle(tx, target.jobTitleId);
-    if (jobTitle === undefined) throw new DomainError('NOT_FOUND', { jobTitleId: ['not_found'] });
-    if (jobTitle.capability !== capability) throw invalid('jobTitleId', 'capability');
+    capabilitiesOf(tenant);
     const role = await this.access.findRole(tx, tenant.businessId, target.roleId);
     if (role === undefined) throw new DomainError('NOT_FOUND', { roleId: ['not_found'] });
-    if (role.capability !== capability) throw invalid('roleId', 'capability');
+    if (!hasCapability(tenant, role.capability)) throw invalid('roleId', 'capability');
+    const jobTitle = await this.repository.findActiveJobTitle(tx, target.jobTitleId);
+    if (jobTitle === undefined) throw new DomainError('NOT_FOUND', { jobTitleId: ['not_found'] });
+    // Unvan rolle aynı yetenekte olmalı (seller rolüne buyer unvanı verilemez).
+    if (jobTitle.capability !== role.capability) throw invalid('jobTitleId', 'capability');
     const scopes = await this.repository.roleScopes(tx, role.id);
     const branchId = await this.resolveScopeField(
       tx,
