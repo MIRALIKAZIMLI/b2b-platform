@@ -1,11 +1,13 @@
 // F2.4: VÖEN girişi ve profil düzenleme (`PATCH /api/v1/business`, US-006 AC1–AC3, R20, K1–K3).
 // İşletmeler kayıt ucuyla açılır (F2.3a); uygulama bağlantısı RLS'e tabi app_user.
+import { randomUUID } from 'node:crypto';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from '../../../../test/http-app';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
-import { randomTestPhone } from '../../../../test/users';
+import { insertTestUser, randomTestPhone } from '../../../../test/users';
 import { REDIS_CLIENT } from '../../../infrastructure/redis';
+import { TokenService } from '../../identity';
 import { platformRows, RegistrationHttp, registerBody, runSeeds, testRefs } from './fixtures';
 
 interface Registered {
@@ -45,6 +47,9 @@ describe('F2.4 PATCH /api/v1/business', () => {
   });
 
   async function register(): Promise<Registered> {
+    // Bu dosya IP başına saatlik kayıt sınırından (10) fazla işletme açar; sınır F2.3a'da sınanır.
+    const limits = (await redis.keys()).filter((key) => key.startsWith('buyer_reg:'));
+    if (limits.length > 0) await redis.client.del(...limits);
     const response = await api.register(
       await api.pendingToken(randomTestPhone()),
       await registerBody(),
@@ -207,5 +212,53 @@ describe('F2.4 PATCH /api/v1/business', () => {
     expect(response.status).toBe(403);
     expect((response.body as ErrorJson).code).toBe('CAPABILITY_REQUIRED');
     expect((await businessRow(who.businessId))?.voen).toBeNull();
+  });
+
+  it("F2.4-AUTH: business.manage izni olmayan üye (buyer_branch_staff) profili ve VÖEN'i değiştiremez (403)", async () => {
+    const owner = await register();
+    const staffId = randomUUID();
+    await insertTestUser({ id: staffId, phone: randomTestPhone() });
+    const roleId = randomUUID();
+    await platformRows(
+      `insert into roles (id, business_id, name, capability, is_business_admin, source_template_id)
+       select $1, $2, name, capability, is_business_admin, id from role_templates
+        where code = 'buyer_branch_staff'`,
+      [roleId, owner.businessId],
+    );
+    await platformRows(
+      `insert into role_permissions (role_id, permission_code, scope)
+       select $1, p.permission_code, p.default_scope
+         from role_template_permissions p join role_templates t on t.id = p.template_id
+        where t.code = 'buyer_branch_staff'`,
+      [roleId],
+    );
+    const [perm] = await platformRows<{ n: number }>(
+      `select count(*)::int as n from role_permissions
+        where role_id = $1 and permission_code = 'business.manage'`,
+      [roleId],
+    );
+    expect(perm?.n).toBe(0);
+    await platformRows(
+      `insert into memberships (id, user_id, business_id, role_id, job_title_id, branch_id)
+       select $1, $2, $3, $4, j.id, (select id from branches where business_id = $3 limit 1)
+         from job_titles j join role_templates t on t.id = j.role_template_id
+        where t.code = 'buyer_branch_staff' and j.code = t.code`,
+      [randomUUID(), staffId, owner.businessId, roleId],
+    );
+    const signed = await app
+      .get(TokenService)
+      .signAccess({ userId: staffId, sessionId: randomUUID() });
+    const staff: Registered = { businessId: owner.businessId, accessToken: signed.token };
+
+    const response = await patch(staff, { voen: newVoen(), legalName: 'Personel değiştirdi' });
+    expect(response.status).toBe(403);
+    expect((response.body as ErrorJson).code).toBe('PERMISSION_DENIED');
+    const row = await businessRow(owner.businessId);
+    expect(row?.voen).toBeNull();
+    const [name] = await platformRows<{ legal_name: string }>(
+      'select legal_name from businesses where id = $1',
+      [owner.businessId],
+    );
+    expect(name?.legal_name).not.toBe('Personel değiştirdi');
   });
 });
