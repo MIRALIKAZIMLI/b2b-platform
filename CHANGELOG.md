@@ -34,3 +34,4 @@
 - F2.3a: perakendeci kayıt API'si (onboarding, pendingToken, telefon kapsamlı idempotens), faaliyet türleri
 - F2.3b: perakendeci kayıt ekranları (web + mobil), profil doluluk kartı, GET /business, E2E-03
 - F2.4: VÖEN girişi, profil düzenleme (PATCH /business), rozet sıfırlama tetikleyicisi
+- F2.6: depolar, satıcı profili, hizmet bölgeleri
