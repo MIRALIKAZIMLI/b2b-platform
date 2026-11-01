@@ -53,6 +53,7 @@ export interface SelfUser {
   readonly phoneE164: string;
   readonly preferredLanguage: string | null;
   readonly timezone: string | null;
+  readonly lastBusinessId: string | null;
   readonly status: UserStatus;
 }
 
@@ -60,6 +61,8 @@ export interface SelfProfilePatch {
   readonly fullName?: string;
   readonly preferredLanguage?: string;
   readonly timezone?: string;
+  /** Son kullanılan işletme (F2.7a, S8); üyelik denetimi çağıranda (access). */
+  readonly lastBusinessId?: string;
 }
 
 interface SelfUserRow extends Record<string, unknown> {
@@ -68,6 +71,7 @@ interface SelfUserRow extends Record<string, unknown> {
   phone_e164: string;
   preferred_language: string | null;
   timezone: string | null;
+  last_business_id: string | null;
   status: UserStatus;
 }
 
@@ -103,7 +107,7 @@ export class SessionRepository {
   async findSelf(userId: string): Promise<SelfUser | undefined> {
     const result = await withUserTx({ userId }, (tx) =>
       tx.execute<SelfUserRow>(sql`
-        select id, full_name, phone_e164, preferred_language, timezone, status
+        select id, full_name, phone_e164, preferred_language, timezone, last_business_id, status
           from users where id = ${userId}::uuid
       `),
     );
@@ -116,6 +120,7 @@ export class SessionRepository {
           phoneE164: row.phone_e164,
           preferredLanguage: row.preferred_language,
           timezone: row.timezone,
+          lastBusinessId: row.last_business_id,
           status: row.status,
         };
   }
@@ -142,6 +147,7 @@ export class SessionRepository {
           full_name = coalesce(${patch.fullName ?? null}::text, full_name),
           preferred_language = coalesce(${patch.preferredLanguage ?? null}::char(2), preferred_language),
           timezone = coalesce(${patch.timezone ?? null}::text, timezone),
+          last_business_id = coalesce(${patch.lastBusinessId ?? null}::uuid, last_business_id),
           updated_at = ${now.toISOString()}::timestamptz
         where id = ${userId}::uuid
       `);

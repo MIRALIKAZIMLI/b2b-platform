@@ -38,6 +38,7 @@ const EXPECTED_FUNCTIONS = [
   'settings_put',
   'subscription_start_self_signup',
   'user_create_self_signup',
+  'user_ensure_for_invitation',
   'user_session_rotate',
 ];
 

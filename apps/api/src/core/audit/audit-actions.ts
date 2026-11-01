@@ -7,9 +7,13 @@ export const AUDIT_ACTIONS = [
   'otp.locked',
   'session.refresh_reused',
   'membership.role_changed',
+  'membership.removed',
+  'membership.scope_changed',
   'seller.created',
   'seller.activation_resent',
   'invitation.accepted',
+  'invitation.created',
+  'invitation.revoked',
   'seller_application.approved',
   'seller_application.rejected',
   'buyer.registered',
@@ -27,7 +31,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // membership: hedef kimliği üyelik (memberships.id); kime = before/after.userId (F1.8a, US-013 AC4).
 // business: hedef kimliği işletme (businesses.id; F2.1a toptancı açılışı, aktivasyon yeniden gönderimi;
 // F2.3a perakendeci kaydı; F2.4 VÖEN ve profil düzenleme).
-// invitation: hedef kimliği davet (invitations.id); token ve özeti audit'e yazılmaz (F2.1a).
+// invitation: hedef kimliği davet (invitations.id); token, özeti ve telefon audit'e yazılmaz
+// (F2.1a; F2.7a ekip daveti oluşturma / geri çekme).
 // seller_application: hedef kimliği başvuru (seller_applications.id; F2.2 onay / ret).
 // warehouse: hedef kimliği depo (warehouses.id; F2.6). Satıcı profili ve hizmet bölgeleri
 // (F2.6) hedef olarak `business` kullanır.

@@ -1,7 +1,7 @@
 // Üyelik rolü değişikliği (F1.8a, US-013 AC4). Aynı işlemde: üyelik kilitlenir, rol güncellenir
 // (son admin tetikleyicisi → LAST_ADMIN_PROTECTED), audit'e kim (actor), kime (userId), eski ve
 // yeni rol yazılır, `membership.role_changed` outbox olayı eklenir (izin önbelleği temizliği F1.8b).
-// Uç nokta ve izin denetimi (`team.manage`) F2.7 / F1.8b'de gelir.
+// Uç nokta (`PATCH /team/members/{id}`, `team.manage`) F2.7a TeamService'te.
 import { Inject, Injectable } from '@nestjs/common';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
@@ -90,33 +90,53 @@ export class MembershipService {
       if (membership.roleId === role.id) {
         return false;
       }
-      await this.repository.updateMembershipRole(tx, membership.id, role.id, this.clock.now());
-      await this.audit.record(tx, {
-        actor: { type: 'user', userId: ctx.userId },
-        businessId: ctx.businessId,
-        action: 'membership.role_changed',
-        targetType: 'membership',
-        targetId: membership.id,
-        before: { userId: membership.userId, roleId: membership.roleId },
-        after: { userId: membership.userId, roleId: role.id },
-        ...(input.context === undefined ? {} : { context: input.context }),
-      });
-      await this.outbox.write(tx, {
-        type: 'membership.role_changed',
-        aggregateType: 'membership',
-        aggregateId: membership.id,
-        businessIds: [ctx.businessId],
-        payload: {
-          membershipId: membership.id,
-          userId: membership.userId,
-          oldRoleId: membership.roleId,
-          newRoleId: role.id,
-        },
-      });
+      await this.applyRoleChangeTx(tx, ctx, membership, role.id, input.context);
       return true;
     });
     // Commit sonrası: önbellek hemen temizlenir (worker tüketicisi yedek; F1.8-AC5).
     if (changed) await this.cache.invalidate(input.membershipId);
+  }
+
+  /**
+   * Rol değişikliğini çağıranın işleminde uygular (F2.7a ekip ekranı da kullanır): rol yazılır
+   * (son admin tetikleyicisi), audit `membership.role_changed` (kim, kime, eski, yeni; US-013 AC4)
+   * ve outbox olayı. Önbellek temizliği commit'ten sonra çağıranın işidir.
+   */
+  async applyRoleChangeTx(
+    tx: Tx,
+    ctx: MembershipActorContext,
+    membership: { id: string; userId: string; roleId: string },
+    roleId: string,
+    context?: AuditRequestContext,
+  ): Promise<void> {
+    await this.repository.updateMembershipRole(tx, membership.id, roleId, this.clock.now());
+    await this.audit.record(tx, {
+      actor: { type: 'user', userId: ctx.userId },
+      businessId: ctx.businessId,
+      action: 'membership.role_changed',
+      targetType: 'membership',
+      targetId: membership.id,
+      before: { userId: membership.userId, roleId: membership.roleId },
+      after: { userId: membership.userId, roleId },
+      ...(context === undefined ? {} : { context }),
+    });
+    await this.outbox.write(tx, {
+      type: 'membership.role_changed',
+      aggregateType: 'membership',
+      aggregateId: membership.id,
+      businessIds: [ctx.businessId],
+      payload: {
+        membershipId: membership.id,
+        userId: membership.userId,
+        oldRoleId: membership.roleId,
+        newRoleId: roleId,
+      },
+    });
+  }
+
+  /** Commit sonrası izin önbelleğini temizler (F1.8-AC5). */
+  async invalidatePermissions(membershipId: string): Promise<void> {
+    await this.cache.invalidate(membershipId);
   }
 
   /** Kullanıcının tüm işletmelerdeki aktif üyelikleri (/me, işletme seçici; F1.8b kullanır). */

@@ -7,6 +7,8 @@ export {
   MembershipService,
 } from './membership.service';
 export { RoleService } from './role.service';
+export { activationLink, WEB_BASE_URL } from './activation-link';
+export { type InvitationTarget, TeamService } from './team.service';
 export {
   type ActivationStatus,
   type CreatedInvitation,

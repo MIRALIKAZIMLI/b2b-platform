@@ -1,1 +1,1 @@
-export { OnboardingModule } from './onboarding.module';
+export { OnboardingModule, type OnboardingOptions } from './onboarding.module';

@@ -11,7 +11,13 @@ import { LINE_TOTAL_SCALE, toDecimalString } from '../../core/money';
 import { type Tx, withPlatformTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
-import { type ActivationStatus, InvitationService, RoleService } from '../access';
+import {
+  type ActivationStatus,
+  activationLink,
+  InvitationService,
+  RoleService,
+  WEB_BASE_URL,
+} from '../access';
 import { type Plan, PlanService } from '../billing';
 import {
   BusinessesRepository,
@@ -20,7 +26,6 @@ import {
 } from '../businesses';
 import { I18nService, ReferenceLookup } from '../i18n';
 import { SettingsService } from '../settings';
-import { activationLink, WEB_BASE_URL } from './activation-link';
 
 const SELLER_ADMIN_TEMPLATE = 'seller_business_admin';
 const SMS_TEMPLATE_KEY = 'sms.seller_activation_body';

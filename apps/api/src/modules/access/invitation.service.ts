@@ -23,6 +23,9 @@ export interface NewInvitation {
   readonly phoneE164: string;
   readonly roleId: string;
   readonly jobTitleId: string;
+  /** Ekip daveti kapsamı (F2.7a); toptancı aktivasyonunda yok. */
+  readonly branchId?: string | null;
+  readonly warehouseId?: string | null;
   readonly createdBy: string;
   readonly expiresAt: Date;
   readonly now: Date;
@@ -65,6 +68,8 @@ export class InvitationService {
       phoneE164: input.phoneE164,
       roleId: input.roleId,
       jobTitleId: input.jobTitleId,
+      branchId: input.branchId ?? null,
+      warehouseId: input.warehouseId ?? null,
       tokenHash: hash,
       expiresAt: input.expiresAt,
       createdBy: input.createdBy,

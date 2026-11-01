@@ -81,6 +81,8 @@ export interface MeView {
   readonly timezone: string | null;
   readonly platformRole: PlatformRole | null;
   readonly totpEnabled: boolean;
+  /** Ham değer; access `/me`'de aktif üyelik yoksa null yapar (F2.7a, S8). */
+  readonly lastBusinessId: string | null;
   readonly memberships: readonly never[];
 }
 
@@ -260,6 +262,7 @@ export class SessionService {
       timezone: user.timezone,
       platformRole: (await this.totp.platformRole(user.id)) ?? null,
       totpEnabled: await this.totp.isEnabled(user.id),
+      lastBusinessId: user.lastBusinessId,
       memberships: [],
     };
   }

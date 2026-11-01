@@ -253,6 +253,7 @@ describe('F1.8-AC7 kiracı izolasyonu (access)', () => {
       const definerPolicies = [
         'memberships_self_definer',
         'memberships_definer_insert',
+        'memberships_definer_update',
         'invitations_definer_select',
         'invitations_definer_update',
       ];

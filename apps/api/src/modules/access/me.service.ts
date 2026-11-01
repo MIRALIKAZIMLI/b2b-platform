@@ -71,8 +71,14 @@ export class MeService {
         hasAdmin = access?.isBusinessAdmin === true;
       }
     }
+    // Son kullanılan işletme yalnız hâlâ aktif üyelikse (F2.7a, S8; US-003 AC1).
+    const lastBusinessId =
+      base.lastBusinessId !== null && mine.some((item) => item.businessId === base.lastBusinessId)
+        ? base.lastBusinessId
+        : null;
     const view: FullMeView = {
       ...base,
+      lastBusinessId,
       twoFactorRecommended: hasAdmin && !base.totpEnabled,
       memberships: summaries,
     };

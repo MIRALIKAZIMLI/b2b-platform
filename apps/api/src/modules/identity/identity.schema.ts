@@ -37,6 +37,9 @@ export const users = pgTable(
     timezone: text('timezone'),
     status: text('status').notNull().default('active'),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    // Son kullanılan işletme (US-003 AC1, F2 S8). FK `businesses(id)` migration'da elle
+    // (0017_team.sql): c4 yönü `businesses → identity`, şema businesses'ı içe aktaramaz.
+    lastBusinessId: uuid('last_business_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

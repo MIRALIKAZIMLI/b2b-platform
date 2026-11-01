@@ -253,6 +253,12 @@ paths:
                 fullName: { type: string, maxLength: 120 }
                 preferredLanguage: { $ref: '#/components/schemas/LanguageCode' }
                 timezone: { type: string, examples: [Asia/Baku] }
+                lastBusinessId:
+                  type: string
+                  format: uuid
+                  description: >-
+                    Son kullanılan işletme (US-003 AC1, F2.7). Kullanıcının aktif üyeliği
+                    olmayan işletme `422 VALIDATION_FAILED`.
       responses:
         '200': { description: Güncellendi }
         '401': { $ref: '#/components/responses/Error' }
@@ -597,49 +603,126 @@ paths:
   /api/v1/team/members:
     get:
       tags: [team]
-      summary: Üyeler
+      summary: Ekibin aktif üyeleri (US-013)
+      description: >-
+        İzin `team.manage`. Yalnız bağlamdaki işletmenin `active` üyelikleri (F2.7a).
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TeamMember' }
+        '403': { $ref: '#/components/responses/Error' }
   /api/v1/team/members/{id}:
     patch:
       tags: [team]
       summary: Üyenin rolünü / kapsamını değiştir veya çıkar (US-013)
+      description: >-
+        İzin `team.manage`. Yalnız verilen alanlar değişir; boş gövde `422`. Rol işletmenin rolü ve
+        işletmenin yeteneğinde olmalı. Kapsam rolden türetilir (F2.7 K9): rolde `branch` kapsamlı
+        izin varsa üyeliğin şubesi, `warehouse` kapsamlı izin varsa deposu olmalı; gerekmeyen kapsam
+        alanı veya `assigned` kapsamı olmayan rolde `regionIds` `422 VALIDATION_FAILED`.
+        Başka işletmenin şubesi/deposu veya olmayan bölge `404`. `status: removed` üyeliği çıkarır
+        (bölgeleri silinir); tek admin kendi rolünü düşüremez / kendini çıkaramaz →
+        `409 LAST_ADMIN_PROTECTED` (US-013 AC3). Çıkarılmış üye yalnızca yeniden davetle döner
+        (`status: active` gönderilemez). Rol değişikliği audit'e kim, kime, eski ve yeni rol yazar;
+        sonraki istekte geçerli olur (US-013 AC4). Aktif olmayan veya başka işletmenin üyeliği `404`.
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 roleId: { type: string, format: uuid }
                 branchId: { type: [string, 'null'], format: uuid }
                 warehouseId: { type: [string, 'null'], format: uuid }
-                regionIds: { type: array, items: { type: string, format: uuid } }
-                status: { type: string, enum: [active, removed] }
+                regionIds: { type: array, maxItems: 200, items: { type: string, format: uuid } }
+                status: { type: string, enum: [removed] }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Üyeliğin son hâli
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamMember' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/team/invitations:
+    get:
+      tags: [team]
+      summary: Açık (kabul edilmemiş, süresi dolmamış) davetler
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TeamInvitation' }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       tags: [team]
       summary: Kullanıcı davet et (US-013)
+      description: >-
+        İzin `team.manage`. Unvan aktif ve işletmenin yeteneğinde, rol işletmenin rolü olmalı;
+        kapsam kuralı `PATCH /team/members/{id}` ile aynı (şube/depo). Telefon kayıtlı değilse
+        kullanıcı satırı `fullName` ile oluşur, kayıtlıysa adı değişmez (F2.7 K1); yanıt iki durumda
+        aynıdır. Telefon işletmede aktif üye → `409 MEMBER_ALREADY_EXISTS`. Aynı telefona açık davet
+        varsa kapanır, yenisi gider (VARSAYIM K3). Planın `users.max` hakkı aktif üye + açık davet
+        sayısıyla denetlenir; doluysa `403 ENTITLEMENT_LIMIT_REACHED` (US-013 AC2, VARSAYIM K2).
+        Geçerlilik `invitation.team_days`. SMS (`WEB_BASE_URL/<dil>/activate?token=`) işlemden sonra
+        gider; gönderilemezse davet kalır, `smsSent: false`. Kabul `POST /team/invitations/accept`.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              required: [phone, jobTitleId, roleId]
+              additionalProperties: false
+              required: [phone, fullName, jobTitleId, roleId]
               properties:
                 phone: { $ref: '#/components/schemas/PhoneE164' }
+                fullName: { type: string, minLength: 1, maxLength: 120 }
                 jobTitleId: { type: string, format: uuid }
                 roleId: { type: string, format: uuid }
                 branchId: { type: string, format: uuid }
                 warehouseId: { type: string, format: uuid }
       responses:
-        '201': { description: Davet gönderildi }
+        '201':
+          description: Davet oluştu
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invitationId, expiresAt, smsSent]
+                properties:
+                  invitationId: { type: string, format: uuid }
+                  expiresAt: { type: string, format: date-time }
+                  smsSent: { type: boolean }
         '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/team/invitations/{id}/revoke:
+    post:
+      tags: [team]
+      summary: Açık daveti geri çek (F2.7)
+      description: >-
+        İzin `team.manage`. Davetin süresi şimdiye çekilir (`expires_at = now`); bağlantı artık
+        kabul edilmez ve `users.max` sayacından düşer. Kabul edilmiş, süresi dolmuş veya başka
+        işletmenin daveti `404`.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '204': { description: Geri çekildi }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /api/v1/team/invitations/accept:
     post:
       tags: [team]
@@ -647,7 +730,9 @@ paths:
       description: >
         Yalnızca giriş ister (işletme bağlamı yok). Oturumdaki kullanıcının telefonu davetteki
         telefonla aynı olmalıdır. Geçersiz, süresi dolmuş, kullanılmış, başka telefona ait davet
-        veya kullanıcının zaten o işletmede üyeliği varsa hepsi aynı `404 NOT_FOUND` döner (F2.1a).
+        veya kullanıcının zaten o işletmede aktif üyeliği varsa hepsi aynı `404 NOT_FOUND` döner (F2.1a).
+        Kullanıcının o işletmede çıkarılmış (`removed`) üyeliği varsa aynı üyelik davetteki rol,
+        unvan ve kapsamla yeniden aktif olur (F2.7a, VARSAYIM K5).
       requestBody:
         content:
           application/json:
@@ -672,10 +757,20 @@ paths:
   /api/v1/team/roles:
     get:
       tags: [team]
-      summary: İşletme rolleri ve kullanılabilir şablonlar
+      summary: İşletme rolleri
+      description: >-
+        İzin `team.manage`. İşletmenin yeteneğindeki roller, izinleri ve kapsamlarıyla; istemci
+        hangi kapsam alanının gerektiğini buradan bilir. Şablon listesi F2.8'de.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TeamRole' }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       tags: [team]
       summary: Şablondan özel rol oluştur (US-014)
@@ -694,6 +789,23 @@ paths:
                   items: { $ref: '#/components/schemas/RolePermission' }
       responses:
         '201': { description: Oluşturuldu }
+  /api/v1/team/job-titles:
+    get:
+      tags: [team]
+      summary: Davet formu için unvanlar (F2.7)
+      description: >-
+        İzin `team.manage`. İşletmenin yeteneğindeki aktif unvanlar; `roleTemplateId` istemcinin
+        önerilen rolü seçmesi içindir (işletme rolü `sourceTemplateId` ile eşleşir).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/JobTitle' }
+        '403': { $ref: '#/components/responses/Error' }
 
   # ---------------------------------------------------------------- directory
   /api/v1/directory/buyers:
@@ -2378,6 +2490,7 @@ components:
         - SELLER_APPLICATION_ALREADY_PENDING
         - PHONE_ALREADY_REGISTERED
         - LAST_ADMIN_PROTECTED
+        - MEMBER_ALREADY_EXISTS
         - CONNECTION_ALREADY_ACTIVE
         - CONNECTION_REQUEST_ALREADY_PENDING
         - CONNECTION_REQUEST_EXPIRED
@@ -2515,6 +2628,10 @@ components:
           type: boolean
           description: "Kullanıcının aktif bir işletme admini üyeliği var ve TOTP kurulu değil (US-002 AC3, F1.8b)"
         memberships: { type: array, items: { $ref: '#/components/schemas/MembershipSummary' } }
+        lastBusinessId:
+          type: [string, 'null']
+          format: uuid
+          description: "Son kullanılan işletme; aktif üyeliği kalmadıysa null (US-003 AC1, F2.7). İstemci işletme seçicide varsayılan alır."
         activeBusiness:
           type: object
           properties:
@@ -2529,6 +2646,53 @@ components:
               type: array
               items: { $ref: '#/components/schemas/RolePermission' }
             subscriptionStatus: { type: string }
+    TeamMember:
+      type: object
+      required: [id, userId, fullName, phone, roleId, jobTitleId, branchId, warehouseId, regionIds, isBusinessAdmin, isSelf, joinedAt]
+      properties:
+        id: { type: string, format: uuid, description: Üyelik kimliği }
+        userId: { type: string, format: uuid }
+        fullName: { type: string }
+        phone: { $ref: '#/components/schemas/PhoneE164' }
+        roleId: { type: string, format: uuid }
+        jobTitleId: { type: string, format: uuid }
+        branchId: { type: [string, 'null'], format: uuid }
+        warehouseId: { type: [string, 'null'], format: uuid }
+        regionIds: { type: array, items: { type: string, format: uuid } }
+        isBusinessAdmin: { type: boolean }
+        isSelf: { type: boolean }
+        joinedAt: { type: [string, 'null'], format: date-time }
+    TeamInvitation:
+      type: object
+      required: [id, phone, roleId, jobTitleId, branchId, warehouseId, expiresAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        phone: { $ref: '#/components/schemas/PhoneE164' }
+        roleId: { type: string, format: uuid }
+        jobTitleId: { type: string, format: uuid }
+        branchId: { type: [string, 'null'], format: uuid }
+        warehouseId: { type: [string, 'null'], format: uuid }
+        expiresAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    TeamRole:
+      type: object
+      required: [id, name, capability, isBusinessAdmin, sourceTemplateId, permissions]
+      properties:
+        id: { type: string, format: uuid }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        capability: { type: string, enum: [seller, buyer] }
+        isBusinessAdmin: { type: boolean }
+        sourceTemplateId: { type: [string, 'null'], format: uuid }
+        permissions: { type: array, items: { $ref: '#/components/schemas/RolePermission' } }
+    JobTitle:
+      type: object
+      required: [id, code, name, capability, roleTemplateId]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        capability: { type: string, enum: [seller, buyer] }
+        roleTemplateId: { type: [string, 'null'], format: uuid }
     RolePermission:
       type: object
       required: [code, scope]

@@ -427,6 +427,11 @@ export interface paths {
                         preferredLanguage?: components["schemas"]["LanguageCode"];
                         /** @example Asia/Baku */
                         timezone?: string;
+                        /**
+                         * Format: uuid
+                         * @description Son kullanılan işletme (US-003 AC1, F2.7). Kullanıcının aktif üyeliği olmayan işletme `422 VALIDATION_FAILED`.
+                         */
+                        lastBusinessId?: string;
                     };
                 };
             };
@@ -1097,7 +1102,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Üyeler */
+        /**
+         * Ekibin aktif üyeleri (US-013)
+         * @description İzin `team.manage`. Yalnız bağlamdaki işletmenin `active` üyelikleri (F2.7a).
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1114,8 +1122,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["TeamMember"][];
+                    };
                 };
+                403: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -1139,7 +1150,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Üyenin rolünü / kapsamını değiştir veya çıkar (US-013) */
+        /**
+         * Üyenin rolünü / kapsamını değiştir veya çıkar (US-013)
+         * @description İzin `team.manage`. Yalnız verilen alanlar değişir; boş gövde `422`. Rol işletmenin rolü ve işletmenin yeteneğinde olmalı. Kapsam rolden türetilir (F2.7 K9): rolde `branch` kapsamlı izin varsa üyeliğin şubesi, `warehouse` kapsamlı izin varsa deposu olmalı; gerekmeyen kapsam alanı veya `assigned` kapsamı olmayan rolde `regionIds` `422 VALIDATION_FAILED`. Başka işletmenin şubesi/deposu veya olmayan bölge `404`. `status: removed` üyeliği çıkarır (bölgeleri silinir); tek admin kendi rolünü düşüremez / kendini çıkaramaz → `409 LAST_ADMIN_PROTECTED` (US-013 AC3). Çıkarılmış üye yalnızca yeniden davetle döner (`status: active` gönderilemez). Rol değişikliği audit'e kim, kime, eski ve yeni rol yazar; sonraki istekte geçerli olur (US-013 AC4). Aktif olmayan veya başka işletmenin üyeliği `404`.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -1162,19 +1176,24 @@ export interface paths {
                         warehouseId?: string | null;
                         regionIds?: string[];
                         /** @enum {string} */
-                        status?: "active" | "removed";
+                        status?: "removed";
                     };
                 };
             };
             responses: {
-                /** @description Güncellendi */
+                /** @description Üyeliğin son hâli */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["TeamMember"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         trace?: never;
@@ -1186,9 +1205,35 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Açık (kabul edilmemiş, süresi dolmamış) davetler */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamInvitation"][];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
         put?: never;
-        /** Kullanıcı davet et (US-013) */
+        /**
+         * Kullanıcı davet et (US-013)
+         * @description İzin `team.manage`. Unvan aktif ve işletmenin yeteneğinde, rol işletmenin rolü olmalı; kapsam kuralı `PATCH /team/members/{id}` ile aynı (şube/depo). Telefon kayıtlı değilse kullanıcı satırı `fullName` ile oluşur, kayıtlıysa adı değişmez (F2.7 K1); yanıt iki durumda aynıdır. Telefon işletmede aktif üye → `409 MEMBER_ALREADY_EXISTS`. Aynı telefona açık davet varsa kapanır, yenisi gider (VARSAYIM K3). Planın `users.max` hakkı aktif üye + açık davet sayısıyla denetlenir; doluysa `403 ENTITLEMENT_LIMIT_REACHED` (US-013 AC2, VARSAYIM K2). Geçerlilik `invitation.team_days`. SMS (`WEB_BASE_URL/<dil>/activate?token=`) işlemden sonra gider; gönderilemezse davet kalır, `smsSent: false`. Kabul `POST /team/invitations/accept`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1202,6 +1247,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         phone: components["schemas"]["PhoneE164"];
+                        fullName: string;
                         /** Format: uuid */
                         jobTitleId: string;
                         /** Format: uuid */
@@ -1214,14 +1260,68 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Davet gönderildi */
+                /** @description Davet oluştu */
                 201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            invitationId: string;
+                            /** Format: date-time */
+                            expiresAt: string;
+                            smsSent: boolean;
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/invitations/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Açık daveti geri çek (F2.7)
+         * @description İzin `team.manage`. Davetin süresi şimdiye çekilir (`expires_at = now`); bağlantı artık kabul edilmez ve `users.max` sayacından düşer. Kabul edilmiş, süresi dolmuş veya başka işletmenin daveti `404`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Geri çekildi */
+                204: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content?: never;
                 };
                 403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -1241,7 +1341,7 @@ export interface paths {
         put?: never;
         /**
          * Daveti kabul et (OTP ile giriş yapmış kullanıcı)
-         * @description Yalnızca giriş ister (işletme bağlamı yok). Oturumdaki kullanıcının telefonu davetteki telefonla aynı olmalıdır. Geçersiz, süresi dolmuş, kullanılmış, başka telefona ait davet veya kullanıcının zaten o işletmede üyeliği varsa hepsi aynı `404 NOT_FOUND` döner (F2.1a).
+         * @description Yalnızca giriş ister (işletme bağlamı yok). Oturumdaki kullanıcının telefonu davetteki telefonla aynı olmalıdır. Geçersiz, süresi dolmuş, kullanılmış, başka telefona ait davet veya kullanıcının zaten o işletmede aktif üyeliği varsa hepsi aynı `404 NOT_FOUND` döner (F2.1a). Kullanıcının o işletmede çıkarılmış (`removed`) üyeliği varsa aynı üyelik davetteki rol, unvan ve kapsamla yeniden aktif olur (F2.7a, VARSAYIM K5).
          */
         post: {
             parameters: {
@@ -1287,7 +1387,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** İşletme rolleri ve kullanılabilir şablonlar */
+        /**
+         * İşletme rolleri
+         * @description İzin `team.manage`. İşletmenin yeteneğindeki roller, izinleri ve kapsamlarıyla; istemci hangi kapsam alanının gerektiğini buradan bilir. Şablon listesi F2.8'de.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1304,8 +1407,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["TeamRole"][];
+                    };
                 };
+                403: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -1339,6 +1445,48 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/job-titles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Davet formu için unvanlar (F2.7)
+         * @description İzin `team.manage`. İşletmenin yeteneğindeki aktif unvanlar; `roleTemplateId` istemcinin önerilen rolü seçmesi içindir (işletme rolü `sourceTemplateId` ile eşleşir).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JobTitle"][];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5812,7 +5960,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "INTERNAL_ERROR";
         /** @example +994501234567 */
         PhoneE164: string;
         Voen: string;
@@ -5919,6 +6067,11 @@ export interface components {
             /** @description Kullanıcının aktif bir işletme admini üyeliği var ve TOTP kurulu değil (US-002 AC3, F1.8b) */
             twoFactorRecommended?: boolean;
             memberships?: components["schemas"]["MembershipSummary"][];
+            /**
+             * Format: uuid
+             * @description Son kullanılan işletme; aktif üyeliği kalmadıysa null (US-003 AC1, F2.7). İstemci işletme seçicide varsayılan alır.
+             */
+            lastBusinessId?: string | null;
             activeBusiness?: {
                 /** Format: uuid */
                 id?: string;
@@ -5932,6 +6085,68 @@ export interface components {
                 permissions?: components["schemas"]["RolePermission"][];
                 subscriptionStatus?: string;
             };
+        };
+        TeamMember: {
+            /**
+             * Format: uuid
+             * @description Üyelik kimliği
+             */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            fullName: string;
+            phone: components["schemas"]["PhoneE164"];
+            /** Format: uuid */
+            roleId: string;
+            /** Format: uuid */
+            jobTitleId: string;
+            /** Format: uuid */
+            branchId: string | null;
+            /** Format: uuid */
+            warehouseId: string | null;
+            regionIds: string[];
+            isBusinessAdmin: boolean;
+            isSelf: boolean;
+            /** Format: date-time */
+            joinedAt: string | null;
+        };
+        TeamInvitation: {
+            /** Format: uuid */
+            id: string;
+            phone: components["schemas"]["PhoneE164"];
+            /** Format: uuid */
+            roleId: string;
+            /** Format: uuid */
+            jobTitleId: string;
+            /** Format: uuid */
+            branchId: string | null;
+            /** Format: uuid */
+            warehouseId: string | null;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        TeamRole: {
+            /** Format: uuid */
+            id: string;
+            name: components["schemas"]["LocalizedText"];
+            /** @enum {string} */
+            capability: "seller" | "buyer";
+            isBusinessAdmin: boolean;
+            /** Format: uuid */
+            sourceTemplateId: string | null;
+            permissions: components["schemas"]["RolePermission"][];
+        };
+        JobTitle: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: components["schemas"]["LocalizedText"];
+            /** @enum {string} */
+            capability: "seller" | "buyer";
+            /** Format: uuid */
+            roleTemplateId: string | null;
         };
         RolePermission: {
             /** @example orders.approve */
