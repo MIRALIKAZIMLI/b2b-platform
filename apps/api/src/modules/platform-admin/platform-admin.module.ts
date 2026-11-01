@@ -1,11 +1,10 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { AuditModule } from '../../core/audit';
-import { AccessModule } from '../access';
+import { AccessModule, WEB_BASE_URL } from '../access';
 import { BillingModule } from '../billing';
 import { BusinessesModule } from '../businesses';
 import { I18nModule } from '../i18n';
 import { SettingsModule } from '../settings';
-import { WEB_BASE_URL } from './activation-link';
 import { SellerApplicationsAdminController } from './seller-applications.controller';
 import { SellerApplicationsAdminService } from './seller-applications.service';
 import { SellersController } from './sellers.controller';

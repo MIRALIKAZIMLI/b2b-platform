@@ -15,6 +15,13 @@ const keys = (
 ) => visibleMenu(area, permissions, platformRole).map((item) => item.key);
 
 describe('İzinden menü', () => {
+  it('US-013 AC5: ekip ekranı yalnız team.manage izniyle menüde görünür (seller + buyer)', () => {
+    for (const area of ['seller', 'buyer'] as const) {
+      expect(keys(area, ['orders.view'])).not.toContain('team');
+      expect(keys(area, ['team.manage'])).toContain('team');
+    }
+  });
+
   it('F1.13-AC5: izni olmayan menü öğesi görünmez (Satış Temsilcisi)', () => {
     // c4 §5 seller_sales_rep izinleri.
     const rep = [

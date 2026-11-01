@@ -77,6 +77,8 @@ export const SETTING_DEFINITIONS = {
   'dormant.deactivate_day': intSetting(120, 1, 3650),
   'dormant.delete_day': intSetting(180, 1, 3650),
   'invitation.seller_activation_days': intSetting(7, 1, 30),
+  // F2.7: ekip davetinin geçerliliği (US-013 AC1; Mimar K10).
+  'invitation.team_days': intSetting(7, 1, 30),
   'onboarding.seller_mode': enumSetting(['manual'] as const, 'manual'),
   'seller_application.ip_max_per_hour': intSetting(5, 1, 100),
   // F2.3a: kimliksiz perakendeci kaydı (US-005). IP başına saatlik sınır; kayıtta atanan ücretsiz

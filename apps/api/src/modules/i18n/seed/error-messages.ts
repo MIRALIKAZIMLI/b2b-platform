@@ -140,6 +140,11 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, ErrorMessageText>> = {
     ru: 'Этот номер уже зарегистрирован. Войдите в систему.',
     tr: 'Bu numara zaten kayıtlı. Giriş yapın.',
   },
+  MEMBER_ALREADY_EXISTS: {
+    az: 'Bu nömrə artıq komandanın üzvüdür.',
+    ru: 'Этот номер уже состоит в команде.',
+    tr: 'Bu numara zaten ekibin üyesi.',
+  },
   LAST_ADMIN_PROTECTED: {
     az: 'Müəssisənin yeganə adminini silmək və ya rolunu dəyişmək olmaz.',
     ru: 'Нельзя удалить единственного администратора предприятия или изменить его роль.',

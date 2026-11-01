@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-01 (F2.6: depolar, satıcı profili, hizmet bölgeleri; sıradaki F2.7).
+Son güncelleme: 2026-11-01 (F2.7a: ekip yönetimi API; sıradaki F2.7b).
 
 ## 1. Mimari özeti
 
@@ -15,7 +15,7 @@ Son güncelleme: 2026-11-01 (F2.6: depolar, satıcı profili, hizmet bölgeleri;
 ## 2. Klasör yapısı (şu anki durum)
 
 ```
-apps/api/drizzle/                 0000_settings … 0013_invitation_accept
+apps/api/drizzle/                 0000_settings … 0017_team
 apps/api/db/bootstrap/roles.sql   app_user, migrator, readonly (şifresiz; pnpm db:bootstrap)
 apps/api/src/core/                audit, bootstrap, config, db, errors, health, idempotency,
                                   logging, outbox, clock.ts, id-generator.ts, money.ts
@@ -109,8 +109,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F2.3b | `GET /business` (`business.manage`); web `/<dil>/register` (`LoginForm intent=register` → OTP sonrası `BuyerRegistrationForm`, kayıt anahtarı yalnız bellekte), perakendeci ana sayfasında profil doluluk kartı + boş durum; mobil `(auth)/register` + `BuyerHomeCards`, tema `apps/mobile/src/lib/theme.ts`; ortak form mantığı `@b2b/shared` `buyer-registration.ts` (`DATA_SHARING_TEXT_VERSION`); veri paylaşım metni `dataSharing.v1.*` çevirilerinde; Playwright E2E-03 (VÖEN adımı F2.4) |
 | F2.4 | `PATCH /business` (`business.manage`; K1 yalnız `businesses` alanları, kişisel veri + logo F2.10'a kadar 422; VARSAYIM K2 VÖEN yalnız `buyer`'da değişir → 403; VARSAYIM K3 VÖEN silinmez), `0016_voen_reset.sql` (tetikleyici `legal_type`'ı VÖEN'den türetir, VÖEN değişince rozeti sıfırlar, R20), `requireVoen()` (`businesses/index.ts`; F4 sepet gönderimi çağırır, US-006 AC4/AC5), audit `business.voen_changed` / `business.profile_updated`; web `/<dil>/buyer/profile`, mobil `(buyer)/business-profile`, ortak form `@b2b/shared` `business-profile.ts`; E2E-03 VÖEN adımı |
 | F2.6 | `GET/POST /warehouses`, `PATCH /warehouses/{id}` (ilk depo varsayılan, `seller_profiles.default_warehouse_id` eşitlenir; silme yok, pasifleştirme; varsayılan depo pasifleşemez → 409), `GET/PATCH /business/seller-profile` (tanıtım metni, `minOrderAmount` metin para, teslim fotoğrafı; stok modu F3), `GET/PUT /business/service-areas`; hepsi `business.manage` + `seller` yeteneği (yoksa 403 `CAPABILITY_REQUIRED`). `warehouses.max` = aktif depo sayısı: `businesses` billing'i içe aktaramaz (c4 §1) → soyut `WarehouseLimitGate` (businesses) + global `WarehouseLimitGateModule` (billing, sayacı da kaydeder); eşzamanlılık işletme satırı kilidiyle. Audit `warehouse.*`, `seller_profile.updated`, `service_areas.updated`; web `/<dil>/seller/settings` (menü `settings` hazır), ortak form `@b2b/shared` `seller-setup.ts` |
+| F2.7a | `onboarding` `POST /team/invitations` (c4: billing + i18n + identity gerektiği için access'te değil; `users.max` sayacı = aktif üye + açık davet, VARSAYIM K2; işletme satırı kilidi; aynı telefona açık davet kapanır, VARSAYIM K3; aktif üye `409 MEMBER_ALREADY_EXISTS`; SMS `sms.team_invitation_body`, `invitation.team_days`), access `GET /team/members`, `PATCH /team/members/{id}` (rol → `applyRoleChangeTx`; kapsam rolden türetilir, K9: `branch`/`warehouse` kapsamı zorunlu alan, gerekmeyen alan 422; bölgeler yalnız `assigned` rolde, K4; `removed` bölgeleri siler), `GET /team/invitations`, `POST …/{id}/revoke`, `GET /team/roles`, `GET /team/job-titles`; `PATCH /me` `lastBusinessId` + `/me.lastBusinessId` (S8); `0017_team.sql`: `users.last_business_id`, `users_member_select`, `user_ensure_for_invitation()` (team.manage'siz 42501, yalnız kimlik döner), `invitation_accept` `removed` üyeliği davetteki rol/kapsamla aynı satırda açar (VARSAYIM K5); `activation-link.ts` access'e taşındı; `OnboardingModule.register({ webBaseUrl })` |
 
-**Sıradaki:** F2.6 (depolar, satıcı profili, hizmet bölgeleri); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
+**Sıradaki:** F2.7b (web ekip ekranı, mobil davet kabulü, `lastBusinessId` istemcide); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 

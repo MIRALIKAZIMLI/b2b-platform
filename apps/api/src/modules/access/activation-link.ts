@@ -1,5 +1,5 @@
-// Toptancı aktivasyon bağlantısı (F2.1a): `WEB_BASE_URL/<dil>/activate?token=<token>`. Sayfa
-// F2.1b'de. Bağlantı yalnızca SMS gövdesinde bulunur; loglanmaz, yanıtta dönmez.
+// Davet bağlantısı (F2.1a toptancı aktivasyonu, F2.7a ekip daveti; ikisi aynı kabul ucunu
+// kullanır): `WEB_BASE_URL/<dil>/activate?token=<token>`. Sayfa F2.1b'de. Bağlantı yalnızca SMS gövdesinde bulunur; loglanmaz, yanıtta dönmez.
 export const WEB_BASE_URL = Symbol('WEB_BASE_URL');
 
 /** Web'in yönlendirdiği diller (`[locale]` az/ru/tr); başka dil → `az`. */

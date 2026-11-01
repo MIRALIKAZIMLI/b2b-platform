@@ -132,6 +132,8 @@ describe('oturum, JWT, yenileme anahtarı (entegrasyon)', () => {
       totpEnabled: false,
       // F1.8b: /me genişledi (kırıcı değil).
       twoFactorRecommended: false,
+      // F2.7a: son kullanılan işletme (S8; kırıcı değil).
+      lastBusinessId: null,
       memberships: [],
     });
 

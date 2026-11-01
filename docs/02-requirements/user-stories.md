@@ -253,6 +253,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `dormant.deactivate_day` | 120 | tamsayı | 1 | 3650 |
 | `dormant.delete_day` | 180 | tamsayı | 1 | 3650 |
 | `invitation.seller_activation_days` | 7 | tamsayı (gün; toptancı aktivasyon davetinin geçerliliği, US-009 AC3) | 1 | 30 |
+| `invitation.team_days` | 7 | tamsayı (gün; ekip davetinin geçerliliği, US-013 AC1, F2.7) | 1 | 30 |
 | `onboarding.seller_mode` | `manual` | seçenek: `manual` | — | — |
 | `seller_application.ip_max_per_hour` | 5 (IP başına saatte toptancı başvurusu; kimliksiz form, US-008, F2.2) | tamsayı | 1 | 100 |
 | `buyer_registration.ip_max_per_hour` | 10 (IP başına saatte perakendeci kayıt isteği; kimliksiz uç, US-005, F2.3a) | tamsayı | 1 | 100 |

@@ -64,7 +64,7 @@ export class AppModule implements NestModule {
         AccessModule,
         NotificationsModule,
         FilesModule,
-        OnboardingModule,
+        OnboardingModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         PlatformAdminModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         IdentityModule.forRoot({
           otpHashKey: env.OTP_HASH_KEY,

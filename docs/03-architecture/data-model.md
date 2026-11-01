@@ -181,8 +181,9 @@ Sütun listesinde `id`, `created_at`, `updated_at` her tabloda vardır ve tekrar
 | timezone | text | null | IANA; null ise işletme saat dilimi |
 | status | text | `active` / `locked` / `deleted` | |
 | last_login_at | timestamptz | null | |
+| last_business_id | uuid | null, FK `businesses.id` (migration'da elle, F2.7a) | Son kullanılan işletme (US-003 AC1, S8); kullanıcı `PATCH /me` ile yazar, aktif üyelik yoksa `/me` null döner |
 
-**RLS (F1.5a):** `SELECT` ve `UPDATE` yalnızca kendi satırı (`id = app.user_id`); `phone_e164`, `status` ve `last_login_at` yalnızca platform bağlamında değişir (tetikleyici `users_guard_platform_columns`, ihlal 42501); platform bağlamı (`app.is_platform = 'true'`) tüm işlemler. Üyelik üzerinden görme politikası `memberships` tablosuyla (F1.8) eklenir. Önceki adımlarda FK'sız bırakılan `settings.updated_by`, `businesses.verified_by`, `business_capabilities.approved_by`, `entitlement_overrides.created_by` sütunlarına `users(id)` FK'sı F1.5a migration'ında eklenir (`audit_logs.actor_user_id` FK'sız kalır: yalnızca ekleme yapılan kayıt).
+**RLS (F1.5a):** `SELECT` ve `UPDATE` yalnızca kendi satırı (`id = app.user_id`); `phone_e164`, `status` ve `last_login_at` yalnızca platform bağlamında değişir (tetikleyici `users_guard_platform_columns`, ihlal 42501); platform bağlamı (`app.is_platform = 'true'`) tüm işlemler. Üyelik üzerinden görme: `users_member_select` (F2.7a) — bağlamdaki işletmede (`app.business_id`) aktif üyeliği olan kullanıcıların satırı okunur; yazma yok. Davet edilen kişinin satırı `user_ensure_for_invitation()` ile (F2.7a). Önceki adımlarda FK'sız bırakılan `settings.updated_by`, `businesses.verified_by`, `business_capabilities.approved_by`, `entitlement_overrides.created_by` sütunlarına `users(id)` FK'sı F1.5a migration'ında eklenir (`audit_logs.actor_user_id` FK'sız kalır: yalnızca ekleme yapılan kayıt).
 
 #### `otp_challenges` (S)
 
@@ -528,6 +529,8 @@ F1.8a uygulaması: `memberships` UPDATE/DELETE ve `roles` UPDATE (`is_business_a
 | created_by | uuid | | |
 
 **Kabul (F2.1a):** `invitation_accept(p_token_hash, p_membership_id, p_now)` (migrator sahipli `SECURITY DEFINER`, `0013_invitation_accept.sql`). Kullanıcı `app.user_id`'den alınır. Davet `FOR UPDATE` kilitlenir; kabul edilmemiş, süresi dolmamış, kullanıcı aktif ve telefonu davetteki telefonla aynı, işletme `active` ve kullanıcının o işletmede üyeliği yoksa aktif üyelik eklenir ve `accepted_at` yazılır; aksi hâlde hiçbir şey yazılmaz (uç `404`). Fonksiyon için yalnız migrator'a açık politikalar: `invitations_definer_select`, `invitations_definer_update`, `businesses_definer_select`, `memberships_definer_insert` (`user_id = app.user_id`).
+
+**Ekip daveti (F2.7a, `0017_team.sql`):** Kiracı (`team.manage`) daveti kendi işleminde yazar. Davet edilen telefonun kullanıcı satırı `user_ensure_for_invitation(p_id, p_phone, p_full_name, p_now)` ile (migrator sahipli `SECURITY DEFINER`; `app.business_id` + `app.user_id` bağlamı ve çağıranın o işletmede `team.manage` izinli aktif üyeliği yoksa 42501; telefon kayıtlıysa var olan kimlik, ad değişmez; yalnız kimlik döner; politika `users_definer_insert_invited`). Kabul fonksiyonu genişledi: kullanıcının o işletmede `removed` üyeliği varsa aynı satır davetteki rol/unvan/şube/depo ile `active` olur (VARSAYIM K5; politika `memberships_definer_update`, `user_id = app.user_id`). Aynı telefona açık davet yenisiyle kapanır (`expires_at = now`, VARSAYIM K3); geri çekme de aynı. `users.max` kullanımı = aktif üyelik + açık davet (VARSAYIM K2). Üyelik çıkarılınca `membership_regions` satırları silinir.
 
 ### 4.6 `billing`
 

@@ -35,3 +35,4 @@
 - F2.3b: perakendeci kayıt ekranları (web + mobil), profil doluluk kartı, GET /business, E2E-03
 - F2.4: VÖEN girişi, profil düzenleme (PATCH /business), rozet sıfırlama tetikleyicisi
 - F2.6: depolar, satıcı profili, hizmet bölgeleri
+- F2.7a: ekip yönetimi API (davet, rol/kapsam, çıkarma, users.max, son kullanılan işletme)
