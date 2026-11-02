@@ -493,7 +493,7 @@ Yalnız bu fonksiyonların içinde etkili politikalar: `users_definer_insert`, `
 
 #### `role_permissions` (T) — `role_id`, `permission_code`, `scope (all/branch/warehouse/assigned)`; PK `(role_id, permission_code)`
 
-`business_id` kolonu yoktur; RLS politikası `roles` satırının görünür olmasını ister (`EXISTS`). Kapsamın iznin kapsam seçeneklerinden biri olması ve iznin rolün yeteneğine uyması servis kuralıdır (`permissions.ts`, F1.8a Mimar K3).
+`business_id` kolonu yoktur; RLS politikası `roles` satırının görünür olmasını ister (`EXISTS`). F2.7c: işletme açılışında (F2.1a, F2.3a) yeteneğin tüm `role_templates` satırları rol olarak kopyalanır (admin dahil; aynı `source_template_id` ikinci kez açılmaz). Var olan işletmeler `business_roles_backfill(p_business_id uuid default null)` (0018; SECURITY DEFINER değil, yalnız `app.is_platform`, aksi 42501; PUBLIC EXECUTE yok) ile tamamlanır. Kapsamın iznin kapsam seçeneklerinden biri olması ve iznin rolün yeteneğine uyması servis kuralıdır (`permissions.ts`, F1.8a Mimar K3).
 
 #### `memberships` (T)
 

@@ -2,7 +2,7 @@
 // çağıran servisten gelir. Son admin tetikleyicisinin hatası (SQLSTATE AC001) burada
 // `LAST_ADMIN_PROTECTED` DomainError'ına çevrilir.
 import { Injectable } from '@nestjs/common';
-import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Tx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import {
@@ -54,6 +54,24 @@ export class AccessRepository {
   async findTemplate(tx: Tx, templateId: string): Promise<RoleTemplateRow | undefined> {
     const rows = await tx.select().from(roleTemplates).where(eq(roleTemplates.id, templateId));
     return rows[0];
+  }
+
+  /** Yeteneğin tüm rol şablonları (F2.7c: işletme açılışında hepsi kopyalanır). */
+  async templatesForCapability(tx: Tx, capability: 'seller' | 'buyer'): Promise<RoleTemplateRow[]> {
+    return await tx
+      .select()
+      .from(roleTemplates)
+      .where(eq(roleTemplates.capability, capability))
+      .orderBy(asc(roleTemplates.code));
+  }
+
+  /** İşletmede zaten kopyalanmış şablonlar (`roles.source_template_id`). */
+  async copiedTemplateIds(tx: Tx, businessId: string): Promise<Set<string>> {
+    const rows = await tx
+      .select({ id: roles.sourceTemplateId })
+      .from(roles)
+      .where(and(eq(roles.businessId, businessId), isNotNull(roles.sourceTemplateId)));
+    return new Set(rows.flatMap((row) => (row.id === null ? [] : [row.id])));
   }
 
   async findTemplateByCode(tx: Tx, code: string): Promise<RoleTemplateRow | undefined> {

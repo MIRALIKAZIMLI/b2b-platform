@@ -251,6 +251,8 @@ export class BuyerRegistrationService {
       now,
     });
     const role = await this.roles.createFromTemplateCodeTx(tx, businessId, BUYER_ADMIN_TEMPLATE);
+    // F2.7c: ekip daveti için yeteneğin diğer rol şablonları da işletmeye kopyalanır.
+    await this.roles.copyCapabilityTemplatesTx(tx, businessId, 'buyer');
     await this.memberships.addFounderAdminTx(tx, {
       id: this.ids.next(),
       businessId,

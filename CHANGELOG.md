@@ -37,3 +37,4 @@
 - F2.6: depolar, satıcı profili, hizmet bölgeleri
 - F2.7a: ekip yönetimi API (davet, rol/kapsam, çıkarma, users.max, son kullanılan işletme)
 - F2.7b: web ekip ekranı, ekip daveti kabulü (web + mobil), son kullanılan işletme
+- F2.7c: işletme açılışında tüm rol şablonları, var olan işletmeler için backfill

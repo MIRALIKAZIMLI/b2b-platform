@@ -185,6 +185,8 @@ export class SellersService {
           businessId,
           SELLER_ADMIN_TEMPLATE,
         );
+        // F2.7c: ekip daveti için yeteneğin diğer rol şablonları da işletmeye kopyalanır.
+        await this.roles.copyCapabilityTemplatesTx(tx, businessId, 'seller');
         const owner = await this.invitations.ensureInviteeTx(tx, phoneE164, input.ownerName);
         const invitation = await this.invitations.createTx(tx, {
           businessId,
