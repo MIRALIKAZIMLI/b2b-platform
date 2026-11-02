@@ -3,7 +3,7 @@
 // paneli yok (productreport "Toptancı — Mobil", "Perakendeci — Mobil"); yalnız platform rolü olan
 // kullanıcıya "web'den girin" bilgisi gösterilir.
 import type { components } from '@b2b/api-client';
-import { type MenuItem, visibleMenu } from '@b2b/shared';
+import { initialBusinessId, type MenuItem, visibleMenu } from '@b2b/shared';
 import type { UpdateDecision } from '../../lib/app-config';
 
 type Me = components['schemas']['Me'];
@@ -11,10 +11,15 @@ type Membership = components['schemas']['MembershipSummary'];
 
 export type MobileArea = 'seller' | 'buyer';
 
-/** Varsayılan işletme: ilk aktif üyelik, yoksa ilk üyelik (US-003 AC1; "son kullanılan" saklanmaz). */
-export function defaultBusinessId(memberships: readonly Membership[]): string | undefined {
-  const active = memberships.find((item) => item.businessStatus === 'active');
-  return (active ?? memberships[0])?.businessId;
+/**
+ * Varsayılan işletme (US-003 AC1): son kullanılan (`/me.lastBusinessId`, S8) üyelikler arasındaysa
+ * o; değilse ilk aktif üyelik, yoksa ilk üyelik. Kural web ile ortak (`@b2b/shared`).
+ */
+export function defaultBusinessId(
+  memberships: readonly Membership[],
+  lastBusinessId: string | null = null,
+): string | undefined {
+  return initialBusinessId(memberships, lastBusinessId);
 }
 
 export type AreaResult =

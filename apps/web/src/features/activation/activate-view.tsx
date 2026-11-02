@@ -2,17 +2,25 @@
 // Toptancı aktivasyonu (F2.1b, US-009 AC2–AC3; SF "admin toptancı açar"). Token adresten okunur,
 // hemen `history.replaceState` ile silinir ve yalnız bu bileşenin belleğinde (ref) kalır. Oturum yoksa
 // giriş akışı aynı sayfada (F1.13a `LoginForm`), böylece token yönlendirmede kaybolmaz. Giriş sonrası
-// `POST /team/invitations/accept` → yeni işletme seçilir → `/seller`. Her başarısız kabul aynı `404`
-// (F2.1a K2) → tek açıklayıcı mesaj.
+// `POST /team/invitations/accept` → yeni işletme seçilir ve son kullanılan olarak yazılır (S8) →
+// ana sayfa işletmenin alanına yönlendirir (F2.7b: ekip daveti `buyer` da olabilir). Her başarısız
+// kabul aynı `404` (F2.1a K2) → tek açıklayıcı mesaj. F2.7b: ekip daveti için ek açıklama; telefonda
+// "Uygulamada aç" (`b2b://activate?token=`, mobil `(auth)/activate`).
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { errorCodeOf } from '../../lib/error-code';
-import { ME_KEY, setActiveBusinessId, useSession, webApi } from '../../lib/session';
+import {
+  ME_KEY,
+  setActiveBusinessId,
+  useRememberBusiness,
+  useSession,
+  webApi,
+} from '../../lib/session';
 import { LoginForm } from '../auth/login-form';
-import { landingPath } from '../shell/landing';
-import { addressWithoutToken, readActivationToken } from './token';
+import { Button, Card } from '../ui/primitives';
+import { addressWithoutToken, appLink, isPhoneBrowser, readActivationToken } from './token';
 
 type Phase =
   | { readonly kind: 'reading' }
@@ -29,7 +37,9 @@ export function ActivateView() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const session = useSession();
+  const remember = useRememberBusiness();
   const token = useRef<string | undefined>(undefined);
+  const [appHref, setAppHref] = useState<string | undefined>();
   const captured = useRef(false);
   const accepting = useRef(false);
   const [phase, setPhase] = useState<Phase>({ kind: 'reading' });
@@ -42,6 +52,9 @@ export function ActivateView() {
     token.current = readActivationToken(search);
     if (search !== '') {
       window.history.replaceState(null, '', addressWithoutToken(pathname, search, hash));
+    }
+    if (token.current !== undefined && isPhoneBrowser(window.navigator.userAgent)) {
+      setAppHref(appLink(token.current));
     }
     setPhase(token.current === undefined ? { kind: 'invalid' } : { kind: 'ready' });
   }, []);
@@ -66,52 +79,85 @@ export function ActivateView() {
         return;
       }
       token.current = undefined;
+      setAppHref(undefined);
       setActiveBusinessId(data.businessId);
+      remember.mutate(data.businessId);
       await queryClient.invalidateQueries({ queryKey: ME_KEY });
-      router.replace(landingPath(locale, 'seller'));
+      router.replace(`/${locale}`);
     } catch (failure) {
       setPhase({ kind: 'failed', code: errorCodeOf(failure) });
     } finally {
       accepting.current = false;
     }
-  }, [locale, queryClient, router]);
+  }, [locale, queryClient, router, remember]);
 
   // Oturum zaten varsa (veya giriş bittiyse) doğrudan kabul.
   useEffect(() => {
     if (phase.kind === 'ready' && session.data === true) void accept();
   }, [phase.kind, session.data, accept]);
 
+  const muted = 'text-sm text-slate-500';
+  const status = 'text-sm font-medium text-slate-600';
   return (
-    <>
-      <h1>{t('title')}</h1>
-      {(phase.kind === 'reading' || (phase.kind === 'ready' && session.isPending)) && (
-        <p role="status">{tCommon('loading')}</p>
-      )}
-      {phase.kind === 'ready' && session.data === false && (
-        <>
-          <p>{t('intro')}</p>
-          <LoginForm
-            onSignedIn={() => {
-              void accept();
-            }}
-          />
-        </>
-      )}
-      {phase.kind === 'accepting' && <p role="status">{t('accepting')}</p>}
-      {phase.kind === 'invalid' && <p role="alert">{t('invalid')}</p>}
-      {phase.kind === 'failed' && (
-        <>
-          <p role="alert">{tErrors(phase.code)}</p>
-          <button
-            type="button"
-            onClick={() => {
-              void accept();
-            }}
-          >
-            {t('retry')}
-          </button>
-        </>
-      )}
-    </>
+    <div className="mx-auto w-full max-w-md space-y-6 px-4 py-12 sm:py-16">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{t('title')}</h1>
+        {phase.kind !== 'invalid' && <p className={muted}>{t('team_intro')}</p>}
+      </div>
+      <Card className="space-y-5 p-6 sm:p-8">
+        {(phase.kind === 'reading' || (phase.kind === 'ready' && session.isPending)) && (
+          <p role="status" className={status}>
+            {tCommon('loading')}
+          </p>
+        )}
+        {phase.kind === 'ready' && session.data === false && (
+          <>
+            {appHref !== undefined && (
+              <a
+                href={appHref}
+                data-testid="open-in-app"
+                className="flex w-full items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition-all duration-200 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
+              >
+                {t('open_in_app')}
+              </a>
+            )}
+            <p className={muted}>{t('intro')}</p>
+            <LoginForm
+              onSignedIn={() => {
+                void accept();
+              }}
+            />
+          </>
+        )}
+        {phase.kind === 'accepting' && (
+          <p role="status" className={status}>
+            {t('accepting')}
+          </p>
+        )}
+        {phase.kind === 'invalid' && (
+          <div className="space-y-2">
+            <p role="alert" className="text-sm font-medium text-rose-700">
+              {t('invalid')}
+            </p>
+            <p className={muted}>{t('team_invalid_hint')}</p>
+          </div>
+        )}
+        {phase.kind === 'failed' && (
+          <>
+            <p role="alert" className="text-sm font-medium text-rose-700">
+              {tErrors(phase.code)}
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void accept();
+              }}
+            >
+              {t('retry')}
+            </Button>
+          </>
+        )}
+      </Card>
+    </div>
   );
 }

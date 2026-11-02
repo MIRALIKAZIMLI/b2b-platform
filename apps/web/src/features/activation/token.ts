@@ -2,14 +2,21 @@
 // Token adresten okunur ve hemen silinir; yalnız bellekte tutulur (coding-guidelines §9.6).
 // Saf fonksiyonlar; birim testli.
 
-/** openapi `POST /team/invitations/accept` `token` sınırı. */
-const TOKEN_MAX_LENGTH = 256;
+import { invitationToken } from '@b2b/shared';
 
-/** Sorgudan token; yoksa, boşsa veya sınırı aşıyorsa `undefined`. */
+/** Sorgudan token; yoksa, boşsa veya sınırı aşıyorsa `undefined` (kural `@b2b/shared`, mobil ile ortak). */
 export function readActivationToken(search: string): string | undefined {
-  const token = new URLSearchParams(search).get('token');
-  if (token === null || token === '' || token.length > TOKEN_MAX_LENGTH) return undefined;
-  return token;
+  return invitationToken(new URLSearchParams(search).get('token'));
+}
+
+/** Mobil uygulamada aynı daveti açan bağlantı (F2.7b; `app.json` `scheme: b2b`). */
+export function appLink(token: string): string {
+  return `b2b://activate?token=${encodeURIComponent(token)}`;
+}
+
+/** Telefon / tablet tarayıcısı mı (yalnız "Uygulamada aç" düğmesini göstermek için). */
+export function isPhoneBrowser(userAgent: string): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(userAgent);
 }
 
 /** Token'sız adres: diğer sorgu parametreleri ve `#` korunur. */

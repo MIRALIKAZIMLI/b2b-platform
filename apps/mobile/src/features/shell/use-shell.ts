@@ -1,5 +1,7 @@
 // Kabuk durumu (F1.14b; web `use-shell.ts` ile aynı mantık): oturum + `/me` + seçili işletme.
-// Seçili işletme yalnızca bellekte (`lib/session.ts`); seçili değilse varsayılan üyelik seçilir.
+// Seçili işletme yalnızca bellekte (`lib/session.ts`); seçili değilse son kullanılan
+// (`/me.lastBusinessId`, F2.7b S8), o yoksa varsayılan üyelik seçilir; elle seçim `PATCH /me` ile
+// hatırlanır.
 // `/me` seçili işletmeyle hata verirse (ör. üyelik kaldırıldı) seçim bırakılır ve o işletme bu
 // uygulama ömründe atlanır. Profildeki dil açılışta da uygulanır (Müfettiş #33 L2).
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,6 +13,7 @@ import {
   setActiveBusinessId,
   subscribeActiveBusiness,
   useMe,
+  useRememberBusiness,
   useSession,
 } from '../../lib/session';
 import { APP_CONFIG_KEY } from '../../lib/app-config';
@@ -50,7 +53,7 @@ export function useShell() {
     }
     if (me.data === undefined || active !== undefined) return;
     const candidates = (me.data.memberships ?? []).filter((m) => selectable(m.businessId));
-    const next = defaultBusinessId(candidates);
+    const next = defaultBusinessId(candidates, me.data.lastBusinessId ?? null);
     if (next !== undefined) setActiveBusinessId(next);
   }, [me.data, me.isError, active]);
 
@@ -83,13 +86,18 @@ export function markProfileLanguageApplied(userId: string | undefined): void {
   profileLanguageAppliedFor = userId;
 }
 
-/** İşletme değiştir: seçim güncellenir, oturum dışındaki tüm sorgu önbelleği temizlenir (US-003 AC2). */
+/**
+ * İşletme değiştir: seçim güncellenir, oturum dışındaki tüm sorgu önbelleği temizlenir (US-003 AC2)
+ * ve seçim son kullanılan olarak yazılır (S8).
+ */
 export function useSelectBusiness(): (businessId: string) => void {
   const queryClient = useQueryClient();
+  const remember = useRememberBusiness();
   return (businessId) => {
     setActiveBusinessId(businessId);
     queryClient.removeQueries({
       predicate: (query) => !KEPT_QUERIES.has(String(query.queryKey[0])),
     });
+    remember.mutate(businessId);
   };
 }

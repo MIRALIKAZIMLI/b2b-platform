@@ -1,7 +1,8 @@
 // Web arayüzü başlangıç çevirileri (`ui_translations`, F1.13a: giriş ekranı ve dil seçici;
 // F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi;
 // F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni;
-// F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri).
+// F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
+// daveti kabulü).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -412,6 +413,31 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Bağlantı geçersiz veya süresi dolmuş; platform yöneticisinden yenisini isteyin.',
   },
   'activate.retry': { az: 'Yenidən cəhd et', ru: 'Повторить', tr: 'Yeniden dene' },
+  'activate.team_intro': {
+    az: 'Komandaya dəvət olunmusunuzsa, dəvət göndərilən telefon nömrəsi ilə daxil olun.',
+    ru: 'Если вас пригласили в команду, войдите по номеру телефона, на который пришло приглашение.',
+    tr: 'Ekibe davet edildiyseniz, davetin gönderildiği telefon numarasıyla giriş yapın.',
+  },
+  'activate.team_invalid_hint': {
+    az: 'Komanda dəvəti üçün sizi dəvət edən şəxsdən yeni dəvət istəyin.',
+    ru: 'Для приглашения в команду попросите пригласившего отправить новое.',
+    tr: 'Ekip daveti için sizi davet eden kişiden yeni bir davet isteyin.',
+  },
+  'activate.open_in_app': {
+    az: 'Tətbiqdə aç',
+    ru: 'Открыть в приложении',
+    tr: 'Uygulamada aç',
+  },
+  'activate.sign_in': {
+    az: 'Daxil ol',
+    ru: 'Войти',
+    tr: 'Giriş yap',
+  },
+  'activate.go_home': {
+    az: 'Ana səhifəyə qayıt',
+    ru: 'На главную',
+    tr: 'Ana sayfaya dön',
+  },
   'languages.az': { az: 'Azərbaycanca', ru: 'Azərbaycanca', tr: 'Azərbaycanca' },
   'languages.ru': { az: 'Русский', ru: 'Русский', tr: 'Русский' },
   'languages.tr': { az: 'Türkçe', ru: 'Türkçe', tr: 'Türkçe' },
@@ -1068,5 +1094,285 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Uyğun bölgə tapılmadı.',
     ru: 'Регион не найден.',
     tr: 'Eşleşen bölge yok.',
+  },
+  'team.title': {
+    az: 'Komanda',
+    ru: 'Команда',
+    tr: 'Ekip',
+  },
+  'team.description': {
+    az: 'İşçiləri dəvət edin, rollarını və iş sahələrini təyin edin.',
+    ru: 'Приглашайте сотрудников, назначайте им роли и зоны работы.',
+    tr: 'Çalışanları davet edin, rollerini ve çalışma alanlarını belirleyin.',
+  },
+  'team.no_access': {
+    az: 'Komandanı idarə etmək üçün icazəniz yoxdur.',
+    ru: 'У вас нет прав на управление командой.',
+    tr: 'Ekibi yönetme yetkiniz yok.',
+  },
+  'team.invite_open': {
+    az: 'Dəvət et',
+    ru: 'Пригласить',
+    tr: 'Davet et',
+  },
+  'team.invite_title': {
+    az: 'Yeni işçi dəvəti',
+    ru: 'Пригласить сотрудника',
+    tr: 'Yeni çalışan daveti',
+  },
+  'team.invite_hint': {
+    az: 'İşçiyə SMS ilə link gedəcək; daxil olub qəbul edəndə komandaya qoşulacaq.',
+    ru: 'Сотрудник получит ссылку по SMS и войдёт в команду после входа и подтверждения.',
+    tr: 'Çalışana SMS ile bağlantı gider; giriş yapıp kabul edince ekibe katılır.',
+  },
+  'team.field.phone': {
+    az: 'Telefon nömrəsi',
+    ru: 'Номер телефона',
+    tr: 'Telefon numarası',
+  },
+  'team.field.fullName': {
+    az: 'Ad və soyad',
+    ru: 'Имя и фамилия',
+    tr: 'Ad soyad',
+  },
+  'team.field.jobTitleId': {
+    az: 'Vəzifə',
+    ru: 'Должность',
+    tr: 'Unvan',
+  },
+  'team.field.roleId': {
+    az: 'Rol',
+    ru: 'Роль',
+    tr: 'Rol',
+  },
+  'team.field.branchId': {
+    az: 'Filial',
+    ru: 'Филиал',
+    tr: 'Şube',
+  },
+  'team.field.warehouseId': {
+    az: 'Anbar',
+    ru: 'Склад',
+    tr: 'Depo',
+  },
+  'team.field.regionIds': {
+    az: 'Bölgələr',
+    ru: 'Регионы',
+    tr: 'Bölgeler',
+  },
+  'team.phone_hint': {
+    az: 'Beynəlxalq formatda, məsələn +994501234567',
+    ru: 'В международном формате, например +994501234567',
+    tr: 'Uluslararası biçimde, ör. +994501234567',
+  },
+  'team.role_hint': {
+    az: 'Vəzifəyə görə təklif olunur; dəyişə bilərsiniz.',
+    ru: 'Предлагается по должности; можно изменить.',
+    tr: 'Unvana göre önerilir; değiştirebilirsiniz.',
+  },
+  'team.no_role_for_title': {
+    az: 'Bu vəzifə üçün biznesdə hazır rol yoxdur; siyahıdan rol seçin.',
+    ru: 'Для этой должности в бизнесе нет готовой роли; выберите роль из списка.',
+    tr: 'Bu unvan için işletmede hazır rol yok; listeden bir rol seçin.',
+  },
+  'team.regions_after_accept': {
+    az: 'Bölgələr işçi dəvəti qəbul etdikdən sonra siyahıda təyin edilir.',
+    ru: 'Регионы назначаются в списке после того, как сотрудник примет приглашение.',
+    tr: 'Bölgeler, çalışan daveti kabul ettikten sonra listede atanır.',
+  },
+  'team.branch_unavailable': {
+    az: 'Filial seçimi filiallar bölməsi hazır olanda aktiv olacaq.',
+    ru: 'Выбор филиала станет доступен, когда появится раздел филиалов.',
+    tr: 'Şube seçimi, şubeler bölümü hazır olunca açılacak.',
+  },
+  'team.warehouse_unavailable': {
+    az: 'Anbar siyahısını görmək üçün biznes parametrləri icazəsi lazımdır.',
+    ru: 'Чтобы видеть склады, нужно право на настройки бизнеса.',
+    tr: 'Depo listesini görmek için işletme ayarları yetkisi gerekir.',
+  },
+  'team.choose': {
+    az: 'Seçin',
+    ru: 'Выберите',
+    tr: 'Seçin',
+  },
+  'team.send': {
+    az: 'Dəvət göndər',
+    ru: 'Отправить приглашение',
+    tr: 'Davet gönder',
+  },
+  'team.sent': {
+    az: 'Dəvət göndərildi.',
+    ru: 'Приглашение отправлено.',
+    tr: 'Davet gönderildi.',
+  },
+  'team.sent_no_sms': {
+    az: 'Dəvət yaradıldı, amma SMS göndərilmədi. Bir az sonra yenidən dəvət edin.',
+    ru: 'Приглашение создано, но SMS не отправлено. Повторите приглашение чуть позже.',
+    tr: 'Davet oluşturuldu ama SMS gönderilemedi. Biraz sonra yeniden davet edin.',
+  },
+  'team.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'team.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'team.saved': {
+    az: 'Yadda saxlanıldı',
+    ru: 'Сохранено',
+    tr: 'Kaydedildi',
+  },
+  'team.edit': {
+    az: 'Düzəliş et',
+    ru: 'Изменить',
+    tr: 'Düzenle',
+  },
+  'team.remove': {
+    az: 'Komandadan çıxar',
+    ru: 'Удалить из команды',
+    tr: 'Ekipten çıkar',
+  },
+  'team.remove_confirm': {
+    az: '{name} komandadan çıxarılsın? Giriş icazəsi dərhal bağlanacaq.',
+    ru: 'Удалить {name} из команды? Доступ закроется сразу.',
+    tr: '{name} ekipten çıkarılsın mı? Erişimi hemen kapanır.',
+  },
+  'team.remove_yes': {
+    az: 'Bəli, çıxar',
+    ru: 'Да, удалить',
+    tr: 'Evet, çıkar',
+  },
+  'team.removed': {
+    az: '{name} komandadan çıxarıldı.',
+    ru: '{name} удалён(а) из команды.',
+    tr: '{name} ekipten çıkarıldı.',
+  },
+  'team.you': {
+    az: 'Siz',
+    ru: 'Вы',
+    tr: 'Siz',
+  },
+  'team.admin': {
+    az: 'Admin',
+    ru: 'Админ',
+    tr: 'Yönetici',
+  },
+  'team.no_regions': {
+    az: 'Bölgə təyin edilməyib',
+    ru: 'Регионы не назначены',
+    tr: 'Bölge atanmadı',
+  },
+  'team.regions_selected': {
+    az: '{count} bölgə',
+    ru: 'Регионов: {count}',
+    tr: '{count} bölge',
+  },
+  'team.region_search': {
+    az: 'Bölgə axtar',
+    ru: 'Поиск региона',
+    tr: 'Bölge ara',
+  },
+  'team.members.title': {
+    az: 'Üzvlər',
+    ru: 'Участники',
+    tr: 'Üyeler',
+  },
+  'team.members.count': {
+    az: '{count} nəfər',
+    ru: '{count} чел.',
+    tr: '{count} kişi',
+  },
+  'team.invitations.title': {
+    az: 'Açıq dəvətlər',
+    ru: 'Открытые приглашения',
+    tr: 'Açık davetler',
+  },
+  'team.invitations.count': {
+    az: '{count} dəvət',
+    ru: 'Приглашений: {count}',
+    tr: '{count} davet',
+  },
+  'team.invitations.empty': {
+    az: 'Açıq dəvət yoxdur',
+    ru: 'Открытых приглашений нет',
+    tr: 'Açık davet yok',
+  },
+  'team.invitations.empty_hint': {
+    az: 'Göndərdiyiniz və hələ qəbul edilməmiş dəvətlər burada görünəcək.',
+    ru: 'Здесь появятся отправленные и ещё не принятые приглашения.',
+    tr: 'Gönderdiğiniz ve henüz kabul edilmemiş davetler burada görünür.',
+  },
+  'team.invitations.expires': {
+    az: 'Bitmə tarixi: {date}',
+    ru: 'Действует до: {date}',
+    tr: 'Son gün: {date}',
+  },
+  'team.revoke': {
+    az: 'Geri çək',
+    ru: 'Отозвать',
+    tr: 'Geri çek',
+  },
+  'team.revoke_confirm': {
+    az: 'Dəvət geri çəkilsin?',
+    ru: 'Отозвать приглашение?',
+    tr: 'Davet geri çekilsin mi?',
+  },
+  'team.revoke_yes': {
+    az: 'Bəli, geri çək',
+    ru: 'Да, отозвать',
+    tr: 'Evet, geri çek',
+  },
+  'team.revoked': {
+    az: 'Dəvət geri çəkildi.',
+    ru: 'Приглашение отозвано.',
+    tr: 'Davet geri çekildi.',
+  },
+  'team.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'team.error.required': {
+    az: 'Bu sahə mütləqdir.',
+    ru: 'Обязательное поле.',
+    tr: 'Bu alan zorunlu.',
+  },
+  'team.error.phone_invalid': {
+    az: 'Nömrəni +994501234567 formatında yazın.',
+    ru: 'Введите номер в формате +994501234567.',
+    tr: 'Numarayı +994501234567 biçiminde yazın.',
+  },
+  'team.error.too_long': {
+    az: 'Mətn çox uzundur.',
+    ru: 'Слишком длинный текст.',
+    tr: 'Metin çok uzun.',
+  },
+  'team.error.not_found': {
+    az: 'Seçim tapılmadı; siyahını yeniləyin.',
+    ru: 'Значение не найдено; обновите список.',
+    tr: 'Seçim bulunamadı; listeyi yenileyin.',
+  },
+  'team.error.inactive': {
+    az: 'Bu seçim aktiv deyil.',
+    ru: 'Этот вариант неактивен.',
+    tr: 'Bu seçim etkin değil.',
+  },
+  'team.error.not_allowed': {
+    az: 'Bu rol üçün bu sahə lazım deyil.',
+    ru: 'Для этой роли это поле не нужно.',
+    tr: 'Bu rol için bu alan gerekmiyor.',
+  },
+  'team.error.invalid': {
+    az: 'Dəyər yanlışdır.',
+    ru: 'Неверное значение.',
+    tr: 'Değer geçersiz.',
+  },
+  'team.error.plan_limit': {
+    az: 'Planınızdakı istifadəçi limiti dolub. Yer açmaq üçün dəvəti geri çəkin və ya planı yüksəldin.',
+    ru: 'Лимит пользователей по тарифу исчерпан. Отзовите приглашение или повысьте тариф.',
+    tr: 'Planınızdaki kullanıcı sınırı doldu. Yer açmak için bir daveti geri çekin veya planı yükseltin.',
   },
 };

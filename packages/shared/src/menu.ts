@@ -68,7 +68,7 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     soon('delivery', ['delivery.view']),
     soon('ledger', ['ledger.view']),
     soon('reports', ['reports.view']),
-    soon('team', ['team.manage']),
+    { key: 'team', anyOf: ['team.manage'], ready: true, path: 'team' },
     soon('audit', ['audit.view']),
     // F2.6: satıcı profili, depolar, hizmet bölgeleri (US-011).
     { key: 'settings', anyOf: ['business.manage'], ready: true, path: 'settings' },
@@ -83,7 +83,7 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     soon('orders', ['orders.view']),
     soon('suppliers', ['connections.cancel']),
     soon('ledger', ['ledger.view']),
-    soon('team', ['team.manage']),
+    { key: 'team', anyOf: ['team.manage'], ready: true, path: 'team' },
     soon('audit', ['audit.view']),
     // F2.4: işletme profili ve VÖEN (US-006); gizlilik ayarları F2.10'da aynı sayfaya eklenir.
     { key: 'profile', anyOf: ['business.manage'], ready: true, path: 'profile' },
