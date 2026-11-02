@@ -95,6 +95,18 @@ export function useMe(enabled: boolean, business?: string) {
   });
 }
 
+/**
+ * Son kullanılan işletmeyi sunucuya yazar (S8, `PATCH /me`, F2.7b). Yalnız kolaylıktır: başarısızlık
+ * seçimi engellemez, react-query hatayı mutasyon durumunda tutar.
+ */
+export function useRememberBusiness() {
+  return useMutation({
+    mutationFn: async (next: string): Promise<void> => {
+      await mobileApi().client.PATCH('/api/v1/me', { body: { lastBusinessId: next } });
+    },
+  });
+}
+
 /** Giriş başarılı: anahtarlar yerine konur, oturum sorgusu güncellenir. */
 export function useStartSession() {
   const queryClient = useQueryClient();

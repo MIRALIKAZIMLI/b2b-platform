@@ -112,6 +112,21 @@ export async function addMembership(
   return { businessId };
 }
 
+/** İşletmeye etkin abonelik (F2.7b: `users.max` hak sınırı plandan; `pilot` / `buyer_free`). */
+export async function addSubscription(businessId: string, planCode: string): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    await client.query(
+      `insert into subscriptions
+         (id, business_id, plan_id, status, current_period_start, current_period_end)
+       select $1, $2, id, 'active', current_date, current_date + 30 from plans where code = $3`,
+      [randomUUID(), businessId, planCode],
+    );
+    await client.query('commit');
+  });
+}
+
 /** Platform ekibi kullanıcısı (`platform_staff` S tablosu). TOTP girişte kurulur. */
 export async function createPlatformStaff(role: string): Promise<{ id: string; phone: string }> {
   const user = await createUser();

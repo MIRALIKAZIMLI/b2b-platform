@@ -1,5 +1,6 @@
 // Açılış (F1.14b): sürüm kontrolü → oturum → alan. Ağ yoksa "Yeniden dene" (Müfettiş #33 L1);
 // oturum yoksa giriş; varsa seçili işletmenin yeteneğine göre `/seller` veya `/buyer`.
+// F2.7b: deep link ile gelen ekip daveti girişten sonra bekliyorsa önce kabul ekranı.
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { OfflineRetry } from '../src/features/shell/offline-retry';
@@ -9,6 +10,7 @@ import { shellStyles } from '../src/features/shell/shell-styles';
 import { useUpdateDecision } from '../src/features/shell/use-app-config';
 import { useShell } from '../src/features/shell/use-shell';
 import { UpdateRequired } from '../src/features/shell/update-required';
+import { pendingInvitation } from '../src/features/team/pending-invitation';
 import { useSession } from '../src/lib/session';
 
 function sessionState(session: ReturnType<typeof useSession>): SessionState {
@@ -27,6 +29,7 @@ function Loading() {
 
 function Home() {
   const shell = useShell();
+  if (pendingInvitation() !== undefined) return <Redirect href="/activate" />;
   if (shell.me === undefined) return <Loading />;
   const result = mobileAreaOf(shell.me);
   if (result.kind === 'area')

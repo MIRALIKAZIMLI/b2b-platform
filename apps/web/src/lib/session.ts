@@ -2,7 +2,7 @@
 // Oturum durumu (F1.13a): tek `WebApi` örneği, react-query ile oturum ve `/me`.
 // Erişim anahtarı yalnızca `webApi` içinde, bellekte; sayfa yenilenince cookie ile geri alınır.
 // Seçili işletme de yalnızca bellekte (F1.13b): her istekte `X-Business-Id` olur; sayfa yenilenince
-// varsayılan üyelik yeniden seçilir.
+// varsayılan üyelik yeniden seçilir (F2.7b: son kullanılan işletme sunucuda, `/me.lastBusinessId`).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 import { createWebApi } from './api';
@@ -74,6 +74,18 @@ export function useMe(enabled: boolean) {
       const { data, response } = await webApi.client.GET('/api/v1/me');
       if (data === undefined) throw new Error(`/me: ${String(response.status)}`);
       return data;
+    },
+  });
+}
+
+/**
+ * Son kullanılan işletmeyi sunucuya yazar (S8, `PATCH /me`). Yalnız kolaylıktır: başarısızlık
+ * seçimi engellemez, react-query hatayı mutasyon durumunda tutar.
+ */
+export function useRememberBusiness() {
+  return useMutation({
+    mutationFn: async (next: string): Promise<void> => {
+      await webApi.client.PATCH('/api/v1/me', { body: { lastBusinessId: next } });
     },
   });
 }

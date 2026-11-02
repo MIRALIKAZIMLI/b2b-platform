@@ -1,6 +1,7 @@
 'use client';
-// Kabuk durumu (F1.13b): oturum + `/me` + seçili işletme. İşletme seçili değilse varsayılan üyelik
-// seçilir (US-003 AC1; "son kullanılan" saklanmaz, bkz. PR notu); `/me` seçili işletmeyle hata
+// Kabuk durumu (F1.13b): oturum + `/me` + seçili işletme. İşletme seçili değilse son kullanılan
+// (`/me.lastBusinessId`, F2.7b S8), o yoksa varsayılan üyelik seçilir (US-003 AC1); elle seçim
+// `PATCH /me` ile hatırlanır. `/me` seçili işletmeyle hata
 // verirse (ör. üyelik kaldırıldı) seçim bırakılır ve o işletme bu sayfa ömründe atlanır.
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -9,6 +10,7 @@ import {
   setActiveBusinessId,
   useActiveBusinessId,
   useMe,
+  useRememberBusiness,
   useSession,
 } from '../../lib/session';
 import { defaultBusinessId } from './landing';
@@ -33,7 +35,7 @@ export function useShell() {
     }
     if (me.data === undefined || active !== undefined) return;
     const candidates = (me.data.memberships ?? []).filter((m) => selectable(m.businessId));
-    const next = defaultBusinessId(candidates);
+    const next = defaultBusinessId(candidates, me.data.lastBusinessId ?? null);
     if (next !== undefined) setActiveBusinessId(next);
   }, [me.data, me.isError, active]);
 
@@ -52,11 +54,16 @@ export function useShell() {
   };
 }
 
-/** İşletme değiştir: seçim güncellenir, oturum dışındaki tüm sorgu önbelleği temizlenir (AC2). */
+/**
+ * İşletme değiştir: seçim güncellenir, oturum dışındaki tüm sorgu önbelleği temizlenir (AC2) ve
+ * seçim son kullanılan olarak yazılır (S8).
+ */
 export function useSelectBusiness(): (businessId: string) => void {
   const queryClient = useQueryClient();
+  const remember = useRememberBusiness();
   return (businessId) => {
     setActiveBusinessId(businessId);
     queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== SESSION_KEY[0] });
+    remember.mutate(businessId);
   };
 }
