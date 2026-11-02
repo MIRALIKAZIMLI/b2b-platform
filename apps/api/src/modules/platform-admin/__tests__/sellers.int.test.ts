@@ -141,8 +141,16 @@ describe('F2.1a admin toptancı açma (entegrasyon)', () => {
     expect(areas.map((row) => row.region_id)).toEqual([...body.serviceAreaRegionIds].sort());
     const roles = await platformQuery(sql`
       select r.is_business_admin, t.code from roles r join role_templates t on t.id = r.source_template_id
-       where r.business_id = ${json.businessId}`);
-    expect(roles).toEqual([{ is_business_admin: true, code: 'seller_business_admin' }]);
+       where r.business_id = ${json.businessId} order by t.code`);
+    // F2.7c (Mimar kararı A): admin dışında yeteneğin tüm şablonları da rol olarak açılır.
+    expect(roles).toEqual([
+      { is_business_admin: false, code: 'seller_accountant' },
+      { is_business_admin: true, code: 'seller_business_admin' },
+      { is_business_admin: false, code: 'seller_courier' },
+      { is_business_admin: false, code: 'seller_sales_manager' },
+      { is_business_admin: false, code: 'seller_sales_rep' },
+      { is_business_admin: false, code: 'seller_warehouse' },
+    ]);
     const invitations = await platformQuery<{
       phone_e164: string;
       token_hash: string;

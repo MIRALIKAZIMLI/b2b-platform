@@ -2,7 +2,8 @@
 // açar. UX kararları: tek kart; oturum yoksa açıklama + tam genişlik Indigo "Daxil ol" düğmesi
 // (giriş bitince açılış ekranı buraya döner, token yalnız bellekte); oturum varsa kabul kendiliğinden
 // başlar ve gösterge döner; başarıda işletme seçilir, son kullanılan yazılır, açılış ekranı alana
-// yönlendirir. Her başarısız kabul aynı `404` → tek açıklayıcı mesaj; ağ hatasında "Yeniden dene".
+// yönlendirir. Her başarısız kabul aynı `404` → tek açıklayıcı mesaj; ağ hatasında "Yeniden dene"
+// ve ana sayfaya dönüş (F2.7c, Müfettiş #49 L3; dönüşte bekleyen davet bırakılır).
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -133,6 +134,17 @@ export function ActivateScreen() {
                 style={({ pressed: isPressed }) => [styles.secondary, isPressed && pressed]}
               >
                 <Text style={styles.secondaryText}>{t('activate.retry')}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  // Bekleyen davet bırakılır; yoksa açılış ekranı yine buraya döner.
+                  clearPendingInvitation();
+                  router.replace('/');
+                }}
+                style={({ pressed: isPressed }) => [styles.secondary, isPressed && pressed]}
+              >
+                <Text style={styles.secondaryText}>{t('activate.go_home')}</Text>
               </Pressable>
             </>
           )}

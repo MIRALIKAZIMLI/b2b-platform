@@ -162,6 +162,19 @@ describe('F2.3a perakendeci kaydı (entegrasyon)', () => {
     expect(memberships).toEqual([
       { status: 'active', is_business_admin: true, capability: 'buyer' },
     ]);
+    // F2.7c: yeteneğin tüm rol şablonları işletmeye kopyalanır (ekip daveti için).
+    const roleCodes = await platformRows<{ code: string }>(
+      `select t.code from roles r join role_templates t on t.id = r.source_template_id
+        where r.business_id = $1 order by t.code`,
+      [json.businessId],
+    );
+    expect(roleCodes.map((row) => row.code)).toEqual([
+      'buyer_accountant',
+      'buyer_branch_admin',
+      'buyer_branch_staff',
+      'buyer_business_admin',
+      'buyer_purchaser',
+    ]);
 
     const subscriptions = await platformRows(
       `select p.code, s.status, s.current_period_start::text as start,

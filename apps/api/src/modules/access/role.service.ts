@@ -60,6 +60,26 @@ export class RoleService {
     return { roleId, jobTitleId };
   }
 
+  /**
+   * F2.7c (Mimar kararı A): işletme açılışında yeteneğin diğer tüm rol şablonları da kopyalanır;
+   * böylece ekip davetinde unvanın rolü hazırdır. Zaten kopyalanmış şablon atlanır (tekrar
+   * çağrılabilir). Var olan işletmeler `0018_business_roles_backfill.sql` ile tamamlanır.
+   */
+  async copyCapabilityTemplatesTx(
+    tx: Tx,
+    businessId: string,
+    capability: 'seller' | 'buyer',
+  ): Promise<number> {
+    const copied = await this.repository.copiedTemplateIds(tx, businessId);
+    let count = 0;
+    for (const template of await this.repository.templatesForCapability(tx, capability)) {
+      if (copied.has(template.id)) continue;
+      await this.copyTemplate(tx, businessId, template);
+      count++;
+    }
+    return count;
+  }
+
   private async copyTemplate(
     tx: Tx,
     businessId: string,

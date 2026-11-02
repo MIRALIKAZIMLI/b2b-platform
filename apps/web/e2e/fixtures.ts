@@ -128,8 +128,8 @@ export async function addSubscription(businessId: string, planCode: string): Pro
 }
 
 /**
- * İşletmeye şablondan ek rol (F2.7b): izinler kopyalanır. Yeni işletmede yalnız admin rolü açılır;
- * diğer roller F2.8 kapsamında (rol açma ucu) gelir.
+ * İşletmeye şablondan ek rol (F2.7b): izinler kopyalanır. `addMembership` işletmeyi doğrudan SQL ile
+ * açtığı için uygulamanın açılışta yaptığı tüm şablon kopyası (F2.7c) burada yoktur.
  */
 export async function addRoleFromTemplate(businessId: string, templateCode: string): Promise<void> {
   await withMigrator(async (client) => {

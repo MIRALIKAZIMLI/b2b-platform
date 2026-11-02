@@ -4,7 +4,7 @@
 import type { components } from '@b2b/api-client';
 import type { InvitationBody, MemberUpdateBody } from '@b2b/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { webApi } from '../../lib/session';
+import { ME_KEY, webApi } from '../../lib/session';
 import { ApiError } from '../admin-sellers/api';
 
 export type TeamMember = components['schemas']['TeamMember'];
@@ -102,7 +102,11 @@ export function useTeamMutations(businessId: string | undefined) {
       if (data === undefined) throw new ApiError(error, response.status);
       return data;
     },
-    onSuccess: refresh,
+    // F2.7c (Müfettiş #49 L1): kendi rolü / kapsamı değişince `/me` (menü, izinler) da yenilenir.
+    onSuccess: async (member) => {
+      await refresh();
+      if (member.isSelf) await queryClient.invalidateQueries({ queryKey: ME_KEY });
+    },
   });
   return { invite, revoke, update };
 }
