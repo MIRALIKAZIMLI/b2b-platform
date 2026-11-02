@@ -5,6 +5,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
   addMembership,
+  addRoleFromTemplate,
   addSubscription,
   completeOtpLogin,
   createUser,
@@ -22,6 +23,7 @@ test('US-013 AC1 davet → SMS bağlantısıyla kabul → üye listede; AC3 tek 
   const admin = await createUser('az');
   const { businessId } = await addMembership(admin.id, 'seller_business_admin', 'E2E Ekip Topdan');
   await addSubscription(businessId, 'pilot');
+  await addRoleFromTemplate(businessId, 'seller_sales_rep');
 
   await loginThroughUi(page, 'az', admin.phone);
   await page.waitForURL('**/az/seller');

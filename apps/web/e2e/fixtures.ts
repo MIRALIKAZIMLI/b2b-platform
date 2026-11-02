@@ -127,6 +127,31 @@ export async function addSubscription(businessId: string, planCode: string): Pro
   });
 }
 
+/**
+ * İşletmeye şablondan ek rol (F2.7b): izinler kopyalanır. Yeni işletmede yalnız admin rolü açılır;
+ * diğer roller F2.8 kapsamında (rol açma ucu) gelir.
+ */
+export async function addRoleFromTemplate(businessId: string, templateCode: string): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    const roleId = randomUUID();
+    await client.query(
+      `insert into roles (id, business_id, name, capability, is_business_admin, source_template_id)
+       select $1, $2, name, capability, is_business_admin, id from role_templates where code = $3`,
+      [roleId, businessId, templateCode],
+    );
+    await client.query(
+      `insert into role_permissions (role_id, permission_code, scope)
+       select $1, p.permission_code, p.default_scope
+         from role_template_permissions p join role_templates t on t.id = p.template_id
+        where t.code = $2`,
+      [roleId, templateCode],
+    );
+    await client.query('commit');
+  });
+}
+
 /** Platform ekibi kullanıcısı (`platform_staff` S tablosu). TOTP girişte kurulur. */
 export async function createPlatformStaff(role: string): Promise<{ id: string; phone: string }> {
   const user = await createUser();

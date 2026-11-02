@@ -1170,6 +1170,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Предлагается по должности; можно изменить.',
     tr: 'Unvana göre önerilir; değiştirebilirsiniz.',
   },
+  'team.no_role_for_title': {
+    az: 'Bu vəzifə üçün biznesdə hazır rol yoxdur; siyahıdan rol seçin.',
+    ru: 'Для этой должности в бизнесе нет готовой роли; выберите роль из списка.',
+    tr: 'Bu unvan için işletmede hazır rol yok; listeden bir rol seçin.',
+  },
   'team.regions_after_accept': {
     az: 'Bölgələr işçi dəvəti qəbul etdikdən sonra siyahıda təyin edilir.',
     ru: 'Регионы назначаются в списке после того, как сотрудник примет приглашение.',

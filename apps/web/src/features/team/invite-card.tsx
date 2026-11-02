@@ -53,6 +53,9 @@ export function InviteCard({
   const [message, setMessage] = useState<string | undefined>();
   const [saved, setSaved] = useState<string | undefined>();
   const needs = roleScopeNeeds(roles.find((role) => role.id === values.roleId));
+  // Unvanın şablonundan kopyalanmış rol işletmede yoksa öneri yapılamaz (roller F2.8'de açılır).
+  const title = jobTitles.find((item) => item.id === values.jobTitleId);
+  const noSuggestion = title !== undefined && suggestedRoleId(title, roles) === undefined;
 
   const set = (patch: Partial<InvitationFormValues>) => {
     setValues((prev) => ({ ...prev, ...patch }));
@@ -162,7 +165,7 @@ export function InviteCard({
           <Field
             id="invite-roleId"
             label={t('field.roleId')}
-            hint={t('role_hint')}
+            hint={noSuggestion ? t('no_role_for_title') : t('role_hint')}
             error={error('roleId')}
           >
             <SelectInput
