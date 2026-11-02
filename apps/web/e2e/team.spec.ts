@@ -71,7 +71,7 @@ test('US-013 AC1 davet → SMS bağlantısıyla kabul → üye listede; AC3 tek 
   const self = page.getByTestId('member-row').filter({ hasText: 'Siz' });
   await self.getByRole('button', { name: 'Komandadan çıxar' }).click();
   await self.getByRole('button', { name: 'Bəli, çıxar' }).click();
-  await expect(page.getByRole('alert')).toHaveText(
+  await expect(page.getByRole('main').getByRole('alert')).toHaveText(
     'Müəssisənin yeganə adminini silmək və ya rolunu dəyişmək olmaz.',
   );
   await expect(page.getByTestId('member-row')).toHaveCount(2);
