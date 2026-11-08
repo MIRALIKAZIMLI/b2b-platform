@@ -218,20 +218,15 @@ describe('F2.4 PATCH /api/v1/business', () => {
     const owner = await register();
     const staffId = randomUUID();
     await insertTestUser({ id: staffId, phone: randomTestPhone() });
-    const roleId = randomUUID();
-    await platformRows(
-      `insert into roles (id, business_id, name, capability, is_business_admin, source_template_id)
-       select $1, $2, name, capability, is_business_admin, id from role_templates
-        where code = 'buyer_branch_staff'`,
-      [roleId, owner.businessId],
+    // F2.7c: kayıt yeteneğin tüm şablonlarını kopyalar; F2.8 kısmi tekil indeksi ikinci kopyayı
+    // engellediği için var olan `buyer_branch_staff` rolü kullanılır.
+    const [copy] = await platformRows<{ id: string }>(
+      `select r.id from roles r join role_templates t on t.id = r.source_template_id
+        where r.business_id = $1 and t.code = 'buyer_branch_staff' and not r.is_custom`,
+      [owner.businessId],
     );
-    await platformRows(
-      `insert into role_permissions (role_id, permission_code, scope)
-       select $1, p.permission_code, p.default_scope
-         from role_template_permissions p join role_templates t on t.id = p.template_id
-        where t.code = 'buyer_branch_staff'`,
-      [roleId],
-    );
+    const roleId = copy?.id ?? '';
+    expect(roleId).not.toBe('');
     const [perm] = await platformRows<{ n: number }>(
       `select count(*)::int as n from role_permissions
         where role_id = $1 and permission_code = 'business.manage'`,

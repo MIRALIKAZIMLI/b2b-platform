@@ -38,3 +38,4 @@
 - F2.7a: ekip yönetimi API (davet, rol/kapsam, çıkarma, users.max, son kullanılan işletme)
 - F2.7b: web ekip ekranı, ekip daveti kabulü (web + mobil), son kullanılan işletme
 - F2.7c: işletme açılışında tüm rol şablonları, var olan işletmeler için backfill
+- F2.8: işletmeye özel rol, rol düzenleyici, yetki yükseltme koruması, izin sürümüyle önbellek

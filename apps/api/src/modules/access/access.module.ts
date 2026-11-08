@@ -9,6 +9,8 @@ import { AccessGuard, PLATFORM_ROLE } from './access.guard';
 import { AccessRepository } from './access.repository';
 import { InvitationService } from './invitation.service';
 import { InvitationsController } from './invitations.controller';
+import { TeamRolesRepository } from './team-roles.repository';
+import { TeamRolesService } from './team-roles.service';
 import { TeamController } from './team.controller';
 import { TeamRepository } from './team.repository';
 import { TeamService } from './team.service';
@@ -38,6 +40,8 @@ import { TenantContextService, TOTP_STATUS } from './tenant-context.service';
     InvitationService,
     TeamRepository,
     TeamService,
+    TeamRolesRepository,
+    TeamRolesService,
     { provide: TOTP_STATUS, useExisting: TotpRepository },
     { provide: PLATFORM_ROLE, useExisting: TotpRepository },
     { provide: APP_GUARD, useClass: AccessGuard },

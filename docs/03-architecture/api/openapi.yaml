@@ -760,7 +760,7 @@ paths:
       summary: İşletme rolleri
       description: >-
         İzin `team.manage`. İşletmenin yeteneğindeki roller, izinleri ve kapsamlarıyla; istemci
-        hangi kapsam alanının gerektiğini buradan bilir. Şablon listesi F2.8'de.
+        hangi kapsam alanının gerektiğini buradan bilir. `isCustom` rolleri F2.8 özel rolleridir.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       responses:
         '200':
@@ -774,21 +774,89 @@ paths:
     post:
       tags: [team]
       summary: Şablondan özel rol oluştur (US-014)
+      description: >-
+        İzin `team.manage`. Şablon işletmenin yeteneğinde olmalı; izinler rolün yeteneğine ait
+        olmalı ve kapsam iznin kapsam seçeneklerinden biri olmalı (aksi `422`, US-014 AC2). Özel rol
+        işletme admini değildir. İşletme admini olmayan çağıran yalnızca kendisinde aynı kapsamda
+        veya `all` kapsamda olan izinleri ekleyebilir (aksi `403 PERMISSION_DENIED`).
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [templateId, name, permissions]
               properties:
                 templateId: { type: string, format: uuid }
-                name: { $ref: '#/components/schemas/LocalizedText' }
+                name: { $ref: '#/components/schemas/RoleName' }
                 permissions:
                   type: array
+                  minItems: 1
+                  maxItems: 100
                   items: { $ref: '#/components/schemas/RolePermission' }
       responses:
-        '201': { description: Oluşturuldu }
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamRole' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/team/roles/{id}:
+    patch:
+      tags: [team]
+      summary: Özel rolü düzenle (US-014)
+      description: >-
+        İzin `team.manage`. Yalnızca `isCustom` roller (şablon kopyası `422 roleId: not_editable`).
+        `POST` ile aynı izin kuralları. Rol bir aktif üyeye veya açık davete bağlıyken gereken kapsam
+        alanları (şube / depo / bölge) değişemez (`422 permissions: scope_change_in_use`). İzin
+        değişince rolün üyelerinin izin önbelleği temizlenir; değişiklik sonraki istekte geçerlidir.
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                name: { $ref: '#/components/schemas/RoleName' }
+                permissions:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/RolePermission' }
+      responses:
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamRole' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/team/role-templates:
+    get:
+      tags: [team]
+      summary: Özel rol için kopyalanabilir şablonlar (US-014)
+      description: >-
+        İzin `team.manage`. İşletmenin yeteneğindeki rol şablonları, varsayılan izin ve kapsamlarıyla.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoleTemplate' }
+        '403': { $ref: '#/components/responses/Error' }
   /api/v1/team/job-titles:
     get:
       tags: [team]
@@ -2676,14 +2744,33 @@ components:
         createdAt: { type: string, format: date-time }
     TeamRole:
       type: object
-      required: [id, name, capability, isBusinessAdmin, sourceTemplateId, permissions]
+      required: [id, name, capability, isBusinessAdmin, sourceTemplateId, isCustom, permissions]
       properties:
         id: { type: string, format: uuid }
         name: { $ref: '#/components/schemas/LocalizedText' }
         capability: { type: string, enum: [seller, buyer] }
         isBusinessAdmin: { type: boolean }
         sourceTemplateId: { type: [string, 'null'], format: uuid }
+        isCustom: { type: boolean }
         permissions: { type: array, items: { $ref: '#/components/schemas/RolePermission' } }
+    RoleTemplate:
+      type: object
+      required: [id, code, name, capability, permissions]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        capability: { type: string, enum: [seller, buyer] }
+        permissions: { type: array, items: { $ref: '#/components/schemas/RolePermission' } }
+    RoleName:
+      description: Özel rol adı; en az bir dil, her biri 1–80 karakter.
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        az: { type: string, minLength: 1, maxLength: 80 }
+        ru: { type: string, minLength: 1, maxLength: 80 }
+        tr: { type: string, minLength: 1, maxLength: 80 }
     JobTitle:
       type: object
       required: [id, code, name, capability, roleTemplateId]

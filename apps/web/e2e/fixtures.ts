@@ -136,18 +136,23 @@ export async function addRoleFromTemplate(businessId: string, templateCode: stri
     await client.query('begin');
     await client.query("select set_config('app.is_platform', 'true', true)");
     const roleId = randomUUID();
-    await client.query(
+    // F2.8: aynı şablonun ikinci kopyası açılamaz (roles_business_template_copy_uq); varsa atlanır.
+    const created = await client.query(
       `insert into roles (id, business_id, name, capability, is_business_admin, source_template_id)
-       select $1, $2, name, capability, is_business_admin, id from role_templates where code = $3`,
+       select $1, $2, name, capability, is_business_admin, id from role_templates where code = $3
+       on conflict (business_id, source_template_id)
+         where source_template_id is not null and not is_custom do nothing`,
       [roleId, businessId, templateCode],
     );
-    await client.query(
-      `insert into role_permissions (role_id, permission_code, scope)
-       select $1, p.permission_code, p.default_scope
-         from role_template_permissions p join role_templates t on t.id = p.template_id
-        where t.code = $2`,
-      [roleId, templateCode],
-    );
+    if ((created.rowCount ?? 0) > 0) {
+      await client.query(
+        `insert into role_permissions (role_id, permission_code, scope)
+         select $1, p.permission_code, p.default_scope
+           from role_template_permissions p join role_templates t on t.id = p.template_id
+          where t.code = $2`,
+        [roleId, templateCode],
+      );
+    }
     await client.query('commit');
   });
 }

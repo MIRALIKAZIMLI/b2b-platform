@@ -1375,4 +1375,150 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Лимит пользователей по тарифу исчерпан. Отзовите приглашение или повысьте тариф.',
     tr: 'Planınızdaki kullanıcı sınırı doldu. Yer açmak için bir daveti geri çekin veya planı yükseltin.',
   },
+  // F2.8: özel rol düzenleyici (US-014). Taslak; az/ru/tr onayı platform sahibinde.
+  'team.role.title': {
+    az: 'Rollar',
+    ru: 'Роли',
+    tr: 'Roller',
+  },
+  'team.role.count': {
+    az: '{count} rol',
+    ru: '{count} ролей',
+    tr: '{count} rol',
+  },
+  'team.role.create_open': {
+    az: 'Şablondan yeni rol',
+    ru: 'Новая роль из шаблона',
+    tr: 'Şablondan yeni rol',
+  },
+  'team.role.badge_admin': {
+    az: 'Admin',
+    ru: 'Админ',
+    tr: 'Admin',
+  },
+  'team.role.badge_custom': {
+    az: 'Xüsusi',
+    ru: 'Своя',
+    tr: 'Özel',
+  },
+  'team.role.all_permissions': {
+    az: 'Bütün icazələr',
+    ru: 'Все права',
+    tr: 'Tüm izinler',
+  },
+  'team.role.permission_count': {
+    az: '{count} icazə',
+    ru: 'Прав: {count}',
+    tr: '{count} izin',
+  },
+  'team.role.edit': {
+    az: 'Redaktə et',
+    ru: 'Изменить',
+    tr: 'Düzenle',
+  },
+  'team.role.create_title': {
+    az: 'Şablondan yeni rol',
+    ru: 'Новая роль из шаблона',
+    tr: 'Şablondan yeni rol',
+  },
+  'team.role.edit_title': {
+    az: 'Rolu redaktə et',
+    ru: 'Изменить роль',
+    tr: 'Rolü düzenle',
+  },
+  'team.role.editor_hint': {
+    az: 'Rol yalnız bu şirkətdə istifadə olunur. İcazələri açıb-bağlayın.',
+    ru: 'Роль действует только в этой компании. Включайте и отключайте права.',
+    tr: 'Rol yalnızca bu işletmede kullanılır. İzinleri açıp kapatın.',
+  },
+  'team.role.field.template': {
+    az: 'Şablon',
+    ru: 'Шаблон',
+    tr: 'Şablon',
+  },
+  'team.role.template_hint': {
+    az: 'Ad və icazələr şablondan doldurulur.',
+    ru: 'Название и права заполнятся из шаблона.',
+    tr: 'Ad ve izinler şablondan doldurulur.',
+  },
+  'team.role.field.name': {
+    az: 'Rolun adı',
+    ru: 'Название роли',
+    tr: 'Rol adı',
+  },
+  'team.role.name_hint': {
+    az: 'Ad seçilmiş dildə saxlanılır.',
+    ru: 'Название сохраняется на выбранном языке.',
+    tr: 'Ad seçili dilde kaydedilir.',
+  },
+  'team.role.field.permissions': {
+    az: 'İcazələr',
+    ru: 'Права',
+    tr: 'İzinler',
+  },
+  'team.role.permissions_hint': {
+    az: 'Yalnız şirkətinizin növünə uyğun icazələr göstərilir.',
+    ru: 'Показаны только права, подходящие вашему типу компании.',
+    tr: 'Yalnızca işletme türünüze uygun izinler gösterilir.',
+  },
+  'team.role.not_grantable': {
+    az: 'Bu icazə sizdə olmadığı üçün verə bilməzsiniz.',
+    ru: 'Вы не можете выдать право, которого нет у вас.',
+    tr: 'Sizde olmayan bir izni veremezsiniz.',
+  },
+  'team.role.scope.all': {
+    az: 'Hamısı',
+    ru: 'Все',
+    tr: 'Tümü',
+  },
+  'team.role.scope.branch': {
+    az: 'Öz filialı',
+    ru: 'Свой филиал',
+    tr: 'Kendi şubesi',
+  },
+  'team.role.scope.warehouse': {
+    az: 'Öz anbarı',
+    ru: 'Свой склад',
+    tr: 'Kendi deposu',
+  },
+  'team.role.scope.assigned': {
+    az: 'Təyin olunanlar',
+    ru: 'Назначенные',
+    tr: 'Atananlar',
+  },
+  'team.role.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'team.role.created': {
+    az: 'Rol yaradıldı.',
+    ru: 'Роль создана.',
+    tr: 'Rol oluşturuldu.',
+  },
+  'team.role.updated': {
+    az: 'Rol yeniləndi.',
+    ru: 'Роль обновлена.',
+    tr: 'Rol güncellendi.',
+  },
+  'team.role.error.no_permissions': {
+    az: 'Ən azı bir icazə seçin.',
+    ru: 'Выберите хотя бы одно право.',
+    tr: 'En az bir izin seçin.',
+  },
+  'team.role.error.scope_change_in_use': {
+    az: 'Bu rol istifadədədir: filial, anbar və ya bölgə tələb edən icazələri dəyişmək olmaz. Yeni rol yaradın.',
+    ru: 'Роль используется: нельзя менять права, требующие филиал, склад или регион. Создайте новую роль.',
+    tr: 'Bu rol kullanımda: şube, depo veya bölge gerektiren izinler değiştirilemez. Yeni bir rol oluşturun.',
+  },
+  'team.role.error.beyond_actor': {
+    az: 'Sizdə olmayan icazəni rola əlavə edə və ya belə rolu təyin edə bilməzsiniz.',
+    ru: 'Нельзя добавить в роль право, которого нет у вас, или назначить такую роль.',
+    tr: 'Sizde olmayan bir izni role ekleyemez veya böyle bir rolü atayamazsınız.',
+  },
+  'team.role.error.invalid': {
+    az: 'İcazələrdən biri bu rol üçün uyğun deyil.',
+    ru: 'Одно из прав не подходит для этой роли.',
+    tr: 'İzinlerden biri bu rol için uygun değil.',
+  },
 };

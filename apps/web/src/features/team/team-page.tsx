@@ -3,7 +3,8 @@
 // ana eylem "Dəvət et" (form sayfa içinde açılır, liste bağlamı kaybolmaz); altında üyeler kartı,
 // en altta açık davetler kartı. Satır eylemleri ikincil düğme; çıkarma ve geri çekme iki adımlı
 // onaylı (rose yalnız onay kutusunda). `team.manage` yoksa bilgi kartı (menüde de görünmez, AC5).
-import { pickLocalizedText, type TimeZoneChain } from '@b2b/shared';
+// F2.8: en altta "Rollar" kartı (özel rol oluşturma / düzenleme, US-014).
+import { type GrantActor, pickLocalizedText, type TimeZoneChain } from '@b2b/shared';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useRegionOptions } from '../admin-sellers/api';
@@ -12,10 +13,17 @@ import { useWarehouses } from '../seller-settings/api';
 import { LoadFailed } from '../seller-settings/status';
 import { useShell } from '../shell/use-shell';
 import { Button, Card, PageHeader } from '../ui/primitives';
-import { useJobTitles, useTeamInvitations, useTeamMembers, useTeamRoles } from './api';
+import {
+  useJobTitles,
+  useRoleTemplates,
+  useTeamInvitations,
+  useTeamMembers,
+  useTeamRoles,
+} from './api';
 import { InvitationList } from './invitation-list';
 import { InviteCard } from './invite-card';
 import { MemberList } from './member-list';
+import { RoleList } from './role-list';
 import type { ScopeOptions } from './scope-fields';
 
 export function TeamPage() {
@@ -25,7 +33,8 @@ export function TeamPage() {
   const businessId = shell.activeBusinessId;
   const permissions = shell.me?.activeBusiness?.permissions ?? [];
   const allowed = permissions.some((item) => item.code === 'team.manage');
-  const isSeller = shell.me?.activeBusiness?.capability === 'seller';
+  const capability = shell.me?.activeBusiness?.capability ?? null;
+  const isSeller = capability === 'seller';
   const canReadWarehouses = isSeller && permissions.some((item) => item.code === 'business.manage');
   const scoped = allowed ? businessId : undefined;
 
@@ -33,6 +42,7 @@ export function TeamPage() {
   const invitations = useTeamInvitations(scoped);
   const roles = useTeamRoles(scoped);
   const jobTitles = useJobTitles(scoped);
+  const roleTemplates = useRoleTemplates(scoped);
   const warehouses = useWarehouses(canReadWarehouses ? scoped : undefined);
   const regions = useRegionOptions(locale);
   const [inviting, setInviting] = useState(false);
@@ -64,6 +74,15 @@ export function TeamPage() {
       regions: regions.data ?? [],
     }),
     [warehouses.data, regions.data],
+  );
+  // F2.8 (R3): rol düzenleyicide aktörün verebileceği izinler. Admin bayrağı üye listesinden
+  // (`isSelf`); sunucu aynı kuralı ayrıca uygular.
+  const actor = useMemo<GrantActor>(
+    () => ({
+      isBusinessAdmin: members.data?.some((m) => m.isSelf && m.isBusinessAdmin) ?? false,
+      permissions: new Map(permissions.map((item) => [item.code, item.scope])),
+    }),
+    [members.data, permissions],
   );
   const timeZone: TimeZoneChain = {
     user: shell.me?.timezone ?? null,
@@ -145,6 +164,15 @@ export function TeamPage() {
             jobTitles={titleOptions}
             timeZone={timeZone}
           />
+          {capability !== null && (
+            <RoleList
+              businessId={businessId}
+              capability={capability}
+              roles={roles.data}
+              templates={roleTemplates.data}
+              actor={actor}
+            />
+          )}
         </div>
       )}
     </div>

@@ -16,6 +16,8 @@ import { DomainError } from '../../core/errors/domain-error';
 import type { TenantContext } from '../../core/tenant-context';
 import { AccessRepository } from './access.repository';
 import { MembershipService } from './membership.service';
+import { TeamRolesRepository } from './team-roles.repository';
+import { assertWithinActor } from './team-roles.service';
 import {
   type JobTitleRow,
   type MembershipPatch,
@@ -93,7 +95,24 @@ export class TeamService {
     @Inject(MembershipService) private readonly memberships: MembershipService,
     @Inject(AuditService) private readonly audit: AuditRecorder,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(TeamRolesRepository) private readonly roles: TeamRolesRepository,
   ) {}
+
+  /**
+   * F2.8 yetki yükseltme koruması (Müfettiş 11 R3, kart V5/V6): işletme admini olmayan aktör,
+   * kendisini aşan rolü (admin rolü veya kendinde olmayan izin / kapsam) atayamaz, davet edemez ve
+   * böyle bir roldeki üyeyi değiştiremez / çıkaramaz → 403.
+   */
+  private async assertRoleWithinActor(
+    tx: Tx,
+    tenant: TenantContext,
+    role: { id: string; isBusinessAdmin: boolean },
+    field: string,
+  ): Promise<void> {
+    if (tenant.isBusinessAdmin) return;
+    const permissions = await this.roles.permissionsOf(tx, role.id);
+    assertWithinActor(tenant, { isBusinessAdmin: role.isBusinessAdmin, permissions }, field);
+  }
 
   async listMembers(tenant: TenantContext): Promise<TeamMemberView[]> {
     return await withTenantTx(tenant, async (tx) => {
@@ -120,6 +139,12 @@ export class TeamService {
           ? await this.repository.findActiveMember(tx, tenant.businessId, membershipId)
           : undefined;
       if (locked === undefined || member === undefined) throw new DomainError('NOT_FOUND');
+      await this.assertRoleWithinActor(
+        tx,
+        tenant,
+        { id: member.roleId, isBusinessAdmin: member.isBusinessAdmin },
+        'membership',
+      );
       const oldRegions = (await this.repository.regionsOf(tx, [member.id])).get(member.id) ?? [];
 
       if (input.status === 'removed') {
@@ -152,6 +177,7 @@ export class TeamService {
       if (!hasCapability(tenant, role.capability)) {
         throw invalid('roleId', 'capability');
       }
+      if (role.id !== member.roleId) await this.assertRoleWithinActor(tx, tenant, role, 'roleId');
       const scopes = await this.repository.roleScopes(tx, role.id);
       const branchId = await this.resolveScopeField(
         tx,
@@ -272,6 +298,7 @@ export class TeamService {
     const role = await this.access.findRole(tx, tenant.businessId, target.roleId);
     if (role === undefined) throw new DomainError('NOT_FOUND', { roleId: ['not_found'] });
     if (!hasCapability(tenant, role.capability)) throw invalid('roleId', 'capability');
+    await this.assertRoleWithinActor(tx, tenant, role, 'roleId');
     const jobTitle = await this.repository.findActiveJobTitle(tx, target.jobTitleId);
     if (jobTitle === undefined) throw new DomainError('NOT_FOUND', { jobTitleId: ['not_found'] });
     // Unvan rolle aynı yetenekte olmalı (seller rolüne buyer unvanı verilemez).

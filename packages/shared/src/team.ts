@@ -31,14 +31,21 @@ export function roleScopeNeeds(
   };
 }
 
-/** Unvan seçilince önerilen rol: unvanın şablonundan kopyalanan işletme rolü (`sourceTemplateId`). */
+/**
+ * Unvan seçilince önerilen rol: unvanın şablonundan kopyalanan işletme rolü (`sourceTemplateId`).
+ * Aynı şablondan açılmış özel roller (F2.8, `isCustom`) önerilmez.
+ */
 export function suggestedRoleId(
   jobTitle: { readonly roleTemplateId: string | null } | undefined,
-  roles: readonly { readonly id: string; readonly sourceTemplateId: string | null }[],
+  roles: readonly {
+    readonly id: string;
+    readonly sourceTemplateId: string | null;
+    readonly isCustom?: boolean;
+  }[],
 ): string | undefined {
   const template = jobTitle?.roleTemplateId ?? null;
   if (template === null) return undefined;
-  return roles.find((role) => role.sourceTemplateId === template)?.id;
+  return roles.find((role) => role.sourceTemplateId === template && role.isCustom !== true)?.id;
 }
 
 /** Telefonu E.164'e yaklaştırır: boşluk, tire, parantez atılır; `00` başı `+` olur. */

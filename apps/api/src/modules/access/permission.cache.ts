@@ -1,7 +1,8 @@
 // İzin önbelleği (F1.8b, c4 §4): üyelik başına `access:perm:<membershipId>` → `{ roleId, permissions }`,
-// ömür `access.permission_cache_seconds`. Değer, o istekte veritabanından okunan güncel `role_id` ile
-// eşleşmezse yok sayılır: rol değişikliği bir sonraki istekte, olay işlenmesini beklemeden geçerli
-// olur (F1.8-AC5). Rol değişikliğinde anahtar ayrıca silinir (servis + worker tüketicisi).
+// ömür `access.permission_cache_seconds`. Değer, o istekte veritabanından okunan güncel `role_id` ve
+// `roles.permissions_version` ile eşleşmezse yok sayılır: rol değişikliği (F1.8-AC5) ve rolün izin
+// değişikliği (F2.8, R22) bir sonraki istekte, olay işlenmesini beklemeden geçerli olur. Anahtar
+// ayrıca silinir (servis commit sonrası + worker tüketicisi).
 // Redis yoksa önbellek atlanır, veritabanından okunur, uyarı loglanır (F1.4a kalıbı).
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
@@ -28,6 +29,7 @@ export function permissionCacheKey(membershipId: string): string {
 
 interface Stored {
   readonly roleId: string;
+  readonly version?: unknown;
   readonly permissions: [string, string][];
 }
 
@@ -61,8 +63,12 @@ export class PermissionCache {
     @Inject(SettingsService) private readonly settings: Pick<SettingsService, 'get'>,
   ) {}
 
-  /** Önbellekteki izinler; yoksa, bozuksa veya rol değiştiyse undefined. */
-  async get(membershipId: string, roleId: string): Promise<PermissionEntries | undefined> {
+  /** Önbellekteki izinler; yoksa, bozuksa, rol veya rolün izin sürümü değiştiyse undefined. */
+  async get(
+    membershipId: string,
+    roleId: string,
+    version = 1,
+  ): Promise<PermissionEntries | undefined> {
     let raw: string | null;
     try {
       raw = await this.redis.get(permissionCacheKey(membershipId));
@@ -72,7 +78,7 @@ export class PermissionCache {
     }
     if (raw === null) return undefined;
     const stored = parse(raw);
-    if (stored?.roleId !== roleId) return undefined;
+    if (stored?.roleId !== roleId || stored.version !== version) return undefined;
     const entries: [PermissionCode, PermissionScope][] = [];
     for (const item of stored.permissions) {
       const [code, scope] = item;
@@ -83,10 +89,19 @@ export class PermissionCache {
     return entries;
   }
 
-  async set(membershipId: string, roleId: string, permissions: PermissionEntries): Promise<void> {
+  async set(
+    membershipId: string,
+    roleId: string,
+    permissions: PermissionEntries,
+    version = 1,
+  ): Promise<void> {
     try {
       const seconds = await this.settings.get('access.permission_cache_seconds');
-      const value: Stored = { roleId, permissions: permissions.map(([c, s]) => [c, s]) };
+      const value: Stored = {
+        roleId,
+        version,
+        permissions: permissions.map(([c, s]) => [c, s]),
+      };
       await this.redis.set(permissionCacheKey(membershipId), JSON.stringify(value), 'EX', seconds);
     } catch (error: unknown) {
       this.warn('set', error);
@@ -94,8 +109,14 @@ export class PermissionCache {
   }
 
   async invalidate(membershipId: string): Promise<void> {
+    await this.invalidateMany([membershipId]);
+  }
+
+  /** F2.8: rolün izni değişince rolün tüm üyeliklerinin anahtarı tek komutla silinir. */
+  async invalidateMany(membershipIds: readonly string[]): Promise<void> {
+    if (membershipIds.length === 0) return;
     try {
-      await this.redis.del(permissionCacheKey(membershipId));
+      await this.redis.del(...membershipIds.map(permissionCacheKey));
     } catch (error: unknown) {
       this.warn('invalidate', error);
     }

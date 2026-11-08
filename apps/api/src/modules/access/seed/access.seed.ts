@@ -4,7 +4,7 @@
 //   güncellenir (kod tek kaynak). Açıklama metni yok (arayüz `permissions.<kod>` çeviri anahtarını
 //   kullanır, F2).
 // - role_templates, role_template_permissions, job_titles: ON CONFLICT DO NOTHING; adminin sonradan
-//   yaptığı düzenlemeler ezilmez.
+//   yaptığı düzenlemeler ezilmez. Yeni şablon eklendiyse var olan işletmelere backfill (F2.8).
 import { PERMISSION_CODES, PERMISSIONS, permissionModule } from '@b2b/shared';
 import { assertTemplateConsistent, SEED_ROLE_TEMPLATES } from './role-templates';
 
@@ -21,8 +21,12 @@ export interface AccessSeedResult {
   readonly inserted: number;
 }
 
-async function insertAll(client: SeedClient, newId: () => string): Promise<number> {
+async function insertAll(
+  client: SeedClient,
+  newId: () => string,
+): Promise<{ inserted: number; newTemplates: number }> {
   let inserted = 0;
+  let newTemplates = 0;
   for (const code of PERMISSION_CODES) {
     const result = await client.query(
       `insert into permissions (code, capability, module)
@@ -49,6 +53,7 @@ async function insertAll(client: SeedClient, newId: () => string): Promise<numbe
       ],
     );
     inserted += created.rowCount ?? 0;
+    newTemplates += created.rowCount ?? 0;
     // Şablon yeni açıldıysa izinleri yazılır; var olan şablonun izinlerine dokunulmaz.
     if ((created.rowCount ?? 0) > 0) {
       for (const [code, scope] of Object.entries(template.permissions)) {
@@ -69,7 +74,7 @@ async function insertAll(client: SeedClient, newId: () => string): Promise<numbe
     );
     inserted += title.rowCount ?? 0;
   }
-  return inserted;
+  return { inserted, newTemplates };
 }
 
 /** Seed'i tek işlemde uygular; hata olursa hiçbir satır yazılmaz. `newId` UUIDv7 üretir. */
@@ -80,7 +85,14 @@ export async function seedAccess(
   await client.query('begin');
   try {
     await client.query("select set_config('app.is_platform', 'true', true)");
-    const inserted = await insertAll(client, newId);
+    const seeded = await insertAll(client, newId);
+    let inserted = seeded.inserted;
+    // Müfettiş 12 notu (F2.7c): sonradan eklenen şablon var olan işletmelere de rol olarak açılır
+    // (0018 `business_roles_backfill`; zaten kopyalanmış şablon atlanır). Boş veritabanında no-op.
+    if (seeded.newTemplates > 0) {
+      const backfill = await client.query('select business_roles_backfill(null) as count');
+      inserted += Number(backfill.rows[0]?.count ?? 0);
+    }
     await client.query('commit');
     return { inserted };
   } catch (error) {

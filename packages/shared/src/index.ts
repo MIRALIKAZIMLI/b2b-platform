@@ -12,6 +12,7 @@ export * from './platform-roles';
 export * from './seller-setup';
 export * from './settings';
 export * from './team';
+export * from './team-roles';
 export * from './uuidv7';
 export * from './version';
 export * from './voen';
