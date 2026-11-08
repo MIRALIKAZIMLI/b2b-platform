@@ -50,4 +50,27 @@ describe('bildirim türleri (birim)', () => {
     expect(isNotificationType('test')).toBe(true);
     expect(isNotificationType('orders.new')).toBe(false);
   });
+
+  it('US-012-AC2 olay → role_template_version bildirimi (işletme adminine, konu şablon)', () => {
+    const templateId = '0190a7f0-0000-7000-8000-000000000003';
+    const businessId = '0190a7f0-0000-7000-8000-000000000004';
+    const userId = '0190a7f0-0000-7000-8000-000000000005';
+    expect(
+      intentsForEvent('role_template.version_published', {
+        templateId,
+        version: 3,
+        businessId,
+        userId,
+      }),
+    ).toEqual([
+      {
+        userId,
+        businessId,
+        type: 'role_template_version',
+        subjectId: templateId,
+        params: { version: 3 },
+      },
+    ]);
+    expect(isNotificationType('role_template_version')).toBe(true);
+  });
 });

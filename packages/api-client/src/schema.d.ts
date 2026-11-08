@@ -5723,13 +5723,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Genel katalog kaydı oluştur (units, categories, brands, activity-types, regions, job-titles, role-templates) */
+        /**
+         * Genel katalog kaydı oluştur (units, categories, brands, activity-types, regions)
+         * @description Unvan ve rol şablonu (`job-titles`, `role-templates`) kendi yollarında tanımlıdır (F2.9).
+         */
         post: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    kind: "units" | "categories" | "brands" | "activity-types" | "regions" | "job-titles" | "role-templates";
+                    kind: "units" | "categories" | "brands" | "activity-types" | "regions";
                 };
                 cookie?: never;
             };
@@ -5791,6 +5794,291 @@ export interface paths {
                     };
                     content?: never;
                 };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/role-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rol şablonları, izinleri ve sürümleriyle (US-012)
+         * @description Platform rolü `super_admin` veya `content` (F2.9 V1).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["AdminRoleTemplate"][];
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        /**
+         * Rol şablonu oluştur (US-012 AC1)
+         * @description Şablon hiçbir zaman işletme admini değildir. İzinler şablonun yeteneğine ait olmalı ve kapsam iznin seçeneklerinden biri olmalı (aksi 422). Aynı işlemde yeteneğin var olan tüm işletmelerine rol olarak kopyalanır (F2.9 V4). `code` benzersiz (aksi 422 `code: [taken]`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: components["schemas"]["CatalogCode"];
+                        name: components["schemas"]["CatalogName"];
+                        /** @enum {string} */
+                        capability: "seller" | "buyer";
+                        permissions: components["schemas"]["RolePermission"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description Oluşturuldu */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminRoleTemplate"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/role-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Rol şablonunu güncelle (US-012 AC2)
+         * @description İzin listesi değişirse `version` 1 artar, işletmelerin kopyaları değişmez ve şablondan rolü olan her arşivlenmemiş işletmenin aktif adminlerine "yeni şablon sürümü" bildirimi gider (outbox `role_template.version_published`). Yalnız ad değişikliği sürüm artırmaz (F2.9 V2). İşletme admin şablonunun izinleri değişmez (422 `permissions: [admin_template_locked]`, V6). `code` ve `capability` değişmez.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: components["schemas"]["CatalogName"];
+                        permissions?: components["schemas"]["RolePermission"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description Güncellendi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminRoleTemplate"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/job-titles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unvanlar, pasifler dahil (US-012)
+         * @description Platform rolü `super_admin` veya `content` (F2.9 V1). `inUse` silinebilirliği gösterir (AC3).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["AdminJobTitle"][];
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        /**
+         * Unvan oluştur (US-012 AC1)
+         * @description Şablon unvanla aynı yetenekte olmalı (aksi 422 `roleTemplateId: [capability]`). Aktif unvan işletmelerin davet ekranında (`GET /team/job-titles`) hemen görünür.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: components["schemas"]["CatalogCode"];
+                        name: components["schemas"]["CatalogName"];
+                        /** @enum {string} */
+                        capability: "seller" | "buyer";
+                        /** Format: uuid */
+                        roleTemplateId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Oluşturuldu */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminJobTitle"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/job-titles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Kullanılmayan unvanı sil (US-012 AC3)
+         * @description Bir üyelik (`removed` dahil) veya davet unvanı gösteriyorsa `409 JOB_TITLE_IN_USE`; yalnız pasifleştirilebilir (F2.9 V7).
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Silindi */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Unvanı güncelle / pasifleştir (US-012 AC3)
+         * @description Pasif unvan davet ekranında görünmez; var olan üyelikler etkilenmez. `code` ve `capability` değişmez.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: components["schemas"]["CatalogName"];
+                        /** Format: uuid */
+                        roleTemplateId?: string;
+                        isActive?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Güncellendi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminJobTitle"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         trace?: never;
@@ -6063,7 +6351,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "JOB_TITLE_IN_USE" | "INTERNAL_ERROR";
         /** @example +994501234567 */
         PhoneE164: string;
         Voen: string;
@@ -6266,6 +6554,42 @@ export interface components {
             capability: "seller" | "buyer";
             /** Format: uuid */
             roleTemplateId: string | null;
+        };
+        /** @description Benzersiz kod (seed eşleşme anahtarı); sonradan değişmez (F2.9 V5). */
+        CatalogCode: string;
+        /** @description Katalog adı; az, ru, tr zorunlu, en isteğe bağlı (ADR-0007); her biri 1–80 karakter. */
+        CatalogName: {
+            az: string;
+            ru: string;
+            tr: string;
+            en?: string;
+        };
+        AdminRoleTemplate: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: components["schemas"]["LocalizedText"];
+            /** @enum {string} */
+            capability: "seller" | "buyer";
+            /** @description true ise izinleri değişmez (V6) */
+            isBusinessAdmin: boolean;
+            version: number;
+            permissions: components["schemas"]["RolePermission"][];
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminJobTitle: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: components["schemas"]["LocalizedText"];
+            /** @enum {string} */
+            capability: "seller" | "buyer";
+            /** Format: uuid */
+            roleTemplateId: string | null;
+            isActive: boolean;
+            /** @description Üyelik veya davet gösteriyor; silinemez (AC3) */
+            inUse: boolean;
         };
         RolePermission: {
             /** @example orders.approve */

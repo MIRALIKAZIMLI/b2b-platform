@@ -5,6 +5,8 @@ import { BillingModule } from '../billing';
 import { BusinessesModule } from '../businesses';
 import { I18nModule } from '../i18n';
 import { SettingsModule } from '../settings';
+import { RoleCatalogController } from './role-catalog.controller';
+import { RoleCatalogAdminService } from './role-catalog.service';
 import { SellerApplicationsAdminController } from './seller-applications.controller';
 import { SellerApplicationsAdminService } from './seller-applications.service';
 import { SellersController } from './sellers.controller';
@@ -16,7 +18,8 @@ export interface PlatformAdminOptions {
 }
 
 /**
- * Platform admin uçları (F2.1a: toptancı açma, aktivasyon daveti, plan listesi; F2.2: başvurular). Platform bağlamı
+ * Platform admin uçları (F2.1a: toptancı açma, aktivasyon daveti, plan listesi; F2.2: başvurular; F2.9: unvan ve rol
+ * şablonu kataloğu). Platform bağlamı
  * (`withPlatformTx`) yalnızca bu modülde açılır (c4 §3.7); uçlar `@RequirePlatformRole`.
  */
 @Module({})
@@ -32,10 +35,11 @@ export class PlatformAdminModule {
         I18nModule,
         SettingsModule,
       ],
-      controllers: [SellersController, SellerApplicationsAdminController],
+      controllers: [SellersController, SellerApplicationsAdminController, RoleCatalogController],
       providers: [
         SellersService,
         SellerApplicationsAdminService,
+        RoleCatalogAdminService,
         { provide: WEB_BASE_URL, useValue: options.webBaseUrl },
       ],
     };

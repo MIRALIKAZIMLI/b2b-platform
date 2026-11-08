@@ -25,6 +25,11 @@ export const AUDIT_ACTIONS = [
   'warehouse.updated',
   'seller_profile.updated',
   'service_areas.updated',
+  'role_template.created',
+  'role_template.updated',
+  'job_title.created',
+  'job_title.updated',
+  'job_title.deleted',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -40,6 +45,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // (F2.6) hedef olarak `business` kullanır.
 // role: hedef kimliği işletme rolü (roles.id; F2.8 özel rol oluşturma / düzenleme; before/after ad
 // ve izinler).
+// role_template / job_title: hedef kimliği platform rol şablonu / unvan (G tabloları; F2.9 admin
+// kataloğu, işletmesiz kayıt `business_id = null`; before/after ad, izinler, sürüm, aktiflik).
 export const AUDIT_TARGET_TYPES = [
   'setting',
   'otp_challenge',
@@ -50,6 +57,8 @@ export const AUDIT_TARGET_TYPES = [
   'seller_application',
   'warehouse',
   'role',
+  'role_template',
+  'job_title',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

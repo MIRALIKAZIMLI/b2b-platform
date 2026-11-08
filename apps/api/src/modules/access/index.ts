@@ -7,6 +7,15 @@ export {
   MembershipService,
 } from './membership.service';
 export { RoleService } from './role.service';
+export {
+  type AdminJobTitleView,
+  type AdminRoleTemplateView,
+  type JobTitlePatch,
+  type NewJobTitle,
+  type NewRoleTemplate,
+  RoleCatalogService,
+  type RoleTemplatePatch,
+} from './role-catalog.service';
 export { activationLink, WEB_BASE_URL } from './activation-link';
 export { type InvitationTarget, TeamService } from './team.service';
 export {

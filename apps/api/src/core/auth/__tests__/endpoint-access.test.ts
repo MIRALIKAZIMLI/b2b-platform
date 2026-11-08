@@ -64,6 +64,14 @@ const EXPECTED_PLATFORM: Record<string, readonly string[]> = {
   'GET /api/v1/admin/plans': ['super_admin', 'operations'],
   'GET /api/v1/admin/seller-applications': ['super_admin', 'operations'],
   'POST /api/v1/admin/seller-applications/:id/reject': ['super_admin', 'operations'],
+  // F2.9 V1: unvan ve rol şablonu kataloğu süper admin ve içerik ekibine.
+  'GET /api/v1/admin/catalog/role-templates': ['super_admin', 'content'],
+  'POST /api/v1/admin/catalog/role-templates': ['super_admin', 'content'],
+  'PATCH /api/v1/admin/catalog/role-templates/:id': ['super_admin', 'content'],
+  'GET /api/v1/admin/catalog/job-titles': ['super_admin', 'content'],
+  'POST /api/v1/admin/catalog/job-titles': ['super_admin', 'content'],
+  'PATCH /api/v1/admin/catalog/job-titles/:id': ['super_admin', 'content'],
+  'DELETE /api/v1/admin/catalog/job-titles/:id': ['super_admin', 'content'],
 };
 
 function join(...parts: (string | undefined)[]): string {
@@ -137,7 +145,7 @@ describe('uç noktası erişim bekçisi (varsayılan reddet)', () => {
     expect(open).toEqual(EXPECTED_OPEN);
   });
 
-  it('F2.1a-AC6: admin uçları yalnız süper admin ve operasyon rolüne açık', () => {
+  it('F2.1a-AC6: admin uçları tablodaki platform rollerine açık (F2.9 katalog: süper admin + içerik)', () => {
     const platform: Record<string, readonly string[]> = {};
     for (const endpoint of collect(app)) {
       if (endpoint.rule?.kind === 'platform') platform[endpoint.route] = endpoint.rule.roles;

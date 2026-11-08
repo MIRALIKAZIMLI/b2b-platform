@@ -39,3 +39,4 @@
 - F2.7b: web ekip ekranı, ekip daveti kabulü (web + mobil), son kullanılan işletme
 - F2.7c: işletme açılışında tüm rol şablonları, var olan işletmeler için backfill
 - F2.8: işletmeye özel rol, rol düzenleyici, yetki yükseltme koruması, izin sürümüyle önbellek
+- F2.9a: admin unvan ve rol şablonu API, "yeni şablon sürümü" bildirimi

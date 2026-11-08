@@ -1,5 +1,5 @@
 // Bildirim şablonları başlangıç verisi (F1.11). `pnpm db:seed` çalıştırır; idempotendir.
-// Yalnızca altyapı test olayının (`test`) şablonu; gerçek olayların şablonları kendi adımlarında.
+// Altyapı test olayı (`test`) ve gerçek olayların şablonları (kendi adımlarında eklenir).
 // migrator rolüyle, tek işlemde ve platform bağlamında yazar (G tablosu FORCE RLS; F1.3 kalıbı).
 // ON CONFLICT DO NOTHING: adminin sonradan yaptığı düzenlemeler ezilmez.
 
@@ -17,6 +17,21 @@ export const NOTIFICATION_TEMPLATES: Readonly<
     az: { title: 'Test bildirişi', body: 'Bildiriş sistemi işləyir.' },
     ru: { title: 'Тестовое уведомление', body: 'Система уведомлений работает.' },
     tr: { title: 'Test bildirimi', body: 'Bildirim sistemi çalışıyor.' },
+  },
+  // F2.9 (US-012 AC2). Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  role_template_version: {
+    az: {
+      title: 'Rol şablonunun yeni versiyası',
+      body: 'Platform rol şablonunu yenilədi (versiya {version}). Mövcud rollarınız dəyişməyib; istəsəniz Komanda bölməsində yeni versiyadan rol yarada bilərsiniz.',
+    },
+    ru: {
+      title: 'Новая версия шаблона роли',
+      body: 'Платформа обновила шаблон роли (версия {version}). Ваши роли не изменились; при желании создайте роль из новой версии в разделе «Команда».',
+    },
+    tr: {
+      title: 'Rol şablonunun yeni sürümü',
+      body: 'Platform bir rol şablonunu güncelledi (sürüm {version}). Mevcut rolleriniz değişmedi; isterseniz Ekip bölümünde yeni sürümden rol açabilirsiniz.',
+    },
   },
 };
 
