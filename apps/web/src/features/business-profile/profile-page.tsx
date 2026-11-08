@@ -3,7 +3,8 @@
 // rozetiyle (yok / doğrulama bekliyor / doğrulandı) ve yazarken hukuki tip ipucuyla; işletme
 // bilgileri altta ikinci kart. Tek "Kaydet" yalnız değişen alanları gönderir. Hatalar alanın
 // altında; AC3 mesajı VÖEN alanında. Başarı satırı Emerald, kısa süreli değil kalıcı (ekran
-// okuyucu `role="status"`). Kişisel veri ve logo F2.10'da.
+// okuyucu `role="status"`). F2.10a: görünürlük ayarları formun altında ayrı kart
+// (`privacy-card.tsx`). Kişisel veri ve logo düzenleme F2.10b.
 import {
   type ProfileFieldErrors,
   type ProfileFormField,
@@ -23,6 +24,7 @@ import { canManageBusiness } from '../buyer-registration/buyer-home';
 import { useShell } from '../shell/use-shell';
 import { Button, Card, Field, PageHeader, SelectInput, TextInput } from '../ui/primitives';
 import { useUpdateBusinessProfile } from './api';
+import { PrivacyCard } from './privacy-card';
 
 const BADGE: Record<VoenStatus, string> = {
   missing: 'border-slate-200 bg-slate-50 text-slate-600',
@@ -230,6 +232,9 @@ export function BusinessProfilePage() {
           )}
         </div>
       </form>
+      <div className="max-w-3xl">
+        <PrivacyCard businessId={activeBusinessId} enabled={canManage} />
+      </div>
     </div>
   );
 }

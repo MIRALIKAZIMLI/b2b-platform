@@ -659,7 +659,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Görünürlük ayarları (US-007) */
+        /**
+         * Görünürlük ayarları (US-007)
+         * @description İzin `business.manage`, yetenek `buyer` (F2.10; VARSAYIM V1: yeteneği olmayan işletme `403 CAPABILITY_REQUIRED`). Yeni kayıtta `listedInDirectory` true, diğerleri false (AC1). Ünvan, faaliyet alanı ve şehir/rayon her zaman açıktır; anahtarları yoktur (AC3).
+         */
         get: {
             parameters: {
                 query?: never;
@@ -680,9 +683,13 @@ export interface paths {
                         "application/json": components["schemas"]["Privacy"];
                     };
                 };
+                403: components["responses"]["Error"];
             };
         };
-        /** Görünürlük ayarlarını güncelle (US-007) */
+        /**
+         * Görünürlük ayarlarını güncelle (US-007)
+         * @description İzin `business.manage`, yetenek `buyer` (F2.10). Tam gövde: yedi anahtarın hepsi zorunlu, başka anahtar `422 VALIDATION_FAILED` (VARSAYIM V2; AC3 `showLegalName` gibi alan yok). Değişiklik varsa audit `business.privacy_updated` ve outbox `buyer.privacy_changed` (dizin indeksi, F2.11a). Yanıt güncel ayarlar.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -692,19 +699,23 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["Privacy"];
                 };
             };
             responses: {
-                /** @description Güncellendi */
+                /** @description Güncellendi; güncel ayarlar */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Privacy"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         post?: never;
@@ -6628,14 +6639,15 @@ export interface components {
             /** Format: email */
             email?: string;
         };
+        /** @description US-007, ADR-0014. `showPersonalContact` kişisel telefon ve e-postayı birlikte açar. */
         Privacy: {
-            listedInDirectory?: boolean;
-            showLogo?: boolean;
-            showAddress?: boolean;
-            showBusinessPhone?: boolean;
-            showVoen?: boolean;
-            showContactName?: boolean;
-            showPersonalContact?: boolean;
+            listedInDirectory: boolean;
+            showLogo: boolean;
+            showAddress: boolean;
+            showBusinessPhone: boolean;
+            showVoen: boolean;
+            showContactName: boolean;
+            showPersonalContact: boolean;
         };
         Branch: components["schemas"]["BranchInput"] & {
             /** Format: uuid */

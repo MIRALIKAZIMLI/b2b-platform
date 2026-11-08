@@ -3,7 +3,8 @@
 // VÖEN alanı sayı klavyesiyle; yazarken hukuki tip Indigo ipucu. Bölge alttan açılan aramalı
 // listeyle. Ana eylem en altta tam genişlik Indigo düğme; basılı durumda ölçek geri bildirimi.
 // Hata alanın altında; AC3 mesajı VÖEN alanında. Başarı Emerald satırı. Yükleniyor = gösterge,
-// hata = yeniden dene kartı. Kişisel veri ve logo F2.10.
+// hata = yeniden dene kartı. F2.10a: görünürlük ayarları kaydın altında ayrı kart
+// (`privacy-section.tsx`). Kişisel veri ve logo düzenleme F2.10b.
 import {
   type ProfileFieldErrors,
   type ProfileFormField,
@@ -36,6 +37,7 @@ import { OptionField } from '../registration/option-sheet';
 import { canManageBusiness } from '../registration/options';
 import { useBusinessProfile, useRegionOptions } from '../registration/queries';
 import { useShell } from '../shell/use-shell';
+import { PrivacySection } from './privacy-section';
 import { ProfileSaveError, useUpdateBusinessProfile } from './queries';
 
 const BADGE: Record<VoenStatus, { bg: string; fg: string }> = {
@@ -262,6 +264,7 @@ export function BusinessProfileScreen() {
               <Text style={styles.primaryText}>{t('businessProfile.save')}</Text>
             )}
           </Pressable>
+          <PrivacySection businessId={businessId} enabled={canManage} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

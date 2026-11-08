@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { DEFAULT_PRIVACY, type PrivacySettings } from '@b2b/shared';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import {
   type PlatformTxContext,
@@ -231,6 +232,57 @@ export class BusinessesRepository {
       email: row?.email === true,
       branchAddress: row?.branch_address === true,
     };
+  }
+
+  // --- F2.10: görünürlük ayarları (US-007), çağıranın kiracı işlemi içinde ---
+
+  /**
+   * Perakendecinin ayarları; `buyer_profiles` satırı yoksa `undefined`. `business_privacy`
+   * satırı yoksa (kayıt her zaman açar; eski veri) ek alanlar varsayılan kapalı döner. `lock`
+   * ile satırlar işlem sonuna kadar kilitli (eşzamanlı PUT sırayla, audit "önce" değeri doğru).
+   */
+  async privacyTx(tx: Tx, businessId: string, lock: boolean): Promise<PrivacySettings | undefined> {
+    const profileQuery = tx
+      .select({ listedInDirectory: buyerProfiles.listedInDirectory })
+      .from(buyerProfiles)
+      .where(eq(buyerProfiles.businessId, businessId));
+    const profile = lock ? await profileQuery.for('update') : await profileQuery;
+    const listed = profile[0];
+    if (listed === undefined) return undefined;
+    const rows = await tx
+      .select({
+        showLogo: businessPrivacy.showLogo,
+        showAddress: businessPrivacy.showAddress,
+        showBusinessPhone: businessPrivacy.showBusinessPhone,
+        showVoen: businessPrivacy.showVoen,
+        showContactName: businessPrivacy.showContactName,
+        showPersonalContact: businessPrivacy.showPersonalContact,
+      })
+      .from(businessPrivacy)
+      .where(eq(businessPrivacy.businessId, businessId));
+    // buyer_profiles kilidi aynı işletmenin eşzamanlı PUT'larını zaten sıraya koyar.
+    return { ...DEFAULT_PRIVACY, ...rows[0], listedInDirectory: listed.listedInDirectory };
+  }
+
+  /** Ayarları yazar: `buyer_profiles.listed_in_directory` + `business_privacy` (yoksa ekler). */
+  async writePrivacyTx(
+    tx: Tx,
+    businessId: string,
+    settings: PrivacySettings,
+    now: Date,
+  ): Promise<void> {
+    const { listedInDirectory, ...fields } = settings;
+    await tx
+      .update(buyerProfiles)
+      .set({ listedInDirectory, updatedAt: now })
+      .where(eq(buyerProfiles.businessId, businessId));
+    await tx
+      .insert(businessPrivacy)
+      .values({ businessId, ...fields, createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({
+        target: businessPrivacy.businessId,
+        set: { ...fields, updatedAt: now },
+      });
   }
 
   /** Bölge var mı (G tablosu; herkes okur). */

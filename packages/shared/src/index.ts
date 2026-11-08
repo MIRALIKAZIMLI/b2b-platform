@@ -9,6 +9,7 @@ export * from './localized-text';
 export * from './menu';
 export * from './permissions';
 export * from './platform-roles';
+export * from './privacy';
 export * from './role-catalog';
 export * from './seller-setup';
 export * from './settings';

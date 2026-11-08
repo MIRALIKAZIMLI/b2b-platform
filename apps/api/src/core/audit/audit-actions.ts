@@ -21,6 +21,7 @@ export const AUDIT_ACTIONS = [
   'buyer.registered',
   'business.voen_changed',
   'business.profile_updated',
+  'business.privacy_updated',
   'warehouse.created',
   'warehouse.updated',
   'seller_profile.updated',
@@ -37,7 +38,7 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // session_family: hedef kimliği oturum ailesi (family_id), F1.5b.
 // membership: hedef kimliği üyelik (memberships.id); kime = before/after.userId (F1.8a, US-013 AC4).
 // business: hedef kimliği işletme (businesses.id; F2.1a toptancı açılışı, aktivasyon yeniden gönderimi;
-// F2.3a perakendeci kaydı; F2.4 VÖEN ve profil düzenleme).
+// F2.3a perakendeci kaydı; F2.4 VÖEN ve profil düzenleme; F2.10 görünürlük ayarları).
 // invitation: hedef kimliği davet (invitations.id); token, özeti ve telefon audit'e yazılmaz
 // (F2.1a; F2.7a ekip daveti oluşturma / geri çekme).
 // seller_application: hedef kimliği başvuru (seller_applications.id; F2.2 onay / ret).

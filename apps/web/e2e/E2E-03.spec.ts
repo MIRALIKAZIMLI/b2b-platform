@@ -2,6 +2,7 @@
 // koduyla doğrulanır, işletme formu + veri paylaşım onayı → oturum açılır, perakendeci alanında
 // "Profilinizi tamamlayın" kartı ve boş durum görünür. F2.4: karttan profile geçer, VÖEN girer
 // (US-006 AC1 geçersiz → mesaj; AC2 geçerli → hukuki tip, "doğrulama bekliyor", doluluk %50).
+// F2.10a: aynı sayfada görünürlük ayarları (US-007 AC1 varsayılan, AC2 alan açma, AC3 kilitli).
 import { expect, test } from '@playwright/test';
 import { addMembership, completeOtpLogin, createRegion, createUser, randomPhone } from './fixtures';
 
@@ -57,6 +58,20 @@ test('E2E-03: perakendeci kaydolur → VÖEN girer (profil %40 → %50)', async 
   await page.getByRole('button', { name: 'Yadda saxla' }).click();
   await expect(page.getByText('Yadda saxlanıldı')).toBeVisible();
   await expect(page.getByTestId('voen-status')).toHaveText('Təsdiq gözləyir');
+
+  // US-007-AC1: yeni kayıtta yalnız "kataloqda görün" açık; AC3: üç alan kilitli, anahtarı yok.
+  const listed = page.getByTestId('privacy-listedInDirectory');
+  const showVoen = page.getByTestId('privacy-showVoen');
+  await expect(listed).toHaveAttribute('aria-checked', 'true');
+  await expect(showVoen).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByTestId('privacy-always-legalName')).toContainText('Həmişə açıq');
+  await expect(page.getByRole('switch', { name: 'Ünvan', exact: true })).toHaveCount(0);
+  // US-007-AC2: VÖEN görünür yapılır; kayıt yenilemeden sonra da açık.
+  await showVoen.click();
+  await page.getByTestId('privacy-save').click();
+  await expect(page.getByText('Görünmə ayarları saxlanıldı.')).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId('privacy-showVoen')).toHaveAttribute('aria-checked', 'true');
 
   await page.goto('/az/buyer');
   await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');

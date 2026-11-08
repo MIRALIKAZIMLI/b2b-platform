@@ -41,3 +41,4 @@
 - F2.8: işletmeye özel rol, rol düzenleyici, yetki yükseltme koruması, izin sürümüyle önbellek
 - F2.9a: admin unvan ve rol şablonu API, "yeni şablon sürümü" bildirimi
 - F2.9b: admin unvan ve rol şablonu ekranları
+- F2.10a: perakendeci görünürlük ayarları (dizinde görünme, açık alanlar)
