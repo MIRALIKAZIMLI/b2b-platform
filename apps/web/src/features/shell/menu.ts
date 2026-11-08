@@ -1,5 +1,6 @@
 // Menü tanımı web ve mobilde ortak (F1.14b): `@b2b/shared` `menu.ts`.
 export {
+  CATALOG_ADMIN_ROLES,
   MENUS,
   type MenuItem,
   platformRoleAllows,

@@ -1521,4 +1521,395 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Одно из прав не подходит для этой роли.',
     tr: 'İzinlerden biri bu rol için uygun değil.',
   },
+  // F2.9b admin unvan ve rol şablonu ekranları (taslak çeviri, onay bekliyor).
+  'shell.menu.role_templates': {
+    az: 'Rol şablonları',
+    ru: 'Шаблоны ролей',
+    tr: 'Rol şablonları',
+  },
+  'shell.menu.job_titles': {
+    az: 'Vəzifələr',
+    ru: 'Должности',
+    tr: 'Unvanlar',
+  },
+  'adminCatalog.eyebrow': {
+    az: 'Ümumi kataloq',
+    ru: 'Общий каталог',
+    tr: 'Ortak katalog',
+  },
+  'adminCatalog.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'adminCatalog.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'adminCatalog.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'adminCatalog.edit': {
+    az: 'Düzəlt',
+    ru: 'Изменить',
+    tr: 'Düzenle',
+  },
+  'adminCatalog.choose': {
+    az: 'Seçin',
+    ru: 'Выберите',
+    tr: 'Seçin',
+  },
+  'adminCatalog.count': {
+    az: '{count} qeyd',
+    ru: 'Записей: {count}',
+    tr: '{count} kayıt',
+  },
+  'adminCatalog.permission_count': {
+    az: '{count} icazə',
+    ru: 'Прав: {count}',
+    tr: '{count} izin',
+  },
+  'adminCatalog.code_hint': {
+    az: 'Kiçik latın hərfləri, rəqəm və _ (məs. seller_cashier). Sonradan dəyişmir.',
+    ru: 'Строчные латинские буквы, цифры и _ (напр. seller_cashier). Потом не меняется.',
+    tr: 'Küçük Latin harfleri, rakam ve _ (ör. seller_cashier). Sonradan değişmez.',
+  },
+  'adminCatalog.code_locked': {
+    az: 'Kod və istiqamət dəyişmir.',
+    ru: 'Код и направление не меняются.',
+    tr: 'Kod ve yetenek değişmez.',
+  },
+  'adminCatalog.name_hint': {
+    az: 'Azərbaycan, rus və türk dilləri məcburidir; ingilis dili istəyə bağlıdır.',
+    ru: 'Азербайджанский, русский и турецкий обязательны; английский — по желанию.',
+    tr: 'Azerbaycanca, Rusça ve Türkçe zorunlu; İngilizce isteğe bağlı.',
+  },
+  'adminCatalog.field.name': {
+    az: 'Ad',
+    ru: 'Название',
+    tr: 'Ad',
+  },
+  'adminCatalog.field.code': {
+    az: 'Kod',
+    ru: 'Код',
+    tr: 'Kod',
+  },
+  'adminCatalog.field.capability': {
+    az: 'İstiqamət',
+    ru: 'Направление',
+    tr: 'Yetenek',
+  },
+  'adminCatalog.field.permissions': {
+    az: 'İcazələr',
+    ru: 'Права',
+    tr: 'İzinler',
+  },
+  'adminCatalog.field.template': {
+    az: 'Rol şablonu',
+    ru: 'Шаблон роли',
+    tr: 'Rol şablonu',
+  },
+  'adminCatalog.lang.az': {
+    az: 'Azərbaycanca',
+    ru: 'Азербайджанский',
+    tr: 'Azerbaycanca',
+  },
+  'adminCatalog.lang.ru': {
+    az: 'Rusca',
+    ru: 'Русский',
+    tr: 'Rusça',
+  },
+  'adminCatalog.lang.tr': {
+    az: 'Türkcə',
+    ru: 'Турецкий',
+    tr: 'Türkçe',
+  },
+  'adminCatalog.lang.en': {
+    az: 'İngiliscə (istəyə bağlı)',
+    ru: 'Английский (по желанию)',
+    tr: 'İngilizce (isteğe bağlı)',
+  },
+  'adminCatalog.error.required': {
+    az: 'Məcburi sahə.',
+    ru: 'Обязательное поле.',
+    tr: 'Zorunlu alan.',
+  },
+  'adminCatalog.error.too_long': {
+    az: 'Çox uzundur.',
+    ru: 'Слишком длинно.',
+    tr: 'Çok uzun.',
+  },
+  'adminCatalog.error.invalid': {
+    az: 'Yanlış dəyər.',
+    ru: 'Неверное значение.',
+    tr: 'Geçersiz değer.',
+  },
+  'adminCatalog.error.code_required': {
+    az: 'Kodu daxil edin.',
+    ru: 'Введите код.',
+    tr: 'Kodu girin.',
+  },
+  'adminCatalog.error.code_invalid': {
+    az: 'Kod yalnız kiçik latın hərfi ilə başlamalı, 3–63 simvol olmalıdır (a–z, 0–9, _).',
+    ru: 'Код должен начинаться со строчной латинской буквы, 3–63 символа (a–z, 0–9, _).',
+    tr: 'Kod küçük Latin harfiyle başlamalı, 3–63 karakter olmalı (a–z, 0–9, _).',
+  },
+  'adminCatalog.error.code_too_long': {
+    az: 'Kod çox uzundur.',
+    ru: 'Код слишком длинный.',
+    tr: 'Kod çok uzun.',
+  },
+  'adminCatalog.error.no_permissions': {
+    az: 'Ən azı bir icazə seçin.',
+    ru: 'Выберите хотя бы одно право.',
+    tr: 'En az bir izin seçin.',
+  },
+  'adminCatalog.capability.seller': {
+    az: 'Topdançı',
+    ru: 'Оптовик',
+    tr: 'Toptancı',
+  },
+  'adminCatalog.capability.buyer': {
+    az: 'Pərakəndəçi',
+    ru: 'Розница',
+    tr: 'Perakendeci',
+  },
+  'adminCatalog.scope.all': {
+    az: 'Hamısı',
+    ru: 'Все',
+    tr: 'Tümü',
+  },
+  'adminCatalog.scope.branch': {
+    az: 'Filial',
+    ru: 'Филиал',
+    tr: 'Şube',
+  },
+  'adminCatalog.scope.warehouse': {
+    az: 'Anbar',
+    ru: 'Склад',
+    tr: 'Depo',
+  },
+  'adminCatalog.scope.assigned': {
+    az: 'Təyin edilmiş',
+    ru: 'Назначенные',
+    tr: 'Atanmış',
+  },
+  'adminCatalog.failure.code_taken': {
+    az: 'Bu kod artıq istifadə olunur.',
+    ru: 'Этот код уже используется.',
+    tr: 'Bu kod zaten kullanılıyor.',
+  },
+  'adminCatalog.failure.admin_template_locked': {
+    az: 'Biznes admini şablonunun icazələri dəyişdirilə bilməz.',
+    ru: 'Права шаблона администратора компании изменить нельзя.',
+    tr: 'İşletme admini şablonunun izinleri değiştirilemez.',
+  },
+  'adminCatalog.failure.capability': {
+    az: 'Seçim bu istiqamətə uyğun deyil.',
+    ru: 'Выбор не подходит для этого направления.',
+    tr: 'Seçim bu yeteneğe uygun değil.',
+  },
+  'adminCatalog.failure.in_use': {
+    az: 'Bu vəzifə istifadədədir; silinə bilməz, yalnız deaktiv edilə bilər.',
+    ru: 'Эта должность используется: удалить нельзя, можно только деактивировать.',
+    tr: 'Bu unvan kullanımda; silinemez, yalnızca pasifleştirilebilir.',
+  },
+  'adminCatalog.failure.invalid': {
+    az: 'Məlumatlardan biri yanlışdır.',
+    ru: 'Одно из значений неверно.',
+    tr: 'Bilgilerden biri geçersiz.',
+  },
+  'adminCatalog.template.title': {
+    az: 'Rol şablonları',
+    ru: 'Шаблоны ролей',
+    tr: 'Rol şablonları',
+  },
+  'adminCatalog.template.description': {
+    az: 'Yeni bizneslər rollarını bu şablonlardan alır. Şablonu dəyişmək mövcud rolları dəyişmir; adminlərə yeni versiya bildirişi gedir.',
+    ru: 'Новые компании получают роли из этих шаблонов. Изменение шаблона не меняет существующие роли; администраторы получают уведомление о новой версии.',
+    tr: 'Yeni işletmeler rollerini bu şablonlardan alır. Şablonu değiştirmek mevcut rolleri değiştirmez; adminlere yeni sürüm bildirimi gider.',
+  },
+  'adminCatalog.template.create_open': {
+    az: 'Yeni şablon',
+    ru: 'Новый шаблон',
+    tr: 'Yeni şablon',
+  },
+  'adminCatalog.template.create_title': {
+    az: 'Yeni rol şablonu',
+    ru: 'Новый шаблон роли',
+    tr: 'Yeni rol şablonu',
+  },
+  'adminCatalog.template.edit_title': {
+    az: 'Şablonu düzəlt',
+    ru: 'Изменить шаблон',
+    tr: 'Şablonu düzenle',
+  },
+  'adminCatalog.template.editor_hint': {
+    az: 'Yeni şablon bu istiqamətdəki bütün bizneslərə rol kimi əlavə olunur.',
+    ru: 'Новый шаблон добавляется как роль всем компаниям этого направления.',
+    tr: 'Yeni şablon bu yetenekteki tüm işletmelere rol olarak eklenir.',
+  },
+  'adminCatalog.template.permissions_hint': {
+    az: 'Yalnız bu istiqamətə aid icazələr göstərilir.',
+    ru: 'Показаны только права этого направления.',
+    tr: 'Yalnızca bu yeteneğe ait izinler gösterilir.',
+  },
+  'adminCatalog.template.locked_badge': {
+    az: 'Kilidli',
+    ru: 'Заблокировано',
+    tr: 'Kilitli',
+  },
+  'adminCatalog.template.locked_hint': {
+    az: 'Biznes admini şablonunun icazələri dəyişmir; yalnız adı dəyişə bilərsiniz.',
+    ru: 'Права шаблона администратора не меняются; можно изменить только название.',
+    tr: 'İşletme admini şablonunun izinleri değişmez; yalnızca adını değiştirebilirsiniz.',
+  },
+  'adminCatalog.template.created': {
+    az: 'Şablon yaradıldı və bizneslərə əlavə olundu.',
+    ru: 'Шаблон создан и добавлен компаниям.',
+    tr: 'Şablon oluşturuldu ve işletmelere eklendi.',
+  },
+  'adminCatalog.template.updated': {
+    az: 'Şablon yadda saxlanıldı.',
+    ru: 'Шаблон сохранён.',
+    tr: 'Şablon kaydedildi.',
+  },
+  'adminCatalog.template.new_version': {
+    az: 'Yeni versiya: v{version}. Bizneslərin rolları dəyişmədi; adminlərə bildiriş göndərilir.',
+    ru: 'Новая версия: v{version}. Роли компаний не изменились; администраторам отправляется уведомление.',
+    tr: 'Yeni sürüm: v{version}. İşletmelerin rolleri değişmedi; adminlere bildirim gönderiliyor.',
+  },
+  'adminCatalog.template.empty': {
+    az: 'Şablon yoxdur.',
+    ru: 'Шаблонов нет.',
+    tr: 'Şablon yok.',
+  },
+  'adminCatalog.template.admin_badge': {
+    az: 'Biznes admini',
+    ru: 'Администратор компании',
+    tr: 'İşletme admini',
+  },
+  'adminCatalog.template.version': {
+    az: 'v{version}',
+    ru: 'v{version}',
+    tr: 'v{version}',
+  },
+  'adminCatalog.title.title': {
+    az: 'Vəzifələr',
+    ru: 'Должности',
+    tr: 'Unvanlar',
+  },
+  'adminCatalog.title.description': {
+    az: 'Aktiv vəzifələr bizneslərin komanda dəvəti ekranında seçilir. İstifadədə olan vəzifə silinmir, yalnız deaktiv edilir.',
+    ru: 'Активные должности выбираются в окне приглашения в команду. Используемую должность нельзя удалить, только деактивировать.',
+    tr: 'Aktif unvanlar işletmelerin ekip daveti ekranında seçilir. Kullanımdaki unvan silinmez, yalnızca pasifleştirilir.',
+  },
+  'adminCatalog.title.create_open': {
+    az: 'Yeni vəzifə',
+    ru: 'Новая должность',
+    tr: 'Yeni unvan',
+  },
+  'adminCatalog.title.create_title': {
+    az: 'Yeni vəzifə',
+    ru: 'Новая должность',
+    tr: 'Yeni unvan',
+  },
+  'adminCatalog.title.edit_title': {
+    az: 'Vəzifəni düzəlt',
+    ru: 'Изменить должность',
+    tr: 'Unvanı düzenle',
+  },
+  'adminCatalog.title.editor_hint': {
+    az: 'Vəzifə dəvət olunan şəxsə təklif olunan rolu şablondan alır.',
+    ru: 'Должность берёт предлагаемую роль из шаблона.',
+    tr: 'Unvan, davet edilen kişiye önerilen rolü şablondan alır.',
+  },
+  'adminCatalog.title.template_hint': {
+    az: 'Yalnız eyni istiqamətin şablonları.',
+    ru: 'Только шаблоны того же направления.',
+    tr: 'Yalnızca aynı yeteneğin şablonları.',
+  },
+  'adminCatalog.title.created': {
+    az: 'Vəzifə yaradıldı; dəvət ekranında görünür.',
+    ru: 'Должность создана и видна в окне приглашения.',
+    tr: 'Unvan oluşturuldu; davet ekranında görünür.',
+  },
+  'adminCatalog.title.updated': {
+    az: 'Vəzifə yadda saxlanıldı.',
+    ru: 'Должность сохранена.',
+    tr: 'Unvan kaydedildi.',
+  },
+  'adminCatalog.title.activated': {
+    az: 'Vəzifə aktiv edildi.',
+    ru: 'Должность активирована.',
+    tr: 'Unvan aktifleştirildi.',
+  },
+  'adminCatalog.title.deactivated': {
+    az: 'Vəzifə deaktiv edildi; dəvət ekranında görünmür.',
+    ru: 'Должность деактивирована и скрыта в окне приглашения.',
+    tr: 'Unvan pasifleştirildi; davet ekranında görünmez.',
+  },
+  'adminCatalog.title.deleted': {
+    az: 'Vəzifə silindi.',
+    ru: 'Должность удалена.',
+    tr: 'Unvan silindi.',
+  },
+  'adminCatalog.title.list_title': {
+    az: 'Bütün vəzifələr',
+    ru: 'Все должности',
+    tr: 'Tüm unvanlar',
+  },
+  'adminCatalog.title.empty': {
+    az: 'Vəzifə yoxdur.',
+    ru: 'Должностей нет.',
+    tr: 'Unvan yok.',
+  },
+  'adminCatalog.title.active': {
+    az: 'Aktiv',
+    ru: 'Активна',
+    tr: 'Aktif',
+  },
+  'adminCatalog.title.inactive': {
+    az: 'Deaktiv',
+    ru: 'Неактивна',
+    tr: 'Pasif',
+  },
+  'adminCatalog.title.in_use': {
+    az: 'İstifadədə',
+    ru: 'Используется',
+    tr: 'Kullanımda',
+  },
+  'adminCatalog.title.in_use_hint': {
+    az: 'İstifadədədir, silinə bilməz.',
+    ru: 'Используется, удалить нельзя.',
+    tr: 'Kullanımda, silinemez.',
+  },
+  'adminCatalog.title.delete_confirm': {
+    az: 'Silinsin?',
+    ru: 'Удалить?',
+    tr: 'Silinsin mi?',
+  },
+  'adminCatalog.title.delete_yes': {
+    az: 'Bəli, sil',
+    ru: 'Да, удалить',
+    tr: 'Evet, sil',
+  },
+  'adminCatalog.title.deactivate': {
+    az: 'Deaktiv et',
+    ru: 'Деактивировать',
+    tr: 'Pasifleştir',
+  },
+  'adminCatalog.title.activate': {
+    az: 'Aktiv et',
+    ru: 'Активировать',
+    tr: 'Aktifleştir',
+  },
+  'adminCatalog.title.delete': {
+    az: 'Sil',
+    ru: 'Удалить',
+    tr: 'Sil',
+  },
 };

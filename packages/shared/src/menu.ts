@@ -5,6 +5,7 @@
 // öğe herkese açıktır (açılış sayfası = dashboard). Metin: `shell.menu.<key>` çeviri anahtarı.
 import type { PermissionCode } from './permissions';
 import type { PlatformRole } from './platform-roles';
+import { CATALOG_ADMIN_ROLES } from './role-catalog';
 
 /** Kabuk alanları: platform admini, toptancı (`seller`), perakendeci (`buyer`). */
 export type ShellArea = 'admin' | 'seller' | 'buyer';
@@ -53,6 +54,21 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
       ready: true,
       path: 'seller-applications',
       platformRoles: SELLER_ADMIN_ROLES,
+    },
+    // F2.9b: unvan ve rol şablonu kataloğu (US-012), süper admin + içerik (V1).
+    {
+      key: 'role_templates',
+      anyOf: [],
+      ready: true,
+      path: 'role-templates',
+      platformRoles: CATALOG_ADMIN_ROLES,
+    },
+    {
+      key: 'job_titles',
+      anyOf: [],
+      ready: true,
+      path: 'job-titles',
+      platformRoles: CATALOG_ADMIN_ROLES,
     },
   ],
   // productreport "Toptancı — Web"; `audit` c4 §5 (`audit.view`, US-057).
