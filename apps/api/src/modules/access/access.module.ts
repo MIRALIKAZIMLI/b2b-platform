@@ -18,6 +18,8 @@ import { MeController } from './me.controller';
 import { MeService } from './me.service';
 import { MembershipService } from './membership.service';
 import { PermissionCache } from './permission.cache';
+import { RoleCatalogRepository } from './role-catalog.repository';
+import { RoleCatalogService } from './role-catalog.service';
 import { RoleService } from './role.service';
 import { TenantContextRepository } from './tenant-context.repository';
 import { TenantContextService, TOTP_STATUS } from './tenant-context.service';
@@ -42,11 +44,20 @@ import { TenantContextService, TOTP_STATUS } from './tenant-context.service';
     TeamService,
     TeamRolesRepository,
     TeamRolesService,
+    RoleCatalogRepository,
+    RoleCatalogService,
     { provide: TOTP_STATUS, useExisting: TotpRepository },
     { provide: PLATFORM_ROLE, useExisting: TotpRepository },
     { provide: APP_GUARD, useClass: AccessGuard },
   ],
-  exports: [RoleService, MembershipService, TenantContextService, InvitationService, TeamService],
+  exports: [
+    RoleService,
+    MembershipService,
+    TenantContextService,
+    InvitationService,
+    TeamService,
+    RoleCatalogService,
+  ],
 })
 export class AccessModule {}
 

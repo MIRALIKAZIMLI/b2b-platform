@@ -480,6 +480,8 @@ Yalnız bu fonksiyonların içinde etkili politikalar: `users_definer_insert`, `
 
 #### `job_titles` (G) — `code text unique` (seed eşleşme anahtarı, F1.8a), `name jsonb`, `capability`, `role_template_id`, `is_active`
 
+**F2.9 (US-012, admin kataloğu; yeni kolon yok):** şablon ve unvanı platform admini açar (`/api/v1/admin/catalog/*`, platform bağlamı). `code` adminin girdiği, sonradan değişmeyen anahtardır; `capability` değişmez. Admin ekranından açılan şablon hiçbir zaman `is_business_admin` değildir; admin şablonunun izinleri değişmez. Yeni şablon aynı işlemde yeteneğin var olan işletmelerine rol olarak kopyalanır (F2.7c kuralı). `role_templates.version` yalnız izin listesi değişince 1 artar; işletme kopyaları (`roles.source_template_version`) değişmez, şablondan rolü olan arşivlenmemiş işletmelerin aktif adminlerine "yeni şablon sürümü" bildirimi gider (outbox `role_template.version_published`). Bir üyelik (`removed` dahil) veya davet unvanı gösteriyorsa unvan silinemez (`409 JOB_TITLE_IN_USE`), yalnız `is_active = false` olur; pasif unvan davet listesinde görünmez.
+
 #### `roles` (T)
 
 | Alan | Tip | Kısıt | Not |

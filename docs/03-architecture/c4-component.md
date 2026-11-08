@@ -240,3 +240,5 @@ Platform uçları `@RequirePlatformRole(...)` ile korunur; izin kodu kullanmaz. 
 | `GET /api/v1/admin/sellers` | `super_admin`, `operations` | S1 = A |
 | `POST /api/v1/admin/sellers/{id}/activation` | `super_admin`, `operations` | S1 = A |
 | `GET /api/v1/admin/plans` (yalnız okuma) | `super_admin`, `operations` | S1 = A; plan yönetimi F6.3 |
+| `GET`, `POST /api/v1/admin/catalog/role-templates`; `PATCH .../role-templates/{id}` | `super_admin`, `content` | F2.9 V1 (productreport "Çeviri ve içerik: ortak katalog"; varsayım, onay bekliyor) |
+| `GET`, `POST /api/v1/admin/catalog/job-titles`; `PATCH`, `DELETE .../job-titles/{id}` | `super_admin`, `content` | F2.9 V1 |

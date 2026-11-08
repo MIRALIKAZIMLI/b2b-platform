@@ -2346,8 +2346,10 @@ paths:
   /api/v1/admin/catalog/{kind}:
     post:
       tags: [admin]
-      summary: Genel katalog kaydı oluştur (units, categories, brands, activity-types, regions, job-titles, role-templates)
-      parameters: [ { name: kind, in: path, required: true, schema: { type: string, enum: [units, categories, brands, activity-types, regions, job-titles, role-templates] } } ]
+      summary: Genel katalog kaydı oluştur (units, categories, brands, activity-types, regions)
+      description: >-
+        Unvan ve rol şablonu (`job-titles`, `role-templates`) kendi yollarında tanımlıdır (F2.9).
+      parameters: [ { name: kind, in: path, required: true, schema: { type: string, enum: [units, categories, brands, activity-types, regions] } } ]
       requestBody:
         content:
           application/json:
@@ -2365,6 +2367,173 @@ paths:
             schema: { type: object }
       responses:
         '200': { description: Güncellendi }
+  /api/v1/admin/catalog/role-templates:
+    get:
+      tags: [admin]
+      summary: Rol şablonları, izinleri ve sürümleriyle (US-012)
+      description: Platform rolü `super_admin` veya `content` (F2.9 V1).
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/AdminRoleTemplate' } }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [admin]
+      summary: Rol şablonu oluştur (US-012 AC1)
+      description: >-
+        Şablon hiçbir zaman işletme admini değildir. İzinler şablonun yeteneğine ait olmalı ve kapsam
+        iznin seçeneklerinden biri olmalı (aksi 422). Aynı işlemde yeteneğin var olan tüm işletmelerine
+        rol olarak kopyalanır (F2.9 V4). `code` benzersiz (aksi 422 `code: [taken]`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, name, capability, permissions]
+              properties:
+                code: { $ref: '#/components/schemas/CatalogCode' }
+                name: { $ref: '#/components/schemas/CatalogName' }
+                capability: { type: string, enum: [seller, buyer] }
+                permissions:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/RolePermission' }
+      responses:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminRoleTemplate' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/catalog/role-templates/{id}:
+    patch:
+      tags: [admin]
+      summary: Rol şablonunu güncelle (US-012 AC2)
+      description: >-
+        İzin listesi değişirse `version` 1 artar, işletmelerin kopyaları değişmez ve şablondan rolü olan
+        her arşivlenmemiş işletmenin aktif adminlerine "yeni şablon sürümü" bildirimi gider (outbox
+        `role_template.version_published`). Yalnız ad değişikliği sürüm artırmaz (F2.9 V2). İşletme admin
+        şablonunun izinleri değişmez (422 `permissions: [admin_template_locked]`, V6). `code` ve
+        `capability` değişmez.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                name: { $ref: '#/components/schemas/CatalogName' }
+                permissions:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/RolePermission' }
+      responses:
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminRoleTemplate' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/catalog/job-titles:
+    get:
+      tags: [admin]
+      summary: Unvanlar, pasifler dahil (US-012)
+      description: Platform rolü `super_admin` veya `content` (F2.9 V1). `inUse` silinebilirliği gösterir (AC3).
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/AdminJobTitle' } }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [admin]
+      summary: Unvan oluştur (US-012 AC1)
+      description: >-
+        Şablon unvanla aynı yetenekte olmalı (aksi 422 `roleTemplateId: [capability]`). Aktif unvan
+        işletmelerin davet ekranında (`GET /team/job-titles`) hemen görünür.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, name, capability, roleTemplateId]
+              properties:
+                code: { $ref: '#/components/schemas/CatalogCode' }
+                name: { $ref: '#/components/schemas/CatalogName' }
+                capability: { type: string, enum: [seller, buyer] }
+                roleTemplateId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminJobTitle' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/catalog/job-titles/{id}:
+    patch:
+      tags: [admin]
+      summary: Unvanı güncelle / pasifleştir (US-012 AC3)
+      description: >-
+        Pasif unvan davet ekranında görünmez; var olan üyelikler etkilenmez. `code` ve `capability`
+        değişmez.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                name: { $ref: '#/components/schemas/CatalogName' }
+                roleTemplateId: { type: string, format: uuid }
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminJobTitle' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [admin]
+      summary: Kullanılmayan unvanı sil (US-012 AC3)
+      description: >-
+        Bir üyelik (`removed` dahil) veya davet unvanı gösteriyorsa `409 JOB_TITLE_IN_USE`; yalnız
+        pasifleştirilebilir (F2.9 V7).
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '204': { description: Silindi }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /api/v1/admin/translations:
     get:
       tags: [admin]
@@ -2580,6 +2749,7 @@ components:
         - FILE_INVALID
         - IMPORT_TOO_MANY_ROWS
         - SETTING_OUT_OF_RANGE
+        - JOB_TITLE_IN_USE
         - INTERNAL_ERROR
     PhoneE164:
       type: string
@@ -2780,6 +2950,43 @@ components:
         name: { $ref: '#/components/schemas/LocalizedText' }
         capability: { type: string, enum: [seller, buyer] }
         roleTemplateId: { type: [string, 'null'], format: uuid }
+    CatalogCode:
+      description: Benzersiz kod (seed eşleşme anahtarı); sonradan değişmez (F2.9 V5).
+      type: string
+      pattern: '^[a-z][a-z0-9_]{2,62}$'
+    CatalogName:
+      description: Katalog adı; az, ru, tr zorunlu, en isteğe bağlı (ADR-0007); her biri 1–80 karakter.
+      type: object
+      additionalProperties: false
+      required: [az, ru, tr]
+      properties:
+        az: { type: string, minLength: 1, maxLength: 80 }
+        ru: { type: string, minLength: 1, maxLength: 80 }
+        tr: { type: string, minLength: 1, maxLength: 80 }
+        en: { type: string, minLength: 1, maxLength: 80 }
+    AdminRoleTemplate:
+      type: object
+      required: [id, code, name, capability, isBusinessAdmin, version, permissions, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        capability: { type: string, enum: [seller, buyer] }
+        isBusinessAdmin: { type: boolean, description: 'true ise izinleri değişmez (V6)' }
+        version: { type: integer, minimum: 1 }
+        permissions: { type: array, items: { $ref: '#/components/schemas/RolePermission' } }
+        updatedAt: { type: string, format: date-time }
+    AdminJobTitle:
+      type: object
+      required: [id, code, name, capability, roleTemplateId, isActive, inUse]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        capability: { type: string, enum: [seller, buyer] }
+        roleTemplateId: { type: [string, 'null'], format: uuid }
+        isActive: { type: boolean }
+        inUse: { type: boolean, description: 'Üyelik veya davet gösteriyor; silinemez (AC3)' }
     RolePermission:
       type: object
       required: [code, scope]

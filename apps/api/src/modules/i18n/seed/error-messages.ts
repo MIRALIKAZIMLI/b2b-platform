@@ -255,6 +255,11 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, ErrorMessageText>> = {
     ru: 'Значение настройки вне допустимых пределов.',
     tr: 'Ayar değeri izin verilen sınırların dışında.',
   },
+  JOB_TITLE_IN_USE: {
+    az: 'Bu vəzifə istifadədədir; silinə bilməz, yalnız deaktiv edilə bilər.',
+    ru: 'Эта должность используется: удалить нельзя, можно только деактивировать.',
+    tr: 'Bu unvan kullanımda; silinemez, yalnızca pasifleştirilebilir.',
+  },
   INTERNAL_ERROR: {
     az: 'Gözlənilməz xəta baş verdi. Bir az sonra yenidən cəhd edin.',
     ru: 'Произошла непредвиденная ошибка. Повторите попытку позже.',

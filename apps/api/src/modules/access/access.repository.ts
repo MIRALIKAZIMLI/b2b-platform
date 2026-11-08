@@ -23,7 +23,7 @@ export type MembershipRow = typeof memberships.$inferSelect;
 export type RoleRow = typeof roles.$inferSelect;
 
 /** Hata zincirinde (Drizzle `cause` ile sarar) PostgreSQL SQLSTATE kodunu bulur. */
-function sqlState(error: unknown): string | undefined {
+export function sqlState(error: unknown): string | undefined {
   let current: unknown = error;
   for (let depth = 0; depth < 5 && typeof current === 'object' && current !== null; depth++) {
     if ('code' in current && typeof current.code === 'string') return current.code;

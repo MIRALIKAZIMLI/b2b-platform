@@ -52,6 +52,7 @@ export const ERROR_CODES = [
   'FILE_INVALID',
   'IMPORT_TOO_MANY_ROWS',
   'SETTING_OUT_OF_RANGE',
+  'JOB_TITLE_IN_USE',
   'INTERNAL_ERROR',
 ] as const;
 

@@ -1,10 +1,10 @@
 // Bildirim türleri ve outbox olayı → bildirim eşlemesi (US-054, F1.11).
-// Bu adımda yalnızca test olayı var; US-054 tablosundaki gerçek olaylar ilgili modüller yazıldıkça
-// eklenir (her olay: tür, alıcılar, konu kimliği). Rol bazlı alıcı çözümü ilk gerçek olayla gelir.
+// US-054 tablosundaki olaylar ilgili modüller yazıldıkça eklenir (her olay: tür, alıcılar, konu
+// kimliği). Alıcılar olayı yazan modülde çözülür; olay alıcı başınadır (F2.9: yeni şablon sürümü).
 import { z } from 'zod';
 
 /** Tercih anahtarları ve şablon türleri. */
-export const NOTIFICATION_TYPES = ['test'] as const;
+export const NOTIFICATION_TYPES = ['test', 'role_template_version'] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 const TYPE_SET: ReadonlySet<string> = new Set(NOTIFICATION_TYPES);
@@ -25,6 +25,12 @@ export interface NotificationIntent {
 }
 
 const testPayload = z.object({ userId: z.uuid(), ref: z.uuid() });
+const templateVersionPayload = z.object({
+  templateId: z.uuid(),
+  version: z.number().int(),
+  businessId: z.uuid(),
+  userId: z.uuid(),
+});
 
 /** Outbox olay türü → bildirimler. Yük outbox'ta zaten doğrulanmıştır; burada yeniden okunur. */
 const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = new Map([
@@ -34,6 +40,22 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
       const event = testPayload.parse(payload);
       return [
         { userId: event.userId, businessId: null, type: 'test', subjectId: event.ref, params: {} },
+      ];
+    },
+  ],
+  [
+    // F2.9 (US-012 AC2): işletme adminine "yeni şablon sürümü"; konu şablon kimliği.
+    'role_template.version_published',
+    (payload: unknown): NotificationIntent[] => {
+      const event = templateVersionPayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.businessId,
+          type: 'role_template_version',
+          subjectId: event.templateId,
+          params: { version: event.version },
+        },
       ];
     },
   ],

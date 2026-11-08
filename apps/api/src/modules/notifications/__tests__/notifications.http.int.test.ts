@@ -191,7 +191,8 @@ describe('F1.11 bildirim uç noktaları (entegrasyon)', () => {
       .send({ 'orders.secret': true });
 
     expect(off.status).toBe(200);
-    expect(off.body).toEqual({ test: false });
+    // F2.9: yanıt tüm türlerin güncel tercihidir; dokunulmayan tür varsayılan açık.
+    expect(off.body).toEqual({ test: false, role_template_version: true });
     expect(unknown.status).toBe(422);
     const stored = await withUserTx({ userId: a.id }, (tx) => repo.pushEnabled(tx, 'test'));
     expect(stored).toBe(false);
