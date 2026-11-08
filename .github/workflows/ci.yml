@@ -221,6 +221,11 @@ jobs:
       - run: pnpm db:migrate
       # Arayüz çevirileri ve rol şablonları seed'den gelir.
       - run: pnpm db:seed
+      # Tüm girişler tek IP'den (127.0.0.1) gelir; varsayılan OTP IP sınırı (saatte 20) takımı keser.
+      - name: E2E OTP IP sınırı
+        run: >-
+          psql "postgres://b2b:b2b_ci_password@127.0.0.1:5432/b2b_e2e" -v ON_ERROR_STOP=1 -c
+          "insert into settings (scope, key, value) values ('platform', 'otp.ip_max_per_hour', '200')"
       - name: Playwright tarayıcısı
         run: pnpm --filter @b2b/web exec playwright install --with-deps chromium
       - run: pnpm --filter @b2b/web test:e2e
