@@ -120,7 +120,7 @@ describe('F2.10 /api/v1/business/privacy', () => {
       expect(response.body).toEqual(current);
       expect((await get(who)).body).toEqual(current);
     }
-    expect(Object.values(await stored(who.businessId))).toEqual([
+    expect(Object.values((await stored(who.businessId)) ?? {})).toEqual([
       true,
       true,
       true,
