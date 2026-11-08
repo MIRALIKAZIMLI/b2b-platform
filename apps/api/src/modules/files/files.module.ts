@@ -10,6 +10,6 @@ import { FilesService } from './files.service';
   imports: [AccessModule, SettingsModule],
   controllers: [FilesController],
   providers: [FilesRepository, FilesService],
-  exports: [FilesService],
+  exports: [FilesService, FilesRepository],
 })
 export class FilesModule {}

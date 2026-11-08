@@ -1,3 +1,4 @@
+export { BusinessLogoPortModule } from './business-logo.adapter';
 export { FilesModule } from './files.module';
 export {
   type CompletedFile,

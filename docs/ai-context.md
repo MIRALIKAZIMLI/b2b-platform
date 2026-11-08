@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-08 (F2.10a: perakendeci görünürlük ayarları).
+Son güncelleme: 2026-11-08 (F2.10b: kişisel bilgi ve logo düzenleme).
 
 ## 1. Mimari özeti
 
@@ -116,6 +116,7 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F2.9a | `/api/v1/admin/catalog/role-templates` (GET, POST, PATCH `{id}`) ve `/job-titles` (GET, POST, PATCH/DELETE `{id}`); `super_admin` + `content` (`@b2b/shared` `CATALOG_ADMIN_ROLES`, V1). Kurallar `access` `RoleCatalogService` (tx alır), platform işlemi `platform-admin` `RoleCatalogAdminService`. Yeni şablon aynı işlemde yeteneğin işletmelerine kopyalanır (V4); izin listesi değişince `version` +1, kopyalar değişmez, şablondan rolü olan arşivlenmemiş işletmelerin aktif adminlerine alıcı başına outbox `role_template.version_published` → bildirim `role_template_version` (V2, V3); admin şablonunun izinleri kilitli (422 `admin_template_locked`, V6). Kullanımdaki unvan `409 JOB_TITLE_IN_USE`, yalnız pasifleştirilir (V7). Not: Drizzle tek tablolu seçimde `${tablo.kolon}`'u niteliksiz basar; alt sorguda tam ad yaz. Test şablonları genel katalogdur: test dosyası açtığını `afterAll`'da siler |
 | F2.9b | Web `/<dil>/admin/role-templates` ve `/job-titles` (`features/admin-catalog`); menü öğeleri `role_templates`, `job_titles` yalnız `CATALOG_ADMIN_ROLES`, sayfa `CatalogAdminOnly` ile korunur. Form gövdesi ve hata eşlemesi `@b2b/shared` `templateFormBody` / `jobTitleFormBody` / `catalogFailure`. Kullanımdaki unvanda Sil yerine ipucu. E2E `admin-catalog.spec.ts`. Çeviriler taslak |
 | F2.10a | `GET|PUT /business/privacy` (`business.manage` + `buyer` yeteneği, VARSAYIM V1–V4; PUT tam gövde, AC3 sabit alanların anahtarı yok → 422), ortak liste `@b2b/shared` `privacy.ts`, audit `business.privacy_updated`, outbox `buyer.privacy_changed` (tüketici F2.11a); web/mobil profil sayfasında görünürlük kartı; E2E-03 adımı. F2.10b: kişisel veri + logo `PATCH /business`'te |
+| F2.10b | `PATCH /business` 🔒 `contactName`/`personalPhone`/`email` (`person_data`; V5 telefon/e-posta/logo `null` siler, V6 satır yoksa yetkili adı zorunlu) ve `logoFileId`; yanıt `logoUrl` + kişisel alanlar. Logo `BusinessLogoPort` (businesses tanımlar, files uygular, global `BusinessLogoPortModule`; ADR-0024, c4 §3 port tablosu). Web logo kartı (aynı köken yükleme), mobil yalnız gösterim (V7) |
 
 **Sıradaki:** F2.18; not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 

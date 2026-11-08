@@ -58,3 +58,60 @@ export function useUpdatePrivacy(businessId: string | undefined) {
     },
   });
 }
+
+/** Logo için kabul edilen türler (API `files` ile aynı, NFR-49). */
+export const LOGO_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+
+/**
+ * Yükleme adresi API'nin kendi yoluysa (`/api/v1/...`, yerel disk deposu) aynı kökenden çağrılır
+ * (Next rewrite; tarayıcı CORS'a takılmaz). R2 gibi başka bir alan adı olduğu gibi kullanılır.
+ */
+function sameOriginUploadUrl(url: string): string {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.pathname.startsWith('/api/v1/') ? `${parsed.pathname}${parsed.search}` : url;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Logo yükleme (F2.10b, SF-09): yükleme adresi → dosyayı PUT → `complete` (boyut + imza) →
+ * `PATCH /business { logoFileId }`. `null` logoyu kaldırır. Sonuç profil önbelleğine yazılır.
+ */
+export function useSetLogo(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  const header = { 'X-Business-Id': businessId ?? '' };
+  return useMutation({
+    mutationFn: async (file: File | null): Promise<BusinessProfile> => {
+      let logoFileId: string | null = null;
+      if (file !== null) {
+        const upload = await webApi.client.POST('/api/v1/files/upload-url', {
+          params: { header },
+          body: { purpose: 'logo', contentType: file.type, sizeBytes: file.size },
+        });
+        if (upload.data === undefined) throw new ApiError(upload.error, upload.response.status);
+        const put = await fetch(sameOriginUploadUrl(upload.data.uploadUrl), {
+          method: 'PUT',
+          headers: upload.data.headers,
+          body: file,
+        });
+        if (!put.ok) throw new ApiError(undefined, put.status);
+        const done = await webApi.client.POST('/api/v1/files/{id}/complete', {
+          params: { header, path: { id: upload.data.fileId } },
+        });
+        if (done.data === undefined) throw new ApiError(done.error, done.response.status);
+        logoFileId = upload.data.fileId;
+      }
+      const { data, error, response } = await webApi.client.PATCH('/api/v1/business', {
+        params: { header },
+        body: { logoFileId },
+      });
+      if (data === undefined) throw new ApiError(error, response.status);
+      return data;
+    },
+    onSuccess: (profile) => {
+      queryClient.setQueryData([...BUSINESS_PROFILE_KEY, businessId ?? null], profile);
+    },
+  });
+}

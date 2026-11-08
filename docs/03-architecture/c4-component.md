@@ -79,6 +79,7 @@ flowchart LR
     files --> identity
     files --> access
     files --> settings
+    files -.->|"BusinessLogoPort (ADR-0024)"| businesses
 
     reporting -.->|"salt-okunur"| orders
     reporting -.-> ledger
@@ -139,6 +140,7 @@ flowchart LR
 | Port | Tanımlayan | Uygulayan | Neden aynı işlem |
 | --- | --- | --- | --- |
 | `ConnectionCancelledHandler` | `connections` | `cart` (sepet kalemlerini sil), `orders` (`submitted` siparişleri iptal et) | İptal anında onay bekleyen bir siparişin onaylanması yarışını önlemek (US-025 AC3) |
+| `BusinessLogoPort` | `businesses` | `files` (logo dosyası doğrulama, okuma adresi) | Aynı işlem değil, eşzamanlı sorgu: `PATCH /business` logo dosyasının sahipliğini, amacını ve hazır durumunu yazmadan önce doğrular; yanıt okuma adresini taşır. `files → access → businesses` yönü nedeniyle doğrudan çağrı döngü olur ([ADR-0024](../04-decisions/adr-0024-business-logo-port.md)) |
 
 ## 4. Kritik servisler
 

@@ -42,3 +42,4 @@
 - F2.9a: admin unvan ve rol şablonu API, "yeni şablon sürümü" bildirimi
 - F2.9b: admin unvan ve rol şablonu ekranları
 - F2.10a: perakendeci görünürlük ayarları (dizinde görünme, açık alanlar)
+- F2.10b: yetkili adı, kişisel telefon, e-posta ve logo düzenleme (BusinessLogoPort, ADR-0024)

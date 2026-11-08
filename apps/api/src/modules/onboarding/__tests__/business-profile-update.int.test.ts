@@ -171,7 +171,9 @@ describe('F2.4 PATCH /api/v1/business', () => {
     expect((await businessRow(who.businessId))?.verified_at).toBeNull();
   });
 
-  it('F2.4-K1: profil alanları güncellenir; kişisel veri ve logo alanları bu adımda 422', async () => {
+  // F2.10b: kişisel veri ve logo artık kabul edilir (business-profile-person.int.test.ts); burada
+  // yalnız bilinmeyen alan, boş gövde ve biçim hataları 422.
+  it('F2.4-K1: profil alanları güncellenir; bilinmeyen alan ve biçim hataları 422', async () => {
     const who = await register();
     const { regionId } = await testRefs();
     const ok = await patch(who, {
@@ -188,9 +190,8 @@ describe('F2.4 PATCH /api/v1/business', () => {
     });
 
     for (const body of [
-      { email: 'a@b.az' },
-      { contactName: 'X' },
-      { logoFileId: '00000000-0000-0000-0000-000000000000' },
+      { verified: true },
+      { legalType: 'legal_entity' },
       {},
       { voen: null },
       { regionId: '01890000-0000-7000-8000-000000000000' },

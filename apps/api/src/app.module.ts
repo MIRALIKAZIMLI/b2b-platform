@@ -22,7 +22,7 @@ import { AppConfigModule } from './modules/app-config';
 import { BillingModule, WarehouseLimitGateModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
-import { FilesModule } from './modules/files';
+import { BusinessLogoPortModule, FilesModule } from './modules/files';
 import { I18nModule } from './modules/i18n';
 import { IdentityModule } from './modules/identity';
 import { NotificationsModule } from './modules/notifications';
@@ -64,6 +64,7 @@ export class AppModule implements NestModule {
         AccessModule,
         NotificationsModule,
         FilesModule,
+        BusinessLogoPortModule,
         OnboardingModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         PlatformAdminModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         IdentityModule.forRoot({
