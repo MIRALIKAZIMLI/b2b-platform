@@ -16,6 +16,8 @@ export interface MembershipAccessRow {
   readonly membershipId: string;
   readonly roleId: string;
   readonly roleCapability: 'seller' | 'buyer';
+  /** `roles.permissions_version` (F2.8): izin önbelleğinin doğrulama anahtarı. */
+  readonly rolePermissionsVersion: number;
   readonly isBusinessAdmin: boolean;
   readonly branchId: string | null;
   readonly warehouseId: string | null;
@@ -47,6 +49,7 @@ export class TenantContextRepository {
         membership_id: string;
         role_id: string;
         role_capability: string;
+        permissions_version: number;
         is_business_admin: boolean;
         branch_id: string | null;
         warehouse_id: string | null;
@@ -56,7 +59,7 @@ export class TenantContextRepository {
         currency_code: string | null;
       }>(sql`
         select m.id as membership_id, m.role_id, r.capability as role_capability,
-               r.is_business_admin, m.branch_id, m.warehouse_id,
+               r.permissions_version, r.is_business_admin, m.branch_id, m.warehouse_id,
                b.status as business_status, b.timezone, b.currency_code,
                array(select bc.capability from business_capabilities bc
                       where bc.business_id = b.id and bc.status = 'approved'
@@ -74,6 +77,7 @@ export class TenantContextRepository {
       membershipId: row.membership_id,
       roleId: row.role_id,
       roleCapability: asCapability(row.role_capability),
+      rolePermissionsVersion: row.permissions_version,
       isBusinessAdmin: row.is_business_admin,
       branchId: row.branch_id,
       warehouseId: row.warehouse_id,

@@ -21,6 +21,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { branches, businesses, warehouses } from '../businesses';
@@ -121,11 +122,20 @@ export const roles = pgTable(
     isBusinessAdmin: boolean('is_business_admin').notNull().default(false),
     sourceTemplateId: uuid('source_template_id').references(() => roleTemplates.id),
     sourceTemplateVersion: integer('source_template_version'),
+    // F2.8 (US-014): şablondan kopyalanıp izinleri değiştirilmiş, yalnız bu işletmeye ait rol.
+    isCustom: boolean('is_custom').notNull().default(false),
+    // F2.8 (R22): izinler her değiştiğinde artar; izin önbelleği bu sürümle doğrulanır.
+    permissionsVersion: integer('permissions_version').notNull().default(1),
     ...timestamps,
   },
   (table) => [
     unique('roles_business_id_id_uq').on(table.businessId, table.id),
     check('roles_capability_check', sql`${table.capability} in (${ROLE_CAPABILITIES})`),
+    check('roles_permissions_version_check', sql`${table.permissionsVersion} >= 1`),
+    // Müfettiş 12 notu (F2.7c): aynı şablonun ikinci kopyası açılamaz; özel roller serbest.
+    uniqueIndex('roles_business_template_copy_uq')
+      .on(table.businessId, table.sourceTemplateId)
+      .where(sql`${table.sourceTemplateId} is not null and not ${table.isCustom}`),
   ],
 );
 

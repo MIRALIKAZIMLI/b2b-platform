@@ -81,3 +81,43 @@ describe('PermissionCache (F1.8b)', () => {
     expect(redis.store.size).toBe(0);
   });
 });
+
+describe('PermissionCache (F2.8, R22)', () => {
+  it('R22 rolün izin sürümü değişince önbellek yok sayılır; eski sürümsüz kayıt da', async () => {
+    const redis = new MemoryRedis();
+    const cache = new PermissionCache(redis, settings);
+    const membershipId = randomUUID();
+    const roleId = randomUUID();
+    await cache.set(membershipId, roleId, [['orders.view', 'all']], 3);
+    expect(await cache.get(membershipId, roleId, 3)).toEqual([['orders.view', 'all']]);
+    expect(await cache.get(membershipId, roleId, 4)).toBeUndefined();
+    redis.store.set(permissionCacheKey(membershipId), {
+      value: JSON.stringify({ roleId, permissions: [['orders.view', 'all']] }),
+      seconds: 1,
+    });
+    expect(await cache.get(membershipId, roleId, 1)).toBeUndefined();
+  });
+
+  it('R22 role.permissions_changed önbelleği siler; invalidateMany tek komutla', async () => {
+    const redis = new MemoryRedis();
+    const cache = new PermissionCache(redis, settings);
+    const first = randomUUID();
+    const second = randomUUID();
+    await cache.set(first, randomUUID(), []);
+    await cache.set(second, randomUUID(), []);
+    const processor = new AccessEventsProcessor(cache);
+    await processor.process({
+      name: 'role.permissions_changed',
+      data: {
+        eventId: '1',
+        type: 'role.permissions_changed',
+        payload: { roleId: randomUUID(), membershipId: first, version: 2 },
+      },
+    });
+    expect(redis.store.has(permissionCacheKey(first))).toBe(false);
+    expect(redis.store.has(permissionCacheKey(second))).toBe(true);
+    await cache.invalidateMany([second]);
+    expect(redis.store.size).toBe(0);
+    await expect(cache.invalidateMany([])).resolves.toBeUndefined();
+  });
+});

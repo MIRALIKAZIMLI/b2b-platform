@@ -134,6 +134,13 @@
       "when": 1793612701128,
       "tag": "0018_business_roles_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794109842459,
+      "tag": "0019_custom_roles",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 // Kiracı bağlamının kurulması (F1.8b, ADR-0004 sırası: üyelik → işletme durumu → 2FA → yetenek →
 // izin). Üyelik ve işletme durumu her istekte veritabanından okunur; yalnızca rolün izin listesi
-// önbelleklenir (PermissionCache, rol kimliğiyle doğrulanır).
+// önbelleklenir (PermissionCache, rol kimliği + rolün izin sürümüyle doğrulanır; F2.8 R22).
 import { Inject, Injectable } from '@nestjs/common';
 import { type PermissionCode, PERMISSIONS } from '@b2b/shared';
 import { z } from 'zod';
@@ -79,10 +79,11 @@ export class TenantContextService {
   }
 
   private async permissionsOf(businessId: string, userId: string, membership: MembershipAccessRow) {
-    const cached = await this.cache.get(membership.membershipId, membership.roleId);
+    const { membershipId, roleId, rolePermissionsVersion: version } = membership;
+    const cached = await this.cache.get(membershipId, roleId, version);
     if (cached !== undefined) return cached;
-    const fresh = await this.repository.rolePermissions({ businessId, userId }, membership.roleId);
-    await this.cache.set(membership.membershipId, membership.roleId, fresh);
+    const fresh = await this.repository.rolePermissions({ businessId, userId }, roleId);
+    await this.cache.set(membershipId, roleId, fresh, version);
     return fresh;
   }
 }

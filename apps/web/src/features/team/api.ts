@@ -2,7 +2,7 @@
 // Ekip yönetimi (F2.7b, US-013): openapi `/api/v1/team/*`. Yalnızca `packages/api-client`.
 // Yazımlardan sonra üye ve davet listeleri birlikte yenilenir (davet kabulü / çıkarma ikisini de etkiler).
 import type { components } from '@b2b/api-client';
-import type { InvitationBody, MemberUpdateBody } from '@b2b/shared';
+import type { InvitationBody, MemberUpdateBody, RoleEditorBody } from '@b2b/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ME_KEY, webApi } from '../../lib/session';
 import { ApiError } from '../admin-sellers/api';
@@ -11,6 +11,7 @@ export type TeamMember = components['schemas']['TeamMember'];
 export type TeamInvitation = components['schemas']['TeamInvitation'];
 export type TeamRole = components['schemas']['TeamRole'];
 export type JobTitle = components['schemas']['JobTitle'];
+export type RoleTemplate = components['schemas']['RoleTemplate'];
 
 const TEAM_KEY = ['team'] as const;
 
@@ -50,6 +51,12 @@ export function useTeamInvitations(businessId: string | undefined) {
 export function useTeamRoles(businessId: string | undefined) {
   return useTeamList(businessId, 'roles', () =>
     webApi.client.GET('/api/v1/team/roles', { params: header(businessId) }),
+  );
+}
+
+export function useRoleTemplates(businessId: string | undefined) {
+  return useTeamList(businessId, 'role-templates', () =>
+    webApi.client.GET('/api/v1/team/role-templates', { params: header(businessId) }),
   );
 }
 
@@ -109,4 +116,39 @@ export function useTeamMutations(businessId: string | undefined) {
     },
   });
   return { invite, revoke, update };
+}
+
+/**
+ * Özel rol (F2.8, US-014). Yazımdan sonra roller yenilenir; izin değişikliği kendi rolünü de
+ * etkileyebileceği için `/me` (menü, izinler) da yenilenir.
+ */
+export function useRoleMutations(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: [...TEAM_KEY, 'roles', businessId ?? null] });
+    await queryClient.invalidateQueries({ queryKey: ME_KEY });
+  };
+  const create = useMutation({
+    mutationFn: async (body: RoleEditorBody & { templateId: string }): Promise<TeamRole> => {
+      const { data, error, response } = await webApi.client.POST('/api/v1/team/roles', {
+        params: header(businessId),
+        body,
+      });
+      if (data === undefined) throw new ApiError(error, response.status);
+      return data;
+    },
+    onSuccess: refresh,
+  });
+  const update = useMutation({
+    mutationFn: async ({ id, body }: { id: string; body: RoleEditorBody }): Promise<TeamRole> => {
+      const { data, error, response } = await webApi.client.PATCH('/api/v1/team/roles/{id}', {
+        params: { ...header(businessId), path: { id } },
+        body,
+      });
+      if (data === undefined) throw new ApiError(error, response.status);
+      return data;
+    },
+    onSuccess: refresh,
+  });
+  return { create, update };
 }

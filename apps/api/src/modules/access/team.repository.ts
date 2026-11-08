@@ -46,6 +46,7 @@ export interface TeamRoleRow {
   readonly capability: string;
   readonly isBusinessAdmin: boolean;
   readonly sourceTemplateId: string | null;
+  readonly isCustom: boolean;
   readonly permissions: { code: string; scope: string }[];
 }
 
@@ -178,10 +179,12 @@ export class TeamRepository {
     return new Set(rows.map((row) => row.scope));
   }
 
+  /** İşletme rolleri izinleriyle; `roleId` verilirse yalnız o rol (F2.8 yanıtı). */
   async listRoles(
     tx: Tx,
     businessId: string,
     capabilities: readonly string[],
+    roleId?: string,
   ): Promise<TeamRoleRow[]> {
     const rows = await tx
       .select({
@@ -190,9 +193,16 @@ export class TeamRepository {
         capability: roles.capability,
         isBusinessAdmin: roles.isBusinessAdmin,
         sourceTemplateId: roles.sourceTemplateId,
+        isCustom: roles.isCustom,
       })
       .from(roles)
-      .where(and(eq(roles.businessId, businessId), inArray(roles.capability, [...capabilities])))
+      .where(
+        and(
+          eq(roles.businessId, businessId),
+          inArray(roles.capability, [...capabilities]),
+          ...(roleId === undefined ? [] : [eq(roles.id, roleId)]),
+        ),
+      )
       .orderBy(asc(roles.createdAt), asc(roles.id));
     if (rows.length === 0) return [];
     const perms = await tx

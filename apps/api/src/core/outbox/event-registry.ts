@@ -26,6 +26,12 @@ export const OUTBOX_EVENTS = {
     queue: 'access',
     fields: { membershipId: 'id', userId: 'id', oldRoleId: 'id', newRoleId: 'id' },
   },
+  // F2.8 (R22): özel rolün izinleri değişti; rolün her aktif üyeliği için bir olay. Tüketici
+  // `access` (izin önbelleği silme; API commit sonrası da siler, bu iş yedektir).
+  'role.permissions_changed': {
+    queue: 'access',
+    fields: { roleId: 'id', membershipId: 'id', version: 'integer' },
+  },
   // F1.11: bildirim altyapısının test olayı (US-054 AC1 altyapı). `userId` alıcı, `ref` konu kimliği.
   'notification.test': { queue: 'notifications', fields: { userId: 'id', ref: 'id' } },
   // F2.3a: perakendeci kaydoldu (SF-02). Tüketici F2.11a (dizin indeksi); o zamana kadar iş

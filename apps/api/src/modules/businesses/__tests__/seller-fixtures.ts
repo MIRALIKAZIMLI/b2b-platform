@@ -62,17 +62,27 @@ export async function addMemberFromTemplate(
 ): Promise<string> {
   const userId = randomUUID();
   await insertTestUser({ id: userId, phone: randomTestPhone() });
-  const roleId = randomUUID();
+  // F2.8: aynı şablonun ikinci kopyası açılamaz (roles_business_template_copy_uq); varsa o rol kullanılır.
   await platformRows(
     `insert into roles (id, business_id, name, capability, is_business_admin, source_template_id)
-     select $1, $2, name, capability, is_business_admin, id from role_templates where code = $3`,
-    [roleId, businessId, templateCode],
+     select $1, $2, name, capability, is_business_admin, id from role_templates where code = $3
+     on conflict (business_id, source_template_id)
+       where source_template_id is not null and not is_custom do nothing`,
+    [randomUUID(), businessId, templateCode],
   );
+  const [copy] = await platformRows<{ id: string }>(
+    `select r.id from roles r join role_templates t on t.id = r.source_template_id
+      where r.business_id = $1 and t.code = $2 and not r.is_custom`,
+    [businessId, templateCode],
+  );
+  if (copy === undefined) throw new Error(`rol yok: ${templateCode}`);
+  const roleId = copy.id;
   await platformRows(
     `insert into role_permissions (role_id, permission_code, scope)
      select $1, p.permission_code, p.default_scope
        from role_template_permissions p join role_templates t on t.id = p.template_id
-      where t.code = $2`,
+      where t.code = $2
+     on conflict do nothing`,
     [roleId, templateCode],
   );
   await platformRows(

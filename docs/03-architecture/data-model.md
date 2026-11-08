@@ -490,6 +490,10 @@ Yalnız bu fonksiyonların içinde etkili politikalar: `users_definer_insert`, `
 | is_business_admin | boolean | default false | |
 | source_template_id | uuid | null | |
 | source_template_version | int | null | Yeni sürüm bildirimi için |
+| is_custom | boolean | not null default false | F2.8 (US-014): şablondan kopyalanıp izinleri değiştirilmiş işletmeye özel rol; yalnız bu roller düzenlenir. Özel rol hiçbir zaman işletme admini değildir |
+| permissions_version | int | not null default 1 | F2.8 (R22): rolün izinleri her değiştiğinde 1 artar; izin önbelleği rol kimliği + bu sürümle doğrulanır |
+
+F2.8: `roles_business_template_copy_uq` kısmi tekil indeksi `(business_id, source_template_id) WHERE source_template_id IS NOT NULL AND NOT is_custom` aynı şablonun ikinci kopyasını veritabanında engeller (Müfettiş 12 notu); özel roller bu kısıta girmez.
 
 #### `role_permissions` (T) — `role_id`, `permission_code`, `scope (all/branch/warehouse/assigned)`; PK `(role_id, permission_code)`
 

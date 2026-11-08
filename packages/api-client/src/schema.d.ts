@@ -1389,7 +1389,7 @@ export interface paths {
         };
         /**
          * İşletme rolleri
-         * @description İzin `team.manage`. İşletmenin yeteneğindeki roller, izinleri ve kapsamlarıyla; istemci hangi kapsam alanının gerektiğini buradan bilir. Şablon listesi F2.8'de.
+         * @description İzin `team.manage`. İşletmenin yeteneğindeki roller, izinleri ve kapsamlarıyla; istemci hangi kapsam alanının gerektiğini buradan bilir. `isCustom` rolleri F2.8 özel rolleridir.
          */
         get: {
             parameters: {
@@ -1415,7 +1415,10 @@ export interface paths {
             };
         };
         put?: never;
-        /** Şablondan özel rol oluştur (US-014) */
+        /**
+         * Şablondan özel rol oluştur (US-014)
+         * @description İzin `team.manage`. Şablon işletmenin yeteneğinde olmalı; izinler rolün yeteneğine ait olmalı ve kapsam iznin kapsam seçeneklerinden biri olmalı (aksi `422`, US-014 AC2). Özel rol işletme admini değildir. İşletme admini olmayan çağıran yalnızca kendisinde aynı kapsamda veya `all` kapsamda olan izinleri ekleyebilir (aksi `403 PERMISSION_DENIED`).
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1425,12 +1428,12 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
                         /** Format: uuid */
                         templateId: string;
-                        name: components["schemas"]["LocalizedText"];
+                        name: components["schemas"]["RoleName"];
                         permissions: components["schemas"]["RolePermission"][];
                     };
                 };
@@ -1441,10 +1444,110 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["TeamRole"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/roles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Özel rolü düzenle (US-014)
+         * @description İzin `team.manage`. Yalnızca `isCustom` roller (şablon kopyası `422 roleId: not_editable`). `POST` ile aynı izin kuralları. Rol bir aktif üyeye veya açık davete bağlıyken gereken kapsam alanları (şube / depo / bölge) değişemez (`422 permissions: scope_change_in_use`). İzin değişince rolün üyelerinin izin önbelleği temizlenir; değişiklik sonraki istekte geçerlidir.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: components["schemas"]["RoleName"];
+                        permissions?: components["schemas"]["RolePermission"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description Güncellendi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamRole"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/team/role-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Özel rol için kopyalanabilir şablonlar (US-014)
+         * @description İzin `team.manage`. İşletmenin yeteneğindeki rol şablonları, varsayılan izin ve kapsamlarıyla.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RoleTemplate"][];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6136,7 +6239,23 @@ export interface components {
             isBusinessAdmin: boolean;
             /** Format: uuid */
             sourceTemplateId: string | null;
+            isCustom: boolean;
             permissions: components["schemas"]["RolePermission"][];
+        };
+        RoleTemplate: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: components["schemas"]["LocalizedText"];
+            /** @enum {string} */
+            capability: "seller" | "buyer";
+            permissions: components["schemas"]["RolePermission"][];
+        };
+        /** @description Özel rol adı; en az bir dil, her biri 1–80 karakter. */
+        RoleName: {
+            az?: string;
+            ru?: string;
+            tr?: string;
         };
         JobTitle: {
             /** Format: uuid */

@@ -9,6 +9,8 @@ export const AUDIT_ACTIONS = [
   'membership.role_changed',
   'membership.removed',
   'membership.scope_changed',
+  'role.created',
+  'role.updated',
   'seller.created',
   'seller.activation_resent',
   'invitation.accepted',
@@ -36,6 +38,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // seller_application: hedef kimliği başvuru (seller_applications.id; F2.2 onay / ret).
 // warehouse: hedef kimliği depo (warehouses.id; F2.6). Satıcı profili ve hizmet bölgeleri
 // (F2.6) hedef olarak `business` kullanır.
+// role: hedef kimliği işletme rolü (roles.id; F2.8 özel rol oluşturma / düzenleme; before/after ad
+// ve izinler).
 export const AUDIT_TARGET_TYPES = [
   'setting',
   'otp_challenge',
@@ -45,6 +49,7 @@ export const AUDIT_TARGET_TYPES = [
   'invitation',
   'seller_application',
   'warehouse',
+  'role',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 
