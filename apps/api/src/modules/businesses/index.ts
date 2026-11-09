@@ -1,3 +1,4 @@
+export { BUSINESS_LOGO_PORT, type BusinessLogoPort } from './business-logo.port';
 export { BusinessesModule } from './businesses.module';
 export {
   type ActivityTypeItem,
@@ -7,6 +8,7 @@ export {
   type CapabilityRow,
   isVoenUniqueViolation,
   type NewSellerBusiness,
+  type OwnPersonData,
   type OwnProfilePatch,
   type SellerListItem,
 } from './businesses.repository';

@@ -734,6 +734,107 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Неверное значение.',
     tr: 'Değer geçersiz.',
   },
+  // F2.10b: yetkili, kişisel iletişim ve logo. Çeviriler taslak; onay platform sahibinde.
+  'businessProfile.section.contact': {
+    az: 'Səlahiyyətli şəxs və əlaqə',
+    ru: 'Ответственное лицо и контакты',
+    tr: 'Yetkili ve iletişim',
+  },
+  'businessProfile.contact_hint': {
+    az: 'Bu məlumatlar topdansatışçılara yalnız görünmə ayarlarında açdıqda görünür.',
+    ru: 'Эти данные видны оптовикам, только если вы откроете их в настройках видимости.',
+    tr: 'Bu bilgiler toptancılara yalnızca görünürlük ayarlarında açarsanız görünür.',
+  },
+  'businessProfile.field.contactName': {
+    az: 'Səlahiyyətli şəxsin adı',
+    ru: 'Имя ответственного лица',
+    tr: 'Yetkili adı',
+  },
+  'businessProfile.field.personalPhone': {
+    az: 'Şəxsi telefon',
+    ru: 'Личный телефон',
+    tr: 'Kişisel telefon',
+  },
+  'businessProfile.personal_phone_hint': {
+    az: 'Beynəlxalq formatda: +994501234567',
+    ru: 'В международном формате: +994501234567',
+    tr: 'Uluslararası biçimde: +994501234567',
+  },
+  'businessProfile.field.email': {
+    az: 'E-poçt',
+    ru: 'E-mail',
+    tr: 'E-posta',
+  },
+  'businessProfile.error.email_invalid': {
+    az: 'E-poçt ünvanı yanlışdır.',
+    ru: 'Неверный адрес e-mail.',
+    tr: 'E-posta adresi geçersiz.',
+  },
+  'businessProfile.logo.title': {
+    az: 'Loqo',
+    ru: 'Логотип',
+    tr: 'Logo',
+  },
+  'businessProfile.logo.description': {
+    az: 'PNG, JPEG və ya WebP. Kvadrat şəkil daha yaxşı görünür.',
+    ru: 'PNG, JPEG или WebP. Квадратное изображение смотрится лучше.',
+    tr: 'PNG, JPEG veya WebP. Kare görsel daha iyi görünür.',
+  },
+  'businessProfile.logo.empty': {
+    az: 'Loqo yoxdur',
+    ru: 'Логотипа нет',
+    tr: 'Logo yok',
+  },
+  'businessProfile.logo.alt': {
+    az: 'Müəssisə loqosu',
+    ru: 'Логотип предприятия',
+    tr: 'İşletme logosu',
+  },
+  'businessProfile.logo.upload': {
+    az: 'Loqo yüklə',
+    ru: 'Загрузить логотип',
+    tr: 'Logo yükle',
+  },
+  'businessProfile.logo.replace': {
+    az: 'Dəyiş',
+    ru: 'Заменить',
+    tr: 'Değiştir',
+  },
+  'businessProfile.logo.remove': {
+    az: 'Sil',
+    ru: 'Удалить',
+    tr: 'Kaldır',
+  },
+  'businessProfile.logo.uploading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'businessProfile.logo.saved': {
+    az: 'Loqo yeniləndi.',
+    ru: 'Логотип обновлён.',
+    tr: 'Logo güncellendi.',
+  },
+  'businessProfile.logo.removed': {
+    az: 'Loqo silindi.',
+    ru: 'Логотип удалён.',
+    tr: 'Logo kaldırıldı.',
+  },
+  'businessProfile.logo.invalid_type': {
+    az: 'Yalnız PNG, JPEG və ya WebP faylı seçin.',
+    ru: 'Выберите файл PNG, JPEG или WebP.',
+    tr: 'Yalnızca PNG, JPEG veya WebP dosyası seçin.',
+  },
+  'businessProfile.logo.failed': {
+    az: 'Loqo yüklənmədi. Faylı yoxlayıb yenidən cəhd edin.',
+    ru: 'Не удалось загрузить логотип. Проверьте файл и повторите.',
+    tr: 'Logo yüklenemedi. Dosyayı kontrol edip yeniden deneyin.',
+  },
+  'businessProfile.logo.mobile_hint': {
+    az: 'Loqonu veb versiyadan yükləyə bilərsiniz.',
+    ru: 'Логотип можно загрузить в веб-версии.',
+    tr: 'Logoyu web sürümünden yükleyebilirsiniz.',
+  },
   // F2.10a: görünürlük ayarları (US-007, ADR-0014). Çeviriler taslak; onay platform sahibinde.
   'businessPrivacy.title': {
     az: 'Görünmə ayarları',

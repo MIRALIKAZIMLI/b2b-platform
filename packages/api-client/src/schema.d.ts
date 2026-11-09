@@ -619,7 +619,7 @@ export interface paths {
         head?: never;
         /**
          * İşletme profilini güncelle (VÖEN dahil, US-006)
-         * @description İzin `business.manage` (F2.4). Yalnız gönderilen alanlar değişir; boş gövde `422`. F2.4'te desteklenen alanlar `voen`, `legalName`, `regionId`, `addressLine`, `businessPhone`; `contactName`, `personalPhone`, `email` ve `logoFileId` F2.10'a kadar `422 VALIDATION_FAILED`. Biçimi hatalı VÖEN `422 VALIDATION_FAILED`, `details.voen = [VOEN_INVALID]` (US-006 AC1). Başka işletmede kayıtlı VÖEN `409 VOEN_ALREADY_REGISTERED` (AC3). `legalType` VÖEN'in son hanesinden türetilir; VÖEN değişince `verified` false olur (AC2, R20). VARSAYIM (F2.4 K2): VÖEN yalnız `buyer` yeteneği olan işletmede değişir, aksi `403 CAPABILITY_REQUIRED`. VARSAYIM (K3): VÖEN silinemez; aynı değer değişiklik sayılmaz.
+         * @description İzin `business.manage` (F2.4). Yalnız gönderilen alanlar değişir; boş gövde `422`. F2.4'te desteklenen alanlar `voen`, `legalName`, `regionId`, `addressLine`, `businessPhone`; F2.10b ile 🔒 `contactName`, `personalPhone`, `email` (`person_data`; telefon ve e-posta `null` ile silinir, yetkili adı silinemez) ve `logoFileId` (bu işletmenin hazır `logo` dosyası, aksi `422 details.logoFileId = [invalid_logo]`; `null` kaldırır, ADR-0024). Biçimi hatalı VÖEN `422 VALIDATION_FAILED`, `details.voen = [VOEN_INVALID]` (US-006 AC1). Başka işletmede kayıtlı VÖEN `409 VOEN_ALREADY_REGISTERED` (AC3). `legalType` VÖEN'in son hanesinden türetilir; VÖEN değişince `verified` false olur (AC2, R20). VARSAYIM (F2.4 K2): VÖEN yalnız `buyer` yeteneği olan işletmede değişir, aksi `403 CAPABILITY_REQUIRED`. VARSAYIM (K3): VÖEN silinemez; aynı değer değişiklik sayılmaz.
          */
         patch: {
             parameters: {
@@ -684,6 +684,7 @@ export interface paths {
                     };
                 };
                 403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
             };
         };
         /**
@@ -715,6 +716,7 @@ export interface paths {
                     };
                 };
                 403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 422: components["responses"]["Error"];
             };
         };
@@ -6619,6 +6621,14 @@ export interface components {
             addressLine?: string | null;
             businessPhone?: string | null;
             logoUrl?: string | null;
+            /** Format: uuid */
+            logoFileId?: string | null;
+            /** @description 🔒 Yalnız `GET|PATCH /business` (kendi işletmesi, `business.manage`). */
+            contactName?: string | null;
+            /** @description 🔒 */
+            personalPhone?: string | null;
+            /** @description 🔒 */
+            email?: string | null;
             status?: string;
             verified?: boolean;
             profileCompleteness?: number;
@@ -6632,12 +6642,19 @@ export interface components {
             regionId?: string;
             addressLine?: string;
             businessPhone?: string;
-            /** Format: uuid */
-            logoFileId?: string;
+            /**
+             * Format: uuid
+             * @description Bu işletmenin hazır `logo` dosyası (`/files` akışı); `null` logoyu kaldırır (F2.10b).
+             */
+            logoFileId?: string | null;
             contactName?: string;
-            personalPhone?: components["schemas"]["PhoneE164"];
-            /** Format: email */
-            email?: string;
+            /** @description 🔒 `null` siler (F2.10b V5). */
+            personalPhone?: components["schemas"]["PhoneE164"] | null;
+            /**
+             * Format: email
+             * @description 🔒 `null` siler (F2.10b V5).
+             */
+            email?: string | null;
         };
         /** @description US-007, ADR-0014. `showPersonalContact` kişisel telefon ve e-postayı birlikte açar. */
         Privacy: {

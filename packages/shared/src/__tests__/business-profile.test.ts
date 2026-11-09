@@ -8,7 +8,12 @@ import {
   voenStatus,
 } from '../business-profile';
 
-const initial = profileFormValues({ legalName: 'Leyla Market', regionId: 'r1', voen: null });
+const initial = profileFormValues({
+  legalName: 'Leyla Market',
+  regionId: 'r1',
+  voen: null,
+  contactName: 'Leyla Əliyeva',
+});
 
 describe('validateProfile', () => {
   it('US-006-AC1: 10 haneli olmayan veya son hanesi 1/2 olmayan VÖEN reddedilir', () => {
@@ -41,6 +46,47 @@ describe('validateProfile', () => {
   });
 });
 
+describe('F2.10b kişisel veri alanları', () => {
+  it('F2.10b-AC1: yetkili adı zorunlu; kişisel telefon E.164, e-posta biçimi denetlenir', () => {
+    expect(
+      validateProfile(
+        { ...initial, contactName: ' ', personalPhone: '050 123 45 67', email: 'a@' },
+        initial,
+      ),
+    ).toEqual({
+      ok: false,
+      fields: { contactName: 'required', personalPhone: 'phone_invalid', email: 'email_invalid' },
+    });
+    expect(
+      validateProfile(
+        { ...initial, contactName: 'Rəşad', personalPhone: '+994501234567', email: 'a@b.az' },
+        initial,
+      ),
+    ).toEqual({
+      ok: true,
+      body: { contactName: 'Rəşad', personalPhone: '+994501234567', email: 'a@b.az' },
+    });
+  });
+
+  it('F2.10b-V5: boşaltılan kişisel telefon ve e-posta null gider; boş adres gönderilmez', () => {
+    const filled = {
+      ...initial,
+      personalPhone: '+994501234567',
+      email: 'a@b.az',
+      addressLine: 'X',
+    };
+    expect(
+      validateProfile({ ...filled, personalPhone: '', email: '', addressLine: '' }, filled),
+    ).toEqual({ ok: true, body: { personalPhone: null, email: null } });
+  });
+
+  it('F2.10b: API e-posta hatası alana bağlanır', () => {
+    expect(
+      profileFailure({ code: 'VALIDATION_FAILED', details: { email: ['invalid_email'] } }),
+    ).toEqual({ kind: 'fields', fields: { email: 'email_invalid' } });
+  });
+});
+
 describe('profileFailure', () => {
   it('US-006-AC3: VOEN_ALREADY_REGISTERED → VÖEN alanında "kayıtlı" hatası', () => {
     expect(profileFailure({ code: 'VOEN_ALREADY_REGISTERED' })).toEqual({
@@ -53,7 +99,7 @@ describe('profileFailure', () => {
     expect(
       profileFailure({ code: 'VALIDATION_FAILED', details: { voen: ['VOEN_INVALID'] } }),
     ).toEqual({ kind: 'fields', fields: { voen: 'voen_invalid' } });
-    expect(profileFailure({ code: 'VALIDATION_FAILED', details: { email: ['x'] } })).toEqual({
+    expect(profileFailure({ code: 'VALIDATION_FAILED', details: { logoFileId: ['x'] } })).toEqual({
       kind: 'general',
       code: 'VALIDATION_FAILED',
     });

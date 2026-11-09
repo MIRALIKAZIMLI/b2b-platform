@@ -3,10 +3,13 @@
 // "Profilinizi tamamlayın" kartı ve boş durum görünür. F2.4: karttan profile geçer, VÖEN girer
 // (US-006 AC1 geçersiz → mesaj; AC2 geçerli → hukuki tip, "doğrulama bekliyor", doluluk %50).
 // F2.10a: aynı sayfada görünürlük ayarları (US-007 AC1 varsayılan, AC2 alan açma, AC3 kilitli).
+// F2.10b: e-posta ve logo düzenlenir (ADR-0024 logo yükleme akışı).
 import { expect, test } from '@playwright/test';
 import { addMembership, completeOtpLogin, createRegion, createUser, randomPhone } from './fixtures';
 
-test('E2E-03: perakendeci kaydolur → VÖEN girer (profil %40 → %50)', async ({ page }) => {
+test('E2E-03: perakendeci kaydolur → VÖEN, e-posta, logo girer (profil %40 → %70)', async ({
+  page,
+}) => {
   const region = await createRegion();
   await page.goto('/az/login');
   await page.getByTestId('buyer-register-link').click();
@@ -55,7 +58,7 @@ test('E2E-03: perakendeci kaydolur → VÖEN girer (profil %40 → %50)', async 
   const valid = `${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}2`;
   await voen.fill(valid);
   await expect(page.getByTestId('voen-legal-type')).toHaveText('Fərdi sahibkar');
-  await page.getByRole('button', { name: 'Yadda saxla' }).click();
+  await page.getByRole('button', { name: 'Yadda saxla', exact: true }).click();
   await expect(page.getByText('Yadda saxlanıldı')).toBeVisible();
   await expect(page.getByTestId('voen-status')).toHaveText('Təsdiq gözləyir');
 
@@ -73,8 +76,26 @@ test('E2E-03: perakendeci kaydolur → VÖEN girer (profil %40 → %50)', async 
   await page.reload();
   await expect(page.getByTestId('privacy-showVoen')).toHaveAttribute('aria-checked', 'true');
 
+  // F2.10b: yetkili kartında e-posta; logo yüklenir (yükleme adresi → complete → PATCH).
+  await page.locator('input[name="email"]').fill('leyla@example.az');
+  await page.getByRole('button', { name: 'Yadda saxla', exact: true }).click();
+  await expect(page.getByText('Yadda saxlanıldı')).toBeVisible();
+  await page.getByTestId('logo-input').setInputFiles({
+    name: 'logo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  });
+  await expect(page.getByText('Loqo yeniləndi.')).toBeVisible();
+  await expect(page.getByTestId('logo-preview').locator('img')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('input[name="email"]')).toHaveValue('leyla@example.az');
+
+  // VÖEN + e-posta + logo → doluluk %40 → %70.
   await page.goto('/az/buyer');
-  await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+  await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
 });
 
 test('US-005-AC4: kayıtlı numara kayıt sayfasında yeni işletme açmaz, mevcut üyeliğine girer', async ({

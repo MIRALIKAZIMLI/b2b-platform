@@ -3,7 +3,8 @@
 // VÖEN alanı sayı klavyesiyle; yazarken hukuki tip Indigo ipucu. Bölge alttan açılan aramalı
 // listeyle. Ana eylem en altta tam genişlik Indigo düğme; basılı durumda ölçek geri bildirimi.
 // Hata alanın altında; AC3 mesajı VÖEN alanında. Başarı Emerald satırı. Yükleniyor = gösterge,
-// hata = yeniden dene kartı. F2.10a: görünürlük ayarları kaydın altında ayrı kart
+// hata = yeniden dene kartı. F2.10b: üstte logo önizlemesi (yükleme web'de; mobilde görsel seçici
+// paketi henüz kurulu değil), "Yetkili ve iletişim" kartı aynı kayıtta. F2.10a: görünürlük ayarları kaydın altında ayrı kart
 // (`privacy-section.tsx`). Kişisel veri ve logo düzenleme F2.10b.
 import {
   type ProfileFieldErrors,
@@ -21,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -194,6 +196,26 @@ export function BusinessProfileScreen() {
             <Text style={styles.body}>{t('businessProfile.description')}</Text>
           </View>
 
+          <View style={[styles.card, styles.logoCard]} testID="logo-preview">
+            <View style={styles.logo}>
+              {profile.data.logoUrl === null || profile.data.logoUrl === undefined ? (
+                <Text style={styles.logoInitial}>
+                  {(profile.data.legalName ?? '').trim().charAt(0).toUpperCase() || '—'}
+                </Text>
+              ) : (
+                <Image
+                  source={{ uri: profile.data.logoUrl }}
+                  style={styles.logoImage}
+                  accessibilityLabel={t('businessProfile.logo.alt')}
+                />
+              )}
+            </View>
+            <View style={styles.logoText}>
+              <Text style={styles.label}>{t('businessProfile.logo.title')}</Text>
+              <Text style={styles.hint}>{t('businessProfile.logo.mobile_hint')}</Text>
+            </View>
+          </View>
+
           <View style={styles.card}>
             <View style={styles.row}>
               <Text style={styles.section}>{t('businessProfile.section.voen')}</Text>
@@ -235,6 +257,23 @@ export function BusinessProfileScreen() {
             />
             {input('businessPhone', { keyboardType: 'phone-pad', autoComplete: 'tel' })}
             {input('addressLine', { autoComplete: 'street-address' })}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.section}>{t('businessProfile.section.contact')}</Text>
+            <Text style={styles.body}>{t('businessProfile.contact_hint')}</Text>
+            {input('contactName', { autoComplete: 'name', maxLength: 120 })}
+            {input(
+              'personalPhone',
+              { keyboardType: 'phone-pad', autoComplete: 'tel', placeholder: '+994501234567' },
+              t('businessProfile.personal_phone_hint'),
+            )}
+            {input('email', {
+              keyboardType: 'email-address',
+              autoComplete: 'email',
+              autoCapitalize: 'none',
+              maxLength: 254,
+            })}
           </View>
 
           {general !== undefined && (
@@ -289,6 +328,21 @@ const styles = StyleSheet.create({
     gap: space.lg,
     ...softShadow(1),
   },
+  logoCard: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  logoImage: { width: 64, height: 64 },
+  logoInitial: { fontSize: 22, fontWeight: '700', color: colors.textSubtle },
+  logoText: { flex: 1, gap: space.xs },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

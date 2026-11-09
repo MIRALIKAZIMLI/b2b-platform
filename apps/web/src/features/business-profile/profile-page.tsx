@@ -3,8 +3,9 @@
 // rozetiyle (yok / doğrulama bekliyor / doğrulandı) ve yazarken hukuki tip ipucuyla; işletme
 // bilgileri altta ikinci kart. Tek "Kaydet" yalnız değişen alanları gönderir. Hatalar alanın
 // altında; AC3 mesajı VÖEN alanında. Başarı satırı Emerald, kısa süreli değil kalıcı (ekran
-// okuyucu `role="status"`). F2.10a: görünürlük ayarları formun altında ayrı kart
-// (`privacy-card.tsx`). Kişisel veri ve logo düzenleme F2.10b.
+// okuyucu `role="status"`). F2.10b: "Yetkili ve iletişim" kartı aynı formda (🔒; telefon ve e-posta
+// boşaltılınca silinir), logo üstte ayrı kart (`logo-card.tsx`, anında yüklenir). F2.10a: görünürlük
+// ayarları formun altında ayrı kart (`privacy-card.tsx`).
 import {
   type ProfileFieldErrors,
   type ProfileFormField,
@@ -24,6 +25,7 @@ import { canManageBusiness } from '../buyer-registration/buyer-home';
 import { useShell } from '../shell/use-shell';
 import { Button, Card, Field, PageHeader, SelectInput, TextInput } from '../ui/primitives';
 import { useUpdateBusinessProfile } from './api';
+import { LogoCard } from './logo-card';
 import { PrivacyCard } from './privacy-card';
 
 const BADGE: Record<VoenStatus, string> = {
@@ -149,6 +151,9 @@ export function BusinessProfilePage() {
   return (
     <div className="space-y-6 px-4 py-8 sm:px-6 lg:py-10">
       <PageHeader title={t('title')} description={t('description')} />
+      <div className="max-w-3xl">
+        <LogoCard businessId={activeBusinessId} profile={profile.data} />
+      </div>
       <form noValidate onSubmit={onSubmit} className="max-w-3xl space-y-6">
         <Card className="space-y-5 p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -211,6 +216,22 @@ export function BusinessProfilePage() {
             {text('businessPhone', { type: 'tel', autoComplete: 'tel' })}
           </div>
           {text('addressLine', { autoComplete: 'street-address' })}
+        </Card>
+
+        <Card className="space-y-5 p-6 sm:p-8">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold text-slate-900">{t('section.contact')}</h2>
+            <p className="text-sm text-slate-500">{t('contact_hint')}</p>
+          </div>
+          {text('contactName', { autoComplete: 'name', maxLength: 120 })}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {text('personalPhone', {
+              type: 'tel',
+              autoComplete: 'tel',
+              placeholder: '+994501234567',
+            })}
+            {text('email', { type: 'email', autoComplete: 'email', maxLength: 254 })}
+          </div>
         </Card>
 
         {general !== undefined && (

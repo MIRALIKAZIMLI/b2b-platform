@@ -64,13 +64,21 @@ export interface NewBuyerBusiness {
   readonly now: Date;
 }
 
-/** `PATCH /api/v1/business` ile değişen `businesses` alanları (F2.4, K1). Yalnız verilenler yazılır. */
+/** `PATCH /api/v1/business` ile değişen `businesses` alanları (F2.4 K1; F2.10b logo). */
 export interface OwnProfilePatch {
   readonly voen?: string | undefined;
   readonly legalName?: string | undefined;
   readonly regionId?: string | undefined;
   readonly addressLine?: string | undefined;
   readonly businessPhone?: string | undefined;
+  readonly logoFileId?: string | null | undefined;
+}
+
+/** 🔒 `person_data` (F2.10b): yetkili adı, kişisel telefon, e-posta. Loglanmaz. */
+export interface OwnPersonData {
+  readonly contactName: string;
+  readonly personalPhone: string | null;
+  readonly email: string | null;
 }
 
 export interface ActivityTypeItem {
@@ -166,13 +174,10 @@ export class BusinessesRepository {
 
   // --- F2.4: profil düzenleme, çağıranın kiracı işlemi içinde ---
 
-  /** Bağlamdaki işletmenin satırı, işlem sonuna kadar kilitli (eşzamanlı PATCH sırayla). */
-  async lockOwnTx(tx: Tx, businessId: string): Promise<BusinessRow | undefined> {
-    const rows = await tx
-      .select()
-      .from(businesses)
-      .where(eq(businesses.id, businessId))
-      .for('update');
+  /** Bağlamdaki işletmenin satırı; `lock` ile işlem sonuna kadar kilitli (eşzamanlı PATCH sırayla). */
+  async lockOwnTx(tx: Tx, businessId: string, lock = true): Promise<BusinessRow | undefined> {
+    const query = tx.select().from(businesses).where(eq(businesses.id, businessId));
+    const rows = lock ? await query.for('update') : await query;
     return rows[0];
   }
 
@@ -194,6 +199,35 @@ export class BusinessesRepository {
       .where(eq(businesses.id, businessId))
       .returning();
     return rows[0];
+  }
+
+  // --- F2.10b: kişisel veri (person_data), çağıranın kiracı işlemi içinde ---
+
+  /** İşletmenin kişisel veri satırı; yoksa (ör. toptancı) `undefined`. */
+  async personDataTx(tx: Tx, businessId: string): Promise<OwnPersonData | undefined> {
+    const rows = await tx
+      .select({
+        contactName: personData.contactName,
+        personalPhone: personData.personalPhone,
+        email: personData.email,
+      })
+      .from(personData)
+      .where(eq(personData.businessId, businessId));
+    return rows[0];
+  }
+
+  /** Kişisel veriyi yazar; satır yoksa `id` ile açar (işletme başına tek satır). */
+  async upsertPersonDataTx(
+    tx: Tx,
+    businessId: string,
+    id: string,
+    data: OwnPersonData,
+    now: Date,
+  ): Promise<void> {
+    await tx
+      .insert(personData)
+      .values({ id, businessId, ...data, createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({ target: personData.businessId, set: { ...data, updatedAt: now } });
   }
 
   /** Doluluk için `businesses` dışındaki alanlar: faaliyet türü, yetkili adı, e-posta, şube adresi. */

@@ -389,8 +389,10 @@ paths:
       description: >-
         İzin `business.manage` (F2.4). Yalnız gönderilen alanlar değişir; boş gövde `422`.
         F2.4'te desteklenen alanlar `voen`, `legalName`, `regionId`, `addressLine`,
-        `businessPhone`; `contactName`, `personalPhone`, `email` ve `logoFileId` F2.10'a kadar
-        `422 VALIDATION_FAILED`. Biçimi hatalı VÖEN `422 VALIDATION_FAILED`,
+        `businessPhone`; F2.10b ile 🔒 `contactName`, `personalPhone`, `email` (`person_data`;
+        telefon ve e-posta `null` ile silinir, yetkili adı silinemez) ve `logoFileId` (bu işletmenin
+        hazır `logo` dosyası, aksi `422 details.logoFileId = [invalid_logo]`; `null` kaldırır,
+        ADR-0024). Biçimi hatalı VÖEN `422 VALIDATION_FAILED`,
         `details.voen = [VOEN_INVALID]` (US-006 AC1). Başka işletmede kayıtlı VÖEN
         `409 VOEN_ALREADY_REGISTERED` (AC3). `legalType` VÖEN'in son hanesinden türetilir; VÖEN
         değişince `verified` false olur (AC2, R20). VARSAYIM (F2.4 K2): VÖEN yalnız `buyer`
@@ -426,6 +428,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Privacy' }
         '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
     put:
       tags: [business]
       summary: Görünürlük ayarlarını güncelle (US-007)
@@ -447,6 +450,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Privacy' }
         '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
   /api/v1/branches:
     get:
@@ -3021,6 +3025,12 @@ components:
         addressLine: { type: [string, 'null'] }
         businessPhone: { type: [string, 'null'] }
         logoUrl: { type: [string, 'null'] }
+        logoFileId: { type: [string, 'null'], format: uuid }
+        contactName:
+          type: [string, 'null']
+          description: 🔒 Yalnız `GET|PATCH /business` (kendi işletmesi, `business.manage`).
+        personalPhone: { type: [string, 'null'], description: 🔒 }
+        email: { type: [string, 'null'], description: 🔒 }
         status: { type: string }
         verified: { type: boolean }
         profileCompleteness: { type: integer }
@@ -3034,10 +3044,21 @@ components:
         regionId: { type: string, format: uuid }
         addressLine: { type: string }
         businessPhone: { type: string }
-        logoFileId: { type: string, format: uuid }
-        contactName: { type: string }
-        personalPhone: { $ref: '#/components/schemas/PhoneE164' }
-        email: { type: string, format: email }
+        logoFileId:
+          type: [string, 'null']
+          format: uuid
+          description: Bu işletmenin hazır `logo` dosyası (`/files` akışı); `null` logoyu kaldırır (F2.10b).
+        contactName: { type: string, minLength: 1, maxLength: 120 }
+        personalPhone:
+          oneOf:
+            - { $ref: '#/components/schemas/PhoneE164' }
+            - { type: 'null' }
+          description: 🔒 `null` siler (F2.10b V5).
+        email:
+          type: [string, 'null']
+          format: email
+          maxLength: 254
+          description: 🔒 `null` siler (F2.10b V5).
     Privacy:
       type: object
       description: >-

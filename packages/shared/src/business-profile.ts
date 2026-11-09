@@ -1,5 +1,5 @@
-// İşletme profili / VÖEN formu (F2.4, US-006 AC1–AC3): web ve mobil aynı doğrulamayı ve API hatası →
-// alan hatası eşlemesini kullanır. Asıl doğrulama API'dedir (`PATCH /api/v1/business`); burası
+// İşletme profili / VÖEN formu (F2.4, US-006 AC1–AC3; F2.10b yetkili adı, kişisel telefon, e-posta):
+// web ve mobil aynı doğrulamayı ve API hatası → alan hatası eşlemesini kullanır. Asıl doğrulama API'dedir (`PATCH /api/v1/business`); burası
 // alanın yanında erken geri bildirim içindir. Saf fonksiyonlar; birim testli.
 import { z } from 'zod';
 import { VOEN_PATTERN } from './voen';
@@ -10,14 +10,25 @@ export const PROFILE_FORM_FIELDS = [
   'regionId',
   'addressLine',
   'businessPhone',
+  // F2.10b: 🔒 kişisel veri (`person_data`).
+  'contactName',
+  'personalPhone',
+  'email',
 ] as const;
 export type ProfileFormField = (typeof PROFILE_FORM_FIELDS)[number];
 
 /** Formdaki değerler; boş metin = alan girilmemiş. */
 export type ProfileFormValues = Readonly<Record<ProfileFormField, string>>;
 
-/** openapi `BusinessUpdate` (F2.4 kapsamı); yalnız değişen alanlar gönderilir. */
-export type BusinessProfileBody = Partial<Record<ProfileFormField, string>>;
+/** Boşaltılınca `null` gönderilerek silinebilen alanlar (F2.10b VARSAYIM V5). */
+export const CLEARABLE_PROFILE_FIELDS = ['personalPhone', 'email'] as const;
+type ClearableField = (typeof CLEARABLE_PROFILE_FIELDS)[number];
+
+/** openapi `BusinessUpdate`; yalnız değişen alanlar gönderilir. */
+export type BusinessProfileBody = Partial<
+  Record<Exclude<ProfileFormField, ClearableField>, string>
+> &
+  Partial<Record<ClearableField, string | null>> & { logoFileId?: string | null };
 
 /** Hata nedeni = `businessProfile.error.<neden>` çeviri anahtarının sonu. */
 export type ProfileFormReason =
@@ -27,6 +38,7 @@ export type ProfileFormReason =
   | 'voen_taken'
   | 'voen_locked'
   | 'phone_invalid'
+  | 'email_invalid'
   | 'not_found'
   | 'invalid';
 
@@ -39,6 +51,9 @@ export interface ProfileSource {
   readonly regionId?: string;
   readonly addressLine?: string | null;
   readonly businessPhone?: string | null;
+  readonly contactName?: string | null;
+  readonly personalPhone?: string | null;
+  readonly email?: string | null;
   readonly verified?: boolean;
 }
 
@@ -49,6 +64,9 @@ export function profileFormValues(source: ProfileSource | undefined): ProfileFor
     regionId: source?.regionId ?? '',
     addressLine: source?.addressLine ?? '',
     businessPhone: source?.businessPhone ?? '',
+    contactName: source?.contactName ?? '',
+    personalPhone: source?.personalPhone ?? '',
+    email: source?.email ?? '',
   };
 }
 
@@ -69,6 +87,8 @@ export function legalTypeHint(
 }
 
 const PHONE_PATTERN = /^\+?[0-9][0-9 ()-]{6,19}$/;
+/** openapi `PhoneE164` (kişisel telefon). */
+export const PHONE_E164_PATTERN = /^\+[1-9][0-9]{7,14}$/;
 
 const formSchema = z.object({
   voen: z.string().refine((value) => value === '' || VOEN_PATTERN.test(value), 'voen_invalid'),
@@ -79,6 +99,16 @@ const formSchema = z.object({
     .string()
     .trim()
     .refine((value) => value === '' || PHONE_PATTERN.test(value), 'phone_invalid'),
+  contactName: z.string().trim().min(1, 'required').max(120, 'too_long'),
+  personalPhone: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || PHONE_E164_PATTERN.test(value), 'phone_invalid'),
+  email: z
+    .string()
+    .trim()
+    .max(254, 'too_long')
+    .refine((value) => value === '' || z.email().safeParse(value).success, 'email_invalid'),
 });
 
 const KNOWN_REASONS: ReadonlySet<string> = new Set<ProfileFormReason>([
@@ -88,6 +118,7 @@ const KNOWN_REASONS: ReadonlySet<string> = new Set<ProfileFormReason>([
   'voen_taken',
   'voen_locked',
   'phone_invalid',
+  'email_invalid',
   'not_found',
 ]);
 
@@ -103,8 +134,9 @@ export type ProfileValidation =
 
 /**
  * Formu doğrular (US-006 AC1: VÖEN 10 rakam, son hane 1/2; boşluk kırpılmaz). Geçerliyse yalnız
- * değişen alanlar gövdeye girer; boşaltılan isteğe bağlı alan gönderilmez (silme F2.10).
- * VÖEN bir kez girildiyse silinemez (K3) → `voen_invalid`.
+ * değişen alanlar gövdeye girer. Boşaltılan kişisel telefon / e-posta `null` olarak gider (silme,
+ * F2.10b V5); diğer boşaltılan isteğe bağlı alanlar gönderilmez. VÖEN bir kez girildiyse silinemez
+ * (K3) → `voen_invalid`. Yetkili adı zorunludur.
  */
 export function validateProfile(
   values: ProfileFormValues,
@@ -121,10 +153,14 @@ export function validateProfile(
   if (initial.voen !== '' && values.voen === '') fields.voen ??= 'voen_invalid';
   if (Object.keys(fields).length > 0 || !parsed.success) return { ok: false, fields };
 
-  const body: BusinessProfileBody = {};
+  const body: Record<string, string | null> = {};
   for (const field of PROFILE_FORM_FIELDS) {
     const value = parsed.data[field];
-    if (value !== '' && value !== initial[field]) body[field] = value;
+    if (value === initial[field]) continue;
+    if (value !== '') body[field] = value;
+    else if ((CLEARABLE_PROFILE_FIELDS as readonly ProfileFormField[]).includes(field)) {
+      body[field] = null;
+    }
   }
   return { ok: true, body };
 }
@@ -143,6 +179,7 @@ function prop(error: unknown, key: 'code' | 'details'): unknown {
 const API_REASONS: Readonly<Record<string, ProfileFormReason>> = {
   VOEN_INVALID: 'voen_invalid',
   invalid_phone: 'phone_invalid',
+  invalid_email: 'email_invalid',
   not_found: 'not_found',
 };
 
