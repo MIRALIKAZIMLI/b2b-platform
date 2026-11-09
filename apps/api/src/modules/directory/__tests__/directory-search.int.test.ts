@@ -1,5 +1,6 @@
 // F2.11b: dizin arama ucu (US-019 AC1–AC3, AC5–AC6; US-020 AC1–AC2; US-007 AC2, AC4, AC6;
-// Müfettiş 15 L1). İndeks bellek içi sahte porttur (Meilisearch filtre ifadesi ayrıca
+// Müfettiş 15 L1). Kiracı izolasyonu (AC10) directory-search.isolation.test.ts'te. İndeks
+// bellek içi sahte porttur (Meilisearch filtre ifadesi ayrıca
 // meili-buyer-directory-index.int.test.ts'te). Uygulama bağlantısı RLS'e tabi app_user.
 import { randomUUID } from 'node:crypto';
 import { DIRECTORY_BUYER_KEYS, type DirectoryBuyer } from '@b2b/shared';
@@ -7,10 +8,8 @@ import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from '../../../../test/http-app';
-import { pgErrorCode } from '../../../../test/isolation';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
 import { randomTestPhone } from '../../../../test/users';
-import { withTenantTx } from '../../../core/db';
 import { BuyerDirectoryIndex } from '../../../core/ports/buyer-directory-index';
 import { REDIS_CLIENT } from '../../../infrastructure/redis';
 import { TokenService } from '../../identity';
@@ -32,15 +31,6 @@ interface SearchJson {
   readonly items: DirectoryBuyer[];
   readonly nextCursor: string | null;
   readonly emptyReason: string | null;
-}
-
-async function errorCode(fn: () => Promise<unknown>): Promise<string | undefined> {
-  try {
-    await fn();
-    return undefined;
-  } catch (error) {
-    return pgErrorCode(error);
-  }
 }
 
 function randomVoen(): string {
@@ -303,40 +293,24 @@ describe('F2.11b perakendeci dizini arama ucu', () => {
     expect(item?.relation).toEqual({ status: 'none', cooldownUntil: null, canRequest: true });
   });
 
-  it('F2.11b-AC10 kart fonksiyonu yalnız seller bağlamında, ≤20 kimlik; buyer üye 403', async () => {
-    const buyerId = await buyer({ legalName: name('Bağlam') });
-    const cards = (businessId: string, list: string[]) =>
-      withTenantTx({ businessId, userId: null }, (tx) => repository.cardsTx(tx, list));
-
-    expect(await errorCode(() => cards(buyerId, [buyerId]))).toBe('42501');
-    const tooMany = Array.from({ length: 21 }, () => randomUUID());
-    expect(await errorCode(() => cards(seller.businessId, tooMany))).toBe('22023');
-    expect((await cards(seller.businessId, [buyerId])).map((card) => card.id)).toEqual([buyerId]);
-
-    // T6 bekçisi: `files` için yalnız migrator'a açık okuma politikası ve sınıf `rls:T,D` (0021).
-    const policies = await platformRows<{ policyname: string; cmd: string; roles: string }>(
-      `select policyname, cmd, array_to_string(roles, ',') as roles from pg_policies
-        where tablename = 'files' order by policyname`,
-    );
-    expect(policies.find((p) => p.policyname === 'files_definer_select')).toEqual({
-      policyname: 'files_definer_select',
-      cmd: 'SELECT',
-      roles: 'migrator',
-    });
-    const [comment] = await platformRows<{ c: string }>(
-      "select obj_description('public.files'::regclass) as c",
-    );
-    expect(comment?.c).toBe('rls:T,D');
-
-    // Perakendeci üyesi uca erişemez (izin `directory.search`, yetenek seller).
-    const buyerAdmin = await addMember(buyerId, 'buyer_business_admin');
-    const denied = await search({}, { userId: buyerAdmin, businessId: buyerId });
-    expect(denied.status).toBe(403);
-
-    // Uç istemciden kimlik almaz: `id` parametresi doğrulamada reddedilmez ama yok sayılır.
-    const hidden = await buyer({ legalName: name('Gizli Kimlik'), listed: false });
-    const probe = await search({ q: tag, id: hidden });
-    expect(ids(probe.body)).not.toContain(hidden);
+  it("F2.11b-AC7 aynı telefon 20'den fazla perakendeciyle eşleşirse 200 ve en fazla 20 kart (Müfettiş 16 M1)", async () => {
+    const shared = randomTestPhone();
+    const created: string[] = [];
+    for (let i = 0; i < 21; i += 1) {
+      created.push(
+        await newBuyer({
+          legalName: `${name('Ortaq')} ${String(i)}`,
+          regionId: districtA1,
+          activityTypeId: grocery,
+          businessPhone: shared,
+        }),
+      );
+    }
+    const result = await search({ phone: shared });
+    expect(result.status, JSON.stringify(result.body)).toBe(200);
+    expect(ids(result.body)).toHaveLength(20);
+    expect(created).toEqual(expect.arrayContaining(ids(result.body)));
+    expect((result.body as SearchJson).nextCursor).toBeNull();
   });
 
   it('F2.11b-AC1 history: never her sonucu, diğer değerler boş liste (bağlantı tabloları F2.12)', async () => {

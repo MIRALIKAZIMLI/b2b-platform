@@ -3,11 +3,12 @@
 // veya tam eşleşme D fonksiyonu) → kart D fonksiyonundan taze alanlar → bayat indekse karşı
 // süzme. Kart fonksiyonuna istemciden gelen kimlik hiç gitmez (Müfettiş 15 L1).
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-  DirectoryBuyer,
-  DirectoryEmptyReason,
-  DirectorySearchQuery,
-  DirectorySearchResult,
+import {
+  DIRECTORY_PAGE_MAX,
+  type DirectoryBuyer,
+  type DirectoryEmptyReason,
+  type DirectorySearchQuery,
+  type DirectorySearchResult,
 } from '@b2b/shared';
 import { Clock } from '../../core/clock';
 import { type Tx, withTenantTx } from '../../core/db';
@@ -91,10 +92,19 @@ export class DirectorySearchService {
       tx,
       query.phone !== undefined ? { phone: query.phone } : { voen: query.voen ?? '' },
     );
-    const cards = await this.repository.cardsTx(tx, ids);
-    if (scope.assigned === undefined) return cards;
-    const groups = [scope.assigned];
-    return cards.filter((card) => inRegionGroups(card, groups));
+    // Kart fonksiyonu çağrı başına ≤20 kimlik alır (22023); eşleşme sayısına güvenilmez,
+    // kimlikler parçalanır, bölge süzmesinden sonra yanıt tek sayfayla sınırlanır.
+    const cards: DirectoryCardRow[] = [];
+    for (let start = 0; start < ids.length; start += DIRECTORY_PAGE_MAX) {
+      cards.push(
+        ...(await this.repository.cardsTx(tx, ids.slice(start, start + DIRECTORY_PAGE_MAX))),
+      );
+    }
+    const visible =
+      scope.assigned === undefined
+        ? cards
+        : cards.filter((card) => inRegionGroups(card, [scope.assigned ?? []]));
+    return visible.slice(0, DIRECTORY_PAGE_MAX);
   }
 
   /** US-019 AC1–AC2, AC6: filtreli arama; kimlik indeksten, alanlar DB'den. */
