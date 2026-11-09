@@ -684,6 +684,7 @@ export interface paths {
                     };
                 };
                 403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
             };
         };
         /**
@@ -715,6 +716,7 @@ export interface paths {
                     };
                 };
                 403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 422: components["responses"]["Error"];
             };
         };

@@ -428,6 +428,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Privacy' }
         '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
     put:
       tags: [business]
       summary: Görünürlük ayarlarını güncelle (US-007)
@@ -449,6 +450,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Privacy' }
         '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
   /api/v1/branches:
     get:
