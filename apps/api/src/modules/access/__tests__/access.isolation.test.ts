@@ -249,11 +249,14 @@ describe('F1.8-AC7 kiracı izolasyonu (access)', () => {
       expect(names).toContain('role_permissions.role_permissions_parent');
       expect(names).toContain('membership_regions.membership_regions_parent');
       // SECURITY DEFINER fonksiyonları için yalnız migrator'a açık politikalar (bilinçli liste):
-      // list_my_memberships (F1.8a), invitation_accept (F2.1a, 0013).
+      // list_my_memberships (F1.8a), invitation_accept (F2.1a, 0013), dizin tam eşleşmesi
+      // (F2.11a, 0020: admin giriş telefonu için üyelik ve rol okuması).
       const definerPolicies = [
         'memberships_self_definer',
         'memberships_definer_insert',
         'memberships_definer_update',
+        'memberships_definer_select',
+        'roles_definer_select',
         'invitations_definer_select',
         'invitations_definer_update',
       ];
