@@ -121,6 +121,10 @@ export const SETTING_DEFINITIONS = {
   'files.xlsx_max_mb': intSetting(10, 1, 50),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
   'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
+  // F2.11a: perakendeci dizini gece tam yeniden indeksleme (ADR-0011 §1, §4).
+  'directory.reindex_hour_utc': intSetting(1, 0, 23),
+  'directory.reindex_batch_size': intSetting(500, 50, 1000),
+  'directory.reindex_lock_seconds': intSetting(1800, 60, 7200),
 } as const satisfies Record<string, SettingDefinition<unknown>>;
 
 type Definitions = typeof SETTING_DEFINITIONS;

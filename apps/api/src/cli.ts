@@ -4,6 +4,7 @@
 //   node dist/cli.js check-rls      tabloların RLS sınıfını denetler; sorun varsa çıkış kodu 1
 //   node dist/cli.js db:seed        başlangıç verisini migrator rolüyle yükler (idempotent)
 //   node dist/cli.js openapi:export uygulamanın OpenAPI şemasını JSON olarak yazar (contract:check)
+//   node dist/cli.js search:reindex perakendeci dizinini veritabanından yeniden kurar (F2.11a)
 // Kökten: pnpm db:bootstrap · pnpm db:migrate · pnpm db:seed · pnpm check-rls
 // Adres ve şifreler ekrana yazılmaz.
 import { parseDbEnv, parseMigratorEnv, parseSeedEnv } from '@b2b/shared';
@@ -103,12 +104,19 @@ async function openapiExport(): Promise<void> {
   process.stdout.write(`${JSON.stringify(await createOpenApiDocument())}\n`);
 }
 
+async function searchReindexCommand(): Promise<void> {
+  // Nest bağlamı yalnız bu komutta yüklenir (diğer komutlar hafif kalır).
+  const { searchReindex } = await import('./search-reindex.js');
+  process.stdout.write(`${await searchReindex()}\n`);
+}
+
 const COMMANDS: Record<string, () => Promise<void>> = {
   'db:bootstrap': dbBootstrap,
   'db:migrate': dbMigrate,
   'db:seed': dbSeed,
   'check-rls': checkRlsCommand,
   'openapi:export': openapiExport,
+  'search:reindex': searchReindexCommand,
 };
 
 async function main(): Promise<void> {

@@ -12,12 +12,15 @@
 //   V6 (VARSAYIM): `person_data` satırı yoksa (toptancı) ilk yazımda `contactName` zorunlu.
 // - `logoFileId` → `businesses.logo_file_id`; dosya bu işletmenin hazır `logo` dosyası olmalı
 //   (`BusinessLogoPort`, ADR-0024), aksi `422 details.logoFileId = [invalid_logo]`; `null` kaldırır.
+// F2.11a (Müfettiş 15 L4, VARSAYIM K3): perakendecide dizinde görünebilen bir alan değişirse
+//   aynı işlemde outbox `buyer.profile_changed` (yükte yalnız kimlik; tüketici `directory`).
 import { Inject, Injectable } from '@nestjs/common';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
 import { withTenantTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
+import { OutboxWriter } from '../../core/outbox';
 import type { TenantContext } from '../../core/tenant-context';
 import { BUSINESS_LOGO_PORT, type BusinessLogoPort } from './business-logo.port';
 import {
@@ -38,6 +41,21 @@ const PATCH_FIELDS = [
   'logoFileId',
 ] as const;
 const PERSON_FIELDS = ['contactName', 'personalPhone', 'email'] as const;
+
+/**
+ * Dizin belgesine veya tam telefon eşleşmesine giren alanlar (F2.11a). E-posta ne indekste ne
+ * eşleşmede; kişisel telefon indekste yok ama olay yine de belgeyi yeniler (zararsız, idempotent).
+ */
+const DIRECTORY_FIELDS: ReadonlySet<string> = new Set([
+  'legalName',
+  'regionId',
+  'addressLine',
+  'businessPhone',
+  'voen',
+  'logoFileId',
+  'contactName',
+  'personalPhone',
+]);
 
 /** `PATCH /api/v1/business` gövdesi (doğrulanmış). */
 export interface ProfileUpdateInput extends OwnProfilePatch {
@@ -87,6 +105,7 @@ export class BusinessProfileService {
     @Inject(Clock) private readonly clock: Clock,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
     @Inject(BUSINESS_LOGO_PORT) private readonly logos: BusinessLogoPort,
+    @Inject(OutboxWriter) private readonly outbox: OutboxWriter,
   ) {}
 
   /** Kendi profili + kişisel veri (GET; F2.10b). */
@@ -219,6 +238,20 @@ export class BusinessProfileService {
             before,
             after: changes,
             context,
+          });
+        }
+        if (
+          tenant.capabilities.includes('buyer') &&
+          Object.keys(changes)
+            .concat(voen === undefined ? [] : ['voen'])
+            .some((key) => DIRECTORY_FIELDS.has(key))
+        ) {
+          await this.outbox.write(tx, {
+            type: 'buyer.profile_changed',
+            aggregateType: 'business',
+            aggregateId: tenant.businessId,
+            businessIds: [tenant.businessId],
+            payload: { businessId: tenant.businessId },
           });
         }
         return { business: updated, person };

@@ -86,6 +86,11 @@ export const businesses = pgTable(
     index('businesses_active_region_idx')
       .on(table.regionId)
       .where(sql`${table.status} = 'active'`),
+    // F2.11a: dizinde tam telefon eşleşmesi (US-020). İşletme telefonu serbest biçimli
+    // (boşluk, parantez); eşleşme yalnız rakamlarla yapılır.
+    index('businesses_business_phone_digits_idx')
+      .on(sql`regexp_replace(${table.businessPhone}, '[^0-9]', '', 'g')`)
+      .where(sql`${table.businessPhone} is not null`),
     check('businesses_voen_format_check', sql`${table.voen} ~ '^[0-9]{9}[12]$'`),
     check(
       'businesses_legal_type_check',
@@ -233,17 +238,26 @@ export const businessPrivacy = pgTable('business_privacy', {
 });
 
 /** 🔒 Kişisel veri (data-model §5): loglanmaz, silme talebinde satır silinir. */
-export const personData = pgTable('person_data', {
-  id: uuid('id').primaryKey(),
-  businessId: uuid('business_id')
-    .notNull()
-    .unique('person_data_business_id_uq')
-    .references(() => businesses.id),
-  contactName: text('contact_name').notNull(),
-  personalPhone: text('personal_phone'),
-  email: text('email'),
-  ...timestamps,
-});
+export const personData = pgTable(
+  'person_data',
+  {
+    id: uuid('id').primaryKey(),
+    businessId: uuid('business_id')
+      .notNull()
+      .unique('person_data_business_id_uq')
+      .references(() => businesses.id),
+    contactName: text('contact_name').notNull(),
+    personalPhone: text('personal_phone'),
+    email: text('email'),
+    ...timestamps,
+  },
+  // F2.11a: dizinde tam telefon eşleşmesi (US-020, kullanıcı kararı 2026-11-09).
+  (table) => [
+    index('person_data_personal_phone_idx')
+      .on(table.personalPhone)
+      .where(sql`${table.personalPhone} is not null`),
+  ],
+);
 
 export const branches = pgTable(
   'branches',

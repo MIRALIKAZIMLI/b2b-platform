@@ -21,6 +21,7 @@
     "db:migrate": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api db:migrate",
     "db:seed": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api db:seed",
     "check-rls": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api check-rls",
+    "search:reindex": "pnpm --filter @b2b/shared build && pnpm --filter @b2b/api search:reindex",
     "generate:api": "pnpm --filter @b2b/api-client generate",
     "contract:check": "node scripts/contract-check.mts"
   },

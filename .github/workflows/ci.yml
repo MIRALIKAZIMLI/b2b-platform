@@ -99,6 +99,16 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      # F2.11a: perakendeci dizini indeksi (ADR-0011). Geliştirme kipinde anahtarsız.
+      meilisearch:
+        image: getmeili/meilisearch:v1.55.0
+        env:
+          MEILI_ENV: development
+          MEILI_NO_ANALYTICS: 'true'
+        ports: ['7700:7700']
+        options: >-
+          --health-cmd "wget -q --spider http://127.0.0.1:7700/health"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       # Servis container'ının süper kullanıcısı (yalnızca CI). test/db.ts her çalıştırmada
       # boş bir test veritabanı açar, rolleri rastgele şifreyle hazırlar, migration'ları
@@ -106,6 +116,8 @@ jobs:
       TEST_DATABASE_ADMIN_URL: postgres://b2b:b2b_ci_password@127.0.0.1:5432/b2b_test
       # Sunucu ortam şeması REDIS_URL'i zorunlu tutar (F1.2a); servis container'ı.
       REDIS_URL: redis://127.0.0.1:6379
+      # F2.11a: Meilisearch servis container'ı (meili-buyer-directory-index.int.test.ts).
+      MEILI_URL: http://127.0.0.1:7700
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0

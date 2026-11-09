@@ -290,6 +290,9 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `files.xlsx_max_mb` | 10 (.xlsx üst sınırı, NFR-49, F1.10) | tamsayı | 1 | 50 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
 | `i18n.cache_ttl_seconds` | 60 (çeviri ve dil önbelleğinin süreç içi ömrü, F1.3) | tamsayı | 1 | 300 |
+| `directory.reindex_hour_utc` | 1 (perakendeci dizininin gece tam yeniden indekslendiği saat, UTC; worker açılışında okunur, ADR-0011, F2.11a) | tamsayı | 0 | 23 |
+| `directory.reindex_batch_size` | 500 (yeniden indekslemede bir turda okunan perakendeci sayısı, F2.11a) | tamsayı | 50 | 1000 |
+| `directory.reindex_lock_seconds` | 1800 (yeniden indeksleme Redis kilidinin ömrü; aynı anda tek çalışma, ADR-0011 §4, F2.11a) | tamsayı | 60 | 7200 |
 | `feature.*` | Özellik bayrakları; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §6 | evet/hayır | — | — |
 
 Çapraz kural (aynı kapsamdaki geçerli değerlerle): `dormant.reminder_days` elemanlarının hepsi < `dormant.warning_day` < `dormant.deactivate_day` < `dormant.delete_day`. İhlal `SETTING_OUT_OF_RANGE`.

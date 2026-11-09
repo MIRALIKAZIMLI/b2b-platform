@@ -127,7 +127,7 @@ flowchart TB
 | `DB_POOL_MAX` | API/worker bağlantı havuzu üst sınırı; varsayılan `10` |
 | `TEST_DATABASE_ADMIN_URL` | Yalnızca CI testleri; süper kullanıcı, test veritabanını hazırlar |
 | `REDIS_URL` | `redis://` veya `rediss://`; api ve worker için zorunlu (F1.2a) |
-| `MEILI_URL`, `MEILI_MASTER_KEY` | — |
+| `MEILI_URL`, `MEILI_MASTER_KEY` | Worker ve `search:reindex` (F2.11a). `local`/`test`'te isteğe bağlı (adres varsayılanı `http://127.0.0.1:7700`); `staging`/`production`'da ikisi zorunlu, production'da adres `https://`. Yoksa worker açılmaz |
 | `JWT_SIGNING_KEY`, `JWT_KEY_ID` | Ortam başına ayrı; HS256 imza anahtarı en az 32 karakter, `JWT_KEY_ID` 1–64 karakter (`A-Z a-z 0-9 . _ -`). Yoksa veya kısaysa api açılmaz (F1.5b) |
 | `JWT_PREVIOUS_SIGNING_KEY`, `JWT_PREVIOUS_KEY_ID` | İsteğe bağlı, ikisi birlikte. Döndürmede eski anahtar: yalnızca doğrulamada kullanılır, yeni anahtar imzalar (F1.5b) |
 | `TOTP_ENCRYPTION_KEY` | 32 bayt, base64 (TOTP sırrı AES-256-GCM anahtarı). Yoksa veya çözülünce 32 bayt değilse api açılmaz (F1.6) |

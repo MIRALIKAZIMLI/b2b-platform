@@ -19,7 +19,8 @@
     "db:bootstrap": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js db:bootstrap",
     "db:migrate": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js db:migrate",
     "db:seed": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js db:seed",
-    "check-rls": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js check-rls"
+    "check-rls": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js check-rls",
+    "search:reindex": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/cli.js search:reindex"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1160.0",
@@ -36,6 +37,7 @@
     "ioredis": "5.11.1",
     "jose": "6.2.13",
     "libphonenumber-js": "1.13.15",
+    "meilisearch": "0.62.0",
     "nestjs-pino": "4.6.1",
     "otplib": "12.0.1",
     "pg": "8.23.1",

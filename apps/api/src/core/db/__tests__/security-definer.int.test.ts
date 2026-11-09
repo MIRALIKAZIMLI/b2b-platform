@@ -15,6 +15,9 @@ interface FunctionRow {
 const EXPECTED_FUNCTIONS = [
   'dev_sms_outbox_insert',
   'dev_sms_outbox_list',
+  'directory_buyer_documents',
+  'directory_buyer_exact_match',
+  'directory_buyer_page',
   'idempotency_complete',
   'idempotency_lookup_by_phone',
   'idempotency_release',

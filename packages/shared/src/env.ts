@@ -175,6 +175,43 @@ export const apiEnvSchema = serverEnvSchema
     }
   });
 
+/** Ortam `local`/`test` iken `MEILI_URL` verilmezse kullanılan adres (docker compose, F2.11a K5). */
+export const MEILI_LOCAL_DEFAULT_URL = 'http://127.0.0.1:7700';
+
+/** Meilisearch bağlantısı (F2.11a). `.env.example` değişmez; local/test'te adres varsayılandır. */
+const searchEnvShape = {
+  MEILI_URL: z.url({ protocol: /^https?$/ }).optional(),
+  MEILI_MASTER_KEY: z.string().min(1).optional(),
+};
+
+interface SearchEnvInput {
+  readonly APP_ENV: AppEnv;
+  readonly MEILI_URL?: string | undefined;
+  readonly MEILI_MASTER_KEY?: string | undefined;
+}
+
+/** staging/production'da adres ve anahtar zorunludur; production'da adres `https://` olmalıdır. */
+function refineSearchEnv(env: SearchEnvInput, ctx: z.RefinementCtx): void {
+  if (env.APP_ENV !== 'staging' && env.APP_ENV !== 'production') return;
+  if (env.MEILI_URL === undefined) {
+    ctx.addIssue({ code: 'custom', path: ['MEILI_URL'], message: 'zorunlu' });
+  } else if (env.APP_ENV === 'production' && !env.MEILI_URL.startsWith('https://')) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['MEILI_URL'],
+      message: 'production ortamında https olmalı',
+    });
+  }
+  if (env.MEILI_MASTER_KEY === undefined) {
+    ctx.addIssue({ code: 'custom', path: ['MEILI_MASTER_KEY'], message: 'zorunlu' });
+  }
+}
+
+/** `search:reindex` komutunun doğruladığı şema (F2.11a). */
+export const searchEnvSchema = z
+  .object({ APP_ENV: z.enum(APP_ENVS), ...searchEnvShape })
+  .superRefine(refineSearchEnv);
+
 /** Push sağlayıcıları (integrations §3, F1.11). */
 export const PUSH_PROVIDERS = ['expo', 'mock'] as const;
 export type PushProvider = (typeof PUSH_PROVIDERS)[number];
@@ -191,8 +228,10 @@ export const workerEnvSchema = serverEnvSchema
     PUSH_PROVIDER: z.enum(PUSH_PROVIDERS),
     /** İsteğe bağlı: Expo hesabında "enhanced push security" açıksa gerekir. */
     EXPO_ACCESS_TOKEN: z.string().min(1).optional(),
+    ...searchEnvShape,
   })
   .superRefine((env, ctx) => {
+    refineSearchEnv(env, ctx);
     if (
       env.APP_ENV === 'production' &&
       PUSH_PROVIDERS_FORBIDDEN_IN_PRODUCTION.has(env.PUSH_PROVIDER)
@@ -210,6 +249,7 @@ export type MigratorEnv = z.infer<typeof migratorEnvSchema>;
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;
+export type SearchEnv = z.infer<typeof searchEnvSchema>;
 
 type RawEnv = Record<string, string | undefined>;
 
@@ -242,6 +282,10 @@ export function parseApiEnv(env: RawEnv): ApiEnv {
 
 export function parseWorkerEnv(env: RawEnv): WorkerEnv {
   return parseEnv(workerEnvSchema, env);
+}
+
+export function parseSearchEnv(env: RawEnv): SearchEnv {
+  return parseEnv(searchEnvSchema, env);
 }
 
 /** `pnpm db:seed` için isteğe bağlı ilk süper admin telefonu (F1.6). Boş veya yoksa undefined. */
