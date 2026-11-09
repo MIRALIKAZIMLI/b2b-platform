@@ -138,3 +138,17 @@ export interface DirectorySearchResult {
   readonly nextCursor: string | null;
   readonly emptyReason: DirectoryEmptyReason | null;
 }
+
+/** Tam eşleşme kutusuna yazılan değer (US-020): `+` ile başlayan telefon veya 10 haneli VÖEN. */
+export type ExactLookup = { readonly phone: string } | { readonly voen: string };
+
+/**
+ * Boşluk, tire ve parantez atılır. `+` ile başlayan tam E.164 → telefon; 10 rakam ve geçerli
+ * VÖEN → VÖEN; diğerleri `undefined` (istemci "tam numara veya VÖEN yazın" der, istek gitmez).
+ */
+export function parseExactLookup(input: string): ExactLookup | undefined {
+  const compact = input.replace(/[\s()-]/g, '');
+  if (PHONE_E164_PATTERN.test(compact)) return { phone: compact };
+  if (VOEN_PATTERN.test(compact)) return { voen: compact };
+  return undefined;
+}

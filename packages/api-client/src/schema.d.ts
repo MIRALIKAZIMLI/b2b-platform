@@ -1632,7 +1632,7 @@ export interface paths {
                 query?: {
                     /** @description Ünvanda arama */
                     q?: string;
-                    /** @description Tam E.164 eşleşme (işletme */
+                    /** @description Tam E.164 eşleşme: işletme, kişisel veya admin giriş telefonu */
                     phone?: components["schemas"]["PhoneE164"];
                     /** @description Tam eşleşme */
                     voen?: components["schemas"]["Voen"];

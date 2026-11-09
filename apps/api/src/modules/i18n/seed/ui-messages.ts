@@ -2,7 +2,7 @@
 // F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi;
 // F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni;
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
-// daveti kabulü).
+// daveti kabulü; F2.11b: perakendeci dizini).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -2123,5 +2123,206 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Sil',
     ru: 'Удалить',
     tr: 'Sil',
+  },
+  // F2.11b: perakendeci dizini (web + mobil).
+  'directory.title': {
+    az: 'Pərakəndəçi tap',
+    ru: 'Поиск розничных точек',
+    tr: 'Perakendeci bul',
+  },
+  'directory.description': {
+    az: 'Bölgənizdəki pərakəndəçiləri tapın. Yalnız pərakəndəçinin açıq saxladığı məlumatlar görünür.',
+    ru: 'Найдите розничные точки в вашем регионе. Видны только данные, которые розничная точка сделала открытыми.',
+    tr: 'Bölgenizdeki perakendecileri bulun. Yalnızca perakendecinin açık bıraktığı bilgiler görünür.',
+  },
+  'directory.mode.filter': {
+    az: 'Süzgəclə axtar',
+    ru: 'Поиск с фильтрами',
+    tr: 'Filtreyle ara',
+  },
+  'directory.mode.exact': {
+    az: 'Telefon və ya VÖEN ilə tap',
+    ru: 'Найти по телефону или VÖEN',
+    tr: 'Telefon veya VÖEN ile bul',
+  },
+  'directory.filter.q': {
+    az: 'Ad',
+    ru: 'Название',
+    tr: 'Ünvan',
+  },
+  'directory.filter.q_placeholder': {
+    az: 'Məsələn, Market',
+    ru: 'Например, Маркет',
+    tr: 'Örneğin, Market',
+  },
+  'directory.filter.region': {
+    az: 'Şəhər / rayon',
+    ru: 'Город / район',
+    tr: 'Şehir / ilçe',
+  },
+  'directory.filter.region_default': {
+    az: 'Xidmət bölgələrim',
+    ru: 'Мои регионы обслуживания',
+    tr: 'Hizmet bölgelerim',
+  },
+  'directory.filter.activity': {
+    az: 'Fəaliyyət sahəsi',
+    ru: 'Вид деятельности',
+    tr: 'Faaliyet alanı',
+  },
+  'directory.filter.activity_all': {
+    az: 'Hamısı',
+    ru: 'Все',
+    tr: 'Tümü',
+  },
+  'directory.filter.verified': {
+    az: 'Yalnız təsdiqlənmiş',
+    ru: 'Только подтверждённые',
+    tr: 'Yalnızca doğrulanmış',
+  },
+  'directory.verified': {
+    az: 'Təsdiqlənib',
+    ru: 'Подтверждено',
+    tr: 'Doğrulandı',
+  },
+  'directory.field.businessPhone': {
+    az: 'Biznes telefonu',
+    ru: 'Рабочий телефон',
+    tr: 'İşletme telefonu',
+  },
+  'directory.field.personalPhone': {
+    az: 'Şəxsi telefon',
+    ru: 'Личный телефон',
+    tr: 'Kişisel telefon',
+  },
+  'directory.field.email': {
+    az: 'E-poçt',
+    ru: 'Эл. почта',
+    tr: 'E-posta',
+  },
+  'directory.field.voen': {
+    az: 'VÖEN',
+    ru: 'VÖEN',
+    tr: 'VÖEN',
+  },
+  'directory.field.contactName': {
+    az: 'Səlahiyyətli şəxs',
+    ru: 'Контактное лицо',
+    tr: 'Yetkili',
+  },
+  'directory.field.addressLine': {
+    az: 'Ünvan',
+    ru: 'Адрес',
+    tr: 'Adres',
+  },
+  'directory.hidden_fields': {
+    az: 'Digər məlumatları pərakəndəçi gizli saxlayıb.',
+    ru: 'Остальные данные розничная точка скрыла.',
+    tr: 'Diğer bilgileri perakendeci gizli tutuyor.',
+  },
+  'directory.more': {
+    az: 'Daha çox',
+    ru: 'Показать ещё',
+    tr: 'Daha fazla',
+  },
+  'directory.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'directory.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Yeniden dene',
+  },
+  'directory.rate_limited': {
+    az: 'Çox sayda axtarış etdiniz. {seconds} saniyə sonra yenidən cəhd edin.',
+    ru: 'Слишком много запросов. Повторите через {seconds} сек.',
+    tr: 'Çok fazla arama yaptınız. {seconds} saniye sonra yeniden deneyin.',
+  },
+  'directory.empty.no_service_areas_title': {
+    az: 'Xidmət bölgəsi seçilməyib',
+    ru: 'Регионы обслуживания не выбраны',
+    tr: 'Hizmet bölgesi seçilmemiş',
+  },
+  'directory.empty.no_service_areas': {
+    az: 'Süzgəcsiz axtarış xidmət bölgələrinizdə aparılır. Əvvəlcə parametrlərdə bölgə əlavə edin və ya yuxarıda şəhər seçin.',
+    ru: 'Поиск без фильтров идёт по вашим регионам обслуживания. Добавьте регион в настройках или выберите город выше.',
+    tr: 'Filtresiz arama hizmet bölgelerinizde yapılır. Önce ayarlardan bölge ekleyin veya yukarıdan şehir seçin.',
+  },
+  'directory.empty.go_settings': {
+    az: 'Parametrlərə keç',
+    ru: 'Перейти в настройки',
+    tr: 'Ayarlara git',
+  },
+  'directory.empty.no_regions_title': {
+    az: 'Sizə bölgə təyin edilməyib',
+    ru: 'Вам не назначены регионы',
+    tr: 'Size bölge atanmamış',
+  },
+  'directory.empty.no_assigned_regions': {
+    az: 'Dizin yalnız sizə təyin edilmiş bölgələri göstərir. İşletmə adminindən bölgə təyin etməsini xahiş edin.',
+    ru: 'Каталог показывает только назначенные вам регионы. Попросите администратора назначить регион.',
+    tr: 'Dizin yalnızca size atanmış bölgeleri gösterir. İşletme admininden bölge atamasını isteyin.',
+  },
+  'directory.empty.none_title': {
+    az: 'Nəticə yoxdur',
+    ru: 'Ничего не найдено',
+    tr: 'Sonuç yok',
+  },
+  'directory.empty.none': {
+    az: 'Süzgəcləri dəyişib yenidən yoxlayın.',
+    ru: 'Измените фильтры и попробуйте снова.',
+    tr: 'Filtreleri değiştirip yeniden deneyin.',
+  },
+  'directory.exact.label': {
+    az: 'Tam telefon nömrəsi və ya VÖEN',
+    ru: 'Полный номер телефона или VÖEN',
+    tr: 'Tam telefon numarası veya VÖEN',
+  },
+  'directory.exact.hint': {
+    az: 'Telefon +994 ilə, VÖEN 10 rəqəmlə. Dizində görünməyən pərakəndəçi də tapılır.',
+    ru: 'Телефон с +994, VÖEN из 10 цифр. Находит и скрытые из каталога точки.',
+    tr: 'Telefon +994 ile, VÖEN 10 haneyle. Dizinde görünmeyen perakendeci de bulunur.',
+  },
+  'directory.exact.invalid': {
+    az: 'Tam nömrə (+994…) və ya 10 rəqəmli VÖEN yazın.',
+    ru: 'Введите полный номер (+994…) или VÖEN из 10 цифр.',
+    tr: 'Tam numara (+994…) veya 10 haneli VÖEN yazın.',
+  },
+  'directory.exact.submit': {
+    az: 'Tap',
+    ru: 'Найти',
+    tr: 'Bul',
+  },
+  'directory.exact.none': {
+    az: 'Bu nömrə və ya VÖEN ilə pərakəndəçi tapılmadı.',
+    ru: 'Розничная точка с таким номером или VÖEN не найдена.',
+    tr: 'Bu numara veya VÖEN ile perakendeci bulunamadı.',
+  },
+  'directory.mobile.back': {
+    az: 'Geri',
+    ru: 'Назад',
+    tr: 'Geri',
+  },
+  'directory.mobile.search_placeholder': {
+    az: 'Ad ilə axtar',
+    ru: 'Поиск по названию',
+    tr: 'Ünvana göre ara',
+  },
+  'directory.mobile.filters': {
+    az: 'Süzgəclər',
+    ru: 'Фильтры',
+    tr: 'Filtreler',
+  },
+  'directory.mobile.apply': {
+    az: 'Tətbiq et',
+    ru: 'Применить',
+    tr: 'Uygula',
+  },
+  'directory.mobile.clear': {
+    az: 'Təmizlə',
+    ru: 'Сбросить',
+    tr: 'Temizle',
   },
 };

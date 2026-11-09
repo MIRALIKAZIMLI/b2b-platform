@@ -171,7 +171,16 @@ describe('env: api (SMS ve OTP, F1.5a)', () => {
 
   it('geçerli değerler okunur', () => {
     expect(parseApiEnv(API_ENV)).toMatchObject({ SMS_PROVIDER: 'mock', OTP_HASH_KEY });
-    expect(parseApiEnv({ ...API_ENV, APP_ENV: 'staging' }).APP_ENV).toBe('staging');
+    // F2.11b: api dizin araması için Meilisearch'e bağlanır; staging'de adres ve anahtar zorunlu.
+    const meili = { MEILI_URL: 'https://search.example', MEILI_MASTER_KEY: MEILI_KEY };
+    expect(parseApiEnv({ ...API_ENV, ...meili, APP_ENV: 'staging' }).APP_ENV).toBe('staging');
+  });
+
+  it('F2.11b: api staging/production ortamında MEILI_URL ve MEILI_MASTER_KEY ister', () => {
+    const message = errorMessage(() => parseApiEnv({ ...API_ENV, APP_ENV: 'staging' }));
+    expect(message).toMatch(/MEILI_URL/);
+    expect(message).toMatch(/MEILI_MASTER_KEY/);
+    expect(parseApiEnv(API_ENV).MEILI_URL).toBeUndefined();
   });
 
   it('F1.5-AC7: production + SMS_PROVIDER=mock reddedilir (NFR-97)', () => {
