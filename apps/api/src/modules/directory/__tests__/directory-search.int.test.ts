@@ -313,6 +313,21 @@ describe('F2.11b perakendeci dizini arama ucu', () => {
     expect(await errorCode(() => cards(seller.businessId, tooMany))).toBe('22023');
     expect((await cards(seller.businessId, [buyerId])).map((card) => card.id)).toEqual([buyerId]);
 
+    // T6 bekçisi: `files` için yalnız migrator'a açık okuma politikası ve sınıf `rls:T,D` (0021).
+    const policies = await platformRows<{ policyname: string; cmd: string; roles: string }>(
+      `select policyname, cmd, array_to_string(roles, ',') as roles from pg_policies
+        where tablename = 'files' order by policyname`,
+    );
+    expect(policies.find((p) => p.policyname === 'files_definer_select')).toEqual({
+      policyname: 'files_definer_select',
+      cmd: 'SELECT',
+      roles: 'migrator',
+    });
+    const [comment] = await platformRows<{ c: string }>(
+      "select obj_description('public.files'::regclass) as c",
+    );
+    expect(comment?.c).toBe('rls:T,D');
+
     // Perakendeci üyesi uca erişemez (izin `directory.search`, yetenek seller).
     const buyerAdmin = await addMember(buyerId, 'buyer_business_admin');
     const denied = await search({}, { userId: buyerAdmin, businessId: buyerId });
