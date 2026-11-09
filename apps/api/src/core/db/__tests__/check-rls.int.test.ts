@@ -24,7 +24,8 @@ const F17_TABLES: Record<string, string> = {
   'public.business_privacy': 'rls:T,D',
   'public.businesses': 'rls:T,D',
   'public.buyer_profiles': 'rls:T,D',
-  'public.person_data': 'rls:T',
+  // F2.11a: yetkili adı dizin D fonksiyonunca (yalnız açıksa) okunur.
+  'public.person_data': 'rls:T,D',
   'public.seller_profiles': 'rls:T',
   'public.service_areas': 'rls:T',
   'public.warehouses': 'rls:T',

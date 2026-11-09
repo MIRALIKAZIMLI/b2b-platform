@@ -32,7 +32,7 @@ Her istek işleminin başında uygulama `SET LOCAL app.business_id = '<uuid>'` �
 | **G** (genel katalog) | Herkes okur; yalnızca `app.is_platform = true` yazar | `units`, `categories`, `brands` (aktif), `activity_types`, `languages`, `currencies`, `regions`, `permissions`, `job_titles`, `role_templates`, `plans` |
 | **U** (kullanıcıya bağlı) | `user_id = app.user_id` | `user_sessions`, `push_tokens`, `notifications`, `notification_preferences` |
 | **S** (sistem) | RLS dışında; yalnızca belirli servisler erişir; uygulama rolünün doğrudan okuma izni yok, yalnızca güvenli fonksiyonlar | `otp_challenges`, `idempotency_keys`, `outbox_events`, `audit_logs` (yalnızca ekleme), `settings`, `dev_sms_outbox` |
-| **D** (dizin) | Perakendeci dizini sorguları yalnızca `directory` modülünün `SECURITY DEFINER` fonksiyonu ve Meilisearch indeksi üzerinden; görünürlük ayarları fonksiyon içinde uygulanır | `businesses`, `buyer_profiles`, `business_privacy` (başka kiracının okuması) |
+| **D** (dizin) | Perakendeci dizini sorguları yalnızca `directory` modülünün `SECURITY DEFINER` fonksiyonu ve Meilisearch indeksi üzerinden; görünürlük ayarları fonksiyon içinde uygulanır | `businesses`, `buyer_profiles`, `business_privacy`, `person_data` (yalnız yetkili adı, F2.11a) (başka kiracının okuması) |
 
 **Ek RLS kuralları:**
 
@@ -404,7 +404,7 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | show_contact_name | boolean | false |
 | show_personal_contact | boolean | false |
 
-#### `person_data` (T)
+#### `person_data` (T, D)
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
@@ -412,6 +412,16 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | contact_name | text | | 🔒 |
 | personal_phone | text | null | 🔒 |
 | email | text | null | 🔒 |
+
+İndeks (F2.11a): `person_data_personal_phone_idx (personal_phone) WHERE personal_phone IS NOT NULL`; `businesses_business_phone_digits_idx (regexp_replace(business_phone, '[^0-9]', '', 'g')) WHERE business_phone IS NOT NULL` (tam telefon eşleşmesi).
+
+**Dizin D okuması (F2.11a, `0020_directory.sql`).** `businesses`, `buyer_profiles`, `business_privacy` ve `person_data` (yalnız yetkili adı) başka kiracı için yalnız migrator sahipli `SECURITY DEFINER` fonksiyonlarla okunur (`search_path = pg_catalog, public, pg_temp`, PUBLIC EXECUTE yok, yalnız `app_user`). Fonksiyonlar için yalnız migrator'a açık okuma politikaları: `buyer_profiles_definer_select`, `business_privacy_definer_select`, `person_data_definer_select`, `business_capabilities_definer_select`, `memberships_definer_select`, `roles_definer_select` (`businesses`, `users` için 0013 / 0008'de var). Çağıran kontrolü `directory_assert_caller` (SECURITY DEFINER değil, PUBLIC EXECUTE yok); ihlal `42501`.
+
+- `directory_buyer_documents(p_ids uuid[])` (en fazla 1000): `buyer` yeteneği `approved` ve işletmesi `active` olanların belgesi. Ünvan, faaliyet alanı, bölge, şehir (bölge rayonsa üstü), doğrulanmış her zaman; logo kimliği, adres, işletme telefonu, VÖEN, yetkili adı yalnız `business_privacy` açıksa, değilse `null`; `listed_in_directory`. Kişisel telefon, e-posta, bağlantı ve alım verisi hiç dönmez (US-007 AC6). Çağıran: onaylı ve aktif `seller` bağlamı, platform veya bağlamsız sistem işlemi (worker).
+- `directory_buyer_page(p_after uuid, p_limit int)` (1–1000): dizinde görünmesi gereken kimlikler, `id` sırasıyla. Yalnız platform / bağlamsız sistem işlemi (yeniden indeksleme).
+- `directory_buyer_exact_match(p_phone text, p_voen text)`: yalnız biri; tam E.164 telefon veya 10 haneli VÖEN. Biçimsiz/kısmi değer boş döner (US-020 AC2). "Dizinde görünme" kapalı olsa da bulur; `active` + `buyer approved` şartı. Telefon (kullanıcı kararı 2026-11-09): işletme telefonu (yalnız rakamlar karşılaştırılır), kişisel telefon veya işletme admini aktif üyenin giriş telefonu. Yalnız kimlik döner, en fazla 20. Çağıran yalnız onaylı ve aktif `seller` bağlamı.
+
+İndeks `buyer_directory` (Meilisearch) yalnız `active` + `buyer approved` + dizinde görünen perakendecileri ve yalnız açık alanları tutar; aranabilir yalnız `legalName`, filtre `regionId`, `cityId`, `activityTypeId`, `verified`. Outbox `buyer.registered`, `buyer.privacy_changed`, `buyer.profile_changed` (yükte yalnız `businessId`) belgeyi D fonksiyonundan yeniden okur; gece tam yeniden indeksleme (`directory.reindex_hour_utc`) ve `pnpm search:reindex` yeni indeksi doldurup takas eder (Redis kilidi). Kilit tutulurken her artımlı yenileme kimliği önce `directory:reindex:dirty` kümesine ekler; takastan hemen sonra küme boşaltılıp bu kimlikler yeni indekste yeniden işlenir (Müfettiş 15 M1).
 
 #### `branches` (T)
 

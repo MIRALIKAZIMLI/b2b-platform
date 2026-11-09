@@ -5,10 +5,12 @@ import { OutboxDispatcherModule } from './core/outbox';
 import { AccessWorkerModule } from './modules/access';
 import { PushModule } from './infrastructure/push';
 import { RedisModule } from './infrastructure/redis';
+import { SearchModule } from './infrastructure/search';
+import { DirectoryWorkerModule } from './modules/directory';
 import { NotificationsWorkerModule } from './modules/notifications';
 
 // Worker giriş noktasının modülü: outbox dağıtıcısı (F1.2b). Kuyruk tüketicileri: access (F1.8b),
-// notifications (F1.11; push sağlayıcısı PUSH_PROVIDER ile).
+// notifications (F1.11; push sağlayıcısı PUSH_PROVIDER ile), directory (F2.11a; Meilisearch).
 // Ayarların Redis istemcisi (RedisModule) ile BullMQ bağlantısı ayrıdır (Müfettiş notu b).
 @Module({})
 export class WorkerModule {
@@ -27,6 +29,8 @@ export class WorkerModule {
             : { expoAccessToken: env.EXPO_ACCESS_TOKEN }),
         }),
         NotificationsWorkerModule,
+        SearchModule.forRoot({ url: env.MEILI_URL, apiKey: env.MEILI_MASTER_KEY }),
+        DirectoryWorkerModule,
       ],
     };
   }

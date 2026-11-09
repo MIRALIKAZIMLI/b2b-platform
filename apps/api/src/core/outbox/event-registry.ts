@@ -34,12 +34,15 @@ export const OUTBOX_EVENTS = {
   },
   // F1.11: bildirim altyapısının test olayı (US-054 AC1 altyapı). `userId` alıcı, `ref` konu kimliği.
   'notification.test': { queue: 'notifications', fields: { userId: 'id', ref: 'id' } },
-  // F2.3a: perakendeci kaydoldu (SF-02). Tüketici F2.11a (dizin indeksi); o zamana kadar iş
-  // `directory` kuyruğunda bekler.
+  // F2.3a: perakendeci kaydoldu (SF-02). Tüketici `directory` (F2.11a, dizin indeksi).
   'buyer.registered': { queue: 'directory', fields: { businessId: 'id', regionId: 'id' } },
-  // F2.10 (US-007): perakendecinin görünürlük ayarları değişti. Tüketici F2.11a (indeksteki açık
-  // alanları yeniler, "dizinde görünme" kapalıysa filtreli aramadan çıkarır).
+  // F2.10 (US-007): perakendecinin görünürlük ayarları değişti. Tüketici `directory` (F2.11a;
+  // indeksteki açık alanları yeniler, "dizinde görünme" kapalıysa indeksten çıkarır).
   'buyer.privacy_changed': { queue: 'directory', fields: { businessId: 'id' } },
+  // F2.11a (Müfettiş 15 L4, VARSAYIM K3): perakendecinin dizinde görünebilen profil alanı
+  // (ünvan, bölge, faaliyet alanı, adres, işletme telefonu, VÖEN, yetkili adı, logo) değişti.
+  // Yükte yalnız kimlik; tüketici `directory` belgeyi D fonksiyonundan yeniden okur.
+  'buyer.profile_changed': { queue: 'directory', fields: { businessId: 'id' } },
   // F2.9 (US-012 AC2): platform rol şablonunun izinleri değişti (yeni sürüm). Şablondan rolü olan
   // işletmenin her aktif admini için bir olay; tüketici `notifications` (bildirim).
   'role_template.version_published': {

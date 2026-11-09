@@ -43,3 +43,4 @@
 - F2.9b: admin unvan ve rol şablonu ekranları
 - F2.10a: perakendeci görünürlük ayarları (dizinde görünme, açık alanlar)
 - F2.10b: yetkili adı, kişisel telefon, e-posta ve logo düzenleme (BusinessLogoPort, ADR-0024)
+- F2.11a: perakendeci dizini D fonksiyonları, Meilisearch `buyer_directory` indeksi, outbox tüketicisi, gece yeniden indeksleme ve `search:reindex`

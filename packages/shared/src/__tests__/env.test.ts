@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { randomBytes } from 'node:crypto';
 import {
+  MEILI_LOCAL_DEFAULT_URL,
   parseApiEnv,
   parseDbEnv,
   parseMigratorEnv,
+  parseSearchEnv,
   parseSeedEnv,
   parseServerEnv,
   parseWorkerEnv,
@@ -11,6 +13,7 @@ import {
 
 // Her çalıştırmada rastgele (depoda anahtar gibi görünen değer yok).
 const TOTP_KEY = randomBytes(32).toString('base64');
+const MEILI_KEY = randomBytes(16).toString('hex');
 
 const APP_URL = 'postgres://app_user:secret-app@127.0.0.1:5432/b2b';
 const MIGRATOR_URL = 'postgresql://migrator:secret-mig@127.0.0.1:5432/b2b';
@@ -290,13 +293,49 @@ describe('env: worker push sağlayıcısı (F1.11)', () => {
 
   it('production + PUSH_PROVIDER=mock reddedilir; expo kabul', () => {
     const token = randomBytes(12).toString('hex');
+    // F2.11a: production worker Meilisearch adresi ve anahtarı da ister.
+    const meili = { MEILI_URL: 'https://search.example', MEILI_MASTER_KEY: MEILI_KEY };
     const message = errorMessage(() =>
-      parseWorkerEnv({ ...WORKER_ENV, APP_ENV: 'production', EXPO_ACCESS_TOKEN: token }),
+      parseWorkerEnv({ ...WORKER_ENV, ...meili, APP_ENV: 'production', EXPO_ACCESS_TOKEN: token }),
     );
     expect(message).toMatch(/PUSH_PROVIDER/);
     expect(message).not.toContain(token);
     expect(
-      parseWorkerEnv({ ...WORKER_ENV, APP_ENV: 'production', PUSH_PROVIDER: 'expo' }).APP_ENV,
+      parseWorkerEnv({ ...WORKER_ENV, ...meili, APP_ENV: 'production', PUSH_PROVIDER: 'expo' })
+        .APP_ENV,
     ).toBe('production');
+  });
+});
+
+describe('env: Meilisearch (F2.11a)', () => {
+  const WORKER_ENV = { ...SERVER_ENV, PUSH_PROVIDER: 'mock' };
+
+  it('F2.11a K5: local/test ortamında adres ve anahtar isteğe bağlı', () => {
+    const env = parseWorkerEnv(WORKER_ENV);
+    expect(env.MEILI_URL).toBeUndefined();
+    expect(MEILI_LOCAL_DEFAULT_URL).toBe('http://127.0.0.1:7700');
+    expect(parseSearchEnv({ APP_ENV: 'test' }).MEILI_URL).toBeUndefined();
+  });
+
+  it('F2.11a K5: staging/production ortamında adres ve anahtar zorunlu; anahtar mesaja girmez', () => {
+    const message = errorMessage(() => parseSearchEnv({ APP_ENV: 'staging' }));
+    expect(message).toMatch(/MEILI_URL/);
+    expect(message).toMatch(/MEILI_MASTER_KEY/);
+    const insecure = errorMessage(() =>
+      parseSearchEnv({
+        APP_ENV: 'production',
+        MEILI_URL: 'http://search.example',
+        MEILI_MASTER_KEY: MEILI_KEY,
+      }),
+    );
+    expect(insecure).toMatch(/MEILI_URL/);
+    expect(insecure).not.toContain(MEILI_KEY);
+    expect(
+      parseSearchEnv({
+        APP_ENV: 'production',
+        MEILI_URL: 'https://search.example',
+        MEILI_MASTER_KEY: MEILI_KEY,
+      }).MEILI_URL,
+    ).toBe('https://search.example');
   });
 });
