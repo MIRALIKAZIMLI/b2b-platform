@@ -15,6 +15,9 @@ export const DIRECTORY_REINDEX_JOB = 'directory.reindex';
 /** Kilit anahtarı: worker işi ve `search:reindex` komutu aynı anda çalışmaz (ADR-0011 §4). */
 export const DIRECTORY_REINDEX_LOCK_KEY = 'lock:directory:reindex';
 
+/** Kilit tutulurken yenilenen perakendecilerin kimlikleri (Müfettiş 15 M1). */
+export const DIRECTORY_REINDEX_DIRTY_KEY = 'directory:reindex:dirty';
+
 export const directoryOutboxJobSchema = z.object({
   /** outbox_events.id (bigint, metin); idempotens: aynı olay iki kez işlense de sonuç aynı. */
   eventId: z.string().regex(/^\d{1,19}$/),

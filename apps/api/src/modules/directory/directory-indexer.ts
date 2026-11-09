@@ -1,11 +1,13 @@
 // Perakendeci dizini indeksini veritabanından besler (F2.11a, ADR-0011).
 // - refresh: olay gelen perakendecinin belgesini D fonksiyonundan yeniden okur; dizinde
 //   görünüyorsa yazar, görünmüyorsa (gizli, askıda, pasif, onaysız) indeksten siler.
-//   Olay yükündeki bilgiye güvenmez, yalnız kimliği kullanır (idempotent).
+//   Olay yükündeki bilgiye güvenmez, yalnız kimliği kullanır (idempotent). Yeniden indeksleme
+//   sürüyorsa kimlik önce kirli kümeye eklenir (DirectoryRebuildTracker, Müfettiş 15 M1).
 // - rebuild: tüm indeksi sayfa sayfa yeni bir indekse yazar ve takas eder (gece işi + komut).
 import { Inject, Injectable } from '@nestjs/common';
 import { withSystemTx } from '../../core/db';
 import { BuyerDirectoryIndex } from '../../core/ports/buyer-directory-index';
+import { DirectoryRebuildTracker } from './directory-rebuild-tracker';
 import { DirectoryRepository } from './directory.repository';
 
 export interface RebuildResult {
@@ -17,11 +19,22 @@ export class DirectoryIndexer {
   constructor(
     @Inject(BuyerDirectoryIndex) private readonly index: BuyerDirectoryIndex,
     @Inject(DirectoryRepository) private readonly repository: DirectoryRepository,
+    @Inject(DirectoryRebuildTracker)
+    private readonly tracker: Pick<DirectoryRebuildTracker, 'markIfRebuilding'>,
   ) {}
 
-  async refresh(businessIds: readonly string[]): Promise<void> {
+  /**
+   * `track: false` yalnız rebuild'in takas sonrası yeniden işlemesi içindir (kimlik kümeye
+   * tekrar eklenmez).
+   */
+  async refresh(
+    businessIds: readonly string[],
+    options: { readonly track?: boolean } = {},
+  ): Promise<void> {
     const ids = [...new Set(businessIds)];
     if (ids.length === 0) return;
+    // Belge okunmadan önce: takastan önce kaybolabilecek her yazımın kimliği kümede olsun.
+    if (options.track !== false) await this.tracker.markIfRebuilding(ids);
     const rows = await withSystemTx((tx) => this.repository.documentsTx(tx, ids));
     const listed = rows.filter((row) => row.listedInDirectory).map((row) => row.document);
     const keep = new Set(listed.map((document) => document.id));

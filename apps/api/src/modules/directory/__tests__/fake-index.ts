@@ -9,6 +9,8 @@ import {
 export class FakeBuyerDirectoryIndex extends BuyerDirectoryIndex {
   readonly docs = new Map<string, BuyerDirectoryDocument>();
   upserts = 0;
+  /** Doldurma bitti, takas olmadı: bu arada canlı indekse yazılanlar takasla kaybolur. */
+  beforeSwap: (() => Promise<void>) | undefined;
 
   upsert(documents: readonly BuyerDirectoryDocument[]): Promise<void> {
     for (const document of documents) this.docs.set(document.id, document);
@@ -27,6 +29,7 @@ export class FakeBuyerDirectoryIndex extends BuyerDirectoryIndex {
       for (const document of documents) next.set(document.id, document);
       return Promise.resolve();
     });
+    await this.beforeSwap?.();
     this.docs.clear();
     for (const [id, document] of next) this.docs.set(id, document);
   }

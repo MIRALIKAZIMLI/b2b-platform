@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SettingsModule } from '../settings';
 import { DirectoryIndexer } from './directory-indexer';
+import { DirectoryRebuildTracker } from './directory-rebuild-tracker';
 import { DirectoryReindexService } from './directory-reindex.service';
 import { DirectoryReindexSchedule } from './directory-schedule';
 import { DirectoryProcessor } from './directory.processor';
@@ -12,7 +13,12 @@ import { DirectoryRepository } from './directory.repository';
  */
 @Module({
   imports: [SettingsModule],
-  providers: [DirectoryRepository, DirectoryIndexer, DirectoryReindexService],
+  providers: [
+    DirectoryRepository,
+    DirectoryRebuildTracker,
+    DirectoryIndexer,
+    DirectoryReindexService,
+  ],
   exports: [DirectoryIndexer, DirectoryReindexService],
 })
 export class DirectoryIndexModule {}

@@ -84,11 +84,18 @@ describe('F2.11a directory kuyruğu', () => {
 
   it('F2.11a-AC8: yeniden indeksleme kilitliyse çalışmaz (ADR-0011 §4)', async () => {
     const lock = new MemoryLock();
-    const indexer = { rebuild: vi.fn(() => Promise.resolve({ indexed: 5 })) };
-    const service = new DirectoryReindexService(indexer, settings as never, lock);
+    const indexer = {
+      rebuild: vi.fn(() => Promise.resolve({ indexed: 5 })),
+      refresh: vi.fn(() => Promise.resolve()),
+    };
+    const dirty = [randomUUID()];
+    const tracker = { drain: vi.fn(() => Promise.resolve(dirty)) };
+    const service = new DirectoryReindexService(indexer, tracker, settings as never, lock);
 
     expect(await service.run()).toEqual({ status: 'done', indexed: 5 });
     expect(indexer.rebuild).toHaveBeenCalledWith(500);
+    // M1: takastan sonra kirli kimlikler izlenmeden yeniden işlenir.
+    expect(indexer.refresh).toHaveBeenCalledWith(dirty, { track: false });
     expect(lock.values.size).toBe(0);
 
     await withRedisLock(lock, 'lock:directory:reindex', 60, async () => {

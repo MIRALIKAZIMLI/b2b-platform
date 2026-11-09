@@ -15,6 +15,8 @@ import { BUYER_DIRECTORY_DOCUMENT_KEYS } from '../../../core/ports/buyer-directo
 import { REDIS_CLIENT } from '../../../infrastructure/redis';
 import { platformRows, RegistrationHttp, registerBody, runSeeds, testRefs } from './fixtures';
 import { DirectoryIndexer } from '../directory-indexer';
+import { DirectoryRebuildTracker } from '../directory-rebuild-tracker';
+import { DirectoryReindexService } from '../directory-reindex.service';
 import { DirectoryRepository } from '../directory.repository';
 import { FakeBuyerDirectoryIndex } from './fake-index';
 
@@ -37,6 +39,7 @@ describe('F2.11a perakendeci dizini (D fonksiyonları + indeks)', () => {
   let api: RegistrationHttp;
   let index: FakeBuyerDirectoryIndex;
   let indexer: DirectoryIndexer;
+  let tracker: DirectoryRebuildTracker;
   const repository = new DirectoryRepository();
   let sellerId: string;
 
@@ -58,7 +61,8 @@ describe('F2.11a perakendeci dizini (D fonksiyonları + indeks)', () => {
 
   beforeEach(() => {
     index = new FakeBuyerDirectoryIndex();
-    indexer = new DirectoryIndexer(index, repository);
+    tracker = new DirectoryRebuildTracker(redis.client);
+    indexer = new DirectoryIndexer(index, repository, tracker);
   });
 
   async function createSeller(capability: 'approved' | 'pending'): Promise<string> {
@@ -322,12 +326,50 @@ describe('F2.11a perakendeci dizini (D fonksiyonları + indeks)', () => {
     expect([...incremental.keys()]).toEqual([listed.businessId]);
 
     const rebuilt = new FakeBuyerDirectoryIndex();
-    const result = await new DirectoryIndexer(rebuilt, repository).rebuild(50);
+    const result = await new DirectoryIndexer(rebuilt, repository, tracker).rebuild(50);
     expect(result.indexed).toBe(rebuilt.docs.size);
     expect(rebuilt.docs.get(listed.businessId)).toEqual(incremental.get(listed.businessId));
     expect(rebuilt.docs.has(hidden.businessId)).toBe(false);
     // Toptancı dizinde hiç görünmez.
     expect(rebuilt.docs.has(sellerId)).toBe(false);
+  });
+
+  it('F2.11a-AC8 (Müfettiş 15 M1): yeniden indeksleme sırasında gizlenen kayıt ve kapanan alan takastan sonra geri gelmez', async () => {
+    const hidden = await register();
+    const closed = await register();
+    const late = await register();
+    const voen = randomVoen();
+    expect((await patchProfile(closed, { voen })).status).toBe(200);
+    expect((await putPrivacy(closed, { showVoen: true })).status).toBe(200);
+
+    const settings = {
+      get: (key: string) =>
+        Promise.resolve(
+          (
+            {
+              'directory.reindex_lock_seconds': 60,
+              'directory.reindex_batch_size': 500,
+            } as Record<string, number>
+          )[key],
+        ),
+    };
+    const service = new DirectoryReindexService(indexer, tracker, settings as never, redis.client);
+    // Doldurma bitti, takas olmadı: perakendeciler değişir, olaylar canlı (eski) indekse işlenir.
+    index.beforeSwap = async () => {
+      expect((await putPrivacy(hidden, { listedInDirectory: false })).status).toBe(200);
+      expect((await putPrivacy(closed, { showVoen: false })).status).toBe(200);
+      await indexer.refresh([hidden.businessId]);
+      await indexer.refresh([closed.businessId]);
+    };
+
+    expect((await service.run()).status).toBe('done');
+    expect(index.docs.has(hidden.businessId)).toBe(false);
+    expect(index.docs.get(closed.businessId)?.voen).toBeNull();
+    expect(index.docs.has(late.businessId)).toBe(true);
+    // Küme boşaltıldı; kilit bırakıldı, sonraki olay kümeye eklenmez.
+    expect(await tracker.drain()).toEqual([]);
+    await indexer.refresh([late.businessId]);
+    expect(await tracker.drain()).toEqual([]);
   });
 
   it('F2.11a-AC9: belge fonksiyonu perakendeci bağlamında, sayfa fonksiyonu işletme bağlamında 42501', async () => {
