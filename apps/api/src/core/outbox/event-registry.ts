@@ -37,6 +37,9 @@ export const OUTBOX_EVENTS = {
   // F2.3a: perakendeci kaydoldu (SF-02). Tüketici F2.11a (dizin indeksi); o zamana kadar iş
   // `directory` kuyruğunda bekler.
   'buyer.registered': { queue: 'directory', fields: { businessId: 'id', regionId: 'id' } },
+  // F2.10 (US-007): perakendecinin görünürlük ayarları değişti. Tüketici F2.11a (indeksteki açık
+  // alanları yeniler, "dizinde görünme" kapalıysa filtreli aramadan çıkarır).
+  'buyer.privacy_changed': { queue: 'directory', fields: { businessId: 'id' } },
   // F2.9 (US-012 AC2): platform rol şablonunun izinleri değişti (yeni sürüm). Şablondan rolü olan
   // işletmenin her aktif admini için bir olay; tüketici `notifications` (bildirim).
   'role_template.version_published': {

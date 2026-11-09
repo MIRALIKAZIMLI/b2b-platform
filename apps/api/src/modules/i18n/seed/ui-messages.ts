@@ -275,7 +275,7 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   'sellerApplication.field.regionId': {
     az: 'Şəhər / rayon',
     ru: 'Город / район',
-    tr: 'Şehir / ilçe',
+    tr: 'Şehir / rayon',
   },
   'sellerApplication.field.contactName': { az: 'Ad və soyad', ru: 'Имя и фамилия', tr: 'Ad soyad' },
   'sellerApplication.field.phone': {
@@ -733,6 +733,117 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Dəyər yanlışdır.',
     ru: 'Неверное значение.',
     tr: 'Değer geçersiz.',
+  },
+  // F2.10a: görünürlük ayarları (US-007, ADR-0014). Çeviriler taslak; onay platform sahibinde.
+  'businessPrivacy.title': {
+    az: 'Görünmə ayarları',
+    ru: 'Настройки видимости',
+    tr: 'Görünürlük ayarları',
+  },
+  'businessPrivacy.description': {
+    az: 'Əlaqə qurmadığınız topdansatışçıların kataloqda sizin haqqınızda nə görəcəyini seçin.',
+    ru: 'Выберите, что о вас увидят в каталоге оптовики, с которыми у вас нет связи.',
+    tr: 'Bağlantı kurmadığınız toptancıların dizinde sizinle ilgili ne göreceğini seçin.',
+  },
+  'businessPrivacy.field.listedInDirectory': {
+    az: 'Kataloqda görün',
+    ru: 'Показывать в каталоге',
+    tr: 'Dizinde görün',
+  },
+  'businessPrivacy.listed_on_hint': {
+    az: 'Topdansatışçılar sizi bölgə və fəaliyyət sahəsinə görə tapa bilər.',
+    ru: 'Оптовики могут найти вас по региону и виду деятельности.',
+    tr: 'Toptancılar sizi bölge ve faaliyet alanına göre bulabilir.',
+  },
+  'businessPrivacy.listed_off_hint': {
+    az: 'Axtarışda görünmürsünüz; sizi yalnız tam telefon və ya VÖEN ilə tapmaq olar.',
+    ru: 'Вы не видны в поиске; найти вас можно только по полному номеру телефона или VÖEN.',
+    tr: 'Aramada görünmezsiniz; yalnızca tam telefon veya VÖEN ile bulunabilirsiniz.',
+  },
+  'businessPrivacy.always_title': {
+    az: 'Həmişə görünür',
+    ru: 'Видно всегда',
+    tr: 'Her zaman görünür',
+  },
+  'businessPrivacy.always_badge': {
+    az: 'Həmişə açıq',
+    ru: 'Всегда открыто',
+    tr: 'Her zaman açık',
+  },
+  'businessPrivacy.always.legalName': {
+    az: 'Ünvan',
+    ru: 'Название',
+    tr: 'Ünvan',
+  },
+  'businessPrivacy.always.activityType': {
+    az: 'Fəaliyyət sahəsi',
+    ru: 'Вид деятельности',
+    tr: 'Faaliyet alanı',
+  },
+  'businessPrivacy.always.region': {
+    az: 'Şəhər / rayon',
+    ru: 'Город / район',
+    tr: 'Şehir / rayon',
+  },
+  'businessPrivacy.optional_title': {
+    az: 'İstəyə görə açın',
+    ru: 'Открыть по желанию',
+    tr: 'İsteğe bağlı açın',
+  },
+  'businessPrivacy.field.showLogo': {
+    az: 'Loqo',
+    ru: 'Логотип',
+    tr: 'Logo',
+  },
+  'businessPrivacy.field.showAddress': {
+    az: 'Tam ünvan',
+    ru: 'Полный адрес',
+    tr: 'Tam adres',
+  },
+  'businessPrivacy.field.showBusinessPhone': {
+    az: 'Müəssisə telefonu',
+    ru: 'Телефон предприятия',
+    tr: 'İşletme telefonu',
+  },
+  'businessPrivacy.field.showVoen': {
+    az: 'VÖEN',
+    ru: 'VÖEN',
+    tr: 'VÖEN',
+  },
+  'businessPrivacy.field.showContactName': {
+    az: 'Səlahiyyətli şəxsin adı',
+    ru: 'Имя ответственного лица',
+    tr: 'Yetkili adı',
+  },
+  'businessPrivacy.field.showPersonalContact': {
+    az: 'Şəxsi telefon və e-poçt',
+    ru: 'Личный телефон и e-mail',
+    tr: 'Kişisel telefon ve e-posta',
+  },
+  'businessPrivacy.personal_contact_hint': {
+    az: 'Hər ikisi birlikdə açılır.',
+    ru: 'Открываются вместе.',
+    tr: 'İkisi birlikte açılır.',
+  },
+  'businessPrivacy.save': {
+    az: 'Ayarları saxla',
+    ru: 'Сохранить настройки',
+    tr: 'Ayarları kaydet',
+  },
+  'businessPrivacy.saved': {
+    az: 'Görünmə ayarları saxlanıldı.',
+    ru: 'Настройки видимости применены.',
+    tr: 'Görünürlük ayarları güncellendi.',
+  },
+  'businessPrivacy.load_failed': {
+    az: 'Ayarlar yüklənmədi.',
+    ru: 'Не удалось загрузить настройки.',
+    tr: 'Ayarlar yüklenemedi.',
+  },
+  'businessPrivacy.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Yeniden dene',
   },
   'buyer.home.empty_title': {
     az: 'Hələ bağlı topdansatışçınız yoxdur',
