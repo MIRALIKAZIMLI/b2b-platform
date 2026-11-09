@@ -44,3 +44,4 @@
 - F2.10a: perakendeci görünürlük ayarları (dizinde görünme, açık alanlar)
 - F2.10b: yetkili adı, kişisel telefon, e-posta ve logo düzenleme (BusinessLogoPort, ADR-0024)
 - F2.11a: perakendeci dizini D fonksiyonları, Meilisearch `buyer_directory` indeksi, outbox tüketicisi, gece yeniden indeksleme ve `search:reindex`
+- F2.11b: perakendeci dizini arama ucu (`GET /directory/buyers`, kart D fonksiyonu, temsilci bölgesi, dakikada 60 arama sınırı), web ve mobil dizin ekranı

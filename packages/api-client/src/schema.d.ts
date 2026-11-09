@@ -1616,15 +1616,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Perakendeci dizini (US-019, US-020) — yalnızca seller */
+        /**
+         * Perakendeci dizini (US-019, US-020) — yalnızca seller
+         * @description İzin `directory.search` (kapsam `all` / `assigned`). Filtre verilmezse yalnız toptancının
+         *     hizmet bölgeleri (US-019 AC2); `assigned` kapsamlı üye yalnız atandığı bölgeleri görür,
+         *     tam telefon / VÖEN araması dahil (US-019 AC3; F2.11b K3, kullanıcı değiştirebilir varsayım).
+         *     `phone` veya `voen` tek başına verilir (diğer filtrelerle veya birlikte → 422); dizinde
+         *     görünme kapalı perakendeciyi de bulur, kısmi değer eşleşmez (US-020). Kullanıcı başına
+         *     dakikada `directory.search_max_per_minute` (60) arama; aşınca 429 + `Retry-After`
+         *     (US-019 AC5). Dışa aktarma ucu yoktur (US-019 AC4). `history`: bağlantı tabloları gelene
+         *     kadar (F2.12–F2.15) `never` her sonucu, diğer değerler boş liste döner.
+         */
         get: {
             parameters: {
                 query?: {
+                    /** @description Ünvanda arama */
                     q?: string;
-                    /** @description Tam E.164 eşleşme */
+                    /** @description Tam E.164 eşleşme (işletme */
                     phone?: components["schemas"]["PhoneE164"];
                     /** @description Tam eşleşme */
                     voen?: components["schemas"]["Voen"];
+                    /** @description Şehir verilirse ilçeleri de kapsar */
                     regionId?: string[];
                     activityTypeId?: string;
                     verified?: boolean;
@@ -1647,11 +1659,18 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            items?: components["schemas"]["DirectoryBuyer"][];
-                            nextCursor?: string | null;
+                            items: components["schemas"]["DirectoryBuyer"][];
+                            nextCursor: string | null;
+                            /**
+                             * @description Liste neden boş (istemci hizmet bölgesi / bölge atama ekranına yönlendirir)
+                             * @enum {string|null}
+                             */
+                            emptyReason: "no_service_areas" | "no_assigned_regions" | null;
                         };
                     };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
                 429: components["responses"]["Error"];
             };
         };
@@ -6710,26 +6729,41 @@ export interface components {
         ServiceAreas: {
             regionIds: string[];
         };
-        /** @description Yalnızca görünürlük ayarına göre açık alanlar dolu döner. Diğer bağlantılar asla dönmez. */
+        /**
+         * @description Yalnızca görünürlük ayarına göre açık alanlar dolu döner, kapalı alan `null` (US-007 AC1–AC2).
+         *     Kişisel telefon ve e-posta yalnız `showPersonalContact` açıkken dolu. Diğer bağlantılar ve
+         *     alım hacmi asla dönmez (US-007 AC6). Alanlar her istekte veritabanından taze okunur.
+         */
         DirectoryBuyer: {
             /** Format: uuid */
             id: string;
             legalName: string;
-            activityType: string;
-            region: string;
-            verified?: boolean;
-            logoUrl?: string | null;
-            addressLine?: string | null;
-            businessPhone?: string | null;
-            voen?: string | null;
-            contactName?: string | null;
-            /** @description Bu satıcıyla ilişki durumu */
-            relation?: {
+            /** Format: uuid */
+            activityTypeId: string;
+            activityType: components["schemas"]["LocalizedText"];
+            /** Format: uuid */
+            regionId: string;
+            /**
+             * Format: uuid
+             * @description Bölge ilçeyse üst şehri
+             */
+            cityId: string;
+            region: components["schemas"]["LocalizedText"];
+            verified: boolean;
+            logoUrl: string | null;
+            addressLine: string | null;
+            businessPhone: string | null;
+            voen: string | null;
+            contactName: string | null;
+            personalPhone: string | null;
+            email: string | null;
+            /** @description Bu satıcıyla ilişki durumu (F2.12'ye kadar her zaman `none`) */
+            relation: {
                 /** @enum {string} */
-                status?: "none" | "pending" | "active" | "rejected" | "cancelled" | "blocked";
+                status: "none" | "pending" | "active" | "rejected" | "cancelled" | "blocked";
                 /** Format: date-time */
-                cooldownUntil?: string | null;
-                canRequest?: boolean;
+                cooldownUntil: string | null;
+                canRequest: boolean;
             };
         };
         ConnectionRequest: {

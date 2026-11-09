@@ -15,6 +15,7 @@ import { IdempotencyModule } from './core/idempotency';
 import { OutboxModule } from './core/outbox';
 import { RequestIdMiddleware } from './core/request-id.middleware';
 import { RedisModule } from './infrastructure/redis';
+import { SearchModule } from './infrastructure/search';
 import { SmsModule, type SmsRetryPolicy } from './infrastructure/sms';
 import { StorageModule } from './infrastructure/storage';
 import { AccessModule } from './modules/access';
@@ -22,6 +23,7 @@ import { AppConfigModule } from './modules/app-config';
 import { BillingModule, WarehouseLimitGateModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
+import { DirectoryApiModule } from './modules/directory';
 import { BusinessLogoPortModule, FilesModule } from './modules/files';
 import { I18nModule } from './modules/i18n';
 import { IdentityModule } from './modules/identity';
@@ -65,6 +67,8 @@ export class AppModule implements NestModule {
         NotificationsModule,
         FilesModule,
         BusinessLogoPortModule,
+        SearchModule.forRoot({ url: env.MEILI_URL, apiKey: env.MEILI_MASTER_KEY }),
+        DirectoryApiModule,
         OnboardingModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         PlatformAdminModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         IdentityModule.forRoot({

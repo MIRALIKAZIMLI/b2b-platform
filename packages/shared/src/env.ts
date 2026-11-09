@@ -81,6 +81,38 @@ const R2_REQUIRED_KEYS = [
 
 const bucketName = z.string().regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/);
 
+/** Ortam `local`/`test` iken `MEILI_URL` verilmezse kullanılan adres (docker compose, F2.11a K5). */
+export const MEILI_LOCAL_DEFAULT_URL = 'http://127.0.0.1:7700';
+
+/** Meilisearch bağlantısı (F2.11a). `.env.example` değişmez; local/test'te adres varsayılandır. */
+const searchEnvShape = {
+  MEILI_URL: z.url({ protocol: /^https?$/ }).optional(),
+  MEILI_MASTER_KEY: z.string().min(1).optional(),
+};
+
+interface SearchEnvInput {
+  readonly APP_ENV: AppEnv;
+  readonly MEILI_URL?: string | undefined;
+  readonly MEILI_MASTER_KEY?: string | undefined;
+}
+
+/** staging/production'da adres ve anahtar zorunludur; production'da adres `https://` olmalıdır. */
+function refineSearchEnv(env: SearchEnvInput, ctx: z.RefinementCtx): void {
+  if (env.APP_ENV !== 'staging' && env.APP_ENV !== 'production') return;
+  if (env.MEILI_URL === undefined) {
+    ctx.addIssue({ code: 'custom', path: ['MEILI_URL'], message: 'zorunlu' });
+  } else if (env.APP_ENV === 'production' && !env.MEILI_URL.startsWith('https://')) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['MEILI_URL'],
+      message: 'production ortamında https olmalı',
+    });
+  }
+  if (env.MEILI_MASTER_KEY === undefined) {
+    ctx.addIssue({ code: 'custom', path: ['MEILI_MASTER_KEY'], message: 'zorunlu' });
+  }
+}
+
 /**
  * Yalnızca api sürecinin doğruladığı şema (F1.5a). Worker SMS göndermez, bu değişkenleri istemez.
  * Production'da `SMS_PROVIDER=mock` reddedilir: api açılmaz (NFR-97, ADR-0021).
@@ -88,6 +120,8 @@ const bucketName = z.string().regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/);
 export const apiEnvSchema = serverEnvSchema
   .extend({
     SMS_PROVIDER: z.enum(SMS_PROVIDERS),
+    /** Dizin araması (F2.11b) Meilisearch'e bağlanır; kurallar worker ile aynı (F2.11a K5). */
+    ...searchEnvShape,
     /** OTP kod özeti (HMAC-SHA256) anahtarı; ortam başına ayrı ve rastgele. */
     OTP_HASH_KEY: z.string().min(OTP_HASH_KEY_MIN_LENGTH),
     /** Erişim anahtarı (JWT, HS256) imza anahtarı ve `kid` değeri (F1.5b). */
@@ -121,6 +155,7 @@ export const apiEnvSchema = serverEnvSchema
       .default('http://localhost:3000'),
   })
   .superRefine((env, ctx) => {
+    refineSearchEnv(env, ctx);
     if ((env.JWT_PREVIOUS_SIGNING_KEY === undefined) !== (env.JWT_PREVIOUS_KEY_ID === undefined)) {
       ctx.addIssue({
         code: 'custom',
@@ -174,38 +209,6 @@ export const apiEnvSchema = serverEnvSchema
       }
     }
   });
-
-/** Ortam `local`/`test` iken `MEILI_URL` verilmezse kullanılan adres (docker compose, F2.11a K5). */
-export const MEILI_LOCAL_DEFAULT_URL = 'http://127.0.0.1:7700';
-
-/** Meilisearch bağlantısı (F2.11a). `.env.example` değişmez; local/test'te adres varsayılandır. */
-const searchEnvShape = {
-  MEILI_URL: z.url({ protocol: /^https?$/ }).optional(),
-  MEILI_MASTER_KEY: z.string().min(1).optional(),
-};
-
-interface SearchEnvInput {
-  readonly APP_ENV: AppEnv;
-  readonly MEILI_URL?: string | undefined;
-  readonly MEILI_MASTER_KEY?: string | undefined;
-}
-
-/** staging/production'da adres ve anahtar zorunludur; production'da adres `https://` olmalıdır. */
-function refineSearchEnv(env: SearchEnvInput, ctx: z.RefinementCtx): void {
-  if (env.APP_ENV !== 'staging' && env.APP_ENV !== 'production') return;
-  if (env.MEILI_URL === undefined) {
-    ctx.addIssue({ code: 'custom', path: ['MEILI_URL'], message: 'zorunlu' });
-  } else if (env.APP_ENV === 'production' && !env.MEILI_URL.startsWith('https://')) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['MEILI_URL'],
-      message: 'production ortamında https olmalı',
-    });
-  }
-  if (env.MEILI_MASTER_KEY === undefined) {
-    ctx.addIssue({ code: 'custom', path: ['MEILI_MASTER_KEY'], message: 'zorunlu' });
-  }
-}
 
 /** `search:reindex` komutunun doğruladığı şema (F2.11a). */
 export const searchEnvSchema = z

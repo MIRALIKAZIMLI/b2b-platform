@@ -2,8 +2,11 @@
 // meili-buyer-directory-index.int.test.ts ile gerçek sunucuda sınanır.
 import {
   type BuyerDirectoryDocument,
+  type BuyerDirectoryHits,
   BuyerDirectoryIndex,
+  type BuyerDirectorySearch,
   type BuyerDirectoryWriter,
+  inRegionGroups,
 } from '../../../core/ports/buyer-directory-index';
 
 export class FakeBuyerDirectoryIndex extends BuyerDirectoryIndex {
@@ -11,6 +14,24 @@ export class FakeBuyerDirectoryIndex extends BuyerDirectoryIndex {
   upserts = 0;
   /** Doldurma bitti, takas olmadı: bu arada canlı indekse yazılanlar takasla kaybolur. */
   beforeSwap: (() => Promise<void>) | undefined;
+
+  search(query: BuyerDirectorySearch): Promise<BuyerDirectoryHits> {
+    const q = query.q?.toLocaleLowerCase('az');
+    const matches = [...this.docs.values()]
+      .filter(
+        (doc) =>
+          inRegionGroups(doc, query.regionGroups) &&
+          (query.activityTypeId === undefined || doc.activityTypeId === query.activityTypeId) &&
+          (query.verified === undefined || doc.verified === query.verified) &&
+          (q === undefined || doc.legalName.toLocaleLowerCase('az').includes(q)),
+      )
+      .sort((a, b) => a.legalName.localeCompare(b.legalName));
+    const page = matches.slice(query.offset, query.offset + query.limit);
+    return Promise.resolve({
+      ids: page.map((doc) => doc.id),
+      hasMore: matches.length > query.offset + query.limit,
+    });
+  }
 
   upsert(documents: readonly BuyerDirectoryDocument[]): Promise<void> {
     for (const document of documents) this.docs.set(document.id, document);

@@ -125,6 +125,8 @@ export const SETTING_DEFINITIONS = {
   'directory.reindex_hour_utc': intSetting(1, 0, 23),
   'directory.reindex_batch_size': intSetting(500, 50, 1000),
   'directory.reindex_lock_seconds': intSetting(1800, 60, 7200),
+  // F2.11b: kullanıcı başına dakikada dizin araması (US-019 AC5).
+  'directory.search_max_per_minute': intSetting(60, 10, 600),
 } as const satisfies Record<string, SettingDefinition<unknown>>;
 
 type Definitions = typeof SETTING_DEFINITIONS;

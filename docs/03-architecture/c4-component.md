@@ -39,6 +39,9 @@ flowchart LR
     connections --> settings
     directory --> businesses
     directory --> connections
+    directory --> access
+    directory --> files
+    directory --> settings
 
     catalog --> businesses
     catalog --> files

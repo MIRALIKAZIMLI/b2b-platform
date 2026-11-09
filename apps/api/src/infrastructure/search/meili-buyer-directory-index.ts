@@ -1,10 +1,12 @@
 // Meilisearch `buyer_directory` indeksi (F2.11a, ADR-0011). Her yazma Meilisearch görevinin
 // bitmesini bekler; görev başarısızsa hata fırlatır (iş yeniden denenir).
-import { Meilisearch, type Settings, type Task } from 'meilisearch';
+import { Meilisearch, MeilisearchApiError, type Settings, type Task } from 'meilisearch';
 import type { Clock } from '../../core/clock';
 import {
   type BuyerDirectoryDocument,
+  type BuyerDirectoryHits,
   BuyerDirectoryIndex,
+  type BuyerDirectorySearch,
   type BuyerDirectoryWriter,
 } from '../../core/ports/buyer-directory-index';
 
@@ -29,6 +31,27 @@ export interface MeiliOptions {
   readonly indexPrefix?: string;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Filtre değeri yalnız UUID; tırnaklı yazılır (filtre ifadesine kullanıcı metni girmez). */
+function quoted(id: string): string {
+  if (!UUID.test(id)) throw new Error('meilisearch filtre değeri UUID değil');
+  return `"${id}"`;
+}
+
+/** `BuyerDirectorySearch` → Meilisearch filtre ifadeleri (dizi elemanları VE ile bağlanır). */
+export function buyerDirectoryFilter(query: BuyerDirectorySearch): string[] {
+  const filters = query.regionGroups.map((group) => {
+    const list = group.map(quoted).join(', ');
+    return `(regionId IN [${list}] OR cityId IN [${list}])`;
+  });
+  if (query.activityTypeId !== undefined) {
+    filters.push(`activityTypeId = ${quoted(query.activityTypeId)}`);
+  }
+  if (query.verified !== undefined) filters.push(`verified = ${String(query.verified)}`);
+  return filters;
+}
+
 function assertSucceeded(task: Task, action: string): void {
   if (task.status !== 'succeeded') {
     // Görev hatasının kodu yeterli; belge içeriği loga/hataya girmez.
@@ -51,6 +74,29 @@ export class MeiliBuyerDirectoryIndex extends BuyerDirectoryIndex {
       ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
     });
     this.uid = `${options.indexPrefix ?? ''}${BUYER_DIRECTORY_INDEX_UID}`;
+  }
+
+  async search(query: BuyerDirectorySearch): Promise<BuyerDirectoryHits> {
+    if (query.regionGroups.some((group) => group.length === 0)) return { ids: [], hasMore: false };
+    try {
+      const result = await this.client
+        .index<BuyerDirectoryDocument>(this.uid)
+        .search(query.q ?? '', {
+          filter: buyerDirectoryFilter(query),
+          offset: query.offset,
+          limit: query.limit + 1,
+          attributesToRetrieve: ['id'],
+          ...(query.q === undefined ? { sort: ['legalName:asc'] } : {}),
+        });
+      const ids = result.hits.map((hit) => hit.id);
+      return { ids: ids.slice(0, query.limit), hasMore: ids.length > query.limit };
+    } catch (error) {
+      // İndeks henüz açılmadıysa (hiç perakendeci yok) boş sonuç.
+      if (error instanceof MeilisearchApiError && error.cause?.code === 'index_not_found') {
+        return { ids: [], hasMore: false };
+      }
+      throw error;
+    }
   }
 
   async upsert(documents: readonly BuyerDirectoryDocument[]): Promise<void> {
