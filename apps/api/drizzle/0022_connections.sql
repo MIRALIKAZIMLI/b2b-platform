@@ -111,7 +111,13 @@ CREATE POLICY "connection_requests_party_update" ON "connection_requests" FOR UP
 CREATE POLICY "connection_requests_platform_select" ON "connection_requests" FOR SELECT
   USING (current_setting('app.is_platform', true) = 'true');
 --> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE ON TABLE "connection_requests" TO app_user;
+-- Müfettiş 16 M1: UPDATE yalnız durum kolonlarında; taraf ve kimlik kolonları (id, seller_id,
+-- buyer_id, sent_by_user_id, seller_local_date, created_at …) değiştirilemez, satır üçüncü
+-- işletmeye taşınamaz (politika eski değeri karşılaştırmaz).
+GRANT SELECT, INSERT ON TABLE "connection_requests" TO app_user;
+--> statement-breakpoint
+GRANT UPDATE ("status", "responded_at", "responded_by_user_id", "updated_at")
+  ON TABLE "connection_requests" TO app_user;
 --> statement-breakpoint
 GRANT SELECT ON TABLE "connection_requests" TO readonly;
 --> statement-breakpoint
@@ -139,7 +145,14 @@ CREATE POLICY "connections_party_update" ON "connections" FOR UPDATE
 CREATE POLICY "connections_platform_select" ON "connections" FOR SELECT
   USING (current_setting('app.is_platform', true) = 'true');
 --> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE ON TABLE "connections" TO app_user;
+-- Müfettiş 16 M1: UPDATE yalnız koşul ve bitiş kolonlarında; id, seller_id, buyer_id,
+-- request_id, started_at, created_at değiştirilemez.
+GRANT SELECT, INSERT ON TABLE "connections" TO app_user;
+--> statement-breakpoint
+GRANT UPDATE ("status", "price_list_id", "branch_pricing_enabled", "credit_limit",
+              "payment_term_days", "sales_rep_membership_id", "ended_at", "ended_by_side",
+              "end_reason", "ended_by_user_id", "updated_at")
+  ON TABLE "connections" TO app_user;
 --> statement-breakpoint
 GRANT SELECT ON TABLE "connections" TO readonly;
 --> statement-breakpoint

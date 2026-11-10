@@ -15,6 +15,7 @@ import { ConnectionRelationsService } from '../connection-relations.service';
 import {
   type Buyer,
   insertBlock,
+  insertConnection,
   insertRequest,
   newBuyer,
   newRegion,
@@ -125,6 +126,90 @@ describe('F2.12a bağlantı tabloları kiracı izolasyonu', () => {
         ),
       ),
     ).toBe('42501');
+  });
+
+  it('F2.12a-M1 taraf ve kimlik kolonları değiştirilemez; yalnız durum/koşul kolonları güncellenir', async () => {
+    // İstek: satıcı alıcıyı, alıcı satıcıyı başka işletmeye taşıyamaz (kolon izni yok → 42501).
+    for (const [businessId, column, value] of [
+      [sellerA.businessId, 'buyer_id', sellerB.businessId],
+      [buyerX.businessId, 'seller_id', sellerB.businessId],
+      [sellerA.businessId, 'id', randomUUID()],
+      [sellerA.businessId, 'seller_local_date', '2026-01-01'],
+    ] as const) {
+      expect(
+        await errorCode(() =>
+          as(businessId, (tx) =>
+            tx.execute(
+              sql`update connection_requests set ${sql.identifier(column)} = ${value} where id = ${requestId}`,
+            ),
+          ),
+        ),
+        column,
+      ).toBe('42501');
+    }
+    // B bağlamında satır hâlâ görünmez; izinli kolon güncellemesi geçer.
+    expect(
+      (
+        await as(sellerB.businessId, (tx) =>
+          tx.execute(sql`select 1 from connection_requests where id = ${requestId}`),
+        )
+      ).rows,
+    ).toHaveLength(0);
+    const touched = await as(sellerA.businessId, (tx) =>
+      tx.execute(sql`update connection_requests set updated_at = now() where id = ${requestId}`),
+    );
+    expect(touched.rowCount).toBe(1);
+
+    // Bağlantı: taraflar ve istek kimliği değiştirilemez; koşul kolonu güncellenir.
+    const buyerY = await newBuyer(await newRegion('İzolyasiya Y'));
+    const accepted = await insertRequest({
+      sellerId: sellerA.businessId,
+      buyerId: buyerY.businessId,
+      sentByUserId: sellerA.admin.userId,
+      status: 'accepted',
+      createdAt: new Date(),
+      respondedAt: new Date(),
+      sellerLocalDate: '2026-11-10',
+    });
+    const connectionId = await insertConnection({
+      sellerId: sellerA.businessId,
+      buyerId: buyerY.businessId,
+      requestId: accepted,
+      startedAt: new Date(),
+    });
+    for (const [businessId, column, value] of [
+      [buyerY.businessId, 'seller_id', sellerB.businessId],
+      [sellerA.businessId, 'buyer_id', buyerX.businessId],
+      [sellerA.businessId, 'request_id', requestId],
+    ] as const) {
+      expect(
+        await errorCode(() =>
+          as(businessId, (tx) =>
+            tx.execute(
+              sql`update connections set ${sql.identifier(column)} = ${value} where id = ${connectionId}`,
+            ),
+          ),
+        ),
+        column,
+      ).toBe('42501');
+    }
+    const terms = await as(sellerA.businessId, (tx) =>
+      tx.execute(sql`update connections set payment_term_days = 15 where id = ${connectionId}`),
+    );
+    expect(terms.rowCount).toBe(1);
+  });
+
+  it('F2.12a T6 blocks_definer_select yalnız migrator rolüne verilmiş', async () => {
+    const rows = await withSystemTx((tx) =>
+      tx.execute<{ policyname: string; roles: string }>(sql`
+        select policyname, array_to_string(roles, ',') as roles from pg_policies
+         where tablename = 'blocks' order by policyname`),
+    );
+    expect(rows.rows).toEqual([
+      { policyname: 'blocks_definer_select', roles: 'migrator' },
+      { policyname: 'blocks_platform_select', roles: 'public' },
+      { policyname: 'blocks_tenant', roles: 'public' },
+    ]);
   });
 
   it('F2.12a blocks T: satıcı engel satırını göremez; yalnız alıcı görür ve yazar', async () => {

@@ -133,6 +133,30 @@ describe('F2.12a bağlantı isteği API', () => {
     expect(code(second.body)).toBe('CONNECTION_REQUEST_ALREADY_PENDING');
   });
 
+  it('F2.12a-M2 Idempotency-Key: aynı anahtar + gövde → aynı 201, tek satır; farklı gövde → 409', async () => {
+    const seller = await newSeller(city);
+    const buyer = await newBuyer(district);
+    const key = `conn-${randomUUID()}`;
+    const post = async (body: Record<string, unknown>) =>
+      await request(app.getHttpServer())
+        .post('/api/v1/connection-requests')
+        .set({ ...(await auth(seller.admin.userId, seller.businessId)), 'Idempotency-Key': key })
+        .send(body);
+    const first = await post({ buyerId: buyer.businessId, message: 'Salam' });
+    expect(first.status, JSON.stringify(first.body)).toBe(201);
+    const retry = await post({ buyerId: buyer.businessId, message: 'Salam' });
+    expect(retry.status).toBe(201);
+    expect(retry.body).toEqual(first.body);
+    const rows = await platformRows(
+      'select 1 from connection_requests where seller_id = $1 and buyer_id = $2',
+      [seller.businessId, buyer.businessId],
+    );
+    expect(rows).toHaveLength(1);
+    const changed = await post({ buyerId: buyer.businessId, message: 'Başqa' });
+    expect(changed.status).toBe(409);
+    expect(code(changed.body)).toBe('IDEMPOTENCY_CONFLICT');
+  });
+
   it('US-021-AC3 aktif bağlantı → 409 CONNECTION_ALREADY_ACTIVE', async () => {
     const seller = await newSeller(city);
     const buyer = await newBuyer(district);
