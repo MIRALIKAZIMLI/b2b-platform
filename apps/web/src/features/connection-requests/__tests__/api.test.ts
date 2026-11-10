@@ -1,4 +1,5 @@
 import { createApiClient } from '@b2b/api-client';
+import { createIdempotencyKey } from '@b2b/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../admin-sellers/api';
 import {
@@ -111,7 +112,7 @@ describe('F2.12b web bağlantı isteği', () => {
 
 const REQUEST = created.id;
 const SELLER = '0190a3b4-0000-7000-8000-0000000000dd';
-const KEY = 'resp-0123456789abcdef0123456789abcdef';
+const KEY = createIdempotencyKey('resp');
 
 describe('F2.13b web gelen istekler, yanıt ve engel', () => {
   it('F2.13b-AC1 gelen liste: işletme başlığı, imleç ve sayfa', async () => {

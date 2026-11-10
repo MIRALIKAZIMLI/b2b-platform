@@ -1,5 +1,5 @@
 import { createApiClient } from '@b2b/api-client';
-import { connectionRequestFailure } from '@b2b/shared';
+import { connectionRequestFailure, createIdempotencyKey } from '@b2b/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { mobileHref, mobileMenu, pushHref } from '../../shell/shell-state';
 import {
@@ -107,7 +107,7 @@ describe('F2.12b mobil bağlantı isteği', () => {
 
 const REQUEST = '0190a3b4-0000-7000-8000-0000000000cc';
 const SELLER = '0190a3b4-0000-7000-8000-0000000000dd';
-const KEY = 'resp-0123456789abcdef0123456789abcdef';
+const KEY = createIdempotencyKey('resp');
 
 describe('F2.13b mobil gelen istekler, yanıt ve engel', () => {
   it('F2.13b-AC1 gelen liste: işletme başlığı ve imleç', async () => {

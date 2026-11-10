@@ -4,3 +4,7 @@
 # bunları çalışma anında rastgele üretilen değerlerle değiştirdi; commit main geçmişinde kaldı.
 8d1b713095a765af59c16965e8b234c4c7086b2a:apps/api/src/modules/identity/__tests__/token.service.test.ts:generic-api-key:13
 8d1b713095a765af59c16965e8b234c4c7086b2a:apps/api/src/modules/identity/__tests__/token.service.test.ts:generic-api-key:66
+# F2.13b (PR #61): testlerdeki sahte `Idempotency-Key` değeri (`resp-0123…`). Sonraki commit bunu
+# çalışma anında üretilen anahtarla değiştirdi; ilk commit dal geçmişinde kaldı.
+d089f154e1eccd7f896c1f1eed93e3f326206c97:apps/mobile/src/features/connection-requests/__tests__/connection-requests.test.ts:generic-api-key:110
+d089f154e1eccd7f896c1f1eed93e3f326206c97:apps/web/src/features/connection-requests/__tests__/api.test.ts:generic-api-key:114
