@@ -40,7 +40,7 @@ export function TermsDialog({
   const [invalid, setInvalid] = useState({ creditLimit: false, paymentTermDays: false });
   const name = connection.counterpartyName ?? t('closed_business');
   const repOptions = reps.data?.items ?? [];
-  // Önceki temsilci artık listede yoksa (ayrılmış üye) seçim boş başlar; sunucu da reddeder.
+  // Önceki temsilci artık listede yoksa (ayrılmış üye) seçim boş başlar; kaydedilirse temsilci kalkar.
   const repValue = rep === '' || repOptions.some((item) => item.membershipId === rep) ? rep : '';
 
   function onSubmit(event: SyntheticEvent<HTMLFormElement>) {
@@ -49,7 +49,8 @@ export function TermsDialog({
     const result = termsUpdateBody({
       creditLimit,
       paymentTermDays: days,
-      salesRepMembershipId: repValue,
+      // Liste gelmediyse (yükleniyor/hata) temsilci gönderilmez; kayıtlı temsilci korunur.
+      salesRepMembershipId: reps.data === undefined ? undefined : repValue,
     });
     if (!result.ok) {
       setInvalid({ creditLimit: result.creditLimit, paymentTermDays: result.paymentTermDays });

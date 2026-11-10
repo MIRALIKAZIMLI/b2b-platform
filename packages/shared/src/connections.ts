@@ -569,14 +569,18 @@ export function termsFormValues(
 export interface TermsFormBody {
   readonly creditLimit: string | null;
   readonly paymentTermDays: number;
-  readonly salesRepMembershipId: string | null;
+  /** Yoksa sunucu temsilciyi değiştirmez (PATCH kısmi). */
+  readonly salesRepMembershipId?: string | null;
 }
 
-/** Pencere gövdesi: üç alan her zaman gönderilir. */
+/**
+ * Pencere gövdesi: limit ve vade her zaman gönderilir. Temsilci `undefined` ise (temsilci listesi
+ * yüklenmedi/yüklenemedi) alan gönderilmez, böylece kayıtlı temsilci sessizce silinmez.
+ */
 export function termsUpdateBody(values: {
   readonly creditLimit: string;
   readonly paymentTermDays: string;
-  readonly salesRepMembershipId: string;
+  readonly salesRepMembershipId: string | undefined;
 }):
   | { readonly ok: true; readonly body: TermsFormBody }
   | { readonly ok: false; readonly creditLimit: boolean; readonly paymentTermDays: boolean } {
@@ -587,13 +591,17 @@ export function termsUpdateBody(values: {
   if (!creditLimit.valid || badDays) {
     return { ok: false, creditLimit: badLimit, paymentTermDays: badDays };
   }
+  const rep = values.salesRepMembershipId;
   return {
     ok: true,
-    body: {
-      creditLimit: creditLimit.value,
-      paymentTermDays: days,
-      salesRepMembershipId: values.salesRepMembershipId === '' ? null : values.salesRepMembershipId,
-    },
+    body:
+      rep === undefined
+        ? { creditLimit: creditLimit.value, paymentTermDays: days }
+        : {
+            creditLimit: creditLimit.value,
+            paymentTermDays: days,
+            salesRepMembershipId: rep === '' ? null : rep,
+          },
   };
 }
 

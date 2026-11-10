@@ -3013,7 +3013,7 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Boş bırakılırsa limitsiz. Şimdilik yalnız uyarı amaçlı.',
   },
   'customers.terms.credit_limit_invalid': {
-    az: 'Məbləğ müsbət olmalı, ən çox 2 onluq rəqəm.',
+    az: 'Məbləğ mənfi olmamalı, ən çox 2 onluq rəqəm.',
     ru: 'Сумма должна быть неотрицательной, не более 2 знаков после запятой.',
     tr: 'Tutar negatif olamaz, en çok 2 ondalık.',
   },

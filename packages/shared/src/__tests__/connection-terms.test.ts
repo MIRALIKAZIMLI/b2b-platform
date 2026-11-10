@@ -82,6 +82,19 @@ describe('F2.14 bağlantı koşulları ekran yardımcıları', () => {
     ).toEqual({ ok: false, creditLimit: false, paymentTermDays: true });
   });
 
+  it('F2.14b-AC2 temsilci listesi yoksa temsilci alanı gönderilmez (kayıtlı temsilci silinmez)', () => {
+    const result = termsUpdateBody({
+      creditLimit: '200',
+      paymentTermDays: '15',
+      salesRepMembershipId: undefined,
+    });
+    expect(result).toEqual({ ok: true, body: { creditLimit: '200', paymentTermDays: 15 } });
+    if (result.ok) {
+      expect('salesRepMembershipId' in result.body).toBe(false);
+      expect(connectionTermsUpdateSchema.parse(result.body)).toEqual(result.body);
+    }
+  });
+
   it('US-024-AC3 pencere değerleri: atanmış koşul > önceki dönem önerisi > istek vadesi > boş', () => {
     expect(
       termsFormValues(
