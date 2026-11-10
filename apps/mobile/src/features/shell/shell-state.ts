@@ -44,7 +44,8 @@ export function mobileMenu(me: Pick<Me, 'activeBusiness'>, area: MobileArea): Me
  * Hazır menü öğesinin mobil adresi (expo-router; grup adı adreste yoktur). Yalnız mobilde ekranı
  * olan öğeler; diğerleri bağlantısız kalır. F2.4: perakendeci profili. F2.11b: dizin. F2.12b: istekler.
  */
-type MobileRoute = '/business-profile' | '/directory' | '/requests' | '/incoming-requests';
+type MobileRoute =
+  '/business-profile' | '/directory' | '/requests' | '/incoming-requests' | '/suppliers';
 
 const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'buyer:profile': '/business-profile',
@@ -54,12 +55,15 @@ const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'seller:requests': '/requests',
   // F2.13b: gelen bağlantı istekleri + bloklananlar (US-023).
   'buyer:incoming_requests': '/incoming-requests',
+  // F2.15b: bağlı toptancılar ve iptal (US-025).
+  'buyer:suppliers': '/suppliers',
 };
 
 /** Menü `path`'i → mobil adres (push dokunuşu için; `MOBILE_ROUTES` ile aynı ekranlar). */
 const PATH_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'seller:requests': '/requests',
   'buyer:incoming-requests': '/incoming-requests',
+  'buyer:suppliers': '/suppliers',
 };
 
 /**
@@ -68,8 +72,9 @@ const PATH_ROUTES: Readonly<Record<string, MobileRoute>> = {
  * yalnız açılır, yanlış alanda boş ekran gösterilmez.
  */
 export function pushHref(data: unknown, area: MobileArea | undefined): MobileRoute | undefined {
-  const target = pushRoute(data);
-  if (target === undefined || target.area !== area) return undefined;
+  if (area === undefined) return undefined;
+  const target = pushRoute(data, area);
+  if (target === undefined) return undefined;
   return PATH_ROUTES[`${target.area}:${target.path}`];
 }
 

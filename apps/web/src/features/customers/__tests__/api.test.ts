@@ -1,7 +1,7 @@
 import { createApiClient } from '@b2b/api-client';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../admin-sellers/api';
-import { fetchConnections, fetchSalesReps, patchTerms } from '../api';
+import { fetchConnections, fetchSalesReps, patchTerms, postCancel } from '../api';
 
 const BASE = 'http://web.test';
 const BUSINESS = '0190a3b4-0000-7000-8000-0000000000aa';
@@ -80,5 +80,32 @@ describe('F2.14b web müşteriler ve koşullar', () => {
     const reps = clientWith(() => json(200, { items: [{ membershipId: REP, fullName: 'Aynur' }] }));
     expect((await fetchSalesReps(reps.client, BUSINESS)).items[0]?.fullName).toBe('Aynur');
     expect(new URL(reps.seen[0]?.url ?? '').pathname).toBe('/api/v1/connections/sales-reps');
+  });
+
+  it('F2.15b-AC1 iptal: POST gövdesi, idempotens ve işletme başlığı; 409 ApiError olur', async () => {
+    const { client, seen } = clientWith(() => json(200, { cancelledOrders: 0 }));
+    const body = { reason: 'payment_issue' as const, confirm: true as const };
+    expect(await postCancel(client, BUSINESS, CONNECTION, body, 'cancel-0123456789abcdef')).toEqual(
+      {
+        cancelledOrders: 0,
+      },
+    );
+    const request = seen[0];
+    expect(request?.method).toBe('POST');
+    expect(new URL(request?.url ?? '').pathname).toBe(`/api/v1/connections/${CONNECTION}/cancel`);
+    expect(request?.headers.get('Idempotency-Key')).toBe('cancel-0123456789abcdef');
+    expect(request?.headers.get('X-Business-Id')).toBe(BUSINESS);
+    expect(await request?.json()).toEqual(body);
+
+    const failing = clientWith(() => json(409, { code: 'INVALID_STATE_TRANSITION', message: 'x' }));
+    const error = await postCancel(
+      failing.client,
+      BUSINESS,
+      CONNECTION,
+      body,
+      'k'.repeat(16),
+    ).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe('INVALID_STATE_TRANSITION');
   });
 });

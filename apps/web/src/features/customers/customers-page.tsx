@@ -8,6 +8,10 @@
 // - Ana eylem satır başına "Şərtləri təyin et / dəyiş" (yalnız `connections.terms.manage`); pencere
 //   öneriyle dolu açılır (US-024 AC3). İptal edilmiş satırda eylem yok.
 // - Boş: sekmeye göre iki metin + dizine bağlantı; yükleniyor = iskelet; hata = yeniden dene.
+// F2.15b (US-025): aynı ekran perakendecide "Toptancılarım" (`side = buyer`): temsilci sütunu ve
+// koşul eylemi yok. Aktif satırda sessiz tehlike düğmesi "Ləğv et" (`connections.cancel`) iptal
+// penceresini açar; iptal edilmiş satırda kimin iptal ettiği yazar (gerekçe yok, K2 = A). Perakendecide
+// "yeniden bağlan" hiçbir yerde yok (US-025 AC6).
 import {
   CREDIT_LIMIT_CURRENCY,
   type ConnectionStatus,
@@ -21,20 +25,29 @@ import { ApiError } from '../admin-sellers/api';
 import { useConnectionContext } from '../connection-requests/context';
 import { Badge, Button, Card, PageHeader } from '../ui/primitives';
 import { type ConnectionItem, useConnections, useSalesReps } from './api';
+import { CancelDialog } from './cancel-dialog';
 import { TermsDialog } from './terms-dialog';
 
 const TABS: readonly ConnectionStatus[] = ['active', 'cancelled'];
 
+type Side = 'seller' | 'buyer';
+
 function CustomerRow({
   item,
+  side,
   repName,
   canManage,
+  canCancel,
   onEdit,
+  onCancel,
 }: {
   item: ConnectionItem;
+  side: Side;
   repName: string | undefined;
   canManage: boolean;
+  canCancel: boolean;
   onEdit: (item: ConnectionItem) => void;
+  onCancel: (item: ConnectionItem) => void;
 }) {
   const t = useTranslations('customers');
   const { formatDay, locale } = useConnectionContext();
@@ -65,12 +78,21 @@ function CustomerRow({
           {t('row.since', { date: formatDay(item.startedAt) })}
           {item.endedAt !== null && <> · {t('row.ended', { date: formatDay(item.endedAt) })}</>}
         </p>
+        {!active && item.endedBySide !== null && (
+          <p className="text-xs text-slate-500">
+            {t(item.endedBySide === side ? 'row.ended_by_you' : 'row.ended_by_other')}
+          </p>
+        )}
         {active && !item.termsAssigned && (
           <p className="text-xs text-slate-500">{t('row.default_price_list')}</p>
         )}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:shrink-0">
-        <dl className="grid grid-cols-3 gap-4 rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm shadow-sm backdrop-blur sm:min-w-[22rem]">
+        <dl
+          className={`grid gap-4 rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm shadow-sm backdrop-blur ${
+            side === 'seller' ? 'grid-cols-3 sm:min-w-[22rem]' : 'grid-cols-2 sm:min-w-[15rem]'
+          }`}
+        >
           <div className="min-w-0">
             <dt className="text-xs text-slate-500">{t('row.credit_limit')}</dt>
             <dd className="truncate font-semibold text-slate-900 tabular-nums">{limit}</dd>
@@ -81,15 +103,17 @@ function CustomerRow({
               {t('row.days', { days: item.terms.paymentTermDays })}
             </dd>
           </div>
-          <div className="min-w-0">
-            <dt className="text-xs text-slate-500">{t('row.sales_rep')}</dt>
-            <dd className="truncate font-semibold text-slate-900">
-              {item.terms.salesRepMembershipId === null ||
-              item.terms.salesRepMembershipId === undefined
-                ? t('row.no_rep')
-                : (repName ?? t('row.rep_unknown'))}
-            </dd>
-          </div>
+          {side === 'seller' && (
+            <div className="min-w-0">
+              <dt className="text-xs text-slate-500">{t('row.sales_rep')}</dt>
+              <dd className="truncate font-semibold text-slate-900">
+                {item.terms.salesRepMembershipId === null ||
+                item.terms.salesRepMembershipId === undefined
+                  ? t('row.no_rep')
+                  : (repName ?? t('row.rep_unknown'))}
+              </dd>
+            </div>
+          )}
         </dl>
         {active && canManage && (
           <Button
@@ -99,6 +123,16 @@ function CustomerRow({
             }}
           >
             {item.termsAssigned ? t('row.edit') : t('row.assign')}
+          </Button>
+        )}
+        {active && canCancel && (
+          <Button
+            variant="quiet-danger"
+            onClick={() => {
+              onCancel(item);
+            }}
+          >
+            {t('row.cancel')}
           </Button>
         )}
       </div>
@@ -124,37 +158,42 @@ function SkeletonRows() {
   );
 }
 
-export function CustomersPage() {
+export function CustomersPage({ side = 'seller' }: { side?: Side }) {
   const t = useTranslations('customers');
+  // Sayfa düzeyi metinler tarafa göre (`customers` / `suppliers`); satır metinleri ortak.
+  const tPage = useTranslations(side === 'seller' ? 'customers' : 'suppliers');
   const tErrors = useTranslations('errors');
   const { shell, locale } = useConnectionContext();
   const codes = (shell.me?.activeBusiness?.permissions ?? []).map((item) => item.code);
   const access = customersAccess(codes);
   const [tab, setTab] = useState<ConnectionStatus>('active');
   const [editing, setEditing] = useState<ConnectionItem | undefined>();
+  const [cancelling, setCancelling] = useState<ConnectionItem | undefined>();
   const list = useConnections(access.view ? shell.activeBusinessId : undefined, tab);
-  const reps = useSalesReps(access.manage ? shell.activeBusinessId : undefined);
+  const manage = side === 'seller' && access.manage;
+  const reps = useSalesReps(manage ? shell.activeBusinessId : undefined);
   const items = useMemo(() => list.data?.pages.flatMap((page) => page.items) ?? [], [list.data]);
   const repNames = useMemo(
     () => new Map((reps.data?.items ?? []).map((item) => [item.membershipId, item.fullName])),
     [reps.data],
   );
-  const directoryLink = codes.includes('directory.search') ? (
-    <Link
-      href={`/${locale}/seller/directory`}
-      className="inline-flex items-center justify-center rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
-    >
-      {t('go_directory')}
-    </Link>
-  ) : undefined;
+  const directoryLink =
+    side === 'seller' && codes.includes('directory.search') ? (
+      <Link
+        href={`/${locale}/seller/directory`}
+        className="inline-flex items-center justify-center rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
+      >
+        {t('go_directory')}
+      </Link>
+    ) : undefined;
 
   if (shell.me !== undefined && !access.view) {
     return (
       <div className="space-y-8 px-4 py-8 sm:px-6 lg:py-10">
-        <PageHeader title={t('title')} />
+        <PageHeader title={tPage('title')} />
         <Card className="max-w-xl p-8">
           <p role="alert" className="text-sm text-slate-600">
-            {t('no_access')}
+            {tPage('no_access')}
           </p>
         </Card>
       </div>
@@ -163,7 +202,11 @@ export function CustomersPage() {
 
   return (
     <div className="space-y-8 px-4 py-8 sm:px-6 lg:py-10">
-      <PageHeader title={t('title')} description={t('description')} action={directoryLink} />
+      <PageHeader
+        title={tPage('title')}
+        description={tPage('description')}
+        action={directoryLink}
+      />
       <div
         role="tablist"
         aria-label={t('tabs_label')}
@@ -208,9 +251,9 @@ export function CustomersPage() {
         <SkeletonRows />
       ) : items.length === 0 ? (
         <Card className="flex flex-col items-start gap-3 bg-gradient-to-br from-white to-indigo-50/40 p-8">
-          <h2 className="text-base font-semibold text-slate-900">{t('empty_title')}</h2>
+          <h2 className="text-base font-semibold text-slate-900">{tPage('empty_title')}</h2>
           <p className="max-w-xl text-sm text-slate-500">
-            {tab === 'active' ? t('empty_active') : t('empty_cancelled')}
+            {tab === 'active' ? tPage('empty_active') : tPage('empty_cancelled')}
           </p>
           {tab === 'active' && directoryLink}
         </Card>
@@ -228,8 +271,11 @@ export function CustomersPage() {
                       ? undefined
                       : repNames.get(item.terms.salesRepMembershipId)
                   }
-                  canManage={access.manage}
+                  side={side}
+                  canManage={manage}
+                  canCancel={access.cancel}
                   onEdit={setEditing}
+                  onCancel={setCancelling}
                 />
               ))}
             </ul>
@@ -246,6 +292,16 @@ export function CustomersPage() {
             </div>
           )}
         </div>
+      )}
+      {cancelling !== undefined && (
+        <CancelDialog
+          connectionId={cancelling.id}
+          name={cancelling.counterpartyName ?? t('closed_business')}
+          side={side}
+          onClose={() => {
+            setCancelling(undefined);
+          }}
+        />
       )}
       {editing !== undefined && (
         <TermsDialog

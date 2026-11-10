@@ -281,3 +281,42 @@ export async function assignMembershipRegion(
     await client.query('commit');
   });
 }
+
+/**
+ * F2.15b: aktif bağlantı kurulumu (E2E-09). Bekçiler gereği istek satıcı bağlamında `pending`
+ * eklenir, alıcı bağlamında `accepted` olur, bağlantıyı alıcı bağlamı ekler.
+ */
+export async function createActiveConnection(
+  sellerId: string,
+  buyerId: string,
+  sentByUserId: string,
+  respondedByUserId: string,
+): Promise<string> {
+  const requestId = randomUUID();
+  const connectionId = randomUUID();
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.business_id', $1, true)", [sellerId]);
+    await client.query(
+      `insert into connection_requests
+         (id, seller_id, buyer_id, sent_by_user_id, status, expires_at, seller_local_date)
+       values ($1, $2, $3, $4, 'pending', now() + interval '14 days', current_date)`,
+      [requestId, sellerId, buyerId, sentByUserId],
+    );
+    await client.query("select set_config('app.business_id', $1, true)", [buyerId]);
+    await client.query(
+      `update connection_requests
+          set status = 'accepted', responded_at = now(), responded_by_user_id = $2
+        where id = $1`,
+      [requestId, respondedByUserId],
+    );
+    await client.query(
+      `insert into connections (id, seller_id, buyer_id, request_id, status, started_at)
+       select $1, seller_id, buyer_id, id, 'active', responded_at
+         from connection_requests where id = $2`,
+      [connectionId, requestId],
+    );
+    await client.query('commit');
+  });
+  return connectionId;
+}

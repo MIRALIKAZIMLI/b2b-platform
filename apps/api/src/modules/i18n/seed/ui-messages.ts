@@ -3,7 +3,7 @@
 // F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni;
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
 // daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
-// F2.14b: toptancı müşterileri ve bağlantı koşulları).
+// F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -3091,5 +3091,156 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Seçilən təmsilçi artıq komandanızda deyil.',
     ru: 'Выбранный представитель больше не в вашей команде.',
     tr: 'Seçilen temsilci artık ekibinizde değil.',
+  },
+  // F2.15b: bağlantı iptali penceresi, perakendeci toptancılarım ekranı.
+  'customers.row.cancel': {
+    az: 'Əlaqəni ləğv et',
+    ru: 'Отменить связь',
+    tr: 'Bağlantıyı iptal et',
+  },
+  'customers.row.ended_by_you': {
+    az: 'Siz ləğv etmisiniz',
+    ru: 'Отменено вами',
+    tr: 'Siz iptal ettiniz',
+  },
+  'customers.row.ended_by_other': {
+    az: 'Qarşı tərəf ləğv edib',
+    ru: 'Отменено другой стороной',
+    tr: 'Karşı taraf iptal etti',
+  },
+  'suppliers.title': {
+    az: 'Topdançılarım',
+    ru: 'Мои поставщики',
+    tr: 'Toptancılarım',
+  },
+  'suppliers.description': {
+    az: 'Əlaqədə olduğunuz topdançılar, kredit limiti və ödəniş müddəti.',
+    ru: 'Поставщики, с которыми у вас есть связь, кредитный лимит и срок оплаты.',
+    tr: 'Bağlı olduğunuz toptancılar, kredi limiti ve ödeme vadesi.',
+  },
+  'suppliers.no_access': {
+    az: 'Bu səhifəyə baxmaq üçün icazəniz yoxdur.',
+    ru: 'У вас нет доступа к этой странице.',
+    tr: 'Bu sayfayı görme izniniz yok.',
+  },
+  'suppliers.empty_title': {
+    az: 'Hələ topdançı yoxdur',
+    ru: 'Поставщиков пока нет',
+    tr: 'Henüz toptancı yok',
+  },
+  'suppliers.empty_active': {
+    az: 'Topdançının əlaqə sorğusunu qəbul etdikdə burada görünəcək.',
+    ru: 'Поставщик появится здесь, когда вы примете его запрос на связь.',
+    tr: 'Bir toptancının bağlantı isteğini kabul edince burada görünür.',
+  },
+  'suppliers.empty_cancelled': {
+    az: 'Ləğv edilmiş əlaqə yoxdur.',
+    ru: 'Отменённых связей нет.',
+    tr: 'İptal edilmiş bağlantı yok.',
+  },
+  'connections.cancel.eyebrow': {
+    az: 'Əlaqəni ləğv et',
+    ru: 'Отмена связи',
+    tr: 'Bağlantıyı iptal et',
+  },
+  'connections.cancel.title': {
+    az: '{name} ilə əlaqə ləğv edilsin?',
+    ru: 'Отменить связь с {name}?',
+    tr: '{name} ile bağlantı iptal edilsin mi?',
+  },
+  'connections.cancel.point_1': {
+    az: 'Əlaqə dərhal bağlanır və geri qaytarılmır. Yenidən işləmək üçün topdançı yeni sorğu göndərməlidir.',
+    ru: 'Связь закрывается сразу и не восстанавливается. Для новой работы поставщик должен отправить новый запрос.',
+    tr: 'Bağlantı hemen kapanır ve geri alınamaz. Yeniden çalışmak için toptancının yeni istek göndermesi gerekir.',
+  },
+  'connections.cancel.point_2_buyer': {
+    az: 'Ləğvdən sonra {name} 30 gün ərzində sizə yeni sorğu göndərə bilməz.',
+    ru: 'После отмены {name} не сможет отправить вам новый запрос в течение 30 дней.',
+    tr: 'İptalden sonra {name} 30 gün boyunca size yeni istek gönderemez.',
+  },
+  'connections.cancel.point_2_seller': {
+    az: 'Gözləmə müddəti yoxdur: istədiyiniz vaxt yeni sorğu göndərə bilərsiniz.',
+    ru: 'Срока ожидания нет: вы можете отправить новый запрос в любое время.',
+    tr: 'Bekleme süresi yok: istediğiniz zaman yeni istek gönderebilirsiniz.',
+  },
+  'connections.cancel.point_3': {
+    az: '{name} adminlərinə bildiriş gedir. Səbəb və qeyd onlara göstərilmir.',
+    ru: 'Администраторы {name} получат уведомление. Причина и комментарий им не показываются.',
+    tr: '{name} adminlerine bildirim gider. Gerekçe ve not onlara gösterilmez.',
+  },
+  'connections.cancel.reason_label': {
+    az: 'Səbəb',
+    ru: 'Причина',
+    tr: 'Gerekçe',
+  },
+  'connections.cancel.reason.no_longer_working': {
+    az: 'Artıq birlikdə işləmirik',
+    ru: 'Больше не сотрудничаем',
+    tr: 'Artık birlikte çalışmıyoruz',
+  },
+  'connections.cancel.reason.payment_issue': {
+    az: 'Ödəniş problemi',
+    ru: 'Проблема с оплатой',
+    tr: 'Ödeme sorunu',
+  },
+  'connections.cancel.reason.quality_issue': {
+    az: 'Keyfiyyət problemi',
+    ru: 'Проблема с качеством',
+    tr: 'Kalite sorunu',
+  },
+  'connections.cancel.reason.other': {
+    az: 'Digər',
+    ru: 'Другое',
+    tr: 'Diğer',
+  },
+  'connections.cancel.note_label': {
+    az: 'Qeyd (istəyə bağlı)',
+    ru: 'Комментарий (необязательно)',
+    tr: 'Not (isteğe bağlı)',
+  },
+  'connections.cancel.note_placeholder': {
+    az: 'Daxili qeyd',
+    ru: 'Внутренний комментарий',
+    tr: 'İç not',
+  },
+  'connections.cancel.note_counter': {
+    az: '{count} / {max}',
+    ru: '{count} / {max}',
+    tr: '{count} / {max}',
+  },
+  'connections.cancel.note_hint': {
+    az: 'Qeyd yalnız biznesinizin audit jurnalında saxlanılır.',
+    ru: 'Комментарий сохраняется только в журнале аудита вашей компании.',
+    tr: 'Not yalnız işletmenizin denetim kaydında tutulur.',
+  },
+  'connections.cancel.confirm_label': {
+    az: '{name} ilə əlaqənin ləğv edildiyini və bunun geri qaytarılmadığını təsdiq edirəm.',
+    ru: 'Подтверждаю отмену связи с {name}; это действие необратимо.',
+    tr: '{name} ile bağlantının iptal edildiğini ve bunun geri alınamadığını onaylıyorum.',
+  },
+  'connections.cancel.close': {
+    az: 'Bağla',
+    ru: 'Закрыть',
+    tr: 'Kapat',
+  },
+  'connections.cancel.submit': {
+    az: 'Ləğv et',
+    ru: 'Отменить связь',
+    tr: 'İptal et',
+  },
+  'connections.cancel.working': {
+    az: 'Ləğv edilir…',
+    ru: 'Отмена…',
+    tr: 'İptal ediliyor…',
+  },
+  'connections.cancel.error.INVALID_STATE_TRANSITION': {
+    az: 'Bu əlaqə artıq ləğv edilib. Siyahı yeniləndi.',
+    ru: 'Эта связь уже отменена. Список обновлён.',
+    tr: 'Bu bağlantı zaten iptal edilmiş. Liste yenilendi.',
+  },
+  'connections.cancel.error.NOT_FOUND': {
+    az: 'Əlaqə tapılmadı. Siyahı yeniləndi.',
+    ru: 'Связь не найдена. Список обновлён.',
+    tr: 'Bağlantı bulunamadı. Liste yenilendi.',
   },
 };
