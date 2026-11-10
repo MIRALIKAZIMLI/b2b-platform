@@ -7,6 +7,7 @@
 // - Boş durumlar ayrı: hizmet bölgesi yok (ayarlara bağlantı), bölge atanmamış (admine sor),
 //   sonuç yok. Hız sınırı (429) kalan saniyeyle; yükleniyor = iskelet kartlar.
 // - Dışa aktarma bilerek yok (US-019 AC4).
+// - F2.12b: kartın altında ilişki durumu ve "Bağlantı sorğusu göndər" (pencere).
 import { parseExactLookup } from '@b2b/shared';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -22,9 +23,23 @@ import {
   useDirectorySearch,
   useExactLookup,
 } from './api';
+import { RelationFooter } from '../connection-requests/relation-footer';
 import { BuyerCard } from './buyer-card';
+import type { DirectoryBuyer } from './api';
 
 const MODES = ['filter', 'exact'] as const;
+
+/** Kart + ilişki satırı (F2.12b: durum ve bağlantı isteği). */
+function DirectoryCard({ buyer }: { buyer: DirectoryBuyer }) {
+  return (
+    <BuyerCard
+      buyer={buyer}
+      footer={
+        <RelationFooter buyerId={buyer.id} buyerName={buyer.legalName} relation={buyer.relation} />
+      }
+    />
+  );
+}
 type Mode = (typeof MODES)[number];
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -187,7 +202,7 @@ function FilterMode({ businessId }: { businessId: string | undefined }) {
           <ul className="grid gap-4 lg:grid-cols-2">
             {items.map((buyer) => (
               <li key={buyer.id}>
-                <BuyerCard buyer={buyer} />
+                <DirectoryCard buyer={buyer} />
               </li>
             ))}
           </ul>
@@ -263,7 +278,7 @@ function ExactMode({ businessId }: { businessId: string | undefined }) {
         <ul className="grid gap-4 lg:grid-cols-2">
           {lookup.data.items.map((buyer) => (
             <li key={buyer.id}>
-              <BuyerCard buyer={buyer} />
+              <DirectoryCard buyer={buyer} />
             </li>
           ))}
         </ul>

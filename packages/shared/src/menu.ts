@@ -77,7 +77,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     // F2.11b: perakendeci dizini (US-019, US-020); web + mobil (temsilci).
     { key: 'directory', anyOf: ['directory.search'], ready: true, path: 'directory' },
     soon('customers', ['connections.view']),
-    soon('requests', ['connections.request.send']),
+    // F2.12b: gönderilen bağlantı istekleri (US-021); web + mobil.
+    { key: 'requests', anyOf: ['connections.request.send'], ready: true, path: 'requests' },
     soon('products', ['catalog.view']),
     soon('prices', ['pricing.view']),
     soon('stock', ['inventory.view']),

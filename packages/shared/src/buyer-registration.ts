@@ -153,17 +153,18 @@ export function registrationFailure(error: unknown): RegistrationFailure {
 }
 
 /**
- * Kayıt isteğinin `Idempotency-Key`'i (16–64 karakter). Form açıldığında bir kez üretilir ve
- * yeniden denemelerde aynı kalır (zayıf ağda ikinci işletme açılmaz, R12/R13). Gizli değildir;
- * Web Crypto yoksa (bazı React Native ortamları) `Math.random` yeterlidir.
+ * İstek `Idempotency-Key`'i (16–64 karakter). Form açıldığında bir kez üretilir ve yeniden
+ * denemelerde aynı kalır (zayıf ağda ikinci kayıt oluşmaz, R12/R13). Gizli değildir; Web Crypto
+ * yoksa (bazı React Native ortamları) `Math.random` yeterlidir. Ön ek: kayıt `reg`, bağlantı
+ * isteği `conn` (F2.12b).
  */
-export function createIdempotencyKey(): string {
+export function createIdempotencyKey(prefix = 'reg'): string {
   const bytes = new Uint8Array(16);
   const crypto = (globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => Uint8Array } })
     .crypto;
   if (crypto?.getRandomValues !== undefined) crypto.getRandomValues(bytes);
   else for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
-  return `reg-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+  return `${prefix}-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 /** Profil doluluk yüzdesi 0–100 aralığında tam sayı (US-005 AC2 kartı). */

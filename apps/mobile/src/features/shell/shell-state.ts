@@ -42,14 +42,16 @@ export function mobileMenu(me: Pick<Me, 'activeBusiness'>, area: MobileArea): Me
 
 /**
  * Hazır menü öğesinin mobil adresi (expo-router; grup adı adreste yoktur). Yalnız mobilde ekranı
- * olan öğeler; diğerleri bağlantısız kalır. F2.4: perakendeci profili. F2.11b: dizin.
+ * olan öğeler; diğerleri bağlantısız kalır. F2.4: perakendeci profili. F2.11b: dizin. F2.12b: istekler.
  */
-type MobileRoute = '/business-profile' | '/directory';
+type MobileRoute = '/business-profile' | '/directory' | '/requests';
 
 const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'buyer:profile': '/business-profile',
   // F2.11b: satış temsilcisi perakendeci dizini (US-019, US-020).
   'seller:directory': '/directory',
+  // F2.12b: gönderilen bağlantı istekleri (US-021).
+  'seller:requests': '/requests',
 };
 
 export function mobileHref(area: MobileArea, item: MenuItem): MobileRoute | undefined {

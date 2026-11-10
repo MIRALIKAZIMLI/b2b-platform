@@ -2,7 +2,7 @@
 // F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi;
 // F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni;
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
-// daveti kabulü; F2.11b: perakendeci dizini).
+// daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -2324,5 +2324,255 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Təmizlə',
     ru: 'Сбросить',
     tr: 'Temizle',
+  },
+  'connections.relation.pending': {
+    az: 'Sorğu göndərilib · cavab gözlənilir',
+    ru: 'Запрос отправлен · ожидается ответ',
+    tr: 'İstek gönderildi · yanıt bekleniyor',
+  },
+  'connections.relation.active': {
+    az: 'Bağlantı aktivdir',
+    ru: 'Связь активна',
+    tr: 'Bağlantı aktif',
+  },
+  'connections.relation.blocked': {
+    az: 'Bu müəssisə sorğu qəbul etmir',
+    ru: 'Это предприятие не принимает запросы',
+    tr: 'Bu işletme istek kabul etmiyor',
+  },
+  'connections.relation.cooldown': {
+    az: 'Yeni sorğu {date} tarixindən sonra göndərilə bilər',
+    ru: 'Новый запрос можно отправить после {date}',
+    tr: 'Yeni istek {date} tarihinden sonra gönderilebilir',
+  },
+  'connections.relation.unavailable': {
+    az: 'Hazırda sorğu göndərilə bilməz',
+    ru: 'Сейчас запрос отправить нельзя',
+    tr: 'Şu anda istek gönderilemez',
+  },
+  'connections.send.open': {
+    az: 'Bağlantı sorğusu göndər',
+    ru: 'Отправить запрос на связь',
+    tr: 'Bağlantı isteği gönder',
+  },
+  'connections.send.title': {
+    az: 'Bağlantı sorğusu',
+    ru: 'Запрос на связь',
+    tr: 'Bağlantı isteği',
+  },
+  'connections.send.description': {
+    az: 'Sorğu {name} müəssisəsinin adminlərinə bildiriş kimi gedəcək.',
+    ru: 'Запрос придёт администраторам предприятия {name} в виде уведомления.',
+    tr: 'İstek, {name} işletmesinin yöneticilerine bildirim olarak gidecek.',
+  },
+  'connections.send.message': {
+    az: 'Mesaj (istəyə bağlı)',
+    ru: 'Сообщение (необязательно)',
+    tr: 'Mesaj (isteğe bağlı)',
+  },
+  'connections.send.message_placeholder': {
+    az: 'Şirkətinizi qısa təqdim edin',
+    ru: 'Кратко представьте вашу компанию',
+    tr: 'Şirketinizi kısaca tanıtın',
+  },
+  'connections.send.message_count': {
+    az: '{count} / {max}',
+    ru: '{count} / {max}',
+    tr: '{count} / {max}',
+  },
+  'connections.send.term': {
+    az: 'Təklif olunan ödəniş möhləti, gün (istəyə bağlı)',
+    ru: 'Предлагаемая отсрочка платежа, дней (необязательно)',
+    tr: 'Önerilen ödeme vadesi, gün (isteğe bağlı)',
+  },
+  'connections.send.term_hint': {
+    az: '0 ilə {max} gün arasında',
+    ru: 'От 0 до {max} дней',
+    tr: '0 ile {max} gün arası',
+  },
+  'connections.send.term_invalid': {
+    az: '0 ilə {max} arasında tam ədəd yazın.',
+    ru: 'Введите целое число от 0 до {max}.',
+    tr: '0 ile {max} arasında tam sayı girin.',
+  },
+  'connections.send.submit': {
+    az: 'Sorğunu göndər',
+    ru: 'Отправить запрос',
+    tr: 'İsteği gönder',
+  },
+  'connections.send.sending': {
+    az: 'Göndərilir…',
+    ru: 'Отправка…',
+    tr: 'Gönderiliyor…',
+  },
+  'connections.send.close': {
+    az: 'Bağla',
+    ru: 'Закрыть',
+    tr: 'Kapat',
+  },
+  'connections.send.success_title': {
+    az: 'Sorğu göndərildi',
+    ru: 'Запрос отправлен',
+    tr: 'İstek gönderildi',
+  },
+  'connections.send.success_body': {
+    az: '{name} cavab verənədək sorğunun vəziyyətini «Göndərilən sorğular» bölməsində izləyə bilərsiniz.',
+    ru: 'Пока {name} не ответит, статус запроса можно отслеживать в разделе «Отправленные запросы».',
+    tr: '{name} yanıt verene kadar isteğin durumunu «Gönderilen istekler» bölümünden izleyebilirsiniz.',
+  },
+  'connections.send.go_requests': {
+    az: 'Sorğulara bax',
+    ru: 'К запросам',
+    tr: 'İsteklere git',
+  },
+  'connections.error.CONNECTION_REQUEST_ALREADY_PENDING': {
+    az: 'Bu müəssisəyə artıq sorğu göndərilib, cavab gözlənilir.',
+    ru: 'Этому предприятию уже отправлен запрос, ожидается ответ.',
+    tr: 'Bu işletmeye zaten istek gönderildi, yanıt bekleniyor.',
+  },
+  'connections.error.CONNECTION_ALREADY_ACTIVE': {
+    az: 'Bu müəssisə ilə artıq bağlısınız.',
+    ru: 'Вы уже связаны с этим предприятием.',
+    tr: 'Bu işletmeyle zaten bağlısınız.',
+  },
+  'connections.error.CONNECTION_BLOCKED': {
+    az: 'Bu müəssisə sorğu qəbul etmir.',
+    ru: 'Это предприятие не принимает запросы.',
+    tr: 'Bu işletme istek kabul etmiyor.',
+  },
+  'connections.error.CONNECTION_COOLDOWN_ACTIVE': {
+    az: 'Bu müəssisəyə yeni sorğunu {date} tarixindən sonra göndərə bilərsiniz.',
+    ru: 'Новый запрос этому предприятию можно отправить после {date}.',
+    tr: 'Bu işletmeye yeni isteği {date} tarihinden sonra gönderebilirsiniz.',
+  },
+  'connections.error.quota_hours': {
+    az: 'Bugünkü sorğu limitiniz doldu. Yeni sorğunu {hours} saat {minutes} dəqiqə sonra göndərə bilərsiniz.',
+    ru: 'Дневной лимит запросов исчерпан. Новый запрос можно отправить через {hours} ч {minutes} мин.',
+    tr: 'Bugünkü istek sınırınız doldu. Yeni isteği {hours} saat {minutes} dakika sonra gönderebilirsiniz.',
+  },
+  'connections.error.quota_minutes': {
+    az: 'Bugünkü sorğu limitiniz doldu. Yeni sorğunu {minutes} dəqiqə sonra göndərə bilərsiniz.',
+    ru: 'Дневной лимит запросов исчерпан. Новый запрос можно отправить через {minutes} мин.',
+    tr: 'Bugünkü istek sınırınız doldu. Yeni isteği {minutes} dakika sonra gönderebilirsiniz.',
+  },
+  'connections.error.SUBSCRIPTION_READ_ONLY': {
+    az: 'Abunəliyiniz yalnız oxuma rejimindədir. Sorğu göndərmək üçün abunəliyi yeniləyin.',
+    ru: 'Подписка в режиме только для чтения. Чтобы отправлять запросы, продлите подписку.',
+    tr: 'Aboneliğiniz yalnızca okuma modunda. İstek göndermek için aboneliği yenileyin.',
+  },
+  'connections.error.NOT_FOUND': {
+    az: 'Bu müəssisə hazırda sorğu qəbul edə bilmir.',
+    ru: 'Сейчас это предприятие не может принимать запросы.',
+    tr: 'Bu işletme şu anda istek alamıyor.',
+  },
+  'connections.status.pending': {
+    az: 'Gözləyir',
+    ru: 'Ожидает',
+    tr: 'Bekliyor',
+  },
+  'connections.status.accepted': {
+    az: 'Qəbul edildi',
+    ru: 'Принят',
+    tr: 'Kabul edildi',
+  },
+  'connections.status.rejected': {
+    az: 'Rədd edildi',
+    ru: 'Отклонён',
+    tr: 'Reddedildi',
+  },
+  'connections.status.expired': {
+    az: 'Müddəti bitdi',
+    ru: 'Истёк',
+    tr: 'Süresi doldu',
+  },
+  'connections.status.withdrawn': {
+    az: 'Geri çəkildi',
+    ru: 'Отозван',
+    tr: 'Geri çekildi',
+  },
+  'connections.outgoing.title': {
+    az: 'Göndərilən sorğular',
+    ru: 'Отправленные запросы',
+    tr: 'Gönderilen istekler',
+  },
+  'connections.outgoing.description': {
+    az: 'Pərakəndəçilərə göndərdiyiniz bağlantı sorğuları, yenidən köhnəyə.',
+    ru: 'Запросы на связь, отправленные розничным точкам, от новых к старым.',
+    tr: 'Perakendecilere gönderdiğiniz bağlantı istekleri, yeniden eskiye.',
+  },
+  'connections.outgoing.filter_label': {
+    az: 'Vəziyyət',
+    ru: 'Статус',
+    tr: 'Durum',
+  },
+  'connections.outgoing.filter_all': {
+    az: 'Hamısı',
+    ru: 'Все',
+    tr: 'Tümü',
+  },
+  'connections.outgoing.sent_at': {
+    az: 'Göndərilib: {date}',
+    ru: 'Отправлен: {date}',
+    tr: 'Gönderildi: {date}',
+  },
+  'connections.outgoing.expires_at': {
+    az: 'Cavab üçün son tarix: {date}',
+    ru: 'Ответить до: {date}',
+    tr: 'Son yanıt tarihi: {date}',
+  },
+  'connections.outgoing.term': {
+    az: 'Təklif olunan möhlət: {days} gün',
+    ru: 'Предложенная отсрочка: {days} дн.',
+    tr: 'Önerilen vade: {days} gün',
+  },
+  'connections.outgoing.closed_business': {
+    az: 'Müəssisə artıq sorğu qəbul etmir',
+    ru: 'Предприятие больше не принимает запросы',
+    tr: 'İşletme artık istek almıyor',
+  },
+  'connections.outgoing.empty_title': {
+    az: 'Hələ sorğu yoxdur',
+    ru: 'Запросов пока нет',
+    tr: 'Henüz istek yok',
+  },
+  'connections.outgoing.empty': {
+    az: 'Dizində pərakəndəçi tapın və bağlantı sorğusu göndərin.',
+    ru: 'Найдите розничную точку в каталоге и отправьте запрос на связь.',
+    tr: 'Dizinde perakendeci bulun ve bağlantı isteği gönderin.',
+  },
+  'connections.outgoing.empty_filtered': {
+    az: 'Bu vəziyyətdə sorğu yoxdur.',
+    ru: 'Запросов с таким статусом нет.',
+    tr: 'Bu durumda istek yok.',
+  },
+  'connections.outgoing.go_directory': {
+    az: 'Pərakəndəçi tap',
+    ru: 'Найти розничную точку',
+    tr: 'Perakendeci bul',
+  },
+  'connections.outgoing.more': {
+    az: 'Daha çox',
+    ru: 'Показать ещё',
+    tr: 'Daha fazla',
+  },
+  'connections.outgoing.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'connections.outgoing.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Yeniden dene',
+  },
+  'connections.outgoing.no_access': {
+    az: 'Bu səhifəni görmək üçün icazəniz yoxdur.',
+    ru: 'У вас нет доступа к этой странице.',
+    tr: 'Bu sayfayı görme izniniz yok.',
+  },
+  'connections.mobile.back': {
+    az: 'Geri',
+    ru: 'Назад',
+    tr: 'Geri',
   },
 };
