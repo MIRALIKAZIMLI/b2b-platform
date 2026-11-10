@@ -1,9 +1,11 @@
 'use client';
 // Dizin sonucu kartı (F2.11b). Yalnız dolu (perakendecinin açtığı) alanlar satır olarak görünür;
 // kapalı alanlar hiç yer kaplamaz, kapalı alan varsa altta tek ince not. Kod alanları (telefon,
-// VÖEN) `tabular-nums`. Logo yoksa ünvanın baş harfleriyle Indigo→Violet rozet.
+// VÖEN) `tabular-nums`. Logo yoksa ünvanın baş harfleriyle Indigo→Violet rozet. Alt satır
+// (`footer`) F2.12b: ilişki durumu ve bağlantı isteği düğmesi.
 import { pickLocalizedText } from '@b2b/shared';
 import { useLocale, useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { Badge, Card } from '../ui/primitives';
 import type { DirectoryBuyer } from './api';
 
@@ -27,7 +29,7 @@ function initials(name: string): string {
     .join('');
 }
 
-export function BuyerCard({ buyer }: { buyer: DirectoryBuyer }) {
+export function BuyerCard({ buyer, footer }: { buyer: DirectoryBuyer; footer?: ReactNode }) {
   const t = useTranslations('directory');
   const locale = useLocale();
   const region = pickLocalizedText(buyer.region, locale) ?? '';
@@ -79,6 +81,7 @@ export function BuyerCard({ buyer }: { buyer: DirectoryBuyer }) {
       )}
 
       {hasHidden && <p className="text-xs text-slate-400">{t('hidden_fields')}</p>}
+      {footer}
     </Card>
   );
 }

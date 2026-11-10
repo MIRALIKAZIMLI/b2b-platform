@@ -9,6 +9,7 @@
 // - Kart: logo / baş harf, ünvan, doğrulanmış rozeti, bölge · faaliyet; yalnız açık alanlar.
 //   Telefon satırına dokununca arama açılır (Linking, yeni paket yok).
 // - Boş durumlar: bölge atanmamış, hizmet bölgesi yok, sonuç yok; 429'da kalan saniye.
+// - F2.12b: kartın altında ilişki durumu ve "Bağlantı sorğusu göndər" (alttan açılan sayfa).
 import { parseExactLookup, pickLocalizedText } from '@b2b/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -29,6 +30,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, pressed, radius, softShadow, space, touchTarget } from '../../lib/theme';
+import { RelationRow } from '../connection-requests/relation-row';
 import { OptionField } from '../registration/option-sheet';
 import { useActivityOptions, useRegionOptions } from '../registration/queries';
 import { useShell } from '../shell/use-shell';
@@ -117,6 +119,7 @@ function BuyerCard({ buyer }: { readonly buyer: DirectoryBuyer }) {
       {(open.length < FIELDS.length || buyer.logoUrl === null) && (
         <Text style={styles.hidden}>{t('directory.hidden_fields')}</Text>
       )}
+      <RelationRow buyerId={buyer.id} buyerName={buyer.legalName} relation={buyer.relation} />
     </View>
   );
 }
