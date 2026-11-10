@@ -1805,12 +1805,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Gelen istekler (buyer) — satıcı profil özetiyle (US-023) */
+        /**
+         * Gelen bekleyen istekler (buyer) — satıcı profil özetiyle (US-023 AC1, AC6)
+         * @description İzin `connections.view` (satın alma sorumlusu da görür, US-023 AC6). Yalnız `pending` ve süresi geçmemiş
+         *     istekler (US-022 AC1, US-023 AC3), yeniden eskiye. Satıcı özeti yalnız ünvan, logo, tanıtım metni;
+         *     ürün, fiyat, başka bağlantı bilgisi yok (F2.13a, R19). `limit` en fazla 50.
+         */
         get: {
             parameters: {
                 query?: {
                     cursor?: components["parameters"]["Cursor"];
-                    limit?: components["parameters"]["Limit"];
+                    limit?: number;
                 };
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
@@ -1825,8 +1830,17 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: (components["schemas"]["ConnectionRequest"] & {
+                                seller: components["schemas"]["ConnectionSellerSummary"];
+                            })[];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -1846,19 +1860,34 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** İsteği kabul et (US-023) */
+        /**
+         * İsteği kabul et (US-023 AC2)
+         * @description İzin `connections.request.respond` (yalnız `buyer`). Gövde veri paylaşım uyarısının onayıdır
+         *     (`confirmDataSharing: true`, yoksa `422`); onay audit'e yazılır. İstek `accepted`, yeni `active` bağlantı;
+         *     bağlantı vadesi = önerilen vade (yoksa 0). Başka perakendecinin isteği `404`; `pending` değilse
+         *     `409 INVALID_STATE_TRANSITION`; süresi geçmişse `409 CONNECTION_REQUEST_EXPIRED`. Satıcı askıda veya
+         *     salt-okunur olsa da kabul yapılır (SF-03).
+         */
         post: {
             parameters: {
                 query?: never;
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
+                    "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 };
                 path: {
                     id: components["parameters"]["Id"];
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        confirmDataSharing: true;
+                    };
+                };
+            };
             responses: {
                 /** @description Bağlantı oluştu */
                 200: {
@@ -1869,7 +1898,10 @@ export interface paths {
                         "application/json": components["schemas"]["Connection"];
                     };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -1887,12 +1919,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** İsteği reddet (US-023) */
+        /**
+         * İsteği reddet (US-023 AC3)
+         * @description İzin `connections.request.respond`. Bekleme süresi başlar. Başka perakendecinin isteği `404`; `pending` değilse `409 INVALID_STATE_TRANSITION`; süresi geçmişse `409 CONNECTION_REQUEST_EXPIRED`.
+         */
         post: {
             parameters: {
                 query?: never;
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
+                    "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 };
                 path: {
                     id: components["parameters"]["Id"];
@@ -1906,8 +1942,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ConnectionRequest"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -1925,12 +1967,17 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** İsteği geri çek (US-022) */
+        /**
+         * İsteği geri çek (US-022 AC1)
+         * @description İzin `connections.request.send`. Temsilci (`assigned`) yalnız kendi gönderdiğini çeker; başkasınınki ve başka
+         *     satıcının isteği `404`; `pending` değilse `409 INVALID_STATE_TRANSITION`. Kota iadesi yok (US-022 AC2).
+         */
         post: {
             parameters: {
                 query?: never;
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
+                    "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 };
                 path: {
                     id: components["parameters"]["Id"];
@@ -1944,8 +1991,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ConnectionRequest"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -2095,7 +2148,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Engellenen toptancılar (buyer) */
+        /**
+         * Engellenen toptancılar (buyer), yeniden eskiye
+         * @description İzin `connections.block` (F2.13a).
+         */
         get: {
             parameters: {
                 query?: never;
@@ -2112,17 +2168,28 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["BlockedSeller"][];
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
             };
         };
         put?: never;
-        /** Toptancıyı engelle (US-023) */
+        /**
+         * Toptancıyı engelle (US-023 AC4)
+         * @description İzin `connections.block`. Tek işlemde: engel kaydı, çiftin bekleyen isteği `rejected`, aktif bağlantısı
+         *     `cancelled` (`ended_by_side = buyer`, `end_reason = blocked`, olay `connection.cancelled`). Yalnız çağıranla
+         *     isteği, bağlantısı veya engeli olan satıcı; değilse `404`. Tekrar çağrı aynı kaydı döner (`201`).
+         */
         post: {
             parameters: {
                 query?: never;
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
+                    "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 };
                 path?: never;
                 cookie?: never;
@@ -2141,8 +2208,13 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["BlockedSeller"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -2161,7 +2233,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Engeli kaldır */
+        /**
+         * Engeli kaldır (US-023 AC5)
+         * @description İzin `connections.block`. Engel yoksa da `204`. Satıcı yeniden istek gönderebilir (bekleme süresi kurallarıyla).
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -2182,6 +2257,8 @@ export interface paths {
                     };
                     content?: never;
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         options?: never;
@@ -6825,6 +6902,22 @@ export interface components {
             /** Format: date-time */
             endedAt?: string | null;
             endedBySide?: string | null;
+        };
+        /** @description Perakendecinin gördüğü toptancı özeti (US-023 AC1); ürün, fiyat, başka bağlantı yok. */
+        ConnectionSellerSummary: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            logoUrl: string | null;
+            description: components["schemas"]["LocalizedText"] | null;
+        };
+        BlockedSeller: {
+            /** Format: uuid */
+            sellerId: string;
+            sellerName: string;
+            logoUrl: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
         ConnectionTerms: {
             /** Format: uuid */

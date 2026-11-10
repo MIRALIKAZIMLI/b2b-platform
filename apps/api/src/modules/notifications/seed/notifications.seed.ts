@@ -48,6 +48,35 @@ export const NOTIFICATION_TEMPLATES: Readonly<
       body: 'Bir toptancı size bağlantı isteği gönderdi. İsteği açıp yanıtlayabilirsiniz.',
     },
   },
+  // F2.13a (US-023 AC2–AC4, US-054). Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  connection_accepted: {
+    az: {
+      title: 'Əlaqə sorğusu qəbul edildi',
+      body: 'Pərakəndəçi əlaqə sorğunuzu qəbul etdi. İndi müştəri kimi əlaqəniz aktivdir.',
+    },
+    ru: {
+      title: 'Запрос на связь принят',
+      body: 'Розничный покупатель принял ваш запрос на связь. Связь с клиентом активна.',
+    },
+    tr: {
+      title: 'Bağlantı isteği kabul edildi',
+      body: 'Perakendeci bağlantı isteğinizi kabul etti. Müşteri bağlantınız artık aktif.',
+    },
+  },
+  connection_rejected: {
+    az: {
+      title: 'Əlaqə sorğusu rədd edildi',
+      body: 'Pərakəndəçi əlaqə sorğunuzu rədd etdi.',
+    },
+    ru: {
+      title: 'Запрос на связь отклонён',
+      body: 'Розничный покупатель отклонил ваш запрос на связь.',
+    },
+    tr: {
+      title: 'Bağlantı isteği reddedildi',
+      body: 'Perakendeci bağlantı isteğinizi reddetti.',
+    },
+  },
 };
 
 export interface NotificationsSeedResult {

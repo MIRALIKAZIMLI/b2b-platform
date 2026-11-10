@@ -1007,36 +1007,98 @@ paths:
   /api/v1/connection-requests/incoming:
     get:
       tags: [connections]
-      summary: Gelen istekler (buyer) — satıcı profil özetiyle (US-023)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      summary: Gelen bekleyen istekler (buyer) — satıcı profil özetiyle (US-023 AC1, AC6)
+      description: |
+        İzin `connections.view` (satın alma sorumlusu da görür, US-023 AC6). Yalnız `pending` ve süresi geçmemiş
+        istekler (US-022 AC1, US-023 AC3), yeniden eskiye. Satıcı özeti yalnız ünvan, logo, tanıtım metni;
+        ürün, fiyat, başka bağlantı bilgisi yok (F2.13a, R19). `limit` en fazla 50.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Cursor' }, { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - { $ref: '#/components/schemas/ConnectionRequest' }
+                        - type: object
+                          required: [seller]
+                          properties:
+                            seller: { $ref: '#/components/schemas/ConnectionSellerSummary' }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/connection-requests/{id}/accept:
     post:
       tags: [connections]
-      summary: İsteği kabul et (US-023)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      summary: İsteği kabul et (US-023 AC2)
+      description: |
+        İzin `connections.request.respond` (yalnız `buyer`). Gövde veri paylaşım uyarısının onayıdır
+        (`confirmDataSharing: true`, yoksa `422`); onay audit'e yazılır. İstek `accepted`, yeni `active` bağlantı;
+        bağlantı vadesi = önerilen vade (yoksa 0). Başka perakendecinin isteği `404`; `pending` değilse
+        `409 INVALID_STATE_TRANSITION`; süresi geçmişse `409 CONNECTION_REQUEST_EXPIRED`. Satıcı askıda veya
+        salt-okunur olsa da kabul yapılır (SF-03).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmDataSharing]
+              additionalProperties: false
+              properties:
+                confirmDataSharing: { type: boolean, const: true }
       responses:
         '200':
           description: Bağlantı oluştu
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Connection' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/connection-requests/{id}/reject:
     post:
       tags: [connections]
-      summary: İsteği reddet (US-023)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      summary: İsteği reddet (US-023 AC3)
+      description: İzin `connections.request.respond`. Bekleme süresi başlar. Başka perakendecinin isteği `404`; `pending` değilse `409 INVALID_STATE_TRANSITION`; süresi geçmişse `409 CONNECTION_REQUEST_EXPIRED`.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       responses:
-        '200': { description: Reddedildi }
+        '200':
+          description: Reddedildi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConnectionRequest' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/connection-requests/{id}/withdraw:
     post:
       tags: [connections]
-      summary: İsteği geri çek (US-022)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      summary: İsteği geri çek (US-022 AC1)
+      description: |
+        İzin `connections.request.send`. Temsilci (`assigned`) yalnız kendi gönderdiğini çeker; başkasınınki ve başka
+        satıcının isteği `404`; `pending` değilse `409 INVALID_STATE_TRANSITION`. Kota iadesi yok (US-022 AC2).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       responses:
-        '200': { description: Geri çekildi }
+        '200':
+          description: Geri çekildi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConnectionRequest' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/connections:
     get:
       tags: [connections]
@@ -1082,31 +1144,58 @@ paths:
   /api/v1/blocks:
     get:
       tags: [connections]
-      summary: Engellenen toptancılar (buyer)
+      summary: Engellenen toptancılar (buyer), yeniden eskiye
+      description: İzin `connections.block` (F2.13a).
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/BlockedSeller' }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       tags: [connections]
-      summary: Toptancıyı engelle (US-023)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      summary: Toptancıyı engelle (US-023 AC4)
+      description: |
+        İzin `connections.block`. Tek işlemde: engel kaydı, çiftin bekleyen isteği `rejected`, aktif bağlantısı
+        `cancelled` (`ended_by_side = buyer`, `end_reason = blocked`, olay `connection.cancelled`). Yalnız çağıranla
+        isteği, bağlantısı veya engeli olan satıcı; değilse `404`. Tekrar çağrı aynı kaydı döner (`201`).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
         content:
           application/json:
             schema:
               type: object
               required: [sellerId]
+              additionalProperties: false
               properties:
                 sellerId: { type: string, format: uuid }
       responses:
-        '201': { description: Engellendi }
+        '201':
+          description: Engellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlockedSeller' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/blocks/{sellerId}:
     delete:
       tags: [connections]
-      summary: Engeli kaldır
+      summary: Engeli kaldır (US-023 AC5)
+      description: İzin `connections.block`. Engel yoksa da `204`. Satıcı yeniden istek gönderebilir (bekleme süresi kurallarıyla).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: sellerId, in: path, required: true, schema: { type: string, format: uuid } } ]
       responses:
         '204': { description: Kaldırıldı }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
 
   # ---------------------------------------------------------------- catalog
   /api/v1/catalog/units:
@@ -3244,6 +3333,26 @@ components:
         startedAt: { type: string, format: date-time }
         endedAt: { type: [string, 'null'], format: date-time }
         endedBySide: { type: [string, 'null'] }
+    ConnectionSellerSummary:
+      type: object
+      required: [id, name, logoUrl, description]
+      description: Perakendecinin gördüğü toptancı özeti (US-023 AC1); ürün, fiyat, başka bağlantı yok.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        logoUrl: { type: [string, 'null'] }
+        description:
+          oneOf:
+            - $ref: '#/components/schemas/LocalizedText'
+            - type: 'null'
+    BlockedSeller:
+      type: object
+      required: [sellerId, sellerName, logoUrl, createdAt]
+      properties:
+        sellerId: { type: string, format: uuid }
+        sellerName: { type: string }
+        logoUrl: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
     ConnectionTerms:
       type: object
       properties:

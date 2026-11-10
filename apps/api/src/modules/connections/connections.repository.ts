@@ -3,12 +3,13 @@
 // süzer (Mimar notu: ilişki yalnız bağlamdaki satıcının satırlarından hesaplanır).
 import { Injectable } from '@nestjs/common';
 import type { ConnectionRequestStatus } from '@b2b/shared';
-import { and, asc, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Tx } from '../../core/db';
+import type { FileBucket } from '../../core/ports/file-storage';
 import { membershipRegions } from '../access';
 import type { PairState } from './connection-policy';
-import { connectionRequests } from './connections.schema';
+import { blocks, connectionRequests, connections } from './connections.schema';
 
 /** DEFINER fonksiyonlarının kimlik sınırı (`connection_buyer_targets`, 22023). */
 export const BUYER_TARGETS_MAX = 20;
@@ -42,6 +43,28 @@ interface TargetRow extends Record<string, unknown> {
 }
 
 export type ConnectionRequestRow = typeof connectionRequests.$inferSelect;
+export type ConnectionRow = typeof connections.$inferSelect;
+export type NewConnectionRow = typeof connections.$inferInsert;
+export type BlockRow = typeof blocks.$inferSelect;
+
+/** `connection_seller_summaries` kimlik sınırı (22023). */
+export const SELLER_SUMMARIES_MAX = 50;
+
+/** Perakendecinin gördüğü satıcı özeti (DEFINER; yalnız çağıranla ilişkili satıcılar). */
+export interface SellerSummaryRow {
+  readonly id: string;
+  readonly legalName: string;
+  readonly description: Record<string, string> | null;
+  readonly logo: { readonly bucket: FileBucket; readonly objectKey: string } | null;
+}
+
+interface SummaryDbRow extends Record<string, unknown> {
+  id: string;
+  legal_name: string;
+  description: Record<string, string> | null;
+  logo_bucket: string | null;
+  logo_object_key: string | null;
+}
 export type NewConnectionRequestRow = typeof connectionRequests.$inferInsert;
 
 /** Engel dışındaki çift durumu (engel `BuyerTarget.blocked`'tan gelir). */
@@ -77,6 +100,17 @@ export class ConnectionsRepository {
   async lockSellerQuotaTx(tx: Tx, sellerId: string): Promise<void> {
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${`connection_requests.quota:${sellerId}`}, 0))`,
+    );
+  }
+
+  /**
+   * Satıcı–alıcı çifti için işlem sonuna kadar süren kilit (Müfettiş 17 M1): istek gönderme ile
+   * engel aynı çiftte sıralanır; kilitten sonraki ifadeler commit edilmiş engeli/isteği görür.
+   * Sıra her akışta sabit: önce çift, sonra satıcı kotası.
+   */
+  async lockPairTx(tx: Tx, sellerId: string, buyerId: string): Promise<void> {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`connection_pair:${sellerId}:${buyerId}`}, 0))`,
     );
   }
 
@@ -202,5 +236,183 @@ export class ConnectionsRepository {
       .where(eq(membershipRegions.membershipId, membershipId))
       .orderBy(asc(membershipRegions.regionId));
     return rows.map((row) => row.regionId);
+  }
+
+  // ---- F2.13a: yanıt, geri çekme, engel ----
+
+  /** İsteği işlem sonuna kadar kilitler; RLS yalnız iki tarafa gösterir (başkasına `undefined`). */
+  async lockRequestTx(tx: Tx, id: string): Promise<ConnectionRequestRow | undefined> {
+    const [row] = await tx
+      .select()
+      .from(connectionRequests)
+      .where(eq(connectionRequests.id, id))
+      .for('update');
+    return row;
+  }
+
+  /** Çiftin bekleyen isteği (engel), kilitli. */
+  async lockPendingForPairTx(
+    tx: Tx,
+    sellerId: string,
+    buyerId: string,
+  ): Promise<ConnectionRequestRow | undefined> {
+    const [row] = await tx
+      .select()
+      .from(connectionRequests)
+      .where(
+        and(
+          eq(connectionRequests.sellerId, sellerId),
+          eq(connectionRequests.buyerId, buyerId),
+          eq(connectionRequests.status, 'pending'),
+        ),
+      )
+      .for('update');
+    return row;
+  }
+
+  async setRequestStatusTx(
+    tx: Tx,
+    id: string,
+    change: {
+      readonly status: ConnectionRequestStatus;
+      readonly respondedAt: Date | null;
+      readonly respondedByUserId: string | null;
+      readonly updatedAt: Date;
+    },
+  ): Promise<ConnectionRequestRow> {
+    const [row] = await tx
+      .update(connectionRequests)
+      .set(change)
+      .where(eq(connectionRequests.id, id))
+      .returning();
+    if (row === undefined) throw new Error('connection_requests: satır güncellenemedi');
+    return row;
+  }
+
+  async insertConnectionTx(tx: Tx, row: NewConnectionRow): Promise<ConnectionRow> {
+    const [inserted] = await tx.insert(connections).values(row).returning();
+    if (inserted === undefined) throw new Error('connections: satır eklenemedi');
+    return inserted;
+  }
+
+  /** Çiftin aktif bağlantısı, kilitli. */
+  async lockActiveConnectionTx(
+    tx: Tx,
+    sellerId: string,
+    buyerId: string,
+  ): Promise<ConnectionRow | undefined> {
+    const [row] = await tx
+      .select()
+      .from(connections)
+      .where(
+        and(
+          eq(connections.sellerId, sellerId),
+          eq(connections.buyerId, buyerId),
+          eq(connections.status, 'active'),
+        ),
+      )
+      .for('update');
+    return row;
+  }
+
+  async cancelConnectionTx(
+    tx: Tx,
+    id: string,
+    change: {
+      readonly endedAt: Date;
+      readonly endedBySide: 'seller' | 'buyer';
+      readonly endReason: string;
+      readonly endedByUserId: string;
+    },
+  ): Promise<void> {
+    await tx
+      .update(connections)
+      .set({ ...change, status: 'cancelled', updatedAt: change.endedAt })
+      .where(eq(connections.id, id));
+  }
+
+  /** Gelen bekleyen ve süresi geçmemiş istekler, yeniden eskiye (UUIDv7 sırası). */
+  async listIncomingTx(
+    tx: Tx,
+    buyerId: string,
+    filter: { readonly now: Date; readonly cursor?: string; readonly limit: number },
+  ): Promise<ConnectionRequestRow[]> {
+    const conditions = [
+      eq(connectionRequests.buyerId, buyerId),
+      eq(connectionRequests.status, 'pending'),
+      gt(connectionRequests.expiresAt, filter.now),
+    ];
+    if (filter.cursor !== undefined) conditions.push(lt(connectionRequests.id, filter.cursor));
+    return await tx
+      .select()
+      .from(connectionRequests)
+      .where(and(...conditions))
+      .orderBy(desc(connectionRequests.id))
+      .limit(filter.limit);
+  }
+
+  /** `connection_seller_summaries`, 50'lik parçalarla; dönmeyen satıcı çağıranla ilişkisiz. */
+  async sellerSummariesTx(tx: Tx, ids: readonly string[]): Promise<Map<string, SellerSummaryRow>> {
+    const result = new Map<string, SellerSummaryRow>();
+    const unique = [...new Set(ids)];
+    for (let start = 0; start < unique.length; start += SELLER_SUMMARIES_MAX) {
+      const chunk = uuidArrayLiteral(unique.slice(start, start + SELLER_SUMMARIES_MAX));
+      const rows = await tx.execute<SummaryDbRow>(
+        sql`select * from connection_seller_summaries(${chunk}::uuid[])`,
+      );
+      for (const row of rows.rows) {
+        result.set(row.id, {
+          id: row.id,
+          legalName: row.legal_name,
+          description: row.description,
+          logo:
+            (row.logo_bucket === 'public' || row.logo_bucket === 'private') &&
+            row.logo_object_key !== null
+              ? { bucket: row.logo_bucket, objectKey: row.logo_object_key }
+              : null,
+        });
+      }
+    }
+    return result;
+  }
+
+  /** Kabul / red bildiriminin alıcıları: gönderen (aktif üyeyse) + satıcı adminleri. */
+  async sellerRecipientsTx(tx: Tx, requestId: string): Promise<string[]> {
+    const result = await tx.execute<{ user_id: string }>(
+      sql`select user_id from connection_seller_recipients(${requestId}::uuid)`,
+    );
+    return result.rows.map((row) => row.user_id);
+  }
+
+  /** Engel ekler; zaten varsa mevcut satır (`created = false`). */
+  async insertBlockTx(
+    tx: Tx,
+    row: { buyerId: string; sellerId: string; createdByUserId: string; createdAt: Date },
+  ): Promise<{ readonly block: BlockRow; readonly created: boolean }> {
+    const [inserted] = await tx.insert(blocks).values(row).onConflictDoNothing().returning();
+    if (inserted !== undefined) return { block: inserted, created: true };
+    const [existing] = await tx
+      .select()
+      .from(blocks)
+      .where(and(eq(blocks.buyerId, row.buyerId), eq(blocks.sellerId, row.sellerId)));
+    if (existing === undefined) throw new Error('blocks: satır okunamadı');
+    return { block: existing, created: false };
+  }
+
+  /** Engeli siler; silindiyse true. */
+  async deleteBlockTx(tx: Tx, buyerId: string, sellerId: string): Promise<boolean> {
+    const deleted = await tx
+      .delete(blocks)
+      .where(and(eq(blocks.buyerId, buyerId), eq(blocks.sellerId, sellerId)))
+      .returning({ sellerId: blocks.sellerId });
+    return deleted.length > 0;
+  }
+
+  async listBlocksTx(tx: Tx, buyerId: string): Promise<BlockRow[]> {
+    return await tx
+      .select()
+      .from(blocks)
+      .where(eq(blocks.buyerId, buyerId))
+      .orderBy(desc(blocks.createdAt), asc(blocks.sellerId));
   }
 }

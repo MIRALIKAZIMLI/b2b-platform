@@ -103,6 +103,8 @@ export const connections = pgTable(
       .on(table.buyerId)
       .where(sql`${table.status} = 'active'`),
     index('connections_seller_buyer_idx').on(table.sellerId, table.buyerId),
+    // F2.13a: bir istekten en fazla bir bağlantı doğar.
+    uniqueIndex('connections_request_uq').on(table.requestId),
     check('connections_status_check', sql`${table.status} in ('active', 'cancelled')`),
     check(
       'connections_ended_by_side_check',
