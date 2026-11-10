@@ -161,3 +161,12 @@ export function relationOf(pair: PairState, cooldown: CooldownSettings, now: Dat
   const status = (cancelled ?? -1) >= (rejected ?? -1) ? 'cancelled' : 'rejected';
   return { status, cooldownUntil: null, canRequest: true };
 }
+
+/**
+ * Kabulde bağlantının başlangıç vadesi (F2.13a K1, Mimar onayı; kullanıcı kararı bekliyor):
+ * perakendeci kabul ederken önerilen vadeyi gördüğü için önerilen vade yazılır; öneri yoksa `0`.
+ * Karar değişirse yalnız bu fonksiyon değişir.
+ */
+export function initialPaymentTermDays(proposedPaymentTermDays: number | null): number {
+  return proposedPaymentTermDays ?? 0;
+}

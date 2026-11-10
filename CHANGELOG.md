@@ -47,3 +47,4 @@
 - F2.11b: perakendeci dizini arama ucu (`GET /directory/buyers`, kart D fonksiyonu, temsilci bölgesi, dakikada 60 arama sınırı), web ve mobil dizin ekranı
 - F2.12a: bağlantı isteği API (connection_requests/connections/blocks, ConnectionPolicy, kota, dizin ilişki durumu)
 - F2.12b: bağlantı isteği gönderme ekranları (web + mobil), gönderilen istekler
+- F2.13a: bağlantı isteğine yanıt API (gelen istekler, kabul/red/geri çekme, engel listesi, durum bekçileri, satıcı özeti D fonksiyonu)

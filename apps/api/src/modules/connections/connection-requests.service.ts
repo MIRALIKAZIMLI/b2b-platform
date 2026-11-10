@@ -20,6 +20,7 @@ import { EntitlementService, localDate, PlanService } from '../billing';
 import { BusinessesRepository } from '../businesses';
 import { SettingsService } from '../settings';
 import { canRequest, type CooldownSettings, effectiveDailyQuota } from './connection-policy';
+import { ConnectionRequestStateMachine } from './connection-request.state-machine';
 import {
   BUYER_TARGETS_MAX,
   type BuyerTarget,
@@ -162,6 +163,35 @@ export class ConnectionRequestsService {
       }
       throw error;
     }
+  }
+
+  /**
+   * `POST /api/v1/connection-requests/{id}/withdraw` (US-022 AC1): satıcı bekleyen isteğini geri
+   * çeker; olay yok (state-machines §1). Temsilci (`assigned`) yalnız kendi gönderdiğini çeker;
+   * başkasınınki ve alıcının isteği `404`. Kota iadesi yok (US-022 AC2).
+   */
+  async withdraw(tenant: TenantContext, requestId: string): Promise<ConnectionRequestView> {
+    return await withTenantTx(tenant, async (tx) => {
+      const request = await this.repository.lockRequestTx(tx, requestId);
+      const assigned = tenant.permissions.get('connections.request.send') === 'assigned';
+      if (
+        request?.sellerId !== tenant.businessId ||
+        (assigned && request.sentByUserId !== tenant.userId)
+      ) {
+        throw new DomainError('NOT_FOUND');
+      }
+      ConnectionRequestStateMachine.assertTransition(
+        request.status as ConnectionRequestView['status'],
+        'withdrawn',
+      );
+      const withdrawn = await this.repository.setRequestStatusTx(tx, request.id, {
+        status: 'withdrawn',
+        respondedAt: null,
+        respondedByUserId: null,
+        updatedAt: this.clock.now(),
+      });
+      return toRequestView(withdrawn);
+    });
   }
 
   /**

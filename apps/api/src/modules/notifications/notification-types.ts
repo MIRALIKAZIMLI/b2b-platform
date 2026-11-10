@@ -4,7 +4,13 @@
 import { z } from 'zod';
 
 /** Tercih anahtarları ve şablon türleri. */
-export const NOTIFICATION_TYPES = ['test', 'role_template_version', 'connection_request'] as const;
+export const NOTIFICATION_TYPES = [
+  'test',
+  'role_template_version',
+  'connection_request',
+  'connection_accepted',
+  'connection_rejected',
+] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 const TYPE_SET: ReadonlySet<string> = new Set(NOTIFICATION_TYPES);
@@ -37,6 +43,31 @@ const connectionRequestPayload = z.object({
   buyerId: z.uuid(),
   userId: z.uuid(),
 });
+
+const connectionResponsePayload = z.object({
+  requestId: z.uuid(),
+  sellerId: z.uuid(),
+  buyerId: z.uuid(),
+  userId: z.uuid(),
+});
+
+/** Kabul / red bildirimi toptancı tarafına; konu istek kimliği (US-054 "İstek kabul / red"). */
+function connectionResponseIntents(
+  type: 'connection_accepted' | 'connection_rejected',
+): (payload: unknown) => NotificationIntent[] {
+  return (payload: unknown) => {
+    const event = connectionResponsePayload.parse(payload);
+    return [
+      {
+        userId: event.userId,
+        businessId: event.sellerId,
+        type,
+        subjectId: event.requestId,
+        params: {},
+      },
+    ];
+  };
+}
 
 /** Outbox olay türü → bildirimler. Yük outbox'ta zaten doğrulanmıştır; burada yeniden okunur. */
 const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = new Map([
@@ -82,6 +113,9 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
       ];
     },
   ],
+  // F2.13a: perakendeci yanıtı; perakendecinin adı bildirime girmez (yalnız kod/sayı).
+  ['connection.accepted', connectionResponseIntents('connection_accepted')],
+  ['connection.rejected', connectionResponseIntents('connection_rejected')],
 ]);
 
 /** Bildirime dönüşen outbox olay türleri (`notifications` kuyruğu). */

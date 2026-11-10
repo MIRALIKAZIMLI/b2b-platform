@@ -55,6 +55,23 @@ export const OUTBOX_EVENTS = {
     queue: 'notifications',
     fields: { requestId: 'id', sellerId: 'id', buyerId: 'id', userId: 'id' },
   },
+  // F2.13a (US-023 AC2, US-054 "İstek kabul"): isteği gönderen + satıcı adminlerinin her biri için
+  // bir olay (`userId` alıcı). Tüketici `notifications`.
+  'connection.accepted': {
+    queue: 'notifications',
+    fields: { requestId: 'id', connectionId: 'id', sellerId: 'id', buyerId: 'id', userId: 'id' },
+  },
+  // F2.13a (US-023 AC3–AC4, US-054 "İstek red"): red veya engel; alıcılar kabul ile aynı.
+  'connection.rejected': {
+    queue: 'notifications',
+    fields: { requestId: 'id', sellerId: 'id', buyerId: 'id', userId: 'id' },
+  },
+  // F2.13a (US-023 AC4): engel aktif bağlantıyı kapattı; bağlantı başına tek olay. Bildirimi ve
+  // sepet/sipariş tüketicisi (`ConnectionCancelledHandler`) F2.15'te; o zamana kadar atlanır.
+  'connection.cancelled': {
+    queue: 'notifications',
+    fields: { connectionId: 'id', sellerId: 'id', buyerId: 'id', endedBySide: ['seller', 'buyer'] },
+  },
 } as const satisfies Record<string, OutboxEventDefinition>;
 
 export type OutboxEventType = keyof typeof OUTBOX_EVENTS;

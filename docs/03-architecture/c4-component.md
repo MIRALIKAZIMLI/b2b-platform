@@ -38,6 +38,7 @@ flowchart LR
     connections --> billing
     connections --> settings
     connections --> access
+    connections --> files
     directory --> businesses
     directory --> connections
     directory --> access

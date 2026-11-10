@@ -66,6 +66,76 @@ export interface OutgoingConnectionRequestPage {
   readonly nextCursor: string | null;
 }
 
+// ---- İsteğe yanıt, geri çekme, engel (F2.13a; US-022, US-023) ----
+
+/** `POST /connection-requests/{id}/accept` gövdesi: veri paylaşım uyarısı onaylandı (US-023 AC2). */
+export const connectionAcceptSchema = z.object({ confirmDataSharing: z.literal(true) }).strict();
+export type ConnectionAccept = z.infer<typeof connectionAcceptSchema>;
+
+export const incomingConnectionRequestsQuerySchema = z
+  .object({
+    cursor: z.uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(CONNECTION_REQUEST_PAGE_MAX).default(20),
+  })
+  .strict();
+export type IncomingConnectionRequestsQuery = z.infer<typeof incomingConnectionRequestsQuerySchema>;
+
+/** Perakendecinin gördüğü toptancı özeti (US-023 AC1): ürün, fiyat, başka bağlantı yok. */
+export interface ConnectionSellerSummary {
+  readonly id: string;
+  readonly name: string;
+  readonly logoUrl: string | null;
+  /** Tanıtım metni (dil → metin); yoksa null. */
+  readonly description: Readonly<Record<string, string>> | null;
+}
+
+/** Gelen bekleyen istek: mesaj ve önerilen vade `ConnectionRequestView`'da. */
+export interface IncomingConnectionRequest extends ConnectionRequestView {
+  readonly seller: ConnectionSellerSummary;
+}
+
+export interface IncomingConnectionRequestPage {
+  readonly items: readonly IncomingConnectionRequest[];
+  readonly nextCursor: string | null;
+}
+
+/** openapi `ConnectionTerms`; `creditLimit` ondalık metin (para, `numeric`). */
+export interface ConnectionTermsView {
+  readonly priceListId: string | null;
+  readonly branchPricingEnabled: boolean;
+  readonly creditLimit: string | null;
+  readonly paymentTermDays: number;
+  readonly salesRepMembershipId: string | null;
+}
+
+/** openapi `Connection`. */
+export interface ConnectionView {
+  readonly id: string;
+  readonly sellerId: string;
+  readonly buyerId: string;
+  readonly counterpartyName: string;
+  readonly status: 'active' | 'cancelled';
+  readonly terms: ConnectionTermsView;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly endedBySide: 'seller' | 'buyer' | null;
+}
+
+export const blockCreateSchema = z.object({ sellerId: z.uuid() }).strict();
+export type BlockCreate = z.infer<typeof blockCreateSchema>;
+
+/** Engellenen toptancı (perakendecinin "Engellenenler" listesi). */
+export interface BlockedSeller {
+  readonly sellerId: string;
+  readonly sellerName: string;
+  readonly logoUrl: string | null;
+  readonly createdAt: string;
+}
+
+export interface BlockedSellerList {
+  readonly items: readonly BlockedSeller[];
+}
+
 // ---- Ekran yardımcıları (F2.12b) ----
 
 /** openapi `DirectoryBuyer.relation`: bu satıcıyla ilişki (yalnız çağıranın satırlarından). */

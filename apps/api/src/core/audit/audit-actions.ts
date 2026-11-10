@@ -31,6 +31,9 @@ export const AUDIT_ACTIONS = [
   'job_title.created',
   'job_title.updated',
   'job_title.deleted',
+  'connection.accepted',
+  'block.created',
+  'block.deleted',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -48,6 +51,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // ve izinler).
 // role_template / job_title: hedef kimliği platform rol şablonu / unvan (G tabloları; F2.9 admin
 // kataloğu, işletmesiz kayıt `business_id = null`; before/after ad, izinler, sürüm, aktiflik).
+// connection: hedef kimliği bağlantı (connections.id; F2.13a kabul, after: istek kimliği, veri
+// paylaşım onayı, vade). block: hedef kimliği engellenen satıcı (sellerId; işletme = alıcı).
 export const AUDIT_TARGET_TYPES = [
   'setting',
   'otp_challenge',
@@ -60,6 +65,8 @@ export const AUDIT_TARGET_TYPES = [
   'role',
   'role_template',
   'job_title',
+  'connection',
+  'block',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

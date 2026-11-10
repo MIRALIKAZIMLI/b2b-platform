@@ -185,34 +185,61 @@ export async function newBuyer(regionId: string, listed = true): Promise<Buyer> 
   return { businessId, admin: await addMember(businessId, 'buyer_business_admin') };
 }
 
-/** Satıcı bağlamında geçmiş istek satırı (ör. reddedilmiş, geri çekilmiş). */
+/**
+ * Geçmiş istek satırı. F2.13a bekçisi gereği önce satıcı bağlamında `pending` eklenir, sonra
+ * geçişi yapan tarafın bağlamında durum yazılır (kabul/red alıcı, geri çekme satıcı).
+ */
 export async function insertRequest(input: {
   readonly sellerId: string;
   readonly buyerId: string;
   readonly sentByUserId: string;
-  readonly status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'withdrawn';
+  readonly status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
   readonly createdAt: Date;
   readonly respondedAt?: Date;
+  /** Kabul/red eden kullanıcı; verilmezse gönderen (FK yeterli). */
+  readonly respondedByUserId?: string;
   readonly sellerLocalDate: string;
+  /** Varsayılan: oluşturma + 14 gün. */
+  readonly expiresAt?: Date;
 }): Promise<string> {
   const id = ids.next();
   await businessRows(
     input.sellerId,
     `insert into connection_requests
-       (id, seller_id, buyer_id, sent_by_user_id, status, expires_at, responded_at,
+       (id, seller_id, buyer_id, sent_by_user_id, status, expires_at,
         seller_local_date, created_at, updated_at)
-     values ($1, $2, $3, $4, $5, $6::timestamptz + interval '14 days', $7, $8, $6, $6)`,
+     values ($1, $2, $3, $4, 'pending', coalesce($7::timestamptz, $5::timestamptz + interval '14 days'),
+             $6, $5, $5)`,
     [
       id,
       input.sellerId,
       input.buyerId,
       input.sentByUserId,
-      input.status,
       input.createdAt,
-      input.respondedAt ?? null,
       input.sellerLocalDate,
+      input.expiresAt ?? null,
     ],
   );
+  if (input.status === 'accepted' || input.status === 'rejected') {
+    await businessRows(
+      input.buyerId,
+      `update connection_requests
+          set status = $2, responded_at = $3, responded_by_user_id = $4
+        where id = $1`,
+      [
+        id,
+        input.status,
+        input.respondedAt ?? input.createdAt,
+        input.respondedByUserId ?? input.sentByUserId,
+      ],
+    );
+  } else if (input.status === 'withdrawn') {
+    await businessRows(
+      input.sellerId,
+      `update connection_requests set status = 'withdrawn' where id = $1`,
+      [id],
+    );
+  }
   return id;
 }
 
@@ -225,22 +252,21 @@ export async function insertConnection(input: {
   readonly cancelled?: { readonly at: Date; readonly by: 'seller' | 'buyer' };
 }): Promise<string> {
   const id = ids.next();
+  // F2.13a bekçisi: bağlantı `active` doğar; iptal ayrı güncellemedir.
   await businessRows(
     input.buyerId,
-    `insert into connections
-       (id, seller_id, buyer_id, request_id, status, started_at, ended_at, ended_by_side)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [
-      id,
-      input.sellerId,
-      input.buyerId,
-      input.requestId,
-      input.cancelled === undefined ? 'active' : 'cancelled',
-      input.startedAt,
-      input.cancelled?.at ?? null,
-      input.cancelled?.by ?? null,
-    ],
+    `insert into connections (id, seller_id, buyer_id, request_id, status, started_at)
+     values ($1, $2, $3, $4, 'active', $5)`,
+    [id, input.sellerId, input.buyerId, input.requestId, input.startedAt],
   );
+  if (input.cancelled !== undefined) {
+    await businessRows(
+      input.buyerId,
+      `update connections set status = 'cancelled', ended_at = $2, ended_by_side = $3
+        where id = $1`,
+      [id, input.cancelled.at, input.cancelled.by],
+    );
+  }
   return id;
 }
 
