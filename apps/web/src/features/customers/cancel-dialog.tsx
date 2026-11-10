@@ -3,7 +3,7 @@
 // toptancılarım ekranlarında ortak. UX kararları:
 // - `alertdialog` tonunda: gül rengi üst satır "Əlaqəni ləğv et", başlıkta karşı tarafın ünvanı;
 //   altında ne olacağını söyleyen 3 madde (yeniden bağlanma yalnız yeni istekle; perakendeci
-//   iptalinde 30 günlük bekleme; karşı tarafa bildirim gider, gerekçe görünmez).
+//   iptalinde bekleme süresi (gün sayısı ayardan; metinde sayı yok); karşı tarafa bildirim gider, gerekçe görünmez).
 // - Gerekçe dört radyo kartı (zorunlu), not isteğe bağlı (≤500, sayaç). İkinci onay ayrı onay
 //   kutusu: işaretlenmeden "Ləğv et" kapalı. Odak açılışta "Bağla"da (yanlışlıkla Enter yok).
 // - Pencere açılınca tek `Idempotency-Key`; hata pencerede; bağlantı artık aktif değilse (409/404)

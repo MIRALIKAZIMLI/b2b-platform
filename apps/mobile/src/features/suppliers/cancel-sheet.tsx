@@ -1,6 +1,6 @@
 // Bağlantı iptali sayfası — mobil (F2.15b; US-025 AC1, SF-07). UX kararları (web penceresiyle aynı):
 // - Alttan açılan sayfa: gül rengi üst satır, başlıkta toptancının ünvanı, 3 madde (geri alınamaz;
-//   30 günlük bekleme; karşı tarafa bildirim, gerekçe görünmez).
+//   bekleme süresi (gün sayısı ayardan; metinde sayı yok); karşı tarafa bildirim, gerekçe görünmez).
 // - Gerekçe dört büyük dokunma satırı (zorunlu), isteğe bağlı not (≤500), ikinci onay anahtarı
 //   (Switch); onaysız "Ləğv et" kapalı. Ana düğme ≥48 pt, gül rengi.
 // - `Idempotency-Key` sayfa açılınca bir kez; hata sayfada; bağlantı artık aktif değilse ana

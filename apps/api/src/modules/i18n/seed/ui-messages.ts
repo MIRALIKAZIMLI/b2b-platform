@@ -3154,9 +3154,9 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Bağlantı hemen kapanır ve geri alınamaz. Yeniden çalışmak için toptancının yeni istek göndermesi gerekir.',
   },
   'connections.cancel.point_2_buyer': {
-    az: 'Ləğvdən sonra {name} 30 gün ərzində sizə yeni sorğu göndərə bilməz.',
-    ru: 'После отмены {name} не сможет отправить вам новый запрос в течение 30 дней.',
-    tr: 'İptalden sonra {name} 30 gün boyunca size yeni istek gönderemez.',
+    az: 'Ləğvdən sonra {name} bir müddət sizə yeni sorğu göndərə bilməz.',
+    ru: 'После отмены {name} некоторое время не сможет отправить вам новый запрос.',
+    tr: 'İptalden sonra {name} bir süre size yeni istek gönderemez.',
   },
   'connections.cancel.point_2_seller': {
     az: 'Gözləmə müddəti yoxdur: istədiyiniz vaxt yeni sorğu göndərə bilərsiniz.',
