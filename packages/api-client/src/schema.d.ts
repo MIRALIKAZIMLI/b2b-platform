@@ -2059,6 +2059,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connections/sales-reps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Koşul ekranı için temsilci seçenekleri (US-024 AC2) — yalnızca seller
+         * @description İzin `connections.terms.manage`. Satıcının aktif üyeleri; yalnız üyelik kimliği ve ad (telefon, rol yok).
+         *     `PATCH .../terms` temsilci kuralıyla aynı küme (F2.14b).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                membershipId: string;
+                                fullName: string;
+                            }[];
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connections/{id}/terms": {
         parameters: {
             query?: never;

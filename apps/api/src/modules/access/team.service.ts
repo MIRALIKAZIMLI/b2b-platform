@@ -125,6 +125,19 @@ export class TeamService {
     });
   }
 
+  /**
+   * İşletmenin aktif üyelerinin yalnız kimliği ve adı (F2.14b: bağlantıya temsilci seçimi,
+   * `connections.terms.manage`). Telefon, rol, kapsam dönmez.
+   */
+  async activeMemberNames(
+    tenant: TenantContext,
+  ): Promise<{ membershipId: string; fullName: string }[]> {
+    return await withTenantTx(tenant, async (tx) => {
+      const rows = await this.repository.listMembers(tx, tenant.businessId);
+      return rows.map((row) => ({ membershipId: row.id, fullName: row.fullName }));
+    });
+  }
+
   async updateMember(
     tenant: TenantContext,
     membershipId: string,

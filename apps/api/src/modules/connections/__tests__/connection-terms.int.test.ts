@@ -354,4 +354,33 @@ describe('F2.14a bağlantı koşulları API', () => {
     );
     expect(stored[0]?.n).toBe(0);
   });
+
+  it('F2.14b-T1 temsilci seçenekleri: satıcının aktif üyeleri, yalnız kimlik ve ad; temsilci ve alıcı 403', async () => {
+    const seller = await newSeller(region);
+    const rep = await addMember(seller.businessId, 'seller_sales_rep', [region]);
+    const removed = await addMember(seller.businessId, 'seller_sales_rep', [region]);
+    await platformRows(`update memberships set status = 'removed' where id = $1`, [
+      removed.membershipId,
+    ]);
+    const other = await newSeller(region);
+    const res = await http()
+      .get('/api/v1/connections/sales-reps')
+      .set(await auth(seller.admin, seller.businessId));
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    const items = (res.body as { items: { membershipId: string; fullName: string }[] }).items;
+    expect(items.map((item) => item.membershipId).sort()).toEqual(
+      [seller.admin.membershipId, rep.membershipId].sort(),
+    );
+    expect(Object.keys(items[0] ?? {}).sort()).toEqual(['fullName', 'membershipId']);
+    expect(items.map((item) => item.membershipId)).not.toContain(other.admin.membershipId);
+    const repRes = await http()
+      .get('/api/v1/connections/sales-reps')
+      .set(await auth(rep, seller.businessId));
+    expect(repRes.status).toBe(403);
+    const buyer = await newBuyer(region);
+    const buyerRes = await http()
+      .get('/api/v1/connections/sales-reps')
+      .set(await auth(buyer.admin, buyer.businessId));
+    expect(buyerRes.status).toBe(403);
+  });
 });
