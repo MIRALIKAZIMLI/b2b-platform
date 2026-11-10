@@ -8,6 +8,7 @@ process.env.DATABASE_URL = inject('databaseUrl');
 process.env.DATABASE_MIGRATOR_URL = inject('migratorUrl');
 process.env.DB_POOL_MAX = '1';
 process.env.REDIS_URL = inject('redisUrl');
+process.env.TEST_SUPERUSER_URL = inject('superuserUrl');
 
 afterAll(async () => {
   await closeDb();

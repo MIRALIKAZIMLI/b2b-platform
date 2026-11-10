@@ -16,3 +16,13 @@ export async function connectAsMigrator(): Promise<Client> {
   await client.connect();
   return client;
 }
+
+/**
+ * RLS'i aşan süper kullanıcı bağlantısı (TEST_SUPERUSER_URL). Yalnız tetikleyici bekçilerinin
+ * bağlamsız (`app.business_id` yok) yolunu sınamak için; uygulama bu rolü hiç kullanmaz.
+ */
+export async function connectAsSuperuser(): Promise<Client> {
+  const client = new Client({ connectionString: process.env.TEST_SUPERUSER_URL });
+  await client.connect();
+  return client;
+}

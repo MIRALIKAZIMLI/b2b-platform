@@ -196,7 +196,7 @@ describe('F2.13a bağlantı isteğine yanıt API', () => {
     expect((second.body as typeof page1).nextCursor).toBeNull();
   });
 
-  it('US-023-AC2 kabul: active bağlantı, istek accepted, önerilen vade, audit, satıcı tarafına bildirim', async () => {
+  it('US-023-AC2 kabul: active bağlantı, istek accepted, vade 0 (önerilen vade yazılmaz), audit, satıcı tarafına bildirim', async () => {
     const seller = await newSeller(region);
     const rep = await addMember(seller.businessId, 'seller_sales_rep', [region]);
     const secondAdmin = await addMember(seller.businessId, 'seller_business_admin');
@@ -217,13 +217,10 @@ describe('F2.13a bağlantı isteğine yanıt API', () => {
       buyerId: buyer.businessId,
       counterpartyName: `Toptan ${seller.businessId.slice(0, 8)}`,
       status: 'active',
-      terms: {
-        priceListId: null,
-        branchPricingEnabled: false,
-        creditLimit: null,
-        paymentTermDays: 21,
-        salesRepMembershipId: null,
-      },
+      // Kullanıcı kararı 2026-11-10 (F2.13a K1 = B): önerilen vade 21 bağlantıya yazılmaz.
+      // Alıcı bakışında yalnız limit ve vade (F2.14a K5).
+      termsAssigned: false,
+      terms: { creditLimit: null, paymentTermDays: 0 },
       startedAt: NOW.toISOString(),
       endedAt: null,
       endedBySide: null,
@@ -250,7 +247,7 @@ describe('F2.13a bağlantı isteğine yanıt API', () => {
         requestId: id,
         sellerId: seller.businessId,
         confirmDataSharing: true,
-        paymentTermDays: 21,
+        paymentTermDays: 0,
       },
     });
     // US-054: isteği gönderen temsilci + satıcının iki admini; alıcının kendisi değil.

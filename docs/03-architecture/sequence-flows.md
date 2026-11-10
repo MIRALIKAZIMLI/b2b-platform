@@ -119,7 +119,7 @@ sequenceDiagram
     API-->>B: satıcı profil özeti (ürün/fiyat yok)
     B->>API: POST /api/v1/connection-requests/{id}/accept
     API->>DB: BEGIN, istek pending ve süresi geçmemiş mi
-    API->>DB: request → accepted, connections (active, price_list_id = null)
+    API->>DB: request → accepted, connections (active, price_list_id = null, vade 0)
     API->>DB: outbox: connection.accepted, COMMIT
     API-->>B: 200
     W->>P: isteği gönderen + satıcı admin'lerine push
@@ -133,7 +133,10 @@ sequenceDiagram
 | Kabul sırasında istek süresi dolmuş | `409 CONNECTION_REQUEST_EXPIRED` |
 | Kabul sırasında satıcı askıya alınmış veya aboneliği `read_only` | Kabul yine yapılır (perakendecinin kararı); satıcı yeni istek gönderemez. 📌 VARSAYIM |
 | Perakendeci satın alma rolüyle kabul etmeye çalışır | `403 PERMISSION_DENIED` |
-| Koşul atanırken başka satıcının fiyat listesi kimliği verilir | RLS satırı göstermez → `404 NOT_FOUND` |
+| Koşul atanırken başka satıcının fiyat listesi kimliği verilir | RLS satırı göstermez → `404 NOT_FOUND` (F3.6; o zamana kadar `priceListId` yalnız `null`, aksi `422`) |
+| Perakendeci koşulları değiştirmeye çalışır | API `403`; doğrudan SQL'de bekçi `42501` (F2.14a) |
+| İptal edilmiş bağlantıya koşul atanır | `409 INVALID_STATE_TRANSITION` |
+| Temsilci başka işletmenin veya ayrılmış üyenin üyeliği | `422 VALIDATION_FAILED` (`salesRepMembershipId`) |
 
 ## SF-04 — Sepet gönderimi, şube onayı ve bölünme (US-040–US-042)
 

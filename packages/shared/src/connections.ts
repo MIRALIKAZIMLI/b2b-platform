@@ -100,12 +100,28 @@ export interface IncomingConnectionRequestPage {
   readonly nextCursor: string | null;
 }
 
-/** openapi `ConnectionTerms`; `creditLimit` ondalık metin (para, `numeric`). */
+/**
+ * openapi `ConnectionTerms`; `creditLimit` ondalık metin (para, `numeric`). Alıcı bakışında yalnız
+ * `creditLimit` ve `paymentTermDays` döner (F2.14a K5); satıcıya özgü alanlar yoktur.
+ */
 export interface ConnectionTermsView {
-  readonly priceListId: string | null;
-  readonly branchPricingEnabled: boolean;
+  readonly priceListId?: string | null;
+  readonly branchPricingEnabled?: boolean;
   readonly creditLimit: string | null;
   readonly paymentTermDays: number;
+  readonly salesRepMembershipId?: string | null;
+}
+
+/**
+ * Koşul ekranının öneri değerleri (US-024 AC3; F2.14a K4), yalnız satıcı bakışında ve koşul henüz
+ * atanmamışken: önce aynı çiftin önceki (iptal edilmiş) bağlantısının atanmış koşulları, yoksa
+ * isteğin önerilen vadesi. Bağlantıya yazılmaz (kabulde vade 0, kullanıcı kararı 2026-11-10).
+ */
+export interface ConnectionTermsSuggestion {
+  readonly source: 'previous_connection' | 'request';
+  readonly creditLimit: string | null;
+  readonly paymentTermDays: number;
+  /** Önceki temsilci hâlâ aktif üyeyse; değilse null. */
   readonly salesRepMembershipId: string | null;
 }
 
@@ -114,13 +130,57 @@ export interface ConnectionView {
   readonly id: string;
   readonly sellerId: string;
   readonly buyerId: string;
-  readonly counterpartyName: string;
-  readonly status: 'active' | 'cancelled';
+  /** Karşı tarafın ünvanı; karşı taraf artık görünmüyorsa (kapalı işletme) null. */
+  readonly counterpartyName: string | null;
+  readonly status: ConnectionStatus;
+  /** Satıcı koşulları bir kez kaydetti mi (US-024 AC1 "koşul atanmadı")? */
+  readonly termsAssigned: boolean;
   readonly terms: ConnectionTermsView;
+  /** Yalnız satıcı bakışında, koşul atanmamışken; öneri yoksa null. */
+  readonly suggestedTerms?: ConnectionTermsSuggestion | null;
   readonly startedAt: string;
   readonly endedAt: string | null;
   readonly endedBySide: 'seller' | 'buyer' | null;
 }
+
+// ---- Bağlantı listesi ve koşullar (F2.14a; US-024) ----
+
+export const CONNECTION_STATUSES = ['active', 'cancelled'] as const;
+export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
+export const CONNECTION_PAGE_MAX = 50;
+
+export const connectionsQuerySchema = z
+  .object({
+    status: z.enum(CONNECTION_STATUSES).optional(),
+    cursor: z.uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(CONNECTION_PAGE_MAX).default(20),
+  })
+  .strict();
+export type ConnectionsQuery = z.infer<typeof connectionsQuerySchema>;
+
+export interface ConnectionPage {
+  readonly items: readonly ConnectionView[];
+  readonly nextCursor: string | null;
+}
+
+/** Kredi limiti: AZN, negatif değil, en çok 2 ondalık, `numeric(14,2)` sınırında. */
+export const CREDIT_LIMIT_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
+
+/**
+ * `PATCH /connections/{id}/terms` gövdesi (kısmi). Fiyat listesi ve şube fiyatı F3.6'ya kadar
+ * kapalıdır (F2.14a K3): `priceListId` yalnız null, `branchPricingEnabled` yalnız false.
+ */
+export const connectionTermsUpdateSchema = z
+  .object({
+    priceListId: z.null().optional(),
+    branchPricingEnabled: z.literal(false).optional(),
+    creditLimit: z.string().regex(CREDIT_LIMIT_PATTERN).nullable().optional(),
+    paymentTermDays: z.number().int().min(0).max(CONNECTION_REQUEST_TERM_MAX_DAYS).optional(),
+    salesRepMembershipId: z.uuid().nullable().optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, { message: 'empty_terms' });
+export type ConnectionTermsUpdate = z.infer<typeof connectionTermsUpdateSchema>;
 
 export const blockCreateSchema = z.object({ sellerId: z.uuid() }).strict();
 export type BlockCreate = z.infer<typeof blockCreateSchema>;

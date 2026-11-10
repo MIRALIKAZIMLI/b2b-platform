@@ -1041,7 +1041,8 @@ paths:
       description: |
         İzin `connections.request.respond` (yalnız `buyer`). Gövde veri paylaşım uyarısının onayıdır
         (`confirmDataSharing: true`, yoksa `422`); onay audit'e yazılır. İstek `accepted`, yeni `active` bağlantı;
-        bağlantı vadesi = önerilen vade (yoksa 0). Başka perakendecinin isteği `404`; `pending` değilse
+        bağlantı vadesi 0 (önerilen vade yazılmaz, satıcı koşul ekranında öneri olarak görür; kullanıcı kararı
+        2026-11-10). Başka perakendecinin isteği `404`; `pending` değilse
         `409 INVALID_STATE_TRANSITION`; süresi geçmişse `409 CONNECTION_REQUEST_EXPIRED`. Satıcı askıda veya
         salt-okunur olsa da kabul yapılır (SF-03).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
@@ -1102,21 +1103,48 @@ paths:
   /api/v1/connections:
     get:
       tags: [connections]
-      summary: Bağlantılarım (seller veya buyer bakışı)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: status, in: query, schema: { type: string, enum: [active, cancelled] } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      summary: Bağlantılarım (seller veya buyer bakışı) (US-024 AC1, AC3)
+      description: |
+        İzin `connections.view`. Bakış işletmenin yeteneğinden: satıcıda karşı taraf perakendeci, alıcıda toptancı.
+        Satıcıda `assigned` kapsamlı üye (temsilci) yalnız kendisine atanmış bağlantıları görür. Alıcı bakışında
+        koşullardan yalnız `creditLimit` ve `paymentTermDays` döner; `suggestedTerms` yalnız satıcı bakışında ve
+        koşul atanmamış aktif bağlantıda (önce önceki iptal edilmiş bağlantının atanmış koşulları, yoksa isteğin
+        önerilen vadesi; F2.14a). Yeniden eskiye; `limit` en fazla 50.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: status, in: query, schema: { type: string, enum: [active, cancelled] } }, { $ref: '#/components/parameters/Cursor' }, { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConnectionPage' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/connections/{id}/terms:
     patch:
       tags: [connections]
-      summary: Bağlantı koşulları (US-024) — yalnızca seller
+      summary: Bağlantı koşulları (US-024 AC2) — yalnızca seller
+      description: |
+        İzin `connections.terms.manage` (yalnız `seller`, kapsam `all`; temsilci yalnız görür). Kısmi güncelleme,
+        en az bir alan. Alıcı bu koşulları hiçbir yoldan değiştiremez (veritabanı bekçisi de reddeder). Fiyat
+        listesi ve şube fiyatı F3.6'ya kadar kapalı: `priceListId` yalnız `null`, `branchPricingEnabled` yalnız
+        `false`. Temsilci satıcının aktif üyesi olmalı (`422`). Başka işletmenin bağlantısı `404`; iptal edilmiş
+        bağlantı `409 INVALID_STATE_TRANSITION`. Audit `connection.terms_updated`. Idempotency-Key gerekmez (PATCH).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       requestBody:
+        required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ConnectionTerms' }
+            schema: { $ref: '#/components/schemas/ConnectionTermsUpdate' }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Connection' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/connections/{id}/cancel:
     post:
       tags: [connections]
@@ -3323,16 +3351,37 @@ components:
         createdAt: { type: string, format: date-time }
     Connection:
       type: object
+      required: [id, sellerId, buyerId, counterpartyName, status, termsAssigned, terms, startedAt, endedAt, endedBySide]
       properties:
         id: { type: string, format: uuid }
         sellerId: { type: string, format: uuid }
         buyerId: { type: string, format: uuid }
-        counterpartyName: { type: string }
+        counterpartyName: { type: [string, 'null'], description: Karşı tarafın ünvanı; artık görünmüyorsa null. }
         status: { type: string, enum: [active, cancelled] }
+        termsAssigned: { type: boolean, description: 'Satıcı koşulları en az bir kez kaydetti mi (US-024 AC1 "koşul atanmadı").' }
         terms: { $ref: '#/components/schemas/ConnectionTerms' }
+        suggestedTerms:
+          description: Yalnız satıcı bakışında; koşul atanmamış aktif bağlantıda öneri, yoksa null (US-024 AC3).
+          oneOf:
+            - $ref: '#/components/schemas/ConnectionTermsSuggestion'
+            - type: 'null'
         startedAt: { type: string, format: date-time }
         endedAt: { type: [string, 'null'], format: date-time }
-        endedBySide: { type: [string, 'null'] }
+        endedBySide: { type: [string, 'null'], enum: [seller, buyer, null] }
+    ConnectionPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Connection' } }
+        nextCursor: { type: [string, 'null'] }
+    ConnectionTermsSuggestion:
+      type: object
+      required: [source, creditLimit, paymentTermDays, salesRepMembershipId]
+      properties:
+        source: { type: string, enum: [previous_connection, request] }
+        creditLimit: { type: [string, 'null'] }
+        paymentTermDays: { type: integer, minimum: 0, maximum: 180 }
+        salesRepMembershipId: { type: [string, 'null'], format: uuid, description: Önceki temsilci hâlâ aktif üyeyse. }
     ConnectionSellerSummary:
       type: object
       required: [id, name, logoUrl, description]
@@ -3355,10 +3404,22 @@ components:
         createdAt: { type: string, format: date-time }
     ConnectionTerms:
       type: object
+      description: Alıcı bakışında yalnız `creditLimit` ve `paymentTermDays` döner.
+      required: [creditLimit, paymentTermDays]
       properties:
-        priceListId: { type: [string, 'null'], format: uuid }
+        priceListId: { type: [string, 'null'], format: uuid, description: null = satıcının varsayılan listesi }
         branchPricingEnabled: { type: boolean }
-        creditLimit: { type: [string, 'null'] }
+        creditLimit: { type: [string, 'null'], description: 'AZN, 2 ondalık; MVP''de yalnız uyarı' }
+        paymentTermDays: { type: integer, minimum: 0, maximum: 180 }
+        salesRepMembershipId: { type: [string, 'null'], format: uuid }
+    ConnectionTermsUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        priceListId: { type: 'null', description: F3.6'ya kadar yalnız null }
+        branchPricingEnabled: { type: boolean, const: false, description: F3.6'ya kadar yalnız false }
+        creditLimit: { type: [string, 'null'], pattern: '^\d{1,12}(\.\d{1,2})?$' }
         paymentTermDays: { type: integer, minimum: 0, maximum: 180 }
         salesRepMembershipId: { type: [string, 'null'], format: uuid }
     Notification:
