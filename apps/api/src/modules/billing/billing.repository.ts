@@ -42,6 +42,23 @@ export class BillingRepository implements EntitlementRepositoryPort {
     return await withTenantTx({ businessId, userId: null }, fn);
   }
 
+  /** Güncel aboneliğin durumu (`active`/`grace`/`read_only`); yoksa undefined (F2.12a). */
+  async currentSubscriptionStatusTx(
+    tx: Tx,
+    businessId: string,
+  ): Promise<SubscriptionRow['status'] | undefined> {
+    const [row] = await tx
+      .select({ status: subscriptions.status })
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.businessId, businessId),
+          inArray(subscriptions.status, [...CURRENT_SUBSCRIPTION_STATUSES]),
+        ),
+      );
+    return row?.status;
+  }
+
   async findSources(tx: Tx, businessId: string, key: EntitlementKey): Promise<EntitlementSources> {
     const override = await tx
       .select({ value: entitlementOverrides.value })

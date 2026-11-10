@@ -94,6 +94,20 @@ describe('check-rls', () => {
     `;
   }
 
+  /** P kalıbı (F2.12a): satıcı veya alıcı bağlamdaysa okur. */
+  function pairTable(name: string): string {
+    const ctx = "nullif(current_setting('app.business_id', true), '')::uuid";
+    return `
+      create table $s.${name} (id uuid primary key, seller_id uuid not null, buyer_id uuid not null);
+      alter table $s.${name} enable row level security;
+      alter table $s.${name} force row level security;
+      create policy ${name}_party on $s.${name} for all
+        using (seller_id = ${ctx} or buyer_id = ${ctx})
+        with check (seller_id = ${ctx} or buyer_id = ${ctx});
+      comment on table $s.${name} is 'rls:P';
+    `;
+  }
+
   it("F1.1-AC6: RLS'siz T tablosu → hata", async () => {
     const schema = await schemaWith(`
       create table $s.items (id uuid primary key, business_id uuid not null);
@@ -152,7 +166,7 @@ describe('check-rls', () => {
   it('F1.1-AC6: doğru tablolar → başarılı', async () => {
     const schema = await schemaWith(`
       ${tenantTable('t_items', 'rls:T')}
-      ${tenantTable('p_items', 'rls:P')}
+      ${pairTable('p_items')}
       ${tenantTable('u_items', 'rls:U')}
       ${tenantTable('td_items', 'rls:T,D')}
       ${globalTable('g_items')}
@@ -171,6 +185,16 @@ describe('check-rls', () => {
 
     expect(result.problems).toEqual([]);
     expect(result.checked).toBe(8);
+  });
+
+  it('F2.12a-R18: yalnız business_id koşullu P tablosu → çift kiracı hatası', async () => {
+    const schema = await schemaWith(tenantTable('p_wrong', 'rls:P'));
+
+    const result = await checkRls(client, { schemas: [schema] });
+
+    expect(problemsMentioning(result, 'seller_id ve buyer_id')).toEqual([
+      { table: `${schema}.p_wrong`, mentioned: true },
+    ]);
   });
 
   it('F1.1-AC6: bölümlenmiş (partitioned) T tablosu da denetlenir', async () => {

@@ -54,6 +54,20 @@ export class EntitlementService {
     });
   }
 
+  /**
+   * Sayısal hakkın değeri (F2.12a, kota gibi kullanımı çağıranın saydığı haklar): sayı,
+   * `null` = sınırsız, `undefined` = güncel abonelik veya değer yok (çağıran reddeder).
+   */
+  async limitOf(
+    key: LimitEntitlementKey,
+    businessId: string,
+    tx?: Tx,
+  ): Promise<number | null | undefined> {
+    return await this.repository.inTenantTx(businessId, tx, (inner) =>
+      this.valueOf(inner, businessId, key),
+    );
+  }
+
   /** Özellik hakkı açık mı? Değer yoksa kapalı. */
   async isEnabled(key: FeatureEntitlementKey, businessId: string, tx?: Tx): Promise<boolean> {
     const value = await this.repository.inTenantTx(businessId, tx, (inner) =>

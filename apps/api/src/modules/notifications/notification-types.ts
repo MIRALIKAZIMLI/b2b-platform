@@ -4,7 +4,7 @@
 import { z } from 'zod';
 
 /** Tercih anahtarları ve şablon türleri. */
-export const NOTIFICATION_TYPES = ['test', 'role_template_version'] as const;
+export const NOTIFICATION_TYPES = ['test', 'role_template_version', 'connection_request'] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 const TYPE_SET: ReadonlySet<string> = new Set(NOTIFICATION_TYPES);
@@ -31,6 +31,12 @@ const templateVersionPayload = z.object({
   businessId: z.uuid(),
   userId: z.uuid(),
 });
+const connectionRequestPayload = z.object({
+  requestId: z.uuid(),
+  sellerId: z.uuid(),
+  buyerId: z.uuid(),
+  userId: z.uuid(),
+});
 
 /** Outbox olay türü → bildirimler. Yük outbox'ta zaten doğrulanmıştır; burada yeniden okunur. */
 const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = new Map([
@@ -55,6 +61,23 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
           type: 'role_template_version',
           subjectId: event.templateId,
           params: { version: event.version },
+        },
+      ];
+    },
+  ],
+  [
+    // F2.12a (US-021 AC1, US-054 "Yeni bağlantı isteği"): perakendeci adminine; konu istek
+    // kimliği. Toptancının adı bildirime girmez (yalnız kod/sayı); uygulama isteği API'den açar.
+    'connection.request_created',
+    (payload: unknown): NotificationIntent[] => {
+      const event = connectionRequestPayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.buyerId,
+          type: 'connection_request',
+          subjectId: event.requestId,
+          params: {},
         },
       ];
     },

@@ -908,8 +908,8 @@ paths:
         `phone` veya `voen` tek başına verilir (diğer filtrelerle veya birlikte → 422); dizinde
         görünme kapalı perakendeciyi de bulur, kısmi değer eşleşmez (US-020). Kullanıcı başına
         dakikada `directory.search_max_per_minute` (60) arama; aşınca 429 + `Retry-After`
-        (US-019 AC5). Dışa aktarma ucu yoktur (US-019 AC4). `history`: bağlantı tabloları gelene
-        kadar (F2.12–F2.15) `never` her sonucu, diğer değerler boş liste döner.
+        (US-019 AC5). Dışa aktarma ucu yoktur (US-019 AC4). `history` (F2.12a): çağıran satıcının
+        ilişki durumuna göre sayfa içinde süzülür (sayfa `limit`'ten kısa olabilir; `nextCursor` indeks sırasıdır).
       parameters:
         - { $ref: '#/components/parameters/BusinessId' }
         - { name: q, in: query, description: Ünvanda arama, schema: { type: string, maxLength: 100 } }
@@ -953,24 +953,57 @@ paths:
             schema:
               type: object
               required: [buyerId]
+              additionalProperties: false
               properties:
                 buyerId: { type: string, format: uuid }
-                message: { type: string, maxLength: 500 }
+                message: { type: string, maxLength: 500, description: Baştaki/sondaki boşluk atılır; boş mesaj gönderilmemiş sayılır }
                 proposedPaymentTermDays: { type: integer, minimum: 0, maximum: 180 }
+      description: |
+        İzin `connections.request.send` (F2.12a). Kurallar sırasıyla (SF-03): aktif bağlantı (`409 CONNECTION_ALREADY_ACTIVE`),
+        bekleyen istek (`409 CONNECTION_REQUEST_ALREADY_PENDING`), engel (`409 CONNECTION_BLOCKED`), bekleme süresi
+        (`409 CONNECTION_COOLDOWN_ACTIVE`, `details.cooldownUntil`), günlük kota (`429 CONNECTION_DAILY_QUOTA_EXCEEDED`,
+        `details.retryAfter` + `Retry-After` = satıcının saat diliminde gece yarısına kalan saniye). Etkin kota =
+        `connection.daily_request_quota` ayarı ile plan hakkı `connection_requests.daily`'nin küçüğü (hak `null` = ayar).
+        İstek alamayan perakendeci (yok, askıda/arşivde, `buyer` onaysız, çağıranın kendisi) veya temsilcinin
+        (`assigned`) bölgesi dışındaki perakendeci `404 NOT_FOUND`. Salt-okunur abonelik `403 SUBSCRIPTION_READ_ONLY`.
       responses:
         '201':
           description: Oluşturuldu
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ConnectionRequest' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /api/v1/connection-requests/outgoing:
     get:
       tags: [connections]
-      summary: Gönderilen istekler (seller)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }, { name: status, in: query, schema: { type: string } } ]
+      summary: Gönderilen istekler (seller), yeniden eskiye
+      description: İzin `connections.request.send`; temsilci (`assigned`) yalnız kendi gönderdiklerini görür (F2.12a). `limit` en fazla 50.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Cursor' }, { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }, { name: status, in: query, schema: { type: string, enum: [pending, accepted, rejected, expired, withdrawn] } } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - { $ref: '#/components/schemas/ConnectionRequest' }
+                        - type: object
+                          required: [buyerName]
+                          properties:
+                            buyerName: { type: [string, 'null'], description: Perakendecinin ünvanı; artık istek alamıyorsa null }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/connection-requests/incoming:
     get:
       tags: [connections]
@@ -3182,7 +3215,7 @@ components:
         email: { type: [string, 'null'] }
         relation:
           type: object
-          description: Bu satıcıyla ilişki durumu (F2.12'ye kadar her zaman `none`)
+          description: Bu satıcıyla ilişki durumu; yalnız çağıran satıcının istek/bağlantı satırlarından (F2.12a). `canRequest` kota hariç çift kurallarıdır
           required: [status, cooldownUntil, canRequest]
           properties:
             status: { type: string, enum: [none, pending, active, rejected, cancelled, blocked] }

@@ -5,6 +5,8 @@
 //   G       : RLS açık, FORCE açık, en az bir yazma politikası; her yazma politikası (INSERT,
 //             UPDATE, DELETE, FOR ALL) gereken her ifadede `app.is_platform` koşulunu taşır
 //             (F1.3, Mimar düzeltmesi D1). USING (true) yalnızca FOR SELECT'te kabul.
+//   P       : ayrıca okuma politikası satıcı ve alıcı kolonunu `app.business_id` ile karşılaştırır;
+//             her politika ifadesi `app.business_id` veya `app.is_platform` koşulu taşır (F2.12a, R18)
 //   S       : app_user'ın doğrudan SELECT izni yok
 //   D       : ek kontrol yok
 // Yorumu olmayan veya biçimi yanlış tablo da hatadır.
@@ -123,6 +125,44 @@ function evaluateGlobalPolicies(policies: readonly RlsPolicyInfo[]): string[] {
   return reasons;
 }
 
+const TENANT_SETTING = 'app.business_id';
+
+/**
+ * P sınıfı (çift kiracı, F2.12a): en az bir okuma politikası (SELECT veya ALL) USING'de
+ * `seller_id`, `buyer_id` ve `app.business_id` geçirir; migrator dışındaki her politikanın her
+ * ifadesi kiracı veya platform koşulu taşır (`USING (true)` gibi koşulsuz politika yok).
+ */
+function evaluatePairPolicies(policies: readonly RlsPolicyInfo[]): string[] {
+  const own = policies.filter((p) => !isDefinerOnly(p));
+  const reasons: string[] = [];
+  const pairRead = own.some(
+    (p) =>
+      (p.cmd === 'r' || p.cmd === '*') &&
+      p.using !== null &&
+      p.using.includes('seller_id') &&
+      p.using.includes('buyer_id') &&
+      p.using.includes(TENANT_SETTING),
+  );
+  if (!pairRead) {
+    reasons.push(
+      `P sınıfı tabloda seller_id ve buyer_id'yi ${TENANT_SETTING} ile karşılaştıran okuma politikası yok`,
+    );
+  }
+  for (const policy of own) {
+    const fields: ('using' | 'withCheck')[] =
+      policy.cmd === 'r' ? ['using'] : REQUIRED_EXPRESSIONS[policy.cmd];
+    for (const field of fields) {
+      const expression = policy[field];
+      if (!expression?.includes(TENANT_SETTING) && !expression?.includes(PLATFORM_SETTING)) {
+        reasons.push(
+          `${COMMAND_NAMES[policy.cmd]} politikasının ${EXPRESSION_NAMES[field]} ifadesi kiracı veya platform koşulu taşımıyor`,
+        );
+      }
+    }
+  }
+  return reasons;
+}
+
 /** Bir tablonun sorunlarını döndürür; boş dizi = sorun yok. */
 export function evaluateRlsTable(info: RlsTableInfo): string[] {
   const classes = parseRlsComment(info.comment);
@@ -137,6 +177,7 @@ export function evaluateRlsTable(info: RlsTableInfo): string[] {
   }
   if (tenantScoped && info.policyCount === 0) reasons.push('RLS politikası yok');
   if (classes.includes('G')) reasons.push(...evaluateGlobalPolicies(info.policies));
+  if (classes.includes('P')) reasons.push(...evaluatePairPolicies(info.policies));
   if (classes.includes('S') && info.appUserCanSelect) {
     reasons.push("S sınıfı tabloda app_user'ın SELECT izni var");
   }

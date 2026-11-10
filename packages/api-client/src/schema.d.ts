@@ -1624,8 +1624,8 @@ export interface paths {
          *     `phone` veya `voen` tek başına verilir (diğer filtrelerle veya birlikte → 422); dizinde
          *     görünme kapalı perakendeciyi de bulur, kısmi değer eşleşmez (US-020). Kullanıcı başına
          *     dakikada `directory.search_max_per_minute` (60) arama; aşınca 429 + `Retry-After`
-         *     (US-019 AC5). Dışa aktarma ucu yoktur (US-019 AC4). `history`: bağlantı tabloları gelene
-         *     kadar (F2.12–F2.15) `never` her sonucu, diğer değerler boş liste döner.
+         *     (US-019 AC5). Dışa aktarma ucu yoktur (US-019 AC4). `history` (F2.12a): çağıran satıcının
+         *     ilişki durumuna göre sayfa içinde süzülür (sayfa `limit`'ten kısa olabilir; `nextCursor` indeks sırasıdır).
          */
         get: {
             parameters: {
@@ -1691,7 +1691,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Bağlantı isteği gönder (US-021) */
+        /**
+         * Bağlantı isteği gönder (US-021)
+         * @description İzin `connections.request.send` (F2.12a). Kurallar sırasıyla (SF-03): aktif bağlantı (`409 CONNECTION_ALREADY_ACTIVE`),
+         *     bekleyen istek (`409 CONNECTION_REQUEST_ALREADY_PENDING`), engel (`409 CONNECTION_BLOCKED`), bekleme süresi
+         *     (`409 CONNECTION_COOLDOWN_ACTIVE`, `details.cooldownUntil`), günlük kota (`429 CONNECTION_DAILY_QUOTA_EXCEEDED`,
+         *     `details.retryAfter` + `Retry-After` = satıcının saat diliminde gece yarısına kalan saniye). Etkin kota =
+         *     `connection.daily_request_quota` ayarı ile plan hakkı `connection_requests.daily`'nin küçüğü (hak `null` = ayar).
+         *     İstek alamayan perakendeci (yok, askıda/arşivde, `buyer` onaysız, çağıranın kendisi) veya temsilcinin
+         *     (`assigned`) bölgesi dışındaki perakendeci `404 NOT_FOUND`. Salt-okunur abonelik `403 SUBSCRIPTION_READ_ONLY`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1707,6 +1716,7 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         buyerId: string;
+                        /** @description Baştaki/sondaki boşluk atılır; boş mesaj gönderilmemiş sayılır */
                         message?: string;
                         proposedPaymentTermDays?: number;
                     };
@@ -1722,7 +1732,11 @@ export interface paths {
                         "application/json": components["schemas"]["ConnectionRequest"];
                     };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+                429: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -1738,13 +1752,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Gönderilen istekler (seller) */
+        /**
+         * Gönderilen istekler (seller), yeniden eskiye
+         * @description İzin `connections.request.send`; temsilci (`assigned`) yalnız kendi gönderdiklerini görür (F2.12a). `limit` en fazla 50.
+         */
         get: {
             parameters: {
                 query?: {
                     cursor?: components["parameters"]["Cursor"];
-                    limit?: components["parameters"]["Limit"];
-                    status?: string;
+                    limit?: number;
+                    status?: "pending" | "accepted" | "rejected" | "expired" | "withdrawn";
                 };
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
@@ -1759,8 +1776,18 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: (components["schemas"]["ConnectionRequest"] & {
+                                /** @description Perakendecinin ünvanı; artık istek alamıyorsa null */
+                                buyerName: string | null;
+                            })[];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -6757,7 +6784,7 @@ export interface components {
             contactName: string | null;
             personalPhone: string | null;
             email: string | null;
-            /** @description Bu satıcıyla ilişki durumu (F2.12'ye kadar her zaman `none`) */
+            /** @description Bu satıcıyla ilişki durumu; yalnız çağıran satıcının istek/bağlantı satırlarından (F2.12a). `canRequest` kota hariç çift kurallarıdır */
             relation: {
                 /** @enum {string} */
                 status: "none" | "pending" | "active" | "rejected" | "cancelled" | "blocked";

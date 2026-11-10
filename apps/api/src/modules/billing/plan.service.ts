@@ -54,6 +54,14 @@ export class PlanService {
     @Inject(IdGenerator) private readonly ids: IdGenerator,
   ) {}
 
+  /**
+   * Abonelik salt-okunur mu (US-055 AC4: yeni istek gönderemez, F2.12a)? Güncel aboneliği
+   * olmayan işletme salt-okunur sayılmaz; sayısal hak kontrolü onu ayrıca reddeder.
+   */
+  async isReadOnlyTx(tx: Tx, businessId: string): Promise<boolean> {
+    return (await this.repository.currentSubscriptionStatusTx(tx, businessId)) === 'read_only';
+  }
+
   async createPlan(plan: NewPlan, actor: PlanActor): Promise<string> {
     const id = this.ids.next();
     await this.repository.insertPlan(actor, {

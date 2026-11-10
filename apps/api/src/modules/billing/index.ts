@@ -13,3 +13,5 @@ export {
   PlanService,
 } from './plan.service';
 export { type BillingSeedResult, seedBilling } from './seed/billing.seed';
+// F2.12a: satıcının yerel günü (bağlantı isteği kotası).
+export { localDate } from './subscription-period';
