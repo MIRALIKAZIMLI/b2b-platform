@@ -1,5 +1,10 @@
 import { Module } from '@nestjs/common';
+import { BusinessesModule } from '../businesses';
+import { FilesModule } from '../files';
 import { SettingsModule } from '../settings';
+import { DirectorySearchService } from './directory-search.service';
+import { DirectoryController } from './directory.controller';
+import { DirectoryRateLimiter } from './directory-rate-limiter';
 import { DirectoryIndexer } from './directory-indexer';
 import { DirectoryRebuildTracker } from './directory-rebuild-tracker';
 import { DirectoryReindexService } from './directory-reindex.service';
@@ -29,3 +34,11 @@ export class DirectoryIndexModule {}
   providers: [DirectoryProcessor, DirectoryReindexSchedule],
 })
 export class DirectoryWorkerModule {}
+
+/** API: arama ucu (F2.11b). `BuyerDirectoryIndex` global SearchModule'den. */
+@Module({
+  imports: [SettingsModule, BusinessesModule, FilesModule],
+  controllers: [DirectoryController],
+  providers: [DirectoryRepository, DirectoryRateLimiter, DirectorySearchService],
+})
+export class DirectoryApiModule {}

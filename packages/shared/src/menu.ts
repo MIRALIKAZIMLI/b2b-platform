@@ -74,7 +74,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
   // productreport "Toptancı — Web"; `audit` c4 §5 (`audit.view`, US-057).
   seller: [
     dashboard,
-    soon('directory', ['directory.search']),
+    // F2.11b: perakendeci dizini (US-019, US-020); web + mobil (temsilci).
+    { key: 'directory', anyOf: ['directory.search'], ready: true, path: 'directory' },
     soon('customers', ['connections.view']),
     soon('requests', ['connections.request.send']),
     soon('products', ['catalog.view']),

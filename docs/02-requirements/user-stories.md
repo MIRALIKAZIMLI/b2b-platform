@@ -293,6 +293,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `directory.reindex_hour_utc` | 1 (perakendeci dizininin gece tam yeniden indekslendiği saat, UTC; worker açılışında okunur, ADR-0011, F2.11a) | tamsayı | 0 | 23 |
 | `directory.reindex_batch_size` | 500 (yeniden indekslemede bir turda okunan perakendeci sayısı, F2.11a) | tamsayı | 50 | 1000 |
 | `directory.reindex_lock_seconds` | 1800 (yeniden indeksleme Redis kilidinin ömrü; aynı anda tek çalışma, ADR-0011 §4, F2.11a) | tamsayı | 60 | 7200 |
+| `directory.search_max_per_minute` | 60 (kullanıcı başına 1 dakikada dizin araması; aşınca `429 RATE_LIMITED`, US-019 AC5, F2.11b) | tamsayı | 10 | 600 |
 | `feature.*` | Özellik bayrakları; bkz. [environments-cicd.md](../06-operations/environments-cicd.md) §6 | evet/hayır | — | — |
 
 Çapraz kural (aynı kapsamdaki geçerli değerlerle): `dormant.reminder_days` elemanlarının hepsi < `dormant.warning_day` < `dormant.deactivate_day` < `dormant.delete_day`. İhlal `SETTING_OUT_OF_RANGE`.

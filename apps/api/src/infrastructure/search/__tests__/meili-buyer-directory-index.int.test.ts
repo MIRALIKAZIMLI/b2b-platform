@@ -106,4 +106,62 @@ describe.runIf(runs)('F2.11a Meilisearch buyer_directory indeksi', () => {
     const all = await client.index<BuyerDirectoryDocument>(index.uid).search('', { limit: 1000 });
     expect(all.hits.map((hit) => hit.id)).toEqual([kept.id]);
   });
+
+  it('F2.11b-AC1: search — bölge grupları (VE), şehir kapsar, faaliyet, doğrulanmış, ünvan, sayfa', async () => {
+    const city = randomUUID();
+    const district = randomUUID();
+    const activity = randomUUID();
+    const tag = randomUUID().slice(0, 8);
+    const a = doc({ legalName: `Alma ${tag}`, regionId: district, cityId: city, verified: true });
+    const b = doc({
+      legalName: `Bəhər ${tag}`,
+      regionId: city,
+      cityId: city,
+      activityTypeId: activity,
+    });
+    const c = doc({ legalName: `Cənnət ${tag}` });
+    await index.upsert([a, b, c]);
+    const base = {
+      q: undefined,
+      regionGroups: [] as string[][],
+      activityTypeId: undefined,
+      verified: undefined,
+      offset: 0,
+      limit: 20,
+    };
+
+    expect((await index.search({ ...base, regionGroups: [[city]] })).ids).toEqual([a.id, b.id]);
+    expect((await index.search({ ...base, regionGroups: [[city], [district]] })).ids).toEqual([
+      a.id,
+    ]);
+    expect((await index.search({ ...base, regionGroups: [[city], []] })).ids).toEqual([]);
+    expect((await index.search({ ...base, activityTypeId: activity })).ids).toEqual([b.id]);
+    expect((await index.search({ ...base, regionGroups: [[city]], verified: true })).ids).toEqual([
+      a.id,
+    ]);
+    expect((await index.search({ ...base, q: `Cənnət ${tag}` })).ids[0]).toBe(c.id);
+    const page = await index.search({ ...base, regionGroups: [[city]], limit: 1 });
+    expect(page).toEqual({ ids: [a.id], hasMore: true });
+    const next = await index.search({ ...base, regionGroups: [[city]], offset: 1, limit: 1 });
+    expect(next).toEqual({ ids: [b.id], hasMore: false });
+  });
+
+  it('F2.11b: indeks yoksa arama boş döner; filtre değeri UUID değilse hata', async () => {
+    const missing = new MeiliBuyerDirectoryIndex(
+      { url: host, indexPrefix: `${prefix}none_`, ...(apiKey === undefined ? {} : { apiKey }) },
+      new SystemClock(),
+    );
+    const query = {
+      q: undefined,
+      regionGroups: [],
+      activityTypeId: undefined,
+      verified: undefined,
+      offset: 0,
+      limit: 20,
+    };
+    expect(await missing.search(query)).toEqual({ ids: [], hasMore: false });
+    await expect(
+      index.search({ ...query, activityTypeId: '" OR verified = true' }),
+    ).rejects.toThrow('UUID');
+  });
 });

@@ -229,6 +229,18 @@ export class FilesService {
     return await this.readUrl(file, ctx.businessId);
   }
 
+  /**
+   * Satırı okunmadan bilinen nesnenin okuma adresi (F2.11b): dizin kartındaki başka işletmenin
+   * logosu. Nesne D fonksiyonundan gelir (yalnız `show_logo` açık ve dosya `ready`, 0021);
+   * istemciden gelen değerle çağrılmaz. `businessId` yalnız ayar (imzalı URL ömrü) içindir.
+   */
+  async objectReadUrl(
+    object: Pick<FileRow, 'bucket' | 'objectKey'>,
+    businessId: string,
+  ): Promise<string> {
+    return await this.readUrl(object, businessId);
+  }
+
   private async completedView(tenant: TenantContext, file: FileRow): Promise<CompletedFile> {
     return {
       fileId: file.id,
@@ -239,7 +251,10 @@ export class FilesService {
     };
   }
 
-  private async readUrl(file: FileRow, businessId: string): Promise<string> {
+  private async readUrl(
+    file: Pick<FileRow, 'bucket' | 'objectKey'>,
+    businessId: string,
+  ): Promise<string> {
     if (file.bucket === 'public' && this.publicBaseUrl !== null) {
       return `${this.publicBaseUrl}/${file.objectKey}`;
     }

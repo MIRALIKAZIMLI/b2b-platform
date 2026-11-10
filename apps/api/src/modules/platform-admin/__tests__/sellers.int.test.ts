@@ -473,24 +473,32 @@ describe('F2.1a admin toptancı açma (entegrasyon)', () => {
   });
 
   it('F2.1a liste: sayfalama imleci ve aktivasyon durumu', async () => {
+    // Liste `createdAt desc`; diğer test dosyaları gerçek saatle toptancı açtığından ilk sayfa
+    // bu testin toptancısı olmayabilir. İmleçle `b`'ye kadar ilerlenir, sonraki sayfa `a` olmalı.
     const a = (await create(await sellerBody())).body as CreatedJson;
     const b = (await create(await sellerBody())).body as CreatedJson;
-    const first = await api
-      .http()
-      .get('/api/v1/admin/sellers')
-      .set(await api.bearer(admin))
-      .query({ limit: 1 });
-    expect(first.status).toBe(200);
-    const page1 = first.body as { items: { id: string; activation: string }[]; nextCursor: string };
-    expect(page1.items).toEqual([
+    interface Page {
+      items: { id: string; activation: string }[];
+      nextCursor: string | null;
+    }
+    const page = async (cursor: string | null): Promise<Page> => {
+      const response = await api
+        .http()
+        .get('/api/v1/admin/sellers')
+        .set(await api.bearer(admin))
+        .query(cursor === null ? { limit: 1 } : { limit: 1, cursor });
+      expect(response.status).toBe(200);
+      return response.body as Page;
+    };
+    let current = await page(null);
+    for (let step = 0; step < 500 && current.items[0]?.id !== b.businessId; step += 1) {
+      expect(current.nextCursor).not.toBeNull();
+      current = await page(current.nextCursor);
+    }
+    expect(current.items).toEqual([
       expect.objectContaining({ id: b.businessId, activation: 'pending' }),
     ]);
-    const second = await api
-      .http()
-      .get('/api/v1/admin/sellers')
-      .set(await api.bearer(admin))
-      .query({ limit: 1, cursor: page1.nextCursor });
-    const page2 = second.body as { items: { id: string }[] };
-    expect(page2.items.map((item) => item.id)).toEqual([a.businessId]);
+    const next = await page(current.nextCursor);
+    expect(next.items.map((item) => item.id)).toEqual([a.businessId]);
   });
 });

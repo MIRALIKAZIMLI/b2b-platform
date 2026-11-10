@@ -28,6 +28,7 @@ export {
   MEMBERSHIP_STATUSES,
   type MembershipStatus,
   jobTitles,
+  membershipRegions,
   memberships,
   permissions,
   roles,

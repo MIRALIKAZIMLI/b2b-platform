@@ -67,6 +67,22 @@ describe('mobil kabuk', () => {
     expect(dashboard === undefined ? 'x' : mobileHref('buyer', dashboard)).toBeUndefined();
   });
 
+  it('F2.11b-AC11: directory.search izinli temsilcide dizin öğesi dizin ekranına gider', () => {
+    const rep: Me = {
+      activeBusiness: { capability: 'seller', permissions: perms('directory.search') },
+    };
+    const directory = mobileMenu(rep, 'seller').find((item) => item.key === 'directory');
+    expect(directory?.ready).toBe(true);
+    expect(directory === undefined ? undefined : mobileHref('seller', directory)).toBe(
+      '/directory',
+    );
+    const withoutPermission = mobileMenu(
+      { activeBusiness: { capability: 'seller', permissions: [] } },
+      'seller',
+    );
+    expect(withoutPermission.some((item) => item.key === 'directory')).toBe(false);
+  });
+
   it('US-003 AC1: varsayılan işletme ilk aktif üyelik', () => {
     const m = (businessId: string, businessStatus: Membership['businessStatus']) =>
       ({ businessId, businessStatus }) as Membership;
