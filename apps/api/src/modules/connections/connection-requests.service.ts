@@ -100,6 +100,8 @@ export class ConnectionRequestsService {
         if (await this.plans.isReadOnlyTx(tx, sellerId)) {
           throw new DomainError('SUBSCRIPTION_READ_ONLY');
         }
+        // Müfettiş 17 M1: engel ile yarış; çift kilidi engel okunmadan önce, kotadan önce.
+        await this.repository.lockPairTx(tx, sellerId, input.buyerId);
         const target = await this.targetTx(tx, tenant, input.buyerId);
 
         await this.repository.lockSellerQuotaTx(tx, sellerId);

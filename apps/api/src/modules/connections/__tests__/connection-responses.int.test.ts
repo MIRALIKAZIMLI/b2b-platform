@@ -279,7 +279,7 @@ describe('F2.13a bağlantı isteğine yanıt API', () => {
     expect(code(again.body)).toBe('INVALID_STATE_TRANSITION');
   });
 
-  it('US-023-AC2 süresi geçmiş istek kabul edilemez (409 CONNECTION_REQUEST_EXPIRED)', async () => {
+  it('US-023-AC2 süresi geçmiş istek kabul edilemez ve reddedilemez (409 CONNECTION_REQUEST_EXPIRED)', async () => {
     const seller = await newSeller(region);
     const buyer = await newBuyer(region);
     const id = await insertRequest({
@@ -294,6 +294,10 @@ describe('F2.13a bağlantı isteğine yanıt API', () => {
     const res = await act(buyer, id, 'accept');
     expect(res.status).toBe(409);
     expect(code(res.body)).toBe('CONNECTION_REQUEST_EXPIRED');
+    // Müfettiş 17 L1: red de aynı; bekleme süresi başlamaz.
+    const rejected = await act(buyer, id, 'reject', {});
+    expect(rejected.status).toBe(409);
+    expect(code(rejected.body)).toBe('CONNECTION_REQUEST_EXPIRED');
     expect(await requestStatus(id)).toBe('pending');
   });
 

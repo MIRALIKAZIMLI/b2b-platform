@@ -103,6 +103,17 @@ export class ConnectionsRepository {
     );
   }
 
+  /**
+   * Satıcı–alıcı çifti için işlem sonuna kadar süren kilit (Müfettiş 17 M1): istek gönderme ile
+   * engel aynı çiftte sıralanır; kilitten sonraki ifadeler commit edilmiş engeli/isteği görür.
+   * Sıra her akışta sabit: önce çift, sonra satıcı kotası.
+   */
+  async lockPairTx(tx: Tx, sellerId: string, buyerId: string): Promise<void> {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`connection_pair:${sellerId}:${buyerId}`}, 0))`,
+    );
+  }
+
   /** `connection_buyer_targets` (≤20 kimlik); dönmeyen kimlik istek alamaz. */
   async buyerTargetsTx(tx: Tx, ids: readonly string[]): Promise<BuyerTarget[]> {
     if (ids.length === 0) return [];

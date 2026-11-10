@@ -188,8 +188,35 @@ describe('F2.13a bağlantı yanıtı kiracı izolasyonu ve bekçiler', () => {
       as(buyer.businessId, (tx) =>
         tx.execute(sql`insert into connections (id, seller_id, buyer_id, request_id, status, started_at)
                        values (${randomUUID()}, ${sellerId}, ${buyer.businessId}, ${requestId},
-                               ${status}, now())`),
+                               ${status},
+                               (select responded_at from connection_requests where id = ${requestId}))`),
       );
+    // Müfettiş 17 M2: alıcı satıcı koşullarını yazamaz; başlangıç kabul anı, vade önerilen vade.
+    const withColumns = (columns: string, values: ReturnType<typeof sql>) =>
+      as(buyer.businessId, (tx) =>
+        tx.execute(sql`insert into connections (id, seller_id, buyer_id, request_id, ${sql.raw(columns)})
+                       values (${randomUUID()}, ${seller.businessId}, ${buyer.businessId}, ${accepted}, ${values})`),
+      );
+    const respondedAt = sql`(select responded_at from connection_requests where id = ${accepted})`;
+    expect(
+      await errorCode(() => withColumns('started_at, credit_limit', sql`${respondedAt}, 1000`)),
+    ).toBe('23514');
+    expect(
+      await errorCode(() => withColumns('started_at', sql`${respondedAt} + interval '1 day'`)),
+    ).toBe('23514');
+    expect(
+      await errorCode(() => withColumns('started_at, payment_term_days', sql`${respondedAt}, 30`)),
+    ).toBe('23514');
+    expect(
+      await errorCode(() =>
+        withColumns('started_at, branch_pricing_enabled', sql`${respondedAt}, true`),
+      ),
+    ).toBe('23514');
+    expect(
+      await errorCode(() =>
+        withColumns('started_at, price_list_id', sql`${respondedAt}, ${randomUUID()}`),
+      ),
+    ).toBe('23514');
     // Bekleyen istekle, başka satıcıyla veya iptal durumunda eklenemez.
     expect(await errorCode(() => insert(pendingId, seller.businessId))).toBe('23514');
     expect(await errorCode(() => insert(accepted, other.businessId))).toBe('23514');

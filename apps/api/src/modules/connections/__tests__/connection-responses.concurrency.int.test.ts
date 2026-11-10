@@ -1,4 +1,4 @@
-// F2.13a eşzamanlılık (state-machines §1, SF-03): gerçek PostgreSQL, çok bağlantılı havuz. İstek
+// F2.13a eşzamanlılık (state-machines §1, SF-03; Müfettiş 17 M1 istek + engel yarışı): gerçek PostgreSQL, çok bağlantılı havuz. İstek
 // satırı FOR UPDATE ile kilitlenir; aynı isteğe eşzamanlı kabul + geri çekme / kabul + red
 // yarışında yalnız biri geçer, diğeri 409 INVALID_STATE_TRANSITION alır; en fazla bir bağlantı.
 import { randomUUID } from 'node:crypto';
@@ -82,6 +82,52 @@ describe('F2.13a bağlantı yanıtı eşzamanlılığı', () => {
         [id],
       );
       expect(connections).toHaveLength(row?.status === 'accepted' ? 1 : 0);
+    }
+  });
+
+  it('Müfettiş 17 M1 eşzamanlı istek + engel: engel varken pending istek kalmaz', async () => {
+    for (let round = 0; round < 5; round++) {
+      const seller = await newSeller(region);
+      const buyer = await newBuyer(region);
+      // Engel için ilişki: önceden geri çekilmiş bir istek (bekleme süresi yok).
+      await insertRequest({
+        sellerId: seller.businessId,
+        buyerId: buyer.businessId,
+        sentByUserId: seller.admin.userId,
+        status: 'withdrawn',
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        sellerLocalDate: '2026-11-08',
+      });
+      const server = app.getHttpServer();
+      const [sent, blocked] = await Promise.all([
+        request(server)
+          .post('/api/v1/connection-requests')
+          .set(await headers(seller.admin.userId, seller.businessId))
+          .send({ buyerId: buyer.businessId }),
+        request(server)
+          .post('/api/v1/blocks')
+          .set(await headers(buyer.admin.userId, buyer.businessId))
+          .send({ sellerId: seller.businessId }),
+      ]);
+      expect(blocked.status).toBe(201);
+      if (sent.status === 201) {
+        // İstek önce geçtiyse engel onu reddetmiş olmalı.
+        const id = (sent.body as { id: string }).id;
+        const [row] = await platformRows<{ status: string }>(
+          'select status from connection_requests where id = $1',
+          [id],
+        );
+        expect(row?.status).toBe('rejected');
+      } else {
+        expect(sent.status).toBe(409);
+        expect((sent.body as { code: string }).code).toBe('CONNECTION_BLOCKED');
+      }
+      const pending = await platformRows(
+        `select 1 from connection_requests
+          where seller_id = $1 and buyer_id = $2 and status = 'pending'`,
+        [seller.businessId, buyer.businessId],
+      );
+      expect(pending).toHaveLength(0);
     }
   });
 });

@@ -195,6 +195,13 @@ export class ConnectionResponsesService {
   async reject(tenant: TenantContext, requestId: string) {
     return await withTenantTx(tenant, async (tx) => {
       const request = await this.ownIncomingTx(tx, tenant, requestId);
+      // Müfettiş 17 L1: süresi geçmiş istek reddedilmez (bekleme süresi başlatmaz); kabulle aynı.
+      ConnectionRequestStateMachine.assertRespondable(
+        request.status as ConnectionStatusLike,
+        request.expiresAt,
+        this.clock.now(),
+        'rejected',
+      );
       const rejected = await this.rejectTx(tx, tenant, request);
       return toRequestView(rejected);
     });
@@ -213,6 +220,8 @@ export class ConnectionResponsesService {
     const result = await withTenantTx(tenant, async (tx) => {
       const now = this.clock.now();
       const buyerId = tenant.businessId;
+      // Müfettiş 17 M1: istek gönderme ile aynı çift kilidi (bekleyen isteği okumadan önce).
+      await this.repository.lockPairTx(tx, sellerId, buyerId);
       const summary = (await this.repository.sellerSummariesTx(tx, [sellerId])).get(sellerId);
       if (summary === undefined) throw new DomainError('NOT_FOUND');
 

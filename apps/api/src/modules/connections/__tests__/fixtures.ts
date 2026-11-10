@@ -252,12 +252,13 @@ export async function insertConnection(input: {
   readonly cancelled?: { readonly at: Date; readonly by: 'seller' | 'buyer' };
 }): Promise<string> {
   const id = ids.next();
-  // F2.13a bekçisi: bağlantı `active` doğar; iptal ayrı güncellemedir.
+  // F2.13a bekçisi: bağlantı `active` ve isteğin yanıt anında doğar (`startedAt` = isteğin
+  // `respondedAt`'i olmalı); iptal ayrı güncellemedir.
   await businessRows(
     input.buyerId,
     `insert into connections (id, seller_id, buyer_id, request_id, status, started_at)
-     values ($1, $2, $3, $4, 'active', $5)`,
-    [id, input.sellerId, input.buyerId, input.requestId, input.startedAt],
+     select $1, $2, $3, $4, 'active', responded_at from connection_requests where id = $4`,
+    [id, input.sellerId, input.buyerId, input.requestId],
   );
   if (input.cancelled !== undefined) {
     await businessRows(

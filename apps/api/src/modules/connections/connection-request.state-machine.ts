@@ -22,12 +22,18 @@ export const ConnectionRequestStateMachine = {
   },
 
   /**
-   * Kabul koşulu (state-machines §1 "İstek süresi dolmamış", SF-03): `pending` değilse
+   * Kabul ve red koşulu (state-machines §1 "İstek süresi dolmamış", SF-03; red için Müfettiş 17
+   * L1): `pending` değilse
    * `INVALID_STATE_TRANSITION`; `expires_at` geçmişse (F2.16 işi henüz `expired` yapmamış olsa da)
    * `409 CONNECTION_REQUEST_EXPIRED`.
    */
-  assertRespondable(status: ConnectionRequestStatus, expiresAt: Date, now: Date): void {
-    this.assertTransition(status, 'accepted');
+  assertRespondable(
+    status: ConnectionRequestStatus,
+    expiresAt: Date,
+    now: Date,
+    to: 'accepted' | 'rejected' = 'accepted',
+  ): void {
+    this.assertTransition(status, to);
     if (expiresAt.getTime() <= now.getTime()) {
       throw new DomainError('CONNECTION_REQUEST_EXPIRED');
     }

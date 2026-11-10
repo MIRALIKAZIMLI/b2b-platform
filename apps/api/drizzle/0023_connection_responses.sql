@@ -71,6 +71,7 @@ CREATE FUNCTION "connections_guard"()
 AS $$
 DECLARE
   v_ctx uuid := nullif(current_setting('app.business_id', true), '')::uuid;
+  v_request public.connection_requests%ROWTYPE;
 BEGIN
   IF TG_OP = 'INSERT' THEN
     -- BEFORE tetikleyicisi RLS WITH CHECK'ten önce çalışır: taraf denetimi burada da (42501).
@@ -80,15 +81,28 @@ BEGIN
     IF NEW.status <> 'active' THEN
       RAISE EXCEPTION 'connections: yeni bağlantı active olmalı' USING ERRCODE = '23514';
     END IF;
-    IF NOT EXISTS (
-      SELECT 1
-        FROM public.connection_requests r
-       WHERE r.id = NEW.request_id
-         AND r.seller_id = NEW.seller_id
-         AND r.buyer_id = NEW.buyer_id
-         AND r.status = 'accepted'
-    ) THEN
+    SELECT r.* INTO v_request
+      FROM public.connection_requests r
+     WHERE r.id = NEW.request_id
+       AND r.seller_id = NEW.seller_id
+       AND r.buyer_id = NEW.buyer_id
+       AND r.status = 'accepted';
+    IF NOT FOUND THEN
       RAISE EXCEPTION 'connections: istek aynı çiftin kabul edilmiş isteği olmalı' USING ERRCODE = '23514';
+    END IF;
+    -- Müfettiş 17 M2: alıcı satıcının koşullarını (F2.14) yazamaz; başlangıç = kabul anı; vade =
+    -- önerilen vade, yoksa 0 (K1, `initialPaymentTermDays` ile birlikte değişir); bitiş alanı yok.
+    IF NEW.started_at IS DISTINCT FROM v_request.responded_at
+       OR NEW.price_list_id IS NOT NULL
+       OR NEW.credit_limit IS NOT NULL
+       OR NEW.sales_rep_membership_id IS NOT NULL
+       OR NEW.branch_pricing_enabled
+       OR NEW.payment_term_days <> coalesce(v_request.proposed_payment_term_days, 0)
+       OR NEW.ended_at IS NOT NULL
+       OR NEW.ended_by_side IS NOT NULL
+       OR NEW.end_reason IS NOT NULL
+       OR NEW.ended_by_user_id IS NOT NULL THEN
+      RAISE EXCEPTION 'connections: yeni bağlantı varsayılan koşullarla, kabul anında başlar' USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
   END IF;

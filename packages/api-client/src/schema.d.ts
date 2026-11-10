@@ -1921,7 +1921,7 @@ export interface paths {
         put?: never;
         /**
          * İsteği reddet (US-023 AC3)
-         * @description İzin `connections.request.respond`. Bekleme süresi başlar. Başka perakendecinin isteği `404`; `pending` değilse `409 INVALID_STATE_TRANSITION`.
+         * @description İzin `connections.request.respond`. Bekleme süresi başlar. Başka perakendecinin isteği `404`; `pending` değilse `409 INVALID_STATE_TRANSITION`; süresi geçmişse `409 CONNECTION_REQUEST_EXPIRED`.
          */
         post: {
             parameters: {
