@@ -51,3 +51,4 @@
 - F2.13b: gelen bağlantı istekleri, engel listesi, geri çekme ekranları (web + mobil), push dokunuşu yönlendirmesi, E2E-04
 - F2.14a: bağlantı koşulları API (liste, koşul güncelleme, alıcı koşul yazamaz, kabulde vade 0)
 - F2.14b: toptancı müşteri ekranı ve bağlantı koşulları penceresi (web), temsilci seçenekleri ucu
+- F2.14 takip: bağlantı temsilcisi yalnız satış temsilcisi rolündeki üye (kullanıcı kararı B, 0025)

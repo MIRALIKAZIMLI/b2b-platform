@@ -176,6 +176,13 @@
       "when": 1794301141083,
       "tag": "0024_connection_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794311562072,
+      "tag": "0025_connection_sales_rep_role",
+      "breakpoints": true
     }
   ]
 }

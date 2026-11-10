@@ -212,4 +212,24 @@ describe('F2.14a bağlantı koşulları kiracı izolasyonu ve bekçi', () => {
       ].sort(),
     );
   });
+
+  it('F2.14-B1 bekçi: temsilci yalnız satış temsilcisi rolündeki aktif üye (23514); mevcut atama korunur', async () => {
+    const id = await activeConnection(seller, await newBuyer(region), NOW);
+    const manager = await addMember(seller.businessId, 'seller_sales_manager');
+    expect(
+      await errorCode(() =>
+        update(seller.businessId, id, 'sales_rep_membership_id', manager.membershipId),
+      ),
+    ).toBe('23514');
+    const rep = await addMember(seller.businessId, 'seller_sales_rep', [region]);
+    expect(
+      (await update(seller.businessId, id, 'sales_rep_membership_id', rep.membershipId)).rowCount,
+    ).toBe(1);
+    await platformRows(
+      `update memberships set role_id = (select role_id from memberships where id = $2) where id = $1`,
+      [rep.membershipId, manager.membershipId],
+    );
+    // Temsilci değişmeden diğer koşul güncellenir; atama yerinde kalır.
+    expect((await update(seller.businessId, id, 'payment_term_days', 15)).rowCount).toBe(1);
+  });
 });

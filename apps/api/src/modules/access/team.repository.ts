@@ -13,6 +13,7 @@ import {
   membershipRegions,
   memberships,
   rolePermissions,
+  roleTemplates,
   roles,
 } from './access.schema';
 
@@ -84,6 +85,25 @@ export class TeamRepository {
       .from(memberships)
       .innerJoin(users, eq(users.id, memberships.userId))
       .innerJoin(roles, eq(roles.id, memberships.roleId))
+      .where(and(eq(memberships.businessId, businessId), eq(memberships.status, 'active')))
+      .orderBy(asc(memberships.joinedAt), asc(memberships.id));
+  }
+
+  /** Aktif üyelerin adı ve rolünün kaynak şablon kodu (temsilci seçimi, F2.14b; telefon yok). */
+  async listActiveMemberRoleCodes(
+    tx: Tx,
+    businessId: string,
+  ): Promise<{ id: string; fullName: string; roleTemplateCode: string | null }[]> {
+    return await tx
+      .select({
+        id: memberships.id,
+        fullName: users.fullName,
+        roleTemplateCode: roleTemplates.code,
+      })
+      .from(memberships)
+      .innerJoin(users, eq(users.id, memberships.userId))
+      .innerJoin(roles, eq(roles.id, memberships.roleId))
+      .leftJoin(roleTemplates, eq(roleTemplates.id, roles.sourceTemplateId))
       .where(and(eq(memberships.businessId, businessId), eq(memberships.status, 'active')))
       .orderBy(asc(memberships.joinedAt), asc(memberships.id));
   }

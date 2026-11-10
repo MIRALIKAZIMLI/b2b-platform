@@ -129,12 +129,17 @@ export class TeamService {
    * İşletmenin aktif üyelerinin yalnız kimliği ve adı (F2.14b: bağlantıya temsilci seçimi,
    * `connections.terms.manage`). Telefon, rol, kapsam dönmez.
    */
-  async activeMemberNames(
+  /** Aktif üyelerin adı ve rolünün kaynak şablon kodu (bağlantı temsilcisi seçimi; telefon yok). */
+  async activeMemberRoleCodes(
     tenant: TenantContext,
-  ): Promise<{ membershipId: string; fullName: string }[]> {
+  ): Promise<{ membershipId: string; fullName: string; roleTemplateCode: string | null }[]> {
     return await withTenantTx(tenant, async (tx) => {
-      const rows = await this.repository.listMembers(tx, tenant.businessId);
-      return rows.map((row) => ({ membershipId: row.id, fullName: row.fullName }));
+      const rows = await this.repository.listActiveMemberRoleCodes(tx, tenant.businessId);
+      return rows.map((row) => ({
+        membershipId: row.id,
+        fullName: row.fullName,
+        roleTemplateCode: row.roleTemplateCode,
+      }));
     });
   }
 

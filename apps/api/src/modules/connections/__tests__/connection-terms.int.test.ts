@@ -355,9 +355,10 @@ describe('F2.14a bağlantı koşulları API', () => {
     expect(stored[0]?.n).toBe(0);
   });
 
-  it('F2.14b-T1 temsilci seçenekleri: satıcının aktif üyeleri, yalnız kimlik ve ad; temsilci ve alıcı 403', async () => {
+  it('F2.14b-T1 temsilci seçenekleri: yalnız satış temsilcisi rolündeki aktif üyeler, yalnız kimlik ve ad; temsilci ve alıcı 403', async () => {
     const seller = await newSeller(region);
     const rep = await addMember(seller.businessId, 'seller_sales_rep', [region]);
+    const manager = await addMember(seller.businessId, 'seller_sales_manager');
     const removed = await addMember(seller.businessId, 'seller_sales_rep', [region]);
     await platformRows(`update memberships set status = 'removed' where id = $1`, [
       removed.membershipId,
@@ -368,9 +369,9 @@ describe('F2.14a bağlantı koşulları API', () => {
       .set(await auth(seller.admin, seller.businessId));
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     const items = (res.body as { items: { membershipId: string; fullName: string }[] }).items;
-    expect(items.map((item) => item.membershipId).sort()).toEqual(
-      [seller.admin.membershipId, rep.membershipId].sort(),
-    );
+    // Kullanıcı kararı 2026-11-10 (B): admin ve satış müdürü listede yok.
+    expect(items.map((item) => item.membershipId)).toEqual([rep.membershipId]);
+    expect(items.map((item) => item.membershipId)).not.toContain(manager.membershipId);
     expect(Object.keys(items[0] ?? {}).sort()).toEqual(['fullName', 'membershipId']);
     expect(items.map((item) => item.membershipId)).not.toContain(other.admin.membershipId);
     const repRes = await http()
@@ -382,5 +383,47 @@ describe('F2.14a bağlantı koşulları API', () => {
       .get('/api/v1/connections/sales-reps')
       .set(await auth(buyer.admin, buyer.businessId));
     expect(buyerRes.status).toBe(403);
+  });
+
+  it('F2.14-B1 temsilci yalnız satış temsilcisi rolündeki üye (422); rolü sonradan değişen üyenin mevcut ataması korunur', async () => {
+    const { seller, id } = await pair();
+    const manager = await addMember(seller.businessId, 'seller_sales_manager');
+    for (const candidate of [manager.membershipId, seller.admin.membershipId]) {
+      const res = await patch(seller.admin, seller.businessId, id, {
+        salesRepMembershipId: candidate,
+      });
+      expect(res.status).toBe(422);
+      expect(res.body).toMatchObject({
+        code: 'VALIDATION_FAILED',
+        details: { salesRepMembershipId: ['invalid_sales_rep'] },
+      });
+    }
+
+    const rep = await addMember(seller.businessId, 'seller_sales_rep', [region]);
+    expect(
+      (await patch(seller.admin, seller.businessId, id, { salesRepMembershipId: rep.membershipId }))
+        .status,
+    ).toBe(200);
+    // Üye sonradan satış müdürü rolüne geçer: var olan atama silinmez, diğer koşullar kaydedilir.
+    await platformRows(
+      `update memberships set role_id = (select role_id from memberships where id = $2) where id = $1`,
+      [rep.membershipId, manager.membershipId],
+    );
+    const kept = await patch(seller.admin, seller.businessId, id, {
+      paymentTermDays: 20,
+      salesRepMembershipId: rep.membershipId,
+    });
+    expect(kept.status, JSON.stringify(kept.body)).toBe(200);
+    expect(kept.body).toMatchObject({
+      terms: { paymentTermDays: 20, salesRepMembershipId: rep.membershipId },
+    });
+    // Yeni atama olarak aynı üye artık reddedilir (önce kaldırılırsa).
+    expect(
+      (await patch(seller.admin, seller.businessId, id, { salesRepMembershipId: null })).status,
+    ).toBe(200);
+    expect(
+      (await patch(seller.admin, seller.businessId, id, { salesRepMembershipId: rep.membershipId }))
+        .status,
+    ).toBe(422);
   });
 });
