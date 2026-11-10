@@ -1176,13 +1176,24 @@ paths:
     post:
       tags: [connections]
       summary: Bağlantıyı iptal et (US-025)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      description: |
+        İzin `connections.cancel` (satıcı veya alıcı, kapsam `all`). Yalnız `active` bağlantı; çağıran tarafın
+        gerekçesi ve ikinci onayı (`confirm: true`, yoksa `422 CONFIRMATION_REQUIRED`). Tek işlemde (F2.15a, SF-07):
+        bağlantı `cancelled` (`ended_by_side` = çağıranın tarafı, `end_reason` = `reason`, `ended_at`,
+        `ended_by_user_id`), `ConnectionCancelledHandler` kancaları (sepet kalemleri, `submitted` siparişler; F4.5),
+        olay `connection.cancelled`, karşı tarafın aktif adminlerine bildirim, audit `connection.cancelled`
+        (`note` yalnız audit'te, Mimar K1). Alıcı iptali bekleme süresi başlatır, satıcı iptali başlatmaz.
+        Karşı taraf gerekçeyi görmez, yalnız `endedBySide` (K2). Başka çiftin bağlantısı `404`; iptal edilmiş
+        bağlantı `409 INVALID_STATE_TRANSITION`.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
               required: [reason, confirm]
+              additionalProperties: false
               properties:
                 reason: { type: string, enum: [no_longer_working, payment_issue, quality_issue, other] }
                 note: { type: string, maxLength: 500 }
@@ -1194,8 +1205,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [cancelledOrders]
                 properties:
-                  cancelledOrders: { type: integer }
+                  cancelledOrders: { type: integer, minimum: 0, description: 'İptal edilen `submitted` sipariş sayısı (F4.5 öncesi 0)' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/blocks:
     get:
       tags: [connections]

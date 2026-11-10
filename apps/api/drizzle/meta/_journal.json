@@ -183,6 +183,13 @@
       "when": 1794311562072,
       "tag": "0025_connection_sales_rep_role",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794320000000,
+      "tag": "0026_connection_cancel",
+      "breakpoints": true
     }
   ]
 }

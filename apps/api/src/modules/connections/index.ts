@@ -8,3 +8,9 @@ export {
   relationOf,
 } from './connection-policy';
 export { blocks, connectionRequests, connections } from './connections.schema';
+export {
+  CONNECTION_CANCELLED_HANDLERS,
+  type ConnectionCancelledEffect,
+  type ConnectionCancelledEvent,
+  type ConnectionCancelledHandler,
+} from './connection-cancelled.handler';

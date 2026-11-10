@@ -77,6 +77,21 @@ export const NOTIFICATION_TEMPLATES: Readonly<
       body: 'Perakendeci bağlantı isteğinizi reddetti.',
     },
   },
+  // F2.15a: iptal eden işletmenin adı ve gerekçesi yok (engel de aynı metin; Mimar notu 3).
+  connection_cancelled: {
+    az: {
+      title: 'Əlaqə ləğv edildi',
+      body: 'Qarşı tərəf sizinlə əlaqəni ləğv etdi. Ətraflı məlumat tətbiqdədir.',
+    },
+    ru: {
+      title: 'Связь отменена',
+      body: 'Другая сторона отменила связь с вами. Подробности в приложении.',
+    },
+    tr: {
+      title: 'Bağlantı iptal edildi',
+      body: 'Karşı taraf sizinle bağlantıyı iptal etti. Ayrıntılar uygulamada.',
+    },
+  },
 };
 
 export interface NotificationsSeedResult {

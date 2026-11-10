@@ -35,6 +35,7 @@ export const AUDIT_ACTIONS = [
   'block.created',
   'block.deleted',
   'connection.terms_updated',
+  'connection.cancelled',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

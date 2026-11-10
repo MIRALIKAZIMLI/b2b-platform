@@ -1,5 +1,5 @@
 // F2.13a (US-054 "İstek kabul / red"): yanıt olayları toptancı tarafındaki alıcıya bildirim olur;
-// `connection.cancelled` bildirimi F2.15'te (şimdilik bildirim yok).
+// F2.15a: iptal bildirimi alıcı başına `connection.cancel_notice`; `connection.cancelled` bildirim değil.
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { intentsForEvent, NOTIFICATION_EVENT_TYPES } from '../notification-types';
@@ -36,8 +36,26 @@ describe('bildirim türleri (F2.13a)', () => {
     expect(NOTIFICATION_EVENT_TYPES).not.toContain('connection.cancelled');
   });
 
+  it('F2.15a-T7 iptal bildirimi karşı tarafın işletmesi adına, konu bağlantı; gerekçe yok', () => {
+    const payload = { connectionId: randomUUID(), businessId: randomUUID(), userId: randomUUID() };
+    expect(intentsForEvent('connection.cancel_notice', payload)).toEqual([
+      {
+        userId: payload.userId,
+        businessId: payload.businessId,
+        type: 'connection_cancelled',
+        subjectId: payload.connectionId,
+        params: {},
+      },
+    ]);
+    expect(NOTIFICATION_EVENT_TYPES).toContain('connection.cancel_notice');
+    // Engel bilgisi şablona da girmez (Mimar notu 3).
+    for (const text of Object.values(NOTIFICATION_TEMPLATES.connection_cancelled ?? {})) {
+      expect(JSON.stringify(text)).not.toMatch(/blok|блок|engel/i);
+    }
+  });
+
   it('US-054 yeni türlerin az/ru/tr şablonu var', () => {
-    for (const type of ['connection_accepted', 'connection_rejected']) {
+    for (const type of ['connection_accepted', 'connection_rejected', 'connection_cancelled']) {
       const template = NOTIFICATION_TEMPLATES[type];
       expect(Object.keys(template ?? {}).sort()).toEqual(['az', 'ru', 'tr']);
     }

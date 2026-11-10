@@ -193,6 +193,36 @@ export const connectionTermsUpdateSchema = z
   .refine((value) => Object.keys(value).length > 0, { message: 'empty_terms' });
 export type ConnectionTermsUpdate = z.infer<typeof connectionTermsUpdateSchema>;
 
+// ---- Bağlantı iptali (F2.15a; US-025, SF-07) ----
+
+/** İptal gerekçeleri (openapi `/connections/{id}/cancel`). Engel `blocked` sunucuda yazılır. */
+export const CONNECTION_CANCEL_REASONS = [
+  'no_longer_working',
+  'payment_issue',
+  'quality_issue',
+  'other',
+] as const;
+export type ConnectionCancelReason = (typeof CONNECTION_CANCEL_REASONS)[number];
+export const CONNECTION_CANCEL_NOTE_MAX = 500;
+
+/**
+ * `POST /connections/{id}/cancel` gövdesi. `confirm: true` ikinci onaydır; yoksa API bu şemadan
+ * önce `422 CONFIRMATION_REQUIRED` döner (SF-07).
+ */
+export const connectionCancelSchema = z
+  .object({
+    reason: z.enum(CONNECTION_CANCEL_REASONS),
+    note: z.string().trim().max(CONNECTION_CANCEL_NOTE_MAX).optional(),
+    confirm: z.literal(true),
+  })
+  .strict();
+export type ConnectionCancelInput = z.infer<typeof connectionCancelSchema>;
+
+export interface ConnectionCancelResult {
+  /** İptal edilen `submitted` sipariş sayısı (F4.5'e kadar 0). */
+  readonly cancelledOrders: number;
+}
+
 export const blockCreateSchema = z.object({ sellerId: z.uuid() }).strict();
 export type BlockCreate = z.infer<typeof blockCreateSchema>;
 

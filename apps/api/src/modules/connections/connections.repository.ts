@@ -324,11 +324,25 @@ export class ConnectionsRepository {
       readonly endReason: string;
       readonly endedByUserId: string;
     },
-  ): Promise<void> {
-    await tx
+  ): Promise<ConnectionRow> {
+    const [row] = await tx
       .update(connections)
       .set({ ...change, status: 'cancelled', updatedAt: change.endedAt })
-      .where(eq(connections.id, id));
+      .where(and(eq(connections.id, id), eq(connections.status, 'active')))
+      .returning();
+    if (row === undefined) throw new Error('iptal edilecek aktif bağlantı yok (kilit dışı çağrı)');
+    return row;
+  }
+
+  /**
+   * İptal edilmiş bağlantıda karşı tarafın aktif işletme adminleri (`connection_counterpart_admins`,
+   * DEFINER, F2.15a): yalnız kullanıcı kimliği.
+   */
+  async counterpartAdminsTx(tx: Tx, connectionId: string): Promise<string[]> {
+    const result = await tx.execute<{ user_id: string }>(
+      sql`select user_id from connection_counterpart_admins(${connectionId}::uuid)`,
+    );
+    return result.rows.map((row) => row.user_id);
   }
 
   /** Gelen bekleyen ve süresi geçmemiş istekler, yeniden eskiye (UUIDv7 sırası). */

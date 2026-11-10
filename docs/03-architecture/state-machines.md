@@ -44,6 +44,8 @@ stateDiagram-v2
 | --- | --- | --- | --- |
 | active → cancelled | Satıcı veya alıcı, `connections.cancel` | Gerekçe ve ikinci onay | `submitted` siparişler `cancelled`; o satıcının sepet kalemleri silinir; `ended_by_side`; alıcı iptalinde bekleme süresi başlar; olay `connection.cancelled` |
 
+Kodda `ConnectionStateMachine` (F2.15a); tablo dışı geçiş `409 INVALID_STATE_TRANSITION`. Engel de bu geçişi kullanır (`end_reason = blocked`); sepet/sipariş yan etkileri `ConnectionCancelledHandler` kancalarıyla aynı işlemde (F4.5).
+
 Bir iptal edilmiş bağlantı **hiçbir zaman** yeniden `active` olmaz. Yeniden bağlantı = yeni istek + yeni `connections` satırı (K6).
 
 ## 3. Sipariş (`orders.status`)
