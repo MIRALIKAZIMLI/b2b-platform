@@ -1,7 +1,16 @@
 import { createApiClient } from '@b2b/api-client';
+import { createIdempotencyKey } from '@b2b/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../admin-sellers/api';
-import { fetchOutgoing, postConnectionRequest } from '../api';
+import {
+  blockSeller,
+  fetchBlocks,
+  fetchIncoming,
+  fetchOutgoing,
+  postConnectionRequest,
+  respondToRequest,
+  unblockSeller,
+} from '../api';
 
 const BASE = 'http://web.test';
 const BUSINESS = '0190a3b4-0000-7000-8000-0000000000aa';
@@ -98,5 +107,87 @@ describe('F2.12b web bağlantı isteği', () => {
     expect(url.searchParams.get('limit')).toBe('20');
     await fetchOutgoing(client, BUSINESS, undefined, undefined);
     expect(new URL(seen[1]?.url ?? '').searchParams.has('status')).toBe(false);
+  });
+});
+
+const REQUEST = created.id;
+const SELLER = '0190a3b4-0000-7000-8000-0000000000dd';
+const KEY = createIdempotencyKey('resp');
+
+describe('F2.13b web gelen istekler, yanıt ve engel', () => {
+  it('F2.13b-AC1 gelen liste: işletme başlığı, imleç ve sayfa', async () => {
+    const page = {
+      items: [
+        {
+          ...created,
+          seller: { id: SELLER, name: 'Baku Food', logoUrl: null, description: null },
+        },
+      ],
+      nextCursor: null,
+    };
+    const { client, seen } = clientWith(() => json(200, page));
+    expect(await fetchIncoming(client, BUSINESS, REQUEST)).toEqual(page);
+    const url = new URL(seen[0]?.url ?? '');
+    expect(url.pathname).toBe('/api/v1/connection-requests/incoming');
+    expect(url.searchParams.get('cursor')).toBe(REQUEST);
+    expect(seen[0]?.headers.get('X-Business-Id')).toBe(BUSINESS);
+  });
+
+  it('F2.13b-AC2 kabul gövdesi confirmDataSharing: true ve idempotens anahtarı taşır', async () => {
+    const { client, seen } = clientWith(() => json(200, { id: 'c-1', status: 'active' }));
+    await respondToRequest(client, BUSINESS, 'accept', REQUEST, KEY);
+    const request = seen[0];
+    expect(request?.method).toBe('POST');
+    expect(new URL(request?.url ?? '').pathname).toBe(
+      `/api/v1/connection-requests/${REQUEST}/accept`,
+    );
+    expect(request?.headers.get('Idempotency-Key')).toBe(KEY);
+    expect(await request?.json()).toEqual({ confirmDataSharing: true });
+  });
+
+  it('F2.13b-AC3 red: gövdesiz POST; süresi dolmuş 409 kodu hataya taşınır', async () => {
+    const { client, seen } = clientWith(() => json(409, { code: 'CONNECTION_REQUEST_EXPIRED' }));
+    const error: unknown = await respondToRequest(client, BUSINESS, 'reject', REQUEST, KEY).catch(
+      (e: unknown) => e,
+    );
+    expect(new URL(seen[0]?.url ?? '').pathname).toBe(
+      `/api/v1/connection-requests/${REQUEST}/reject`,
+    );
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ code: 'CONNECTION_REQUEST_EXPIRED' });
+  });
+
+  it('F2.13b-AC3 engel: satıcı kimliği gövdede, idempotens anahtarıyla', async () => {
+    const { client, seen } = clientWith(() =>
+      json(201, { sellerId: SELLER, sellerName: 'Baku Food', logoUrl: null, createdAt: 'x' }),
+    );
+    await blockSeller(client, BUSINESS, SELLER, KEY);
+    expect(new URL(seen[0]?.url ?? '').pathname).toBe('/api/v1/blocks');
+    expect(seen[0]?.headers.get('Idempotency-Key')).toBe(KEY);
+    expect(await seen[0]?.json()).toEqual({ sellerId: SELLER });
+  });
+
+  it('F2.13b-AC4 bloklananlar listesi ve "Bloku götür" (DELETE 204)', async () => {
+    const list = {
+      items: [{ sellerId: SELLER, sellerName: 'Baku Food', logoUrl: null, createdAt: 'x' }],
+    };
+    const { client, seen } = clientWith(() => json(200, list));
+    expect(await fetchBlocks(client, BUSINESS)).toEqual(list);
+    const removed = clientWith(() => new Response(null, { status: 204 }));
+    await unblockSeller(removed.client, BUSINESS, SELLER);
+    expect(removed.seen[0]?.method).toBe('DELETE');
+    expect(new URL(removed.seen[0]?.url ?? '').pathname).toBe(`/api/v1/blocks/${SELLER}`);
+    expect(seen[0]?.headers.get('X-Business-Id')).toBe(BUSINESS);
+  });
+
+  it('F2.13b-AC6 geri çekme: başkasının isteği 404 hataya taşınır', async () => {
+    const { client, seen } = clientWith(() => json(404, { code: 'NOT_FOUND' }));
+    const error: unknown = await respondToRequest(client, BUSINESS, 'withdraw', REQUEST, KEY).catch(
+      (e: unknown) => e,
+    );
+    expect(new URL(seen[0]?.url ?? '').pathname).toBe(
+      `/api/v1/connection-requests/${REQUEST}/withdraw`,
+    );
+    expect(error).toMatchObject({ code: 'NOT_FOUND' });
   });
 });

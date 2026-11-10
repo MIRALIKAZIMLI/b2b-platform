@@ -263,3 +263,21 @@ export async function loginPlatformThroughUi(
   await page.locator('button[type="submit"]').click();
   await page.waitForURL(`**/${locale}/admin`);
 }
+
+/** Temsilciye (`assigned` kapsam) bölge atar (F2.13b E2E-04): dizin ve istek bu bölgeyle sınırlı. */
+export async function assignMembershipRegion(
+  userId: string,
+  businessId: string,
+  regionId: string,
+): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    await client.query(
+      `insert into membership_regions (membership_id, region_id)
+       select id, $3 from memberships where user_id = $1 and business_id = $2`,
+      [userId, businessId, regionId],
+    );
+    await client.query('commit');
+  });
+}

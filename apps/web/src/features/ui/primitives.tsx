@@ -57,13 +57,15 @@ export function PageHeader({
   );
 }
 
-type ButtonVariant = 'primary' | 'secondary' | 'quiet-danger';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'quiet-danger';
 
 const BUTTON: Record<ButtonVariant, string> = {
   primary:
     'bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30',
   secondary:
     'border border-slate-200/80 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:shadow-md',
+  danger:
+    'bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-500/20 hover:shadow-lg hover:shadow-rose-500/30',
   'quiet-danger':
     'border border-transparent text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700',
 };

@@ -5,7 +5,7 @@
 // - Liste tek kart içinde satırlar: ünvan (kapanmış işletmede silik not), durum rozeti, gönderilme
 //   tarihi; bekleyende son yanıt tarihi; mesaj iki satıra kısalır; önerilen vade `tabular-nums`.
 // - Boş durum süzgece göre iki metin; yükleniyor = iskelet satırlar; hata = yeniden dene.
-// - Geri çekme düğmesi F2.13'te.
+// - F2.13b: bekleyen satırda "Geri çək" (sessiz tehlike) onay penceresi açar (US-022 AC1).
 import { CONNECTION_REQUEST_STATUSES, type ConnectionRequestStatus } from '@b2b/shared';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react';
 import { ApiError } from '../admin-sellers/api';
 import { Badge, Button, Card, PageHeader } from '../ui/primitives';
 import { type OutgoingRequest, useOutgoingRequests } from './api';
+import { ConfirmDialog } from './confirm-dialog';
 import { useConnectionContext } from './context';
 
 const FILTERS = ['all', ...CONNECTION_REQUEST_STATUSES] as const;
@@ -26,9 +27,15 @@ const TONE: Record<ConnectionRequestStatus, 'amber' | 'emerald' | 'slate'> = {
   withdrawn: 'slate',
 };
 
-function RequestRow({ item }: { item: OutgoingRequest }) {
+function RequestRow({
+  item,
+  onWithdraw,
+}: {
+  item: OutgoingRequest;
+  onWithdraw: (item: OutgoingRequest) => void;
+}) {
   const t = useTranslations('connections');
-  const { formatDay } = useConnectionContext();
+  const { formatDay, canSend } = useConnectionContext();
   return (
     <li className="flex flex-col gap-3 px-6 py-5 transition-colors duration-200 hover:bg-slate-50/70 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 space-y-1.5">
@@ -56,8 +63,19 @@ function RequestRow({ item }: { item: OutgoingRequest }) {
         )}
       </div>
       {item.status !== undefined && (
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
           <Badge tone={TONE[item.status]}>{t(`status.${item.status}`)}</Badge>
+          {item.status === 'pending' && canSend && (
+            <Button
+              variant="quiet-danger"
+              className="px-3 py-1.5"
+              onClick={() => {
+                onWithdraw(item);
+              }}
+            >
+              {t('outgoing.withdraw')}
+            </Button>
+          )}
         </div>
       )}
     </li>
@@ -84,6 +102,7 @@ export function OutgoingRequestsPage() {
   const tErrors = useTranslations('errors');
   const { shell, locale, canSend } = useConnectionContext();
   const [filter, setFilter] = useState<Filter>('all');
+  const [withdrawing, setWithdrawing] = useState<OutgoingRequest | undefined>();
   const list = useOutgoingRequests(
     canSend ? shell.activeBusinessId : undefined,
     filter === 'all' ? undefined : filter,
@@ -173,7 +192,7 @@ export function OutgoingRequestsPage() {
           <Card className="overflow-hidden">
             <ul className="divide-y divide-slate-100">
               {items.map((item) => (
-                <RequestRow key={item.id} item={item} />
+                <RequestRow key={item.id} item={item} onWithdraw={setWithdrawing} />
               ))}
             </ul>
           </Card>
@@ -189,6 +208,16 @@ export function OutgoingRequestsPage() {
             </div>
           )}
         </div>
+      )}
+      {withdrawing?.id !== undefined && (
+        <ConfirmDialog
+          action="withdraw"
+          targetId={withdrawing.id}
+          name={withdrawing.buyerName ?? t('outgoing.closed_business')}
+          onClose={() => {
+            setWithdrawing(undefined);
+          }}
+        />
       )}
     </div>
   );

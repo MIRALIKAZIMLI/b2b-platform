@@ -1,6 +1,6 @@
 import { createApiClient } from '@b2b/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type PushDevice, createPushRegistration } from '../push';
+import { type PushDevice, createPushRegistration, subscribePushTaps } from '../push';
 import { BASE } from './fake-server';
 
 const TOKEN_A = 'ExponentPushToken[test-a]';
@@ -24,6 +24,7 @@ function setup(
   let changed: (() => void) | undefined;
   const removed = vi.fn();
   const ensurePermission = vi.fn(() => Promise.resolve(options.granted ?? true));
+  const onTap = vi.fn<PushDevice['onTap']>(() => ({ remove: vi.fn() }));
   const device: PushDevice = {
     platform: 'android',
     projectId: () => ('projectId' in options ? options.projectId : 'project-1'),
@@ -37,10 +38,13 @@ function setup(
       changed = listener;
       return { remove: removed };
     },
+    onTap,
   };
   const registration = createPushRegistration(createApiClient({ baseUrl: BASE, fetch }), device);
   return {
     registration,
+    device,
+    onTap,
     ensurePermission,
     posts,
     removed,
@@ -110,5 +114,23 @@ describe('push anahtarı kaydı (F1.14-AC4)', () => {
     await t.registration.start();
     t.registration.stop();
     expect(t.removed).toHaveBeenCalledOnce();
+  });
+
+  it('F2.13b-AC7 (Müfettiş 18 M1): projectId yok / Expo Go → dokunuş dinlenmez, modül yüklenmez', () => {
+    const t = setup({ projectId: undefined });
+    const subscription = subscribePushTaps(t.device, vi.fn());
+    expect(t.onTap).not.toHaveBeenCalled();
+    expect(() => {
+      subscription.remove();
+    }).not.toThrow();
+  });
+
+  it('F2.13b-AC7: push olan ortamda dokunuş verisi dinleyiciye iletilir', () => {
+    const t = setup();
+    const listener = vi.fn();
+    subscribePushTaps(t.device, listener);
+    expect(t.onTap).toHaveBeenCalledOnce();
+    t.onTap.mock.calls[0]?.[0]({ type: 'connection_request', id: 'r-1' });
+    expect(listener).toHaveBeenCalledWith({ type: 'connection_request', id: 'r-1' });
   });
 });

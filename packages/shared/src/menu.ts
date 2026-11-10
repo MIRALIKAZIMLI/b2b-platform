@@ -94,7 +94,13 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
   // productreport "Perakendeci — Mobil" (web'de aynısı).
   buyer: [
     dashboard,
-    soon('incoming_requests', ['connections.view']),
+    // F2.13b: gelen bağlantı istekleri + engellenenler (US-023).
+    {
+      key: 'incoming_requests',
+      anyOf: ['connections.view'],
+      ready: true,
+      path: 'incoming-requests',
+    },
     soon('products', ['catalog.browse']),
     soon('cart', ['cart.edit']),
     soon('approvals', ['cart.approve']),

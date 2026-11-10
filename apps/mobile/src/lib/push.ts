@@ -19,6 +19,11 @@ export interface PushDevice {
   getExpoToken(projectId: string): Promise<string>;
   /** Cihaz anahtarı değişince çağrılır. */
   onTokenChange(listener: () => void): { remove(): void };
+  /**
+   * Kullanıcı bildirime dokununca `data` (`{ type, id }`) ile çağrılır; uygulama bildirimle
+   * açıldıysa (soğuk başlangıç) son dokunuş da bir kez iletilir (F2.13b).
+   */
+  onTap(listener: (data: unknown) => void): { remove(): void };
 }
 
 export interface PushRegistration {
@@ -77,4 +82,18 @@ export function createPushRegistration(client: ApiClient, device: PushDevice): P
       lastSent = undefined;
     },
   };
+}
+
+const NO_SUBSCRIPTION = { remove: () => undefined };
+
+/**
+ * Push dokunuşunu dinler (F2.13b-AC7; Müfettiş 18 M1). Kayıtla aynı kapı: `projectId` yoksa veya
+ * Expo Go'daysa uzaktan push gelmez; `expo-notifications` hiç yüklenmez, boş abonelik döner.
+ */
+export function subscribePushTaps(
+  device: PushDevice,
+  listener: (data: unknown) => void,
+): { remove(): void } {
+  if (device.projectId() === undefined) return NO_SUBSCRIPTION;
+  return device.onTap(listener);
 }

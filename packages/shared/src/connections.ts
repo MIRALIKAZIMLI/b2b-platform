@@ -1,6 +1,7 @@
 // Bağlantı isteği sözleşmesi (F2.12a; openapi `POST /api/v1/connection-requests`,
 // `GET /api/v1/connection-requests/outgoing`, şema `ConnectionRequest`). İstemci ve sunucu ortak.
 import { z } from 'zod';
+import { pickLocalizedText } from './localized-text';
 
 export const CONNECTION_REQUEST_MESSAGE_MAX = 500;
 export const CONNECTION_REQUEST_TERM_MAX_DAYS = 180;
@@ -178,6 +179,8 @@ export const CONNECTION_REQUEST_ERROR_CODES = [
   'CONNECTION_DAILY_QUOTA_EXCEEDED',
   'SUBSCRIPTION_READ_ONLY',
   'NOT_FOUND',
+  // Müfettiş 17 #59 L3: ağ kopunca istek sunucuda oluşmuş olabilir; metin listeyi gösterir.
+  'IDEMPOTENCY_CONFLICT',
 ] as const;
 
 /** Bu kodlar kartın ilişki durumunun eskidiğini gösterir: dizin yeniden yüklenir. */
@@ -187,6 +190,7 @@ const RELATION_CHANGED: ReadonlySet<string> = new Set([
   'CONNECTION_BLOCKED',
   'CONNECTION_COOLDOWN_ACTIVE',
   'NOT_FOUND',
+  'IDEMPOTENCY_CONFLICT',
 ]);
 
 export interface WaitTime {
@@ -270,4 +274,153 @@ export function parseTermDays(raw: string): number | undefined | 'invalid' {
   if (!/^\d{1,3}$/.test(value)) return 'invalid';
   const days = Number(value);
   return days <= CONNECTION_REQUEST_TERM_MAX_DAYS ? days : 'invalid';
+}
+
+// ---- Yanıt, geri çekme ve engel ekranları (F2.13b; US-022, US-023) ----
+
+/** Kabul / red / engel / geri çekme hatasında ekranın kendi metniyle gösterdiği kodlar. */
+export const CONNECTION_RESPOND_ERROR_CODES = [
+  'CONNECTION_REQUEST_EXPIRED',
+  'INVALID_STATE_TRANSITION',
+  'CONNECTION_ALREADY_ACTIVE',
+  'NOT_FOUND',
+] as const;
+
+export interface RespondFailure {
+  /** Çeviri anahtarı: `connections.respond_error.<kod>` ya da genel `errors.<kod>`. */
+  readonly key: string;
+  /** İstek artık bekleyen değil (süre doldu, yanıtlandı, geri çekildi): liste yenilenmeli. */
+  readonly refresh: boolean;
+}
+
+/** Yanıt uçlarının hata gövdesi → mesaj anahtarı. Gövde yoksa (ağ hatası) `INTERNAL_ERROR`. */
+export function respondFailure(body: unknown): RespondFailure {
+  const object = typeof body === 'object' && body !== null ? body : {};
+  const code = 'code' in object && typeof object.code === 'string' ? object.code : 'INTERNAL_ERROR';
+  const known = (CONNECTION_RESPOND_ERROR_CODES as readonly string[]).includes(code);
+  return {
+    key: known ? `connections.respond_error.${code}` : `errors.${code}`,
+    refresh: known,
+  };
+}
+
+/** Gelen istek kartının izinleri (US-023 AC6): satın alma sorumlusu yalnız görür. */
+export interface IncomingAccess {
+  readonly view: boolean;
+  readonly respond: boolean;
+  readonly block: boolean;
+}
+
+export function incomingAccess(codes: readonly string[]): IncomingAccess {
+  const has = (code: string) => codes.includes(code);
+  return {
+    view: has('connections.view'),
+    respond: has('connections.request.respond'),
+    block: has('connections.block'),
+  };
+}
+
+/** Ünvanın baş harfleri (logo yoksa); en çok iki harf. */
+export function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((part) => part !== '')
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toLocaleUpperCase())
+    .join('');
+}
+
+/** Gelen istek kartının görünüm modeli (US-023 AC1): yalnız özet alanları; ürün ve fiyat yok. */
+export interface IncomingCardView {
+  readonly id: string;
+  readonly sellerId: string;
+  readonly sellerName: string;
+  readonly initials: string;
+  readonly logoUrl: string | null;
+  /** Kullanıcının dilinde tanıtım; yoksa sırayla diğer diller; hiç yoksa null. */
+  readonly description: string | null;
+  readonly message: string | null;
+  readonly termDays: number | null;
+  readonly expiresAt: string | null;
+}
+
+/** Üretilmiş istemci tipinde istek alanları isteğe bağlı; görünüm yalnız bunları okur. */
+export interface IncomingCardInput {
+  readonly id?: string;
+  readonly message?: string | null;
+  readonly proposedPaymentTermDays?: number | null;
+  readonly expiresAt?: string;
+  readonly seller: ConnectionSellerSummary;
+}
+
+export function incomingCardView(item: IncomingCardInput, lang: string): IncomingCardView {
+  const description =
+    item.seller.description === null ? undefined : pickLocalizedText(item.seller.description, lang);
+  return {
+    id: item.id ?? '',
+    sellerId: item.seller.id,
+    sellerName: item.seller.name,
+    initials: initialsOf(item.seller.name),
+    logoUrl: item.seller.logoUrl,
+    description: description ?? null,
+    message: item.message ?? null,
+    termDays: item.proposedPaymentTermDays ?? null,
+    expiresAt: item.expiresAt ?? null,
+  };
+}
+
+/** Push dokunuşunun açacağı ekran: alan + alan içindeki adres (menü `path`'i ile aynı). */
+export interface PushTarget {
+  readonly area: 'seller' | 'buyer';
+  readonly path: string;
+}
+
+const PUSH_TARGETS: Readonly<Record<string, PushTarget>> = {
+  // Perakendeciye yeni istek (US-054) → gelen istekler.
+  connection_request: { area: 'buyer', path: 'incoming-requests' },
+  // Toptancıya yanıt → gönderilen istekler.
+  connection_accepted: { area: 'seller', path: 'requests' },
+  connection_rejected: { area: 'seller', path: 'requests' },
+};
+
+/** Push `data` (`{ type, id }`) → ekran; bilinmeyen tür veya bozuk veri `undefined`. */
+export function pushRoute(data: unknown): PushTarget | undefined {
+  if (typeof data !== 'object' || data === null || !('type' in data)) return undefined;
+  const type = data.type;
+  return typeof type === 'string' && Object.hasOwn(PUSH_TARGETS, type)
+    ? PUSH_TARGETS[type]
+    : undefined;
+}
+
+/** Gönderilen isteğin ardından dizin kartının ilişkisi (sunucu yanıtıyla aynı). */
+const PENDING_RELATION: ConnectionRelation = {
+  status: 'pending',
+  cooldownUntil: null,
+  canRequest: false,
+};
+
+function markItems(items: unknown, buyerId: string): unknown {
+  if (!Array.isArray(items)) return items;
+  return items.map((item: unknown) =>
+    typeof item === 'object' && item !== null && 'id' in item && item.id === buyerId
+      ? { ...item, relation: PENDING_RELATION }
+      : item,
+  );
+}
+
+/**
+ * Müfettiş 17 #59 L4: istek başarıyla gidince dizin önbelleğindeki kart yerinde "Gözləyir" olur;
+ * arama yeniden çalışmaz (hız sınırından hak harcanmaz). Sayfalı (`pages`) ve tek sayfa (`items`)
+ * önbellek biçimlerini değiştirmeden kopyalar.
+ */
+export function withPendingRelation<T>(data: T, buyerId: string): T {
+  if (typeof data !== 'object' || data === null) return data;
+  if ('pages' in data && Array.isArray(data.pages)) {
+    return {
+      ...data,
+      pages: data.pages.map((page: unknown) => withPendingRelation(page, buyerId)),
+    };
+  }
+  if ('items' in data) return { ...data, items: markItems(data.items, buyerId) };
+  return data;
 }

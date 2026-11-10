@@ -56,3 +56,74 @@ export async function fetchOutgoing(
   if (data === undefined) throw new ConnectionRequestError(error);
   return data;
 }
+
+// ---- Gelen istekler, yanıt, geri çekme, engel (F2.13b; openapi F2.13a uçları) ----
+
+type Incoming = paths['/api/v1/connection-requests/incoming']['get'];
+export type IncomingPage = Incoming['responses']['200']['content']['application/json'];
+export type BlockList =
+  paths['/api/v1/blocks']['get']['responses']['200']['content']['application/json'];
+
+export type RespondAction = 'accept' | 'reject' | 'withdraw';
+/** Onay sayfası eylemi: yanıt, geri çekme, engel veya engel kaldırma. */
+export type ConfirmAction = RespondAction | 'block' | 'unblock';
+
+export async function fetchIncoming(
+  client: ApiClient,
+  businessId: string,
+  cursor: string | undefined,
+): Promise<IncomingPage> {
+  const { data, error } = await client.GET('/api/v1/connection-requests/incoming', {
+    params: {
+      header: { 'X-Business-Id': businessId },
+      query: { limit: 20, ...(cursor === undefined ? {} : { cursor }) },
+    },
+  });
+  if (data === undefined) throw new ConnectionRequestError(error);
+  return data;
+}
+
+export async function fetchBlocks(client: ApiClient, businessId: string): Promise<BlockList> {
+  const { data, error } = await client.GET('/api/v1/blocks', {
+    params: { header: { 'X-Business-Id': businessId } },
+  });
+  if (data === undefined) throw new ConnectionRequestError(error);
+  return data;
+}
+
+/**
+ * Onay sayfasının eylemi. Kabulde gövde `confirmDataSharing: true` (US-023 AC2). `id` istek
+ * kimliği; engel ve engel kaldırmada toptancı kimliği.
+ */
+export async function runConfirmAction(
+  client: ApiClient,
+  businessId: string,
+  action: ConfirmAction,
+  id: string,
+  idempotencyKey: string,
+): Promise<void> {
+  const header = { 'X-Business-Id': businessId, 'Idempotency-Key': idempotencyKey };
+  if (action === 'unblock') {
+    const { error, response } = await client.DELETE('/api/v1/blocks/{sellerId}', {
+      params: { header: { 'X-Business-Id': businessId }, path: { sellerId: id } },
+    });
+    if (!response.ok) throw new ConnectionRequestError(error);
+    return;
+  }
+  const result =
+    action === 'block'
+      ? await client.POST('/api/v1/blocks', { params: { header }, body: { sellerId: id } })
+      : action === 'accept'
+        ? await client.POST('/api/v1/connection-requests/{id}/accept', {
+            params: { header, path: { id } },
+            body: { confirmDataSharing: true },
+          })
+        : action === 'reject'
+          ? await client.POST('/api/v1/connection-requests/{id}/reject', {
+              params: { header, path: { id } },
+            })
+          : await client.POST('/api/v1/connection-requests/{id}/withdraw', {
+              params: { header, path: { id } },
+            });
+  if (result.data === undefined) throw new ConnectionRequestError(result.error);
+}

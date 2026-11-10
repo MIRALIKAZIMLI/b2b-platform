@@ -2,7 +2,7 @@
 // F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi;
 // F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni;
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
-// daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme).
+// daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -2574,5 +2574,271 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Geri',
     ru: 'Назад',
     tr: 'Geri',
+  },
+  // F2.13b: gelen istekler, bloklananlar, onay pencereleri, geri çekme.
+  'connections.error.IDEMPOTENCY_CONFLICT': {
+    az: 'Sorğu artıq göndərilmiş ola bilər. Sorğular siyahısını yoxlayın.',
+    ru: 'Запрос, возможно, уже отправлен. Проверьте список запросов.',
+    tr: 'İstek zaten gönderilmiş olabilir. İstekler listesini kontrol edin.',
+  },
+  'connections.respond_error.CONNECTION_REQUEST_EXPIRED': {
+    az: 'Bu sorğunun müddəti bitib. Siyahı yeniləndi.',
+    ru: 'Срок действия этого запроса истёк. Список обновлён.',
+    tr: 'Bu isteğin süresi doldu. Liste yenilendi.',
+  },
+  'connections.respond_error.INVALID_STATE_TRANSITION': {
+    az: 'Bu sorğu artıq cavablandırılıb və ya geri çəkilib. Siyahı yeniləndi.',
+    ru: 'На этот запрос уже ответили или он отозван. Список обновлён.',
+    tr: 'Bu istek zaten yanıtlandı ya da geri çekildi. Liste yenilendi.',
+  },
+  'connections.respond_error.CONNECTION_ALREADY_ACTIVE': {
+    az: 'Bu topdançı ilə artıq aktiv bağlantınız var.',
+    ru: 'С этим поставщиком уже есть активная связь.',
+    tr: 'Bu toptancıyla zaten aktif bağlantınız var.',
+  },
+  'connections.respond_error.NOT_FOUND': {
+    az: 'Sorğu tapılmadı və ya artıq sizə aid deyil. Siyahı yeniləndi.',
+    ru: 'Запрос не найден или больше вам недоступен. Список обновлён.',
+    tr: 'İstek bulunamadı ya da artık size ait değil. Liste yenilendi.',
+  },
+  'connections.incoming.title': {
+    az: 'Gələn sorğular',
+    ru: 'Входящие запросы',
+    tr: 'Gelen istekler',
+  },
+  'connections.incoming.description': {
+    az: 'Sizinlə işləmək istəyən topdançılar. Qəbul etdikdən sonra onların məhsullarını görəcəksiniz.',
+    ru: 'Поставщики, которые хотят с вами работать. После принятия вы увидите их товары.',
+    tr: 'Sizinle çalışmak isteyen toptancılar. Kabul ettikten sonra ürünlerini göreceksiniz.',
+  },
+  'connections.incoming.tabs_label': {
+    az: 'Sorğu bölmələri',
+    ru: 'Разделы запросов',
+    tr: 'İstek bölümleri',
+  },
+  'connections.incoming.tab_incoming': {
+    az: 'Gələn sorğular',
+    ru: 'Входящие',
+    tr: 'Gelen istekler',
+  },
+  'connections.incoming.tab_blocked': {
+    az: 'Bloklananlar',
+    ru: 'Заблокированные',
+    tr: 'Engellenenler',
+  },
+  'connections.incoming.no_description': {
+    az: 'Topdançı tanıtım mətni əlavə etməyib.',
+    ru: 'Поставщик не добавил описание.',
+    tr: 'Toptancı tanıtım metni eklememiş.',
+  },
+  'connections.incoming.message': {
+    az: 'Mesaj',
+    ru: 'Сообщение',
+    tr: 'Mesaj',
+  },
+  'connections.incoming.term': {
+    az: 'Təklif olunan ödəniş müddəti:',
+    ru: 'Предложенная отсрочка:',
+    tr: 'Önerilen vade:',
+  },
+  'connections.incoming.term_none': {
+    az: 'göstərilməyib',
+    ru: 'не указана',
+    tr: 'belirtilmemiş',
+  },
+  'connections.incoming.term_days': {
+    az: '{days} gün',
+    ru: '{days} дн.',
+    tr: '{days} gün',
+  },
+  'connections.incoming.expires': {
+    az: 'Son cavab tarixi:',
+    ru: 'Ответить до:',
+    tr: 'Son yanıt tarihi:',
+  },
+  'connections.incoming.accept': {
+    az: 'Qəbul et',
+    ru: 'Принять',
+    tr: 'Kabul et',
+  },
+  'connections.incoming.reject': {
+    az: 'Rədd et',
+    ru: 'Отклонить',
+    tr: 'Reddet',
+  },
+  'connections.incoming.block': {
+    az: 'Blokla',
+    ru: 'Заблокировать',
+    tr: 'Engelle',
+  },
+  'connections.incoming.empty_title': {
+    az: 'Gözləyən sorğu yoxdur',
+    ru: 'Нет ожидающих запросов',
+    tr: 'Bekleyen istek yok',
+  },
+  'connections.incoming.empty': {
+    az: 'Topdançı sizə bağlantı sorğusu göndərəndə burada görünəcək.',
+    ru: 'Когда поставщик отправит вам запрос на связь, он появится здесь.',
+    tr: 'Bir toptancı size bağlantı isteği gönderdiğinde burada görünür.',
+  },
+  'connections.blocked.empty_title': {
+    az: 'Bloklanan topdançı yoxdur',
+    ru: 'Нет заблокированных поставщиков',
+    tr: 'Engellenen toptancı yok',
+  },
+  'connections.blocked.empty': {
+    az: 'Blokladığınız topdançılar sizə sorğu göndərə bilmir və burada görünür.',
+    ru: 'Заблокированные поставщики не могут отправлять вам запросы и отображаются здесь.',
+    tr: 'Engellediğiniz toptancılar size istek gönderemez ve burada görünür.',
+  },
+  'connections.blocked.since': {
+    az: '{date} tarixindən bloklanıb',
+    ru: 'Заблокирован с {date}',
+    tr: '{date} tarihinden beri engelli',
+  },
+  'connections.blocked.unblock': {
+    az: 'Bloku götür',
+    ru: 'Разблокировать',
+    tr: 'Engeli kaldır',
+  },
+  'connections.outgoing.withdraw': {
+    az: 'Geri çək',
+    ru: 'Отозвать',
+    tr: 'Geri çek',
+  },
+  'connections.confirm.cancel': {
+    az: 'Bağla',
+    ru: 'Закрыть',
+    tr: 'Kapat',
+  },
+  'connections.confirm.working': {
+    az: 'Göndərilir…',
+    ru: 'Отправка…',
+    tr: 'Gönderiliyor…',
+  },
+  'connections.confirm.accept.eyebrow': {
+    az: 'Sorğunu qəbul et',
+    ru: 'Принять запрос',
+    tr: 'İsteği kabul et',
+  },
+  'connections.confirm.accept.title': {
+    az: '{name} ilə bağlantı qurulsun?',
+    ru: 'Установить связь с {name}?',
+    tr: '{name} ile bağlantı kurulsun mu?',
+  },
+  'connections.confirm.accept.point_1': {
+    az: 'Bu topdançı çatdırılma və əlaqə məlumatlarınızı görəcək.',
+    ru: 'Этот поставщик увидит ваши данные доставки и контакты.',
+    tr: 'Bu toptancı teslimat ve iletişim bilgilerinizi görecek.',
+  },
+  'connections.confirm.accept.point_2': {
+    az: 'Siz onun məhsullarını və sizə təyin etdiyi qiymətləri görəcəksiniz.',
+    ru: 'Вы увидите его товары и назначенные вам цены.',
+    tr: 'Onun ürünlerini ve size atadığı fiyatları göreceksiniz.',
+  },
+  'connections.confirm.accept.point_3': {
+    az: 'Bağlantını istənilən vaxt bitirə və ya topdançını bloklaya bilərsiniz.',
+    ru: 'Вы можете в любой момент прекратить связь или заблокировать поставщика.',
+    tr: 'Bağlantıyı istediğiniz zaman bitirebilir ya da toptancıyı engelleyebilirsiniz.',
+  },
+  'connections.confirm.accept.submit': {
+    az: 'Razıyam, qəbul et',
+    ru: 'Согласен, принять',
+    tr: 'Onaylıyorum, kabul et',
+  },
+  'connections.confirm.reject.eyebrow': {
+    az: 'Sorğunu rədd et',
+    ru: 'Отклонить запрос',
+    tr: 'İsteği reddet',
+  },
+  'connections.confirm.reject.title': {
+    az: '{name} sorğusu rədd edilsin?',
+    ru: 'Отклонить запрос от {name}?',
+    tr: '{name} isteği reddedilsin mi?',
+  },
+  'connections.confirm.reject.point_1': {
+    az: 'Sorğu siyahınızdan çıxacaq; topdançıya bildiriş gedəcək.',
+    ru: 'Запрос исчезнет из списка; поставщик получит уведомление.',
+    tr: 'İstek listenizden kalkar; toptancıya bildirim gider.',
+  },
+  'connections.confirm.reject.point_2': {
+    az: 'Topdançı bir müddət sizə yeni sorğu göndərə bilməyəcək.',
+    ru: 'Некоторое время поставщик не сможет отправить вам новый запрос.',
+    tr: 'Toptancı bir süre size yeni istek gönderemez.',
+  },
+  'connections.confirm.reject.submit': {
+    az: 'Rədd et',
+    ru: 'Отклонить',
+    tr: 'Reddet',
+  },
+  'connections.confirm.block.eyebrow': {
+    az: 'Topdançını blokla',
+    ru: 'Заблокировать поставщика',
+    tr: 'Toptancıyı engelle',
+  },
+  'connections.confirm.block.title': {
+    az: '{name} bloklansın?',
+    ru: 'Заблокировать {name}?',
+    tr: '{name} engellensin mi?',
+  },
+  'connections.confirm.block.point_1': {
+    az: 'Gözləyən sorğusu rədd ediləcək.',
+    ru: 'Ожидающий запрос будет отклонён.',
+    tr: 'Bekleyen isteği reddedilir.',
+  },
+  'connections.confirm.block.point_2': {
+    az: 'Aktiv bağlantı varsa bitəcək.',
+    ru: 'Активная связь, если есть, будет завершена.',
+    tr: 'Aktif bağlantı varsa sona erer.',
+  },
+  'connections.confirm.block.point_3': {
+    az: 'Bloku götürənə qədər sizə sorğu göndərə bilməyəcək.',
+    ru: 'Пока вы не снимете блокировку, он не сможет отправлять вам запросы.',
+    tr: 'Engeli kaldırana kadar size istek gönderemez.',
+  },
+  'connections.confirm.block.submit': {
+    az: 'Blokla',
+    ru: 'Заблокировать',
+    tr: 'Engelle',
+  },
+  'connections.confirm.unblock.eyebrow': {
+    az: 'Bloku götür',
+    ru: 'Снять блокировку',
+    tr: 'Engeli kaldır',
+  },
+  'connections.confirm.unblock.title': {
+    az: '{name} üçün blok götürülsün?',
+    ru: 'Разблокировать {name}?',
+    tr: '{name} için engel kaldırılsın mı?',
+  },
+  'connections.confirm.unblock.point_1': {
+    az: 'Topdançı yenidən sizə sorğu göndərə biləcək (gözləmə müddəti qaydaları ilə).',
+    ru: 'Поставщик снова сможет отправлять вам запросы (с учётом периода ожидания).',
+    tr: 'Toptancı size yeniden istek gönderebilir (bekleme süresi kurallarıyla).',
+  },
+  'connections.confirm.unblock.submit': {
+    az: 'Bloku götür',
+    ru: 'Разблокировать',
+    tr: 'Engeli kaldır',
+  },
+  'connections.confirm.withdraw.eyebrow': {
+    az: 'Sorğunu geri çək',
+    ru: 'Отозвать запрос',
+    tr: 'İsteği geri çek',
+  },
+  'connections.confirm.withdraw.title': {
+    az: '{name} üçün sorğu geri çəkilsin?',
+    ru: 'Отозвать запрос для {name}?',
+    tr: '{name} için istek geri çekilsin mi?',
+  },
+  'connections.confirm.withdraw.point_1': {
+    az: 'Sorğu pərakəndəçinin siyahısından çıxacaq. İstəsəniz sonra yenidən göndərə bilərsiniz.',
+    ru: 'Запрос исчезнет у розничной точки. При желании вы сможете отправить его снова.',
+    tr: 'İstek perakendecinin listesinden kalkar. İsterseniz sonra yeniden gönderebilirsiniz.',
+  },
+  'connections.confirm.withdraw.submit': {
+    az: 'Geri çək',
+    ru: 'Отозвать',
+    tr: 'Geri çek',
   },
 };

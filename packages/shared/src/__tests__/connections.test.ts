@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { createIdempotencyKey } from '../buyer-registration';
 import {
+  connectionAcceptSchema,
   connectionFailureMessage,
   connectionRequestCreateSchema,
   connectionRequestFailure,
+  incomingAccess,
+  incomingCardView,
   parseTermDays,
+  pushRoute,
   relationView,
+  respondFailure,
   waitTimeOf,
+  withPendingRelation,
 } from '../connections';
 import { visibleMenu } from '../menu';
 
@@ -165,5 +171,145 @@ describe('F2.12b bağlantı isteği ekran yardımcıları', () => {
     expect(connectionFailureMessage(connectionRequestFailure({ code: 'X_UNKNOWN' }))).toEqual({
       key: 'errors.X_UNKNOWN',
     });
+  });
+});
+
+describe('F2.13b yanıt, engel ve push yardımcıları', () => {
+  const seller = {
+    id: '0190a3b4-0000-7000-8000-0000000000dd',
+    name: 'Baku Food Distribution',
+    logoUrl: null,
+    description: { az: 'Ərzaq topdan satışı', ru: 'Оптовая продажа продуктов' },
+  };
+  const incoming = {
+    id: '0190a3b4-0000-7000-8000-0000000000ee',
+    sellerId: seller.id,
+    buyerId: BUYER,
+    status: 'pending' as const,
+    message: 'Salam',
+    proposedPaymentTermDays: 30,
+    expiresAt: '2026-11-24T00:00:00.000Z',
+    createdAt: '2026-11-10T00:00:00.000Z',
+    seller,
+  };
+
+  it('F2.13b-AC1 kart görünümü: ünvan, baş harf, kullanıcı dilinde tanıtım, mesaj, vade', () => {
+    const view = incomingCardView(incoming, 'ru');
+    expect(view).toEqual({
+      id: incoming.id,
+      sellerId: seller.id,
+      sellerName: seller.name,
+      initials: 'BF',
+      logoUrl: null,
+      description: 'Оптовая продажа продуктов',
+      message: 'Salam',
+      termDays: 30,
+      expiresAt: incoming.expiresAt,
+    });
+    // Kullanıcının dili yoksa varsayılan dile düşer; tanıtım yoksa null.
+    expect(incomingCardView(incoming, 'tr').description).toBe('Ərzaq topdan satışı');
+    expect(
+      incomingCardView({ ...incoming, seller: { ...seller, description: null } }, 'az').description,
+    ).toBeNull();
+    // Ürün, fiyat, başka bağlantı alanı yok (US-023 AC1).
+    expect(Object.keys(view).some((key) => /product|price|connection/i.test(key))).toBe(false);
+  });
+
+  it('F2.13b-AC2 kabul gövdesi yalnız confirmDataSharing: true', () => {
+    expect(connectionAcceptSchema.safeParse({ confirmDataSharing: true }).success).toBe(true);
+    expect(connectionAcceptSchema.safeParse({ confirmDataSharing: false }).success).toBe(false);
+    expect(connectionAcceptSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('F2.13b-AC3 yanıt hataları: 409 süresi dolmuş / durum değişmiş ve 404 listeyi yeniler', () => {
+    expect(respondFailure({ code: 'CONNECTION_REQUEST_EXPIRED' })).toEqual({
+      key: 'connections.respond_error.CONNECTION_REQUEST_EXPIRED',
+      refresh: true,
+    });
+    expect(respondFailure({ code: 'INVALID_STATE_TRANSITION' })).toEqual({
+      key: 'connections.respond_error.INVALID_STATE_TRANSITION',
+      refresh: true,
+    });
+    expect(respondFailure({ code: 'NOT_FOUND' }).refresh).toBe(true);
+    expect(respondFailure({ code: 'SUBSCRIPTION_READ_ONLY' })).toEqual({
+      key: 'errors.SUBSCRIPTION_READ_ONLY',
+      refresh: false,
+    });
+    expect(respondFailure(undefined)).toEqual({ key: 'errors.INTERNAL_ERROR', refresh: false });
+  });
+
+  it('F2.13b-AC5 satın alma sorumlusu görür ama yanıtlayamaz ve engelleyemez; menü hazır', () => {
+    expect(incomingAccess(['connections.view'])).toEqual({
+      view: true,
+      respond: false,
+      block: false,
+    });
+    expect(
+      incomingAccess(['connections.view', 'connections.request.respond', 'connections.block']),
+    ).toEqual({ view: true, respond: true, block: true });
+    const item = visibleMenu('buyer', ['connections.view']).find(
+      (entry) => entry.key === 'incoming_requests',
+    );
+    expect(item).toMatchObject({ ready: true, path: 'incoming-requests' });
+    expect(visibleMenu('buyer', []).some((entry) => entry.key === 'incoming_requests')).toBe(false);
+  });
+
+  it('F2.13b-AC6 geri çekme hatası: başkasının isteği 404, yanıtlanmış istek 409 anlaşılır', () => {
+    expect(respondFailure({ code: 'NOT_FOUND' }).key).toBe('connections.respond_error.NOT_FOUND');
+    expect(respondFailure({ code: 'INVALID_STATE_TRANSITION' }).key).toBe(
+      'connections.respond_error.INVALID_STATE_TRANSITION',
+    );
+  });
+
+  it('F2.13b-AC7 push dokunuşu: istek → gelen istekler, yanıt → gönderilen istekler', () => {
+    expect(pushRoute({ type: 'connection_request', id: incoming.id })).toEqual({
+      area: 'buyer',
+      path: 'incoming-requests',
+    });
+    expect(pushRoute({ type: 'connection_accepted', id: incoming.id })).toEqual({
+      area: 'seller',
+      path: 'requests',
+    });
+    expect(pushRoute({ type: 'connection_rejected', id: incoming.id })).toEqual({
+      area: 'seller',
+      path: 'requests',
+    });
+    expect(pushRoute({ type: 'team_invitation' })).toBeUndefined();
+    expect(pushRoute({ type: 'toString' })).toBeUndefined();
+    expect(pushRoute(null)).toBeUndefined();
+    expect(pushRoute('connection_request')).toBeUndefined();
+  });
+
+  it('F2.13b-AC8 (#59 L3) idempotens çakışması anlaşılır metin ve kart yenilenir', () => {
+    expect(connectionRequestFailure({ code: 'IDEMPOTENCY_CONFLICT' })).toMatchObject({
+      known: true,
+      relationChanged: true,
+    });
+    expect(
+      connectionFailureMessage(connectionRequestFailure({ code: 'IDEMPOTENCY_CONFLICT' })),
+    ).toEqual({ key: 'connections.error.IDEMPOTENCY_CONFLICT' });
+    // Hız sınırı ve salt-okunur abonelik kartın durumunu değiştirmez: dizin yeniden aranmaz (L4).
+    expect(connectionRequestFailure({ code: 'RATE_LIMITED' }).relationChanged).toBe(false);
+    expect(connectionRequestFailure({ code: 'SUBSCRIPTION_READ_ONLY' }).relationChanged).toBe(
+      false,
+    );
+  });
+
+  it('F2.13b-AC8 (#59 L4) başarıda dizin önbelleği yerinde güncellenir', () => {
+    const none = { status: 'none', cooldownUntil: null, canRequest: true };
+    const other = { id: 'other', relation: none };
+    const target = { id: BUYER, legalName: 'A', relation: none };
+    const infinite = { pages: [{ items: [other, target], nextCursor: null }], pageParams: [null] };
+    const next = withPendingRelation(infinite, BUYER);
+    expect(next.pages[0]?.items[1]).toEqual({
+      id: BUYER,
+      legalName: 'A',
+      relation: { status: 'pending', cooldownUntil: null, canRequest: false },
+    });
+    expect(next.pages[0]?.items[0]).toBe(other);
+    expect(infinite.pages[0]?.items[1]?.relation).toBe(none);
+    const single = withPendingRelation({ items: [target], nextCursor: null }, BUYER);
+    expect(single.items[0]?.relation.status).toBe('pending');
+    expect(withPendingRelation(null, BUYER)).toBeNull();
   });
 });

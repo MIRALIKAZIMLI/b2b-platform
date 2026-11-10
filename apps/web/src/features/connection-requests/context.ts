@@ -1,7 +1,12 @@
 'use client';
 // Bağlantı isteği ekranlarının ortak bağlamı (F2.12b): gönderme izni ve tarih biçimi için saat
 // dilimi zinciri (kullanıcı → işletme → ülke, US-059 AC2).
-import { type ConnectionFailureMessage, formatDate, type TimeZoneChain } from '@b2b/shared';
+import {
+  type ConnectionFailureMessage,
+  formatDate,
+  incomingAccess,
+  type TimeZoneChain,
+} from '@b2b/shared';
 import { useLocale, useTranslations } from 'next-intl';
 import { DEFAULT_TIMEZONE } from '../admin-sellers/form';
 import { useShell } from '../shell/use-shell';
@@ -16,13 +21,14 @@ export function useConnectionContext() {
     business: shell.me?.activeBusiness?.timezone ?? null,
     country: DEFAULT_TIMEZONE,
   };
-  const canSend = (shell.me?.activeBusiness?.permissions ?? []).some(
-    (item) => item.code === SEND_PERMISSION,
-  );
+  const codes = (shell.me?.activeBusiness?.permissions ?? []).map((item) => item.code);
+  const canSend = codes.includes(SEND_PERMISSION);
   return {
     shell,
     locale,
     canSend,
+    /** Gelen istekler (F2.13b): görme, yanıtlama, engel (US-023 AC6). */
+    access: incomingAccess(codes),
     formatDay: (iso: string) => formatDate(iso, locale, timeZone),
   };
 }
