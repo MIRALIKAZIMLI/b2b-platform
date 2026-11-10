@@ -225,4 +225,25 @@ describe('F2.13a bağlantı yanıtı kiracı izolasyonu ve bekçiler', () => {
       ),
     ).toBe('23514');
   });
+
+  it('F2.13a T6 seller_profiles_definer_select yalnız migrator; bekçi tetikleyicileri bağlı', async () => {
+    const policies = await withSystemTx((tx) =>
+      tx.execute<{ policyname: string; roles: string }>(sql`
+        select policyname, array_to_string(roles, ',') as roles from pg_policies
+         where tablename = 'seller_profiles' and policyname = 'seller_profiles_definer_select'`),
+    );
+    expect(policies.rows).toEqual([
+      { policyname: 'seller_profiles_definer_select', roles: 'migrator' },
+    ]);
+    const triggers = await withSystemTx((tx) =>
+      tx.execute<{ tgname: string }>(sql`
+        select tgname from pg_trigger
+         where tgname in ('connection_requests_guard', 'connections_guard') and tgenabled = 'O'
+         order by tgname`),
+    );
+    expect(triggers.rows.map((row) => row.tgname)).toEqual([
+      'connection_requests_guard',
+      'connections_guard',
+    ]);
+  });
 });

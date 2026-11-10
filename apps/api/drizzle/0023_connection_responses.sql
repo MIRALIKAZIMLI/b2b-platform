@@ -45,8 +45,9 @@ BEGIN
       RAISE EXCEPTION 'connection_requests: geri çekmede yanıt alanı yok' USING ERRCODE = '23514';
     END IF;
   ELSIF NEW.status = 'expired' THEN
-    -- Süre dolumu sistem işidir (F2.16); kiracı bağlamında yapılamaz.
-    IF v_ctx IS NOT NULL THEN
+    -- Süre dolumu sistem işidir (F2.16): yalnız migrator sahipli fonksiyon içinden, bağlamsız
+    -- (review-guide T4: izin verilen rol adıyla, kapalı varsayılan).
+    IF current_user <> 'migrator' OR v_ctx IS NOT NULL THEN
       RAISE EXCEPTION 'connection_requests: süre dolumu yalnız sistem işi' USING ERRCODE = '42501';
     END IF;
   END IF;
