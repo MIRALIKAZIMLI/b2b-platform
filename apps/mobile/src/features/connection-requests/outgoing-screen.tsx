@@ -3,7 +3,8 @@
 // - Her istek bir kart: ünvan (kapanmış işletmede silik not), durum rozeti, gönderilme tarihi,
 //   bekleyende son yanıt tarihi, mesaj (3 satır), önerilen vade.
 // - Liste sonunda sonraki sayfa; aşağı çekince yenilenir. Boş durum süzgece göre; boşta "Pərakəndəçi
-//   tap" dizine götürür. Hata kartında yeniden dene. Geri çekme F2.13'te.
+//   tap" dizine götürür. Hata kartında yeniden dene.
+// - F2.13b: bekleyen kartta "Geri çək" (gül rengi metin, ikincil) onay sayfası açar (US-022 AC1).
 import { CONNECTION_REQUEST_STATUSES, type ConnectionRequestStatus } from '@b2b/shared';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -20,6 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, pressed, radius, softShadow, space, touchTarget } from '../../lib/theme';
 import { ConnectionRequestError, type OutgoingRequest } from './api';
+import { ConfirmSheet } from './confirm-sheet';
 import { useConnectionContext, useOutgoingRequests } from './queries';
 
 const FILTERS = ['all', ...CONNECTION_REQUEST_STATUSES] as const;
@@ -33,9 +35,15 @@ const BADGE: Record<ConnectionRequestStatus, { bg: string; fg: string }> = {
   withdrawn: { bg: colors.surfaceMuted, fg: '#475569' },
 };
 
-function RequestCard({ item }: { readonly item: OutgoingRequest }) {
+function RequestCard({
+  item,
+  onWithdraw,
+}: {
+  readonly item: OutgoingRequest;
+  readonly onWithdraw: (item: OutgoingRequest) => void;
+}) {
   const { t } = useTranslation();
-  const { formatDay } = useConnectionContext();
+  const { formatDay, canSend } = useConnectionContext();
   const badge = item.status === undefined ? undefined : BADGE[item.status];
   return (
     <View style={styles.card}>
@@ -77,6 +85,19 @@ function RequestCard({ item }: { readonly item: OutgoingRequest }) {
           {t('connections.outgoing.term', { days: item.proposedPaymentTermDays })}
         </Text>
       )}
+      {item.status === 'pending' && canSend && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            onWithdraw(item);
+          }}
+          style={({ pressed: isPressed }) => [styles.secondary, isPressed && pressed]}
+        >
+          <Text style={[styles.secondaryText, styles.dangerText]}>
+            {t('connections.outgoing.withdraw')}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -86,6 +107,7 @@ export function OutgoingScreen() {
   const router = useRouter();
   const { businessId, canSend, meLoaded } = useConnectionContext();
   const [filter, setFilter] = useState<Filter>('all');
+  const [withdrawing, setWithdrawing] = useState<OutgoingRequest | undefined>();
   const list = useOutgoingRequests(
     canSend ? businessId : undefined,
     filter === 'all' ? undefined : filter,
@@ -192,7 +214,7 @@ export function OutgoingScreen() {
       <FlatList
         data={items}
         keyExtractor={(item, index) => item.id ?? String(index)}
-        renderItem={({ item }) => <RequestCard item={item} />}
+        renderItem={({ item }) => <RequestCard item={item} onWithdraw={setWithdrawing} />}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
         ListFooterComponent={
@@ -208,6 +230,16 @@ export function OutgoingScreen() {
         refreshing={list.isRefetching && !list.isFetchingNextPage}
         onRefresh={() => void list.refetch()}
       />
+      {withdrawing?.id !== undefined && (
+        <ConfirmSheet
+          action="withdraw"
+          targetId={withdrawing.id}
+          name={withdrawing.buyerName ?? t('connections.outgoing.closed_business')}
+          onClose={() => {
+            setWithdrawing(undefined);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -275,4 +307,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
   },
   secondaryText: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  dangerText: { color: '#e11d48' }, // rose-600
 });

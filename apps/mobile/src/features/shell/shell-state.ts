@@ -3,7 +3,7 @@
 // paneli yok (productreport "Toptancı — Mobil", "Perakendeci — Mobil"); yalnız platform rolü olan
 // kullanıcıya "web'den girin" bilgisi gösterilir.
 import type { components } from '@b2b/api-client';
-import { initialBusinessId, type MenuItem, visibleMenu } from '@b2b/shared';
+import { initialBusinessId, type MenuItem, pushRoute, visibleMenu } from '@b2b/shared';
 import type { UpdateDecision } from '../../lib/app-config';
 
 type Me = components['schemas']['Me'];
@@ -44,7 +44,7 @@ export function mobileMenu(me: Pick<Me, 'activeBusiness'>, area: MobileArea): Me
  * Hazır menü öğesinin mobil adresi (expo-router; grup adı adreste yoktur). Yalnız mobilde ekranı
  * olan öğeler; diğerleri bağlantısız kalır. F2.4: perakendeci profili. F2.11b: dizin. F2.12b: istekler.
  */
-type MobileRoute = '/business-profile' | '/directory' | '/requests';
+type MobileRoute = '/business-profile' | '/directory' | '/requests' | '/incoming-requests';
 
 const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'buyer:profile': '/business-profile',
@@ -52,7 +52,26 @@ const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'seller:directory': '/directory',
   // F2.12b: gönderilen bağlantı istekleri (US-021).
   'seller:requests': '/requests',
+  // F2.13b: gelen bağlantı istekleri + bloklananlar (US-023).
+  'buyer:incoming_requests': '/incoming-requests',
 };
+
+/** Menü `path`'i → mobil adres (push dokunuşu için; `MOBILE_ROUTES` ile aynı ekranlar). */
+const PATH_ROUTES: Readonly<Record<string, MobileRoute>> = {
+  'seller:requests': '/requests',
+  'buyer:incoming-requests': '/incoming-requests',
+};
+
+/**
+ * Push dokunuşunun açacağı ekran (F2.13b-AC7). Bildirim seçili işletmenin alanına aitse adres
+ * döner; değilse (ör. toptancı bildirimi perakendeci işletmesi seçiliyken) `undefined` — uygulama
+ * yalnız açılır, yanlış alanda boş ekran gösterilmez.
+ */
+export function pushHref(data: unknown, area: MobileArea | undefined): MobileRoute | undefined {
+  const target = pushRoute(data);
+  if (target === undefined || target.area !== area) return undefined;
+  return PATH_ROUTES[`${target.area}:${target.path}`];
+}
 
 export function mobileHref(area: MobileArea, item: MenuItem): MobileRoute | undefined {
   return item.ready ? MOBILE_ROUTES[`${area}:${item.key}`] : undefined;

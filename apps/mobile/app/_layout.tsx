@@ -1,11 +1,12 @@
 // Kök yerleşim (F1.14a): react-query, çeviriler, oturum süresi dolunca giriş ekranı.
 // F1.14b: zorunlu güncellemede (US-060 AC1) hiçbir ekran açılmaz; oturum açılınca push kaydı.
+// F2.13b: push dokunuşu ilgili ekranı açar.
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { resetLogin } from '../src/features/auth/use-login';
 import { LanguageProvider } from '../src/features/language/language-provider';
-import { PushRegistrar } from '../src/features/shell/push-registrar';
+import { PushRegistrar, PushTapRouter } from '../src/features/shell/push-registrar';
 import { useUpdateDecision } from '../src/features/shell/use-app-config';
 import { UpdateRequired } from '../src/features/shell/update-required';
 import {
@@ -48,6 +49,7 @@ function UpdateGate() {
     <>
       <SessionExpiryWatcher />
       <PushRegistrar />
+      <PushTapRouter />
       <Stack screenOptions={{ headerShown: false }} />
     </>
   );

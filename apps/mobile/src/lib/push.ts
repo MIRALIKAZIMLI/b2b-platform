@@ -19,6 +19,11 @@ export interface PushDevice {
   getExpoToken(projectId: string): Promise<string>;
   /** Cihaz anahtarı değişince çağrılır. */
   onTokenChange(listener: () => void): { remove(): void };
+  /**
+   * Kullanıcı bildirime dokununca `data` (`{ type, id }`) ile çağrılır; uygulama bildirimle
+   * açıldıysa (soğuk başlangıç) son dokunuş da bir kez iletilir (F2.13b).
+   */
+  onTap(listener: (data: unknown) => void): { remove(): void };
 }
 
 export interface PushRegistration {

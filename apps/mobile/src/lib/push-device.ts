@@ -54,4 +54,25 @@ export const expoPushDevice: PushDevice = {
       },
     };
   },
+  onTap(listener) {
+    let removed = false;
+    let inner: { remove(): void } | undefined;
+    void notifications().then((api) => {
+      if (removed) return;
+      inner = api.addNotificationResponseReceivedListener((response) => {
+        listener(response.notification.request.content.data);
+      });
+      const last = api.getLastNotificationResponse();
+      if (last !== null) {
+        listener(last.notification.request.content.data);
+        api.clearLastNotificationResponse();
+      }
+    });
+    return {
+      remove() {
+        removed = true;
+        inner?.remove();
+      },
+    };
+  },
 };

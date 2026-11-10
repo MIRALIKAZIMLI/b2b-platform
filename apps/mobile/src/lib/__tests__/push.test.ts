@@ -37,6 +37,7 @@ function setup(
       changed = listener;
       return { remove: removed };
     },
+    onTap: () => ({ remove: vi.fn() }),
   };
   const registration = createPushRegistration(createApiClient({ baseUrl: BASE, fetch }), device);
   return {
