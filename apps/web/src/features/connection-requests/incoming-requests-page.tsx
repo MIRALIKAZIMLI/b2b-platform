@@ -218,8 +218,8 @@ function IncomingList({ onAction }: { onAction: (pending: Pending) => void }) {
 
 function BlockedList({ onAction }: { onAction: (pending: Pending) => void }) {
   const t = useTranslations('connections');
-  const { shell, formatDay } = useConnectionContext();
-  const blocks = useBlocks(shell.activeBusinessId);
+  const { shell, formatDay, access } = useConnectionContext();
+  const blocks = useBlocks(access.block ? shell.activeBusinessId : undefined);
   if (blocks.isError)
     return <ErrorBox error={blocks.error} onRetry={() => void blocks.refetch()} />;
   if (blocks.data === undefined) return <SkeletonCards />;

@@ -2,7 +2,7 @@
 // F2.13b: bildirime dokununca ilgili ekran açılır (`PushTapRouter`).
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { createPushRegistration } from '../../lib/push';
+import { createPushRegistration, subscribePushTaps } from '../../lib/push';
 import { expoPushDevice } from '../../lib/push-device';
 import { mobileApi, useMe, useSession } from '../../lib/session';
 import { mobileAreaOf, pushHref } from './shell-state';
@@ -36,14 +36,17 @@ export function PushTapRouter() {
   const me = useMe(signedIn, active);
   const [tapped, setTapped] = useState<{ readonly data: unknown } | undefined>();
 
+  // Müfettiş 18 M1: yalnız oturum açıkken ve uzaktan push olan ortamda (Expo Go değil) dinlenir;
+  // aksi hâlde `expo-notifications` yüklenmez.
   useEffect(() => {
-    const subscription = expoPushDevice.onTap((data) => {
+    if (!signedIn) return;
+    const subscription = subscribePushTaps(expoPushDevice, (data) => {
       setTapped({ data });
     });
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [signedIn]);
 
   useEffect(() => {
     if (tapped === undefined || !signedIn || me.data === undefined) return;

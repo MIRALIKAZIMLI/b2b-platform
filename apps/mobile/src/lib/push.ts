@@ -83,3 +83,17 @@ export function createPushRegistration(client: ApiClient, device: PushDevice): P
     },
   };
 }
+
+const NO_SUBSCRIPTION = { remove: () => undefined };
+
+/**
+ * Push dokunuşunu dinler (F2.13b-AC7; Müfettiş 18 M1). Kayıtla aynı kapı: `projectId` yoksa veya
+ * Expo Go'daysa uzaktan push gelmez; `expo-notifications` hiç yüklenmez, boş abonelik döner.
+ */
+export function subscribePushTaps(
+  device: PushDevice,
+  listener: (data: unknown) => void,
+): { remove(): void } {
+  if (device.projectId() === undefined) return NO_SUBSCRIPTION;
+  return device.onTap(listener);
+}
