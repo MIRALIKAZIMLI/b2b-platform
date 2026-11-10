@@ -83,7 +83,7 @@ export const directorySearchQuerySchema = z
 
 export type DirectorySearchQuery = z.infer<typeof directorySearchQuerySchema>;
 
-/** openapi `DirectoryBuyer.relation`. */
+/** openapi `DirectoryBuyer.relation` (F2.12a'dan beri satıcının bağlantı verisinden). */
 export interface DirectoryRelation {
   readonly status: 'none' | 'pending' | 'active' | 'rejected' | 'cancelled' | 'blocked';
   readonly cooldownUntil: string | null;

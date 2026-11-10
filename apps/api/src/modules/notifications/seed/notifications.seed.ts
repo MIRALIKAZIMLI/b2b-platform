@@ -33,6 +33,21 @@ export const NOTIFICATION_TEMPLATES: Readonly<
       body: 'Platform bir rol şablonunu güncelledi (sürüm {version}). Mevcut rolleriniz değişmedi; isterseniz Ekip bölümünde yeni sürümden rol açabilirsiniz.',
     },
   },
+  // F2.12a (US-021 AC1). Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  connection_request: {
+    az: {
+      title: 'Yeni əlaqə sorğusu',
+      body: 'Bir topdançı sizə əlaqə sorğusu göndərdi. Sorğuya baxıb cavab verə bilərsiniz.',
+    },
+    ru: {
+      title: 'Новый запрос на связь',
+      body: 'Оптовик отправил вам запрос на связь. Откройте запрос, чтобы ответить.',
+    },
+    tr: {
+      title: 'Yeni bağlantı isteği',
+      body: 'Bir toptancı size bağlantı isteği gönderdi. İsteği açıp yanıtlayabilirsiniz.',
+    },
+  },
 };
 
 export interface NotificationsSeedResult {

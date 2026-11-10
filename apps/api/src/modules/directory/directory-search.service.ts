@@ -7,6 +7,7 @@ import {
   DIRECTORY_PAGE_MAX,
   type DirectoryBuyer,
   type DirectoryEmptyReason,
+  type DirectoryRelation,
   type DirectorySearchQuery,
   type DirectorySearchResult,
 } from '@b2b/shared';
@@ -17,13 +18,36 @@ import { IdGenerator } from '../../core/id-generator';
 import { BuyerDirectoryIndex, inRegionGroups } from '../../core/ports/buyer-directory-index';
 import type { TenantContext } from '../../core/tenant-context';
 import { SellerSetupRepository } from '../businesses';
+import { ConnectionRelationsService } from '../connections';
 import { FilesService } from '../files';
 import { SettingsService } from '../settings';
 import { DirectoryRateLimiter } from './directory-rate-limiter';
 import { type DirectoryCardRow, DirectoryRepository } from './directory.repository';
 
-/** Bağlantı tabloları F2.12–F2.15'te gelir; o zamana kadar her perakendeci "hiç bağlanmamış". */
-const NO_RELATION = { status: 'none', cooldownUntil: null, canRequest: true } as const;
+/** İlişkisi okunamayan (artık istek alamayan) perakendeci. */
+const NO_REQUEST: DirectoryRelation = { status: 'none', cooldownUntil: null, canRequest: false };
+
+/**
+ * `history` süzgeci (F2.12a): ilişki satıcının bağlantı verisinden geldiği için sayfa içinde
+ * uygulanır; sayfa `limit`'ten kısa dönebilir, `nextCursor` indeks sırasına göredir.
+ */
+function matchesHistory(
+  relation: DirectoryRelation,
+  history: DirectorySearchQuery['history'],
+): boolean {
+  switch (history) {
+    case undefined:
+      return true;
+    case 'never':
+      return relation.status === 'none';
+    case 'cooldown_over':
+      return (
+        (relation.status === 'rejected' || relation.status === 'cancelled') && relation.canRequest
+      );
+    default:
+      return relation.status === history;
+  }
+}
 
 interface Scope {
   /** Temsilci (`assigned`) ise atandığı bölgeler; aksi `undefined` (kısıt yok). */
@@ -41,6 +65,7 @@ export class DirectorySearchService {
     @Inject(SettingsService) private readonly settings: SettingsService,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(ConnectionRelationsService) private readonly relations: ConnectionRelationsService,
   ) {}
 
   async search(tenant: TenantContext, query: DirectorySearchQuery): Promise<DirectorySearchResult> {
@@ -52,7 +77,16 @@ export class DirectorySearchService {
       }
       return await this.filteredTx(tx, tenant, query, scope);
     });
-    const items = await Promise.all(rows.cards.map((card) => this.toBuyer(card, tenant)));
+    const relations = await this.relations.forSeller(
+      tenant,
+      rows.cards.map((card) => card.id),
+    );
+    const cards = rows.cards
+      .map((card) => ({ card, relation: relations.get(card.id) ?? NO_REQUEST }))
+      .filter((entry) => matchesHistory(entry.relation, query.history));
+    const items = await Promise.all(
+      cards.map((entry) => this.toBuyer(entry.card, entry.relation, tenant)),
+    );
     return { items, nextCursor: rows.nextCursor, emptyReason: rows.emptyReason };
   }
 
@@ -123,9 +157,6 @@ export class DirectorySearchService {
       nextCursor: null,
       emptyReason,
     });
-    // Bağlantı geçmişi henüz yok: "hiç bağlanmamış" dışındaki her değer boş sonuç.
-    if (query.history !== undefined && query.history !== 'never') return empty(null);
-
     const groups: string[][] = [];
     if (scope.assigned !== undefined) {
       if (scope.assigned.length === 0) return empty('no_assigned_regions');
@@ -170,7 +201,11 @@ export class DirectorySearchService {
     };
   }
 
-  private async toBuyer(card: DirectoryCardRow, tenant: TenantContext): Promise<DirectoryBuyer> {
+  private async toBuyer(
+    card: DirectoryCardRow,
+    relation: DirectoryRelation,
+    tenant: TenantContext,
+  ): Promise<DirectoryBuyer> {
     return {
       id: card.id,
       legalName: card.legalName,
@@ -188,7 +223,7 @@ export class DirectorySearchService {
       contactName: card.contactName,
       personalPhone: card.personalPhone,
       email: card.email,
-      relation: NO_RELATION,
+      relation,
     };
   }
 }

@@ -23,6 +23,7 @@ import { AppConfigModule } from './modules/app-config';
 import { BillingModule, WarehouseLimitGateModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
+import { ConnectionsModule } from './modules/connections';
 import { DirectoryApiModule } from './modules/directory';
 import { BusinessLogoPortModule, FilesModule } from './modules/files';
 import { I18nModule } from './modules/i18n';
@@ -69,6 +70,7 @@ export class AppModule implements NestModule {
         BusinessLogoPortModule,
         SearchModule.forRoot({ url: env.MEILI_URL, apiKey: env.MEILI_MASTER_KEY }),
         DirectoryApiModule,
+        ConnectionsModule,
         OnboardingModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         PlatformAdminModule.register({ webBaseUrl: env.WEB_BASE_URL }),
         IdentityModule.forRoot({

@@ -49,6 +49,12 @@ export const OUTBOX_EVENTS = {
     queue: 'notifications',
     fields: { templateId: 'id', version: 'integer', businessId: 'id', userId: 'id' },
   },
+  // F2.12a (US-021 AC1, US-054): yeni bağlantı isteği; perakendecinin her aktif admini için bir
+  // olay (`userId` alıcı). Tüketici `notifications` (bildirim). İstek süresi F2.16, kabul F2.13.
+  'connection.request_created': {
+    queue: 'notifications',
+    fields: { requestId: 'id', sellerId: 'id', buyerId: 'id', userId: 'id' },
+  },
 } as const satisfies Record<string, OutboxEventDefinition>;
 
 export type OutboxEventType = keyof typeof OUTBOX_EVENTS;

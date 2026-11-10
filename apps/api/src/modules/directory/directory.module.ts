@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BusinessesModule } from '../businesses';
+import { ConnectionsModule } from '../connections';
 import { FilesModule } from '../files';
 import { SettingsModule } from '../settings';
 import { DirectorySearchService } from './directory-search.service';
@@ -35,9 +36,12 @@ export class DirectoryIndexModule {}
 })
 export class DirectoryWorkerModule {}
 
-/** API: arama ucu (F2.11b). `BuyerDirectoryIndex` global SearchModule'den. */
+/**
+ * API: arama ucu (F2.11b). `BuyerDirectoryIndex` global SearchModule'den; ilişki durumu
+ * `connections`'tan (F2.12a).
+ */
 @Module({
-  imports: [SettingsModule, BusinessesModule, FilesModule],
+  imports: [SettingsModule, BusinessesModule, FilesModule, ConnectionsModule],
   controllers: [DirectoryController],
   providers: [DirectoryRepository, DirectoryRateLimiter, DirectorySearchService],
 })

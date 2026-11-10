@@ -643,6 +643,8 @@ Benzersiz: `(seller_id, buyer_id) WHERE status = 'active'`. İndeks: `(buyer_id)
 
 `buyer_id uuid`, `seller_id uuid`, `created_by_user_id uuid`; PK `(buyer_id, seller_id)`.
 
+**RLS ve fonksiyonlar (F2.12a):** `connection_requests` ve `connections` P: okuma ve güncelleme `seller_id` veya `buyer_id` = `app.business_id`; istek yalnız satıcı (`seller_id` = bağlam), bağlantı yalnız alıcı (`buyer_id` = bağlam, kabul F2.13) ekler; silme yok; platform yalnız okur. `blocks` T (alıcı). `migrator` sahipli `SECURITY DEFINER`, yalnız onaylı ve aktif satıcı bağlamında: `connection_buyer_targets(p_ids uuid[])` (≤20; onaylı `buyer`, aktif, çağıran olmayan işletmelerin ünvanı, bölgesi/şehri ve çağıranı engelleyip engellemediği), `connection_request_recipients(p_request_id uuid)` (çağıranın `pending` isteğindeki alıcının aktif işletme adminleri). Kota günü satıcının saat dilimindeki `seller_local_date`; aynı satıcının eşzamanlı istekleri `pg_advisory_xact_lock` ile sıralanır.
+
 ### 4.8 `catalog`
 
 #### `units` (G) — `code text PK` (UN/ECE), `kind (count/weight/volume/length/area/package)`, `name jsonb`, `abbreviation jsonb`, `allows_decimal bool`, `is_active bool`

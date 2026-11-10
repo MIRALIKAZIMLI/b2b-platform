@@ -13,6 +13,8 @@ interface FunctionRow {
 }
 
 const EXPECTED_FUNCTIONS = [
+  'connection_buyer_targets',
+  'connection_request_recipients',
   'dev_sms_outbox_insert',
   'dev_sms_outbox_list',
   'directory_buyer_cards',

@@ -313,9 +313,51 @@ describe('F2.11b perakendeci dizini arama ucu', () => {
     expect((result.body as SearchJson).nextCursor).toBeNull();
   });
 
-  it('F2.11b-AC1 history: never her sonucu, diğer değerler boş liste (bağlantı tabloları F2.12)', async () => {
-    const id = await buyer({ legalName: name('Tarixçə') });
-    expect(ids((await search({ q: name('Tarixçə'), history: 'never' })).body)).toEqual([id]);
-    expect(ids((await search({ q: name('Tarixçə'), history: 'rejected' })).body)).toEqual([]);
+  it('F2.12a relation ve history: satıcının kendi isteği pending; başka satıcı none görür', async () => {
+    // İstek ucu için toptancı aboneliği (`pilot`, haklar sınırsız).
+    await platformRows(
+      `insert into subscriptions
+         (id, business_id, plan_id, status, current_period_start, current_period_end)
+       select $1, $2, id, 'active', current_date, current_date + 30 from plans where code = 'pilot'
+       on conflict do nothing`,
+      [randomUUID(), seller.businessId],
+    );
+    const requested = await buyer({ legalName: `${name('Tarixçə')} A` });
+    const untouched = await buyer({ legalName: `${name('Tarixçə')} B` });
+    const sent = await request(app.getHttpServer())
+      .post('/api/v1/connection-requests')
+      .set(await auth(seller.adminUserId, seller.businessId))
+      .send({ buyerId: requested });
+    expect(sent.status, JSON.stringify(sent.body)).toBe(201);
+
+    const all = (await search({ q: name('Tarixçə') })).body as SearchJson;
+    const relationOf = (id: string) => all.items.find((item) => item.id === id)?.relation;
+    expect(relationOf(requested)).toEqual({
+      status: 'pending',
+      cooldownUntil: null,
+      canRequest: false,
+    });
+    expect(relationOf(untouched)).toEqual({
+      status: 'none',
+      cooldownUntil: null,
+      canRequest: true,
+    });
+    expect(ids((await search({ q: name('Tarixçə'), history: 'pending' })).body)).toEqual([
+      requested,
+    ]);
+    expect(ids((await search({ q: name('Tarixçə'), history: 'never' })).body)).toEqual([untouched]);
+    expect(ids((await search({ q: name('Tarixçə'), history: 'active' })).body)).toEqual([]);
+
+    // Başka toptancı aynı perakendeciyi "hiç bağlanmamış" görür (US-007 AC6).
+    const other = await newSeller(cityA, [cityA]);
+    const otherView = (
+      await search(
+        { q: `${name('Tarixçə')} A` },
+        { userId: other.adminUserId, businessId: other.businessId },
+      )
+    ).body as SearchJson;
+    expect(otherView.items.map((item) => item.relation)).toEqual([
+      { status: 'none', cooldownUntil: null, canRequest: true },
+    ]);
   });
 });

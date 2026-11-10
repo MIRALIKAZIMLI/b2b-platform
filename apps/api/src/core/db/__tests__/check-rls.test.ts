@@ -149,3 +149,38 @@ describe('evaluateRlsTable — G sınıfı (F1.3)', () => {
     expect(problems.join(' ')).toContain('yazma politikası');
   });
 });
+
+describe('evaluateRlsTable — P sınıfı (F2.12a, R18)', () => {
+  const CTX = "nullif(current_setting('app.business_id'::text, true), ''::text)::uuid";
+  const PARTY = `((seller_id = ${CTX}) OR (buyer_id = ${CTX}))`;
+  const SELLER = `(seller_id = ${CTX})`;
+  const P_POLICIES: RlsPolicyInfo[] = [
+    policy('r', PARTY, null),
+    policy('a', null, SELLER),
+    policy('w', PARTY, PARTY),
+    policy('r', PLATFORM, null),
+  ];
+  const pTable = (policies: RlsPolicyInfo[]) =>
+    table({ comment: 'rls:P', policies, policyCount: policies.length });
+
+  it('F2.12a-R18 doğru P kalıbı → başarılı; migrator politikası muaf', () => {
+    expect(evaluateRlsTable(pTable(P_POLICIES))).toEqual([]);
+    const definer = { ...policy('r', 'true', null), roles: ['migrator'] };
+    expect(evaluateRlsTable(pTable([...P_POLICIES, definer]))).toEqual([]);
+  });
+
+  it('F2.12a-R18 yalnız satıcı tarafını okuyan P tablosu → hata', () => {
+    const problems = evaluateRlsTable(pTable([policy('r', SELLER, null)]));
+    expect(problems.join(' ')).toContain('seller_id ve buyer_id');
+  });
+
+  it('F2.12a-R18 koşulsuz (USING true) veya koşulsuz yazma politikası → hata', () => {
+    expect(evaluateRlsTable(pTable([...P_POLICIES, policy('r', 'true', null)]))).not.toEqual([]);
+    expect(evaluateRlsTable(pTable([...P_POLICIES, policy('a', null, 'true')]))).not.toEqual([]);
+    expect(
+      evaluateRlsTable(
+        pTable([...P_POLICIES, { ...policy('r', 'true', null), roles: ['public'] }]),
+      ),
+    ).not.toEqual([]);
+  });
+});
