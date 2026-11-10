@@ -7,6 +7,8 @@ import { BusinessesModule } from '../businesses';
 import { FilesModule } from '../files';
 import { SettingsModule } from '../settings';
 import { BlocksController } from './blocks.controller';
+import { CONNECTION_CANCELLED_HANDLERS } from './connection-cancelled.handler';
+import { ConnectionCancellationService } from './connection-cancellation.service';
 import { ConnectionRelationsService } from './connection-relations.service';
 import { ConnectionRequestsController } from './connection-requests.controller';
 import { ConnectionRequestsService } from './connection-requests.service';
@@ -19,7 +21,8 @@ import { ConnectionsRepository } from './connections.repository';
  * Bağlantı isteği (F2.12a): `POST /connection-requests`, `GET .../outgoing`; dizin ilişki
  * durumu (`ConnectionRelationsService`, directory → connections, c4 §1). F2.13a: gelen istekler,
  * kabul/red/geri çekme, engel listesi (`/blocks`); satıcı logosu için connections → files.
- * F2.14a: bağlantı listesi ve koşullar (`/connections`).
+ * F2.14a: bağlantı listesi ve koşullar (`/connections`). F2.15a: iptal (`/connections/{id}/cancel`),
+ * `ConnectionCancelledHandler` kancası.
  */
 @Module({
   imports: [
@@ -38,6 +41,9 @@ import { ConnectionsRepository } from './connections.repository';
     ConnectionResponsesService,
     ConnectionTermsService,
     ConnectionRelationsService,
+    ConnectionCancellationService,
+    // F2.15a: kanca listesi; `cart` ve `orders` uygulamaları F4.5'te eklenir.
+    { provide: CONNECTION_CANCELLED_HANDLERS, useValue: [] },
   ],
   exports: [ConnectionRelationsService],
 })

@@ -66,11 +66,19 @@ export const OUTBOX_EVENTS = {
     queue: 'notifications',
     fields: { requestId: 'id', sellerId: 'id', buyerId: 'id', userId: 'id' },
   },
-  // F2.13a (US-023 AC4): engel aktif bağlantıyı kapattı; bağlantı başına tek olay. Bildirimi ve
-  // sepet/sipariş tüketicisi (`ConnectionCancelledHandler`) F2.15'te; o zamana kadar atlanır.
+  // F2.13a/F2.15a (US-025, SF-07): bağlantı iptal edildi (API veya engel); bağlantı başına tek olay.
+  // Sepet/sipariş etkileri olayla değil, aynı işlemdeki `ConnectionCancelledHandler` kancasıyla;
+  // bu olay ileride önbellek tüketicileri (F3/F4) içindir, bugün bildirime dönüşmez.
   'connection.cancelled': {
     queue: 'notifications',
     fields: { connectionId: 'id', sellerId: 'id', buyerId: 'id', endedBySide: ['seller', 'buyer'] },
+  },
+  // F2.15a (US-054 "Bağlantı iptal edildi"): karşı tarafın her aktif admini için bir olay (`userId`
+  // alıcı, `businessId` alıcının işletmesi = karşı taraf). Gerekçe (engel dahil) ve iptal eden yüke
+  // girmez (Mimar K2/notu 3: engel bilgisi sızmaz).
+  'connection.cancel_notice': {
+    queue: 'notifications',
+    fields: { connectionId: 'id', businessId: 'id', userId: 'id' },
   },
 } as const satisfies Record<string, OutboxEventDefinition>;
 

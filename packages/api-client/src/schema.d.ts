@@ -2173,19 +2173,30 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Bağlantıyı iptal et (US-025) */
+        /**
+         * Bağlantıyı iptal et (US-025)
+         * @description İzin `connections.cancel` (satıcı veya alıcı, kapsam `all`). Yalnız `active` bağlantı; çağıran tarafın
+         *     gerekçesi ve ikinci onayı (`confirm: true`, yoksa `422 CONFIRMATION_REQUIRED`). Tek işlemde (F2.15a, SF-07):
+         *     bağlantı `cancelled` (`ended_by_side` = çağıranın tarafı, `end_reason` = `reason`, `ended_at`,
+         *     `ended_by_user_id`), `ConnectionCancelledHandler` kancaları (sepet kalemleri, `submitted` siparişler; F4.5),
+         *     olay `connection.cancelled`, karşı tarafın aktif adminlerine bildirim, audit `connection.cancelled`
+         *     (`note` yalnız audit'te, Mimar K1). Alıcı iptali bekleme süresi başlatır, satıcı iptali başlatmaz.
+         *     Karşı taraf gerekçeyi görmez, yalnız `endedBySide` (K2). Başka çiftin bağlantısı `404`; iptal edilmiş
+         *     bağlantı `409 INVALID_STATE_TRANSITION`.
+         */
         post: {
             parameters: {
                 query?: never;
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
+                    "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 };
                 path: {
                     id: components["parameters"]["Id"];
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
                         /** @enum {string} */
@@ -2204,10 +2215,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            cancelledOrders?: number;
+                            /** @description İptal edilen `submitted` sipariş sayısı (F4.5 öncesi 0) */
+                            cancelledOrders: number;
                         };
                     };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;

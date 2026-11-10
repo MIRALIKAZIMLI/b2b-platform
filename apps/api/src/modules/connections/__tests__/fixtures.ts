@@ -263,14 +263,26 @@ export async function insertConnection(input: {
     [id, input.sellerId, input.buyerId, input.requestId],
   );
   if (input.cancelled !== undefined) {
+    // F2.15a bekçisi: iptal eden tarafın bağlamında, dört bitiş alanı dolu.
+    const side = input.cancelled.by === 'seller' ? input.sellerId : input.buyerId;
     await businessRows(
-      input.buyerId,
-      `update connections set status = 'cancelled', ended_at = $2, ended_by_side = $3
+      side,
+      `update connections set status = 'cancelled', ended_at = $2, ended_by_side = $3,
+              end_reason = 'other', ended_by_user_id = $4
         where id = $1`,
-      [id, input.cancelled.at, input.cancelled.by],
+      [id, input.cancelled.at, input.cancelled.by, await firstMemberUserId(side)],
     );
   }
   return id;
+}
+
+async function firstMemberUserId(businessId: string): Promise<string> {
+  const [member] = await platformRows<{ user_id: string }>(
+    `select user_id from memberships where business_id = $1 order by created_at limit 1`,
+    [businessId],
+  );
+  if (member === undefined) throw new Error('işletmenin üyesi yok');
+  return member.user_id;
 }
 
 export async function insertBlock(buyerId: string, sellerId: string, userId: string) {
@@ -332,11 +344,13 @@ export async function setTerms(
 }
 
 /** Bağlantıyı iptal eder (alıcı bağlamında; F2.15 uçları gelene kadar test kurulumu). */
+/** Alıcı tarafından iptal (F2.15a bekçisi: dört bitiş alanı dolu, taraf = bağlam). */
 export async function cancelConnection(buyerId: string, connectionId: string, at: Date) {
   await businessRows(
     buyerId,
-    `update connections set status = 'cancelled', ended_at = $2, ended_by_side = 'buyer'
+    `update connections set status = 'cancelled', ended_at = $2, ended_by_side = 'buyer',
+            end_reason = 'other', ended_by_user_id = $3
       where id = $1`,
-    [connectionId, at],
+    [connectionId, at, await firstMemberUserId(buyerId)],
   );
 }

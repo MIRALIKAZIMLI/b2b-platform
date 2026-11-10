@@ -1,15 +1,30 @@
 import {
+  type ConnectionCancelResult,
   type ConnectionPage,
+  connectionCancelSchema,
   type ConnectionView,
   connectionsQuerySchema,
   connectionTermsUpdateSchema,
   type SalesRepList,
 } from '@b2b/shared';
-import { Body, Controller, Get, Inject, Param, Patch, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { z } from 'zod';
 import { type AuditHttpRequest, requestAuditContext } from '../../core/audit';
 import { RequirePermission } from '../../core/auth/access-decorators';
+import { DomainError } from '../../core/errors/domain-error';
 import { CurrentTenant, type TenantContext } from '../../core/tenant-context';
+import { ConnectionCancellationService } from './connection-cancellation.service';
 import { ConnectionTermsService } from './connection-terms.service';
 
 /**
@@ -18,7 +33,11 @@ import { ConnectionTermsService } from './connection-terms.service';
  */
 @Controller('api/v1/connections')
 export class ConnectionsController {
-  constructor(@Inject(ConnectionTermsService) private readonly terms: ConnectionTermsService) {}
+  constructor(
+    @Inject(ConnectionTermsService) private readonly terms: ConnectionTermsService,
+    @Inject(ConnectionCancellationService)
+    private readonly cancellation: ConnectionCancellationService,
+  ) {}
 
   @Get()
   @RequirePermission('connections.view')
@@ -51,4 +70,31 @@ export class ConnectionsController {
       requestAuditContext(req),
     );
   }
+
+  /**
+   * `POST /api/v1/connections/{id}/cancel` (F2.15a; US-025 AC1, SF-07). İkinci onay (`confirm: true`)
+   * gövde doğrulamasından önce denetlenir: yoksa `422 CONFIRMATION_REQUIRED`.
+   */
+  @Post(':id/cancel')
+  @HttpCode(200)
+  @RequirePermission('connections.cancel')
+  async cancel(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: AuditHttpRequest,
+  ): Promise<ConnectionCancelResult> {
+    if (!isConfirmed(body)) throw new DomainError('CONFIRMATION_REQUIRED');
+    const input = connectionCancelSchema.parse(body);
+    return await this.cancellation.cancel(
+      tenant,
+      z.uuid().parse(id),
+      input,
+      requestAuditContext(req),
+    );
+  }
+}
+
+function isConfirmed(body: unknown): boolean {
+  return typeof body === 'object' && body !== null && 'confirm' in body && body.confirm === true;
 }

@@ -10,6 +10,7 @@ export const NOTIFICATION_TYPES = [
   'connection_request',
   'connection_accepted',
   'connection_rejected',
+  'connection_cancelled',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -48,6 +49,13 @@ const connectionResponsePayload = z.object({
   requestId: z.uuid(),
   sellerId: z.uuid(),
   buyerId: z.uuid(),
+  userId: z.uuid(),
+});
+
+/** İptal bildirimi; `businessId` alıcının (karşı tarafın) işletmesi. */
+const connectionCancelNoticePayload = z.object({
+  connectionId: z.uuid(),
+  businessId: z.uuid(),
   userId: z.uuid(),
 });
 
@@ -116,6 +124,23 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
   // F2.13a: perakendeci yanıtı; perakendecinin adı bildirime girmez (yalnız kod/sayı).
   ['connection.accepted', connectionResponseIntents('connection_accepted')],
   ['connection.rejected', connectionResponseIntents('connection_rejected')],
+  [
+    // F2.15a (US-054 "Bağlantı iptal edildi"): karşı tarafın adminine; konu bağlantı kimliği.
+    // İptal eden işletmenin adı ve gerekçesi (engel dahil) bildirime girmez (Mimar notu 3).
+    'connection.cancel_notice',
+    (payload: unknown): NotificationIntent[] => {
+      const event = connectionCancelNoticePayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.businessId,
+          type: 'connection_cancelled',
+          subjectId: event.connectionId,
+          params: {},
+        },
+      ];
+    },
+  ],
 ]);
 
 /** Bildirime dönüşen outbox olay türleri (`notifications` kuyruğu). */

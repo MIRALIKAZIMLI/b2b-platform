@@ -290,6 +290,9 @@ sequenceDiagram
 | Hata senaryosu | Davranış |
 | --- | --- |
 | `confirm` alanı yok | `422 CONFIRMATION_REQUIRED` |
+| Bağlantı çağıranın değil (başka çift) | `404 NOT_FOUND` |
+| Bağlantı zaten `cancelled` (iki taraf aynı anda iptal etti) | `409 INVALID_STATE_TRANSITION`; satır kilidiyle tek etki, tek olay |
+| `ConnectionCancelledHandler` kancası hata verir | Tüm işlem geri alınır; bağlantı `active` kalır |
 | Onaylı/yoldaki siparişler | Etkilenmez; teslimat ve cari normal devam eder |
 | Mobil önbellekte eski ürün listesi | Sonraki ürün/sepet isteği `403 CONNECTION_NOT_ACTIVE` döner; istemci önbelleği temizler |
 

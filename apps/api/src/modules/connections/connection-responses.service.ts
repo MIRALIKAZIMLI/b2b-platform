@@ -19,6 +19,7 @@ import { IdGenerator } from '../../core/id-generator';
 import { OutboxWriter } from '../../core/outbox';
 import type { TenantContext } from '../../core/tenant-context';
 import { FilesService } from '../files';
+import { ConnectionCancellationService } from './connection-cancellation.service';
 import { INITIAL_PAYMENT_TERM_DAYS } from './connection-policy';
 import { ConnectionRequestStateMachine } from './connection-request.state-machine';
 import { toRequestView } from './connection-requests.service';
@@ -58,6 +59,8 @@ export class ConnectionResponsesService {
     @Inject(AuditService) private readonly audit: AuditRecorder,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(ConnectionCancellationService)
+    private readonly cancellation: ConnectionCancellationService,
   ) {}
 
   /**
@@ -210,18 +213,11 @@ export class ConnectionResponsesService {
 
       const active = await this.repository.lockActiveConnectionTx(tx, sellerId, buyerId);
       if (active !== undefined) {
-        await this.repository.cancelConnectionTx(tx, active.id, {
-          endedAt: now,
-          endedBySide: 'buyer',
+        // F2.15a (Mimar K4): engel de iptaldir; kanca, olay ve bildirim API iptaliyle aynı yoldan.
+        await this.cancellation.cancelLockedTx(tx, active, {
+          side: 'buyer',
           endReason: BLOCK_END_REASON,
-          endedByUserId: tenant.userId,
-        });
-        await this.outbox.write(tx, {
-          type: 'connection.cancelled',
-          aggregateType: 'connection',
-          aggregateId: active.id,
-          businessIds: [sellerId, buyerId],
-          payload: { connectionId: active.id, sellerId, buyerId, endedBySide: 'buyer' },
+          userId: tenant.userId,
         });
       }
 
