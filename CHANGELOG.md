@@ -49,3 +49,4 @@
 - F2.12b: bağlantı isteği gönderme ekranları (web + mobil), gönderilen istekler
 - F2.13a: bağlantı isteğine yanıt API (gelen istekler, kabul/red/geri çekme, engel listesi, durum bekçileri, satıcı özeti D fonksiyonu)
 - F2.13b: gelen bağlantı istekleri, engel listesi, geri çekme ekranları (web + mobil), push dokunuşu yönlendirmesi, E2E-04
+- F2.14a: bağlantı koşulları API (liste, koşul güncelleme, alıcı koşul yazamaz, kabulde vade 0)

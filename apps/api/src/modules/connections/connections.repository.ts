@@ -3,12 +3,12 @@
 // süzer (Mimar notu: ilişki yalnız bağlamdaki satıcının satırlarından hesaplanır).
 import { Injectable } from '@nestjs/common';
 import type { ConnectionRequestStatus } from '@b2b/shared';
-import { and, asc, desc, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Tx } from '../../core/db';
 import type { FileBucket } from '../../core/ports/file-storage';
-import { membershipRegions } from '../access';
-import type { PairState } from './connection-policy';
+import { membershipRegions, memberships } from '../access';
+import type { PairState, SalesRepCandidate } from './connection-policy';
 import { blocks, connectionRequests, connections } from './connections.schema';
 
 /** DEFINER fonksiyonlarının kimlik sınırı (`connection_buyer_targets`, 22023). */
@@ -414,5 +414,118 @@ export class ConnectionsRepository {
       .from(blocks)
       .where(eq(blocks.buyerId, buyerId))
       .orderBy(desc(blocks.createdAt), asc(blocks.sellerId));
+  }
+
+  // ---- F2.14a: bağlantı listesi ve koşullar ----
+
+  /** Bağlantıyı işlem sonuna kadar kilitler; RLS yalnız iki tarafa gösterir. */
+  async lockConnectionTx(tx: Tx, id: string): Promise<ConnectionRow | undefined> {
+    const [row] = await tx.select().from(connections).where(eq(connections.id, id)).for('update');
+    return row;
+  }
+
+  async updateTermsTx(
+    tx: Tx,
+    id: string,
+    change: {
+      readonly creditLimit?: string | null;
+      readonly paymentTermDays?: number;
+      readonly salesRepMembershipId?: string | null;
+      readonly termsSetAt: Date;
+      readonly termsSetByUserId: string;
+    },
+  ): Promise<ConnectionRow> {
+    const [row] = await tx
+      .update(connections)
+      .set({ ...change, updatedAt: change.termsSetAt })
+      .where(eq(connections.id, id))
+      .returning();
+    if (row === undefined) throw new Error('connections: koşul güncellenemedi');
+    return row;
+  }
+
+  /** Temsilci adayı üyelik; `memberships` T politikası yalnız çağıranın işletmesini gösterir. */
+  async salesRepCandidateTx(tx: Tx, membershipId: string): Promise<SalesRepCandidate | undefined> {
+    const [row] = await tx
+      .select({ businessId: memberships.businessId, status: memberships.status })
+      .from(memberships)
+      .where(eq(memberships.id, membershipId));
+    return row;
+  }
+
+  /** Verilen üyeliklerden aktif olanlar (öneri temsilcisi süzgeci). */
+  async activeMembershipIdsTx(tx: Tx, ids: readonly string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const rows = await tx
+      .select({ id: memberships.id })
+      .from(memberships)
+      .where(and(inArray(memberships.id, [...ids]), eq(memberships.status, 'active')));
+    return new Set(rows.map((row) => row.id));
+  }
+
+  /**
+   * Bağlantılar, yeniden eskiye (UUIDv7 sırası); `side` çağıranın tarafı. Her satırla isteğin
+   * önerilen vadesi (koşul önerisi, F2.14a K4).
+   */
+  async listConnectionsTx(
+    tx: Tx,
+    filter: {
+      readonly side: 'seller' | 'buyer';
+      readonly businessId: string;
+      readonly status?: 'active' | 'cancelled';
+      readonly salesRepMembershipId?: string;
+      readonly cursor?: string;
+      readonly limit: number;
+    },
+  ): Promise<{ connection: ConnectionRow; proposedPaymentTermDays: number | null }[]> {
+    const conditions = [
+      filter.side === 'seller'
+        ? eq(connections.sellerId, filter.businessId)
+        : eq(connections.buyerId, filter.businessId),
+    ];
+    if (filter.status !== undefined) conditions.push(eq(connections.status, filter.status));
+    if (filter.salesRepMembershipId !== undefined) {
+      conditions.push(eq(connections.salesRepMembershipId, filter.salesRepMembershipId));
+    }
+    if (filter.cursor !== undefined) conditions.push(lt(connections.id, filter.cursor));
+    return await tx
+      .select({
+        connection: connections,
+        proposedPaymentTermDays: connectionRequests.proposedPaymentTermDays,
+      })
+      .from(connections)
+      .innerJoin(connectionRequests, eq(connectionRequests.id, connections.requestId))
+      .where(and(...conditions))
+      .orderBy(desc(connections.id))
+      .limit(filter.limit);
+  }
+
+  /**
+   * Satıcının bu alıcılarla son iptal edilmiş ve koşulu atanmış bağlantısı (US-024 AC3), alıcı
+   * başına bir satır.
+   */
+  async previousTermsTx(
+    tx: Tx,
+    sellerId: string,
+    buyerIds: readonly string[],
+  ): Promise<Map<string, ConnectionRow>> {
+    const result = new Map<string, ConnectionRow>();
+    if (buyerIds.length === 0) return result;
+    const rows = await tx
+      .select()
+      .from(connections)
+      .where(
+        and(
+          eq(connections.sellerId, sellerId),
+          inArray(connections.buyerId, [...buyerIds]),
+          eq(connections.status, 'cancelled'),
+          isNotNull(connections.termsSetAt),
+        ),
+      )
+      .orderBy(desc(connections.endedAt), desc(connections.id));
+    for (const row of rows) {
+      if (!result.has(row.buyerId)) result.set(row.buyerId, row);
+    }
+    return result;
   }
 }

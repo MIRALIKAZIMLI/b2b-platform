@@ -15,6 +15,7 @@ declare module 'vitest' {
     databaseUrl: string;
     migratorUrl: string;
     redisUrl: string;
+    superuserUrl: string;
   }
 }
 
@@ -87,6 +88,8 @@ export async function setup(project: TestProject): Promise<void> {
 
   project.provide('databaseUrl', databaseUrl);
   project.provide('migratorUrl', migratorUrl);
+  // RLS'i aşan süper kullanıcı: yalnız bekçi tetikleyicisinin bağlamsız yolunu sınamak için.
+  project.provide('superuserUrl', testAdminUrl);
   const redisUrl = process.env.REDIS_URL;
   project.provide(
     'redisUrl',

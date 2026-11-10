@@ -163,10 +163,25 @@ export function relationOf(pair: PairState, cooldown: CooldownSettings, now: Dat
 }
 
 /**
- * Kabulde bağlantının başlangıç vadesi (F2.13a K1, Mimar onayı; kullanıcı kararı bekliyor):
- * perakendeci kabul ederken önerilen vadeyi gördüğü için önerilen vade yazılır; öneri yoksa `0`.
- * Karar değişirse bu fonksiyon ve `0023` `connections_guard` (Müfettiş 17 M2) birlikte değişir.
+ * Kabulde bağlantının başlangıç vadesi: her zaman `0` (kullanıcı kararı 2026-11-10, F2.13a K1 = B).
+ * Perakendecinin gördüğü önerilen vade bağlantıya yazılmaz; satıcı koşul ekranında öneri olarak
+ * görür (F2.14a K4). `0024` `connections_guard` INSERT'te aynı kuralı uygular.
  */
-export function initialPaymentTermDays(proposedPaymentTermDays: number | null): number {
-  return proposedPaymentTermDays ?? 0;
+export const INITIAL_PAYMENT_TERM_DAYS = 0;
+
+/** Temsilci adayı üyelik (çağıran satıcının kendi üyeliği; RLS başkasınınkini göstermez). */
+export interface SalesRepCandidate {
+  readonly businessId: string;
+  readonly status: string;
+}
+
+/**
+ * Bağlantıya temsilci atanabilir mi (F2.14a K2, Mimar: şimdilik satıcının aktif herhangi bir
+ * üyesi; kullanıcı kararı daraltırsa yalnız bu fonksiyon değişir).
+ */
+export function isAssignableSalesRep(
+  candidate: SalesRepCandidate | undefined,
+  sellerId: string,
+): boolean {
+  return candidate?.businessId === sellerId && candidate.status === 'active';
 }

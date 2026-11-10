@@ -1864,7 +1864,8 @@ export interface paths {
          * İsteği kabul et (US-023 AC2)
          * @description İzin `connections.request.respond` (yalnız `buyer`). Gövde veri paylaşım uyarısının onayıdır
          *     (`confirmDataSharing: true`, yoksa `422`); onay audit'e yazılır. İstek `accepted`, yeni `active` bağlantı;
-         *     bağlantı vadesi = önerilen vade (yoksa 0). Başka perakendecinin isteği `404`; `pending` değilse
+         *     bağlantı vadesi 0 (önerilen vade yazılmaz, satıcı koşul ekranında öneri olarak görür; kullanıcı kararı
+         *     2026-11-10). Başka perakendecinin isteği `404`; `pending` değilse
          *     `409 INVALID_STATE_TRANSITION`; süresi geçmişse `409 CONNECTION_REQUEST_EXPIRED`. Satıcı askıda veya
          *     salt-okunur olsa da kabul yapılır (SF-03).
          */
@@ -2014,13 +2015,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Bağlantılarım (seller veya buyer bakışı) */
+        /**
+         * Bağlantılarım (seller veya buyer bakışı) (US-024 AC1, AC3)
+         * @description İzin `connections.view`. Bakış işletmenin yeteneğinden: satıcıda karşı taraf perakendeci, alıcıda toptancı.
+         *     Satıcıda `assigned` kapsamlı üye (temsilci) yalnız kendisine atanmış bağlantıları görür. Alıcı bakışında
+         *     koşullardan yalnız `creditLimit` ve `paymentTermDays` döner; `suggestedTerms` yalnız satıcı bakışında ve
+         *     koşul atanmamış aktif bağlantıda (önce önceki iptal edilmiş bağlantının atanmış koşulları, yoksa isteğin
+         *     önerilen vadesi; F2.14a). Yeniden eskiye; `limit` en fazla 50.
+         */
         get: {
             parameters: {
                 query?: {
                     status?: "active" | "cancelled";
                     cursor?: components["parameters"]["Cursor"];
-                    limit?: components["parameters"]["Limit"];
+                    limit?: number;
                 };
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
@@ -2035,8 +2043,12 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ConnectionPage"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -2060,7 +2072,14 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Bağlantı koşulları (US-024) — yalnızca seller */
+        /**
+         * Bağlantı koşulları (US-024 AC2) — yalnızca seller
+         * @description İzin `connections.terms.manage` (yalnız `seller`, kapsam `all`; temsilci yalnız görür). Kısmi güncelleme,
+         *     en az bir alan. Alıcı bu koşulları hiçbir yoldan değiştiremez (veritabanı bekçisi de reddeder). Fiyat
+         *     listesi ve şube fiyatı F3.6'ya kadar kapalı: `priceListId` yalnız `null`, `branchPricingEnabled` yalnız
+         *     `false`. Temsilci satıcının aktif üyesi olmalı (`422`). Başka işletmenin bağlantısı `404`; iptal edilmiş
+         *     bağlantı `409 INVALID_STATE_TRANSITION`. Audit `connection.terms_updated`. Idempotency-Key gerekmez (PATCH).
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -2072,9 +2091,9 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
-                    "application/json": components["schemas"]["ConnectionTerms"];
+                    "application/json": components["schemas"]["ConnectionTermsUpdate"];
                 };
             };
             responses: {
@@ -2083,8 +2102,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Connection"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         trace?: never;
@@ -6888,20 +6913,41 @@ export interface components {
         };
         Connection: {
             /** Format: uuid */
-            id?: string;
+            id: string;
             /** Format: uuid */
-            sellerId?: string;
+            sellerId: string;
             /** Format: uuid */
-            buyerId?: string;
-            counterpartyName?: string;
+            buyerId: string;
+            /** @description Karşı tarafın ünvanı; artık görünmüyorsa null. */
+            counterpartyName: string | null;
             /** @enum {string} */
-            status?: "active" | "cancelled";
-            terms?: components["schemas"]["ConnectionTerms"];
+            status: "active" | "cancelled";
+            /** @description Satıcı koşulları en az bir kez kaydetti mi (US-024 AC1 "koşul atanmadı"). */
+            termsAssigned: boolean;
+            terms: components["schemas"]["ConnectionTerms"];
+            /** @description Yalnız satıcı bakışında; koşul atanmamış aktif bağlantıda öneri, yoksa null (US-024 AC3). */
+            suggestedTerms?: components["schemas"]["ConnectionTermsSuggestion"] | null;
             /** Format: date-time */
-            startedAt?: string;
+            startedAt: string;
             /** Format: date-time */
-            endedAt?: string | null;
-            endedBySide?: string | null;
+            endedAt: string | null;
+            /** @enum {string|null} */
+            endedBySide: "seller" | "buyer" | null;
+        };
+        ConnectionPage: {
+            items: components["schemas"]["Connection"][];
+            nextCursor: string | null;
+        };
+        ConnectionTermsSuggestion: {
+            /** @enum {string} */
+            source: "previous_connection" | "request";
+            creditLimit: string | null;
+            paymentTermDays: number;
+            /**
+             * Format: uuid
+             * @description Önceki temsilci hâlâ aktif üyeyse.
+             */
+            salesRepMembershipId: string | null;
         };
         /** @description Perakendecinin gördüğü toptancı özeti (US-023 AC1); ürün, fiyat, başka bağlantı yok. */
         ConnectionSellerSummary: {
@@ -6919,10 +6965,28 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        /** @description Alıcı bakışında yalnız `creditLimit` ve `paymentTermDays` döner. */
         ConnectionTerms: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description null = satıcının varsayılan listesi
+             */
             priceListId?: string | null;
             branchPricingEnabled?: boolean;
+            /** @description AZN, 2 ondalık; MVP'de yalnız uyarı */
+            creditLimit: string | null;
+            paymentTermDays: number;
+            /** Format: uuid */
+            salesRepMembershipId?: string | null;
+        };
+        ConnectionTermsUpdate: {
+            /** @description F3.6'ya kadar yalnız null */
+            priceListId?: null;
+            /**
+             * @description F3.6'ya kadar yalnız false
+             * @constant
+             */
+            branchPricingEnabled?: false;
             creditLimit?: string | null;
             paymentTermDays?: number;
             /** Format: uuid */

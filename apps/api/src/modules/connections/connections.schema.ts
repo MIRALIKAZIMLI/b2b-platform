@@ -1,7 +1,8 @@
 // Bağlantı tabloları (data-model §4.7, F2.12a). RLS politikaları, GRANT'lar, `users` FK'ları ve
 // SECURITY DEFINER fonksiyonları migration'da elle yazılır (drizzle/0022_connections.sql).
 // `connection_requests` ve `connections` P sınıfı (satıcı veya alıcı), `blocks` T sınıfı (alıcı).
-// `price_list_id` → price_lists FK'sı F3.6'da; `sales_rep_membership_id` FK'sı F2.14'te eklenir.
+// `price_list_id` → price_lists FK'sı F3.6'da. F2.14a: `sales_rep_membership_id` → memberships FK'sı,
+// koşulların son atanma anı `terms_set_at` (null = "koşul atanmadı", US-024 AC1).
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -17,6 +18,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { memberships } from '../access';
 import { businesses } from '../businesses';
 
 const timestamps = {
@@ -87,7 +89,9 @@ export const connections = pgTable(
     branchPricingEnabled: boolean('branch_pricing_enabled').notNull().default(false),
     creditLimit: numeric('credit_limit', { precision: 14, scale: 2 }),
     paymentTermDays: integer('payment_term_days').notNull().default(0),
-    salesRepMembershipId: uuid('sales_rep_membership_id'),
+    salesRepMembershipId: uuid('sales_rep_membership_id').references(() => memberships.id),
+    termsSetAt: timestamp('terms_set_at', { withTimezone: true }),
+    termsSetByUserId: uuid('terms_set_by_user_id'),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
     endedAt: timestamp('ended_at', { withTimezone: true }),
     endedBySide: text('ended_by_side'),
@@ -121,6 +125,10 @@ export const connections = pgTable(
       sql`${table.creditLimit} is null or ${table.creditLimit} >= 0`,
     ),
     check('connections_payment_term_check', sql`${table.paymentTermDays} between 0 and 180`),
+    check(
+      'connections_terms_set_check',
+      sql`(${table.termsSetAt} is null) = (${table.termsSetByUserId} is null)`,
+    ),
   ],
 );
 

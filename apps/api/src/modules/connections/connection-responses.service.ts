@@ -19,12 +19,12 @@ import { IdGenerator } from '../../core/id-generator';
 import { OutboxWriter } from '../../core/outbox';
 import type { TenantContext } from '../../core/tenant-context';
 import { FilesService } from '../files';
-import { initialPaymentTermDays } from './connection-policy';
+import { INITIAL_PAYMENT_TERM_DAYS } from './connection-policy';
 import { ConnectionRequestStateMachine } from './connection-request.state-machine';
 import { toRequestView } from './connection-requests.service';
+import { toConnectionView } from './connection-view';
 import {
   type ConnectionRequestRow,
-  type ConnectionRow,
   ConnectionsRepository,
   type SellerSummaryRow,
 } from './connections.repository';
@@ -47,26 +47,6 @@ function isActivePairViolation(error: unknown): boolean {
     current = 'cause' in current ? current.cause : undefined;
   }
   return false;
-}
-
-function toConnectionView(row: ConnectionRow, counterpartyName: string): ConnectionView {
-  return {
-    id: row.id,
-    sellerId: row.sellerId,
-    buyerId: row.buyerId,
-    counterpartyName,
-    status: row.status as ConnectionView['status'],
-    terms: {
-      priceListId: row.priceListId,
-      branchPricingEnabled: row.branchPricingEnabled,
-      creditLimit: row.creditLimit,
-      paymentTermDays: row.paymentTermDays,
-      salesRepMembershipId: row.salesRepMembershipId,
-    },
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt === null ? null : row.endedAt.toISOString(),
-    endedBySide: row.endedBySide as ConnectionView['endedBySide'],
-  };
 }
 
 @Injectable()
@@ -148,7 +128,7 @@ export class ConnectionResponsesService {
           buyerId: request.buyerId,
           requestId: request.id,
           status: 'active',
-          paymentTermDays: initialPaymentTermDays(request.proposedPaymentTermDays),
+          paymentTermDays: INITIAL_PAYMENT_TERM_DAYS,
           startedAt: now,
           createdAt: now,
           updatedAt: now,
@@ -183,7 +163,7 @@ export class ConnectionResponsesService {
             },
           });
         }
-        return toConnectionView(connection, summary.legalName);
+        return toConnectionView(connection, 'buyer', summary.legalName);
       });
     } catch (error) {
       if (isActivePairViolation(error)) throw new DomainError('CONNECTION_ALREADY_ACTIVE');

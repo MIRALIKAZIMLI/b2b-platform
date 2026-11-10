@@ -201,15 +201,16 @@ export async function insertRequest(input: {
   readonly sellerLocalDate: string;
   /** Varsayılan: oluşturma + 14 gün. */
   readonly expiresAt?: Date;
+  readonly proposedPaymentTermDays?: number;
 }): Promise<string> {
   const id = ids.next();
   await businessRows(
     input.sellerId,
     `insert into connection_requests
        (id, seller_id, buyer_id, sent_by_user_id, status, expires_at,
-        seller_local_date, created_at, updated_at)
+        seller_local_date, created_at, updated_at, proposed_payment_term_days)
      values ($1, $2, $3, $4, 'pending', coalesce($7::timestamptz, $5::timestamptz + interval '14 days'),
-             $6, $5, $5)`,
+             $6, $5, $5, $8)`,
     [
       id,
       input.sellerId,
@@ -218,6 +219,7 @@ export async function insertRequest(input: {
       input.createdAt,
       input.sellerLocalDate,
       input.expiresAt ?? null,
+      input.proposedPaymentTermDays ?? null,
     ],
   );
   if (input.status === 'accepted' || input.status === 'rejected') {
@@ -276,5 +278,65 @@ export async function insertBlock(buyerId: string, sellerId: string, userId: str
     buyerId,
     'insert into blocks (buyer_id, seller_id, created_by_user_id) values ($1, $2, $3)',
     [buyerId, sellerId, userId],
+  );
+}
+
+/** F2.14a: kabul edilmiş istek + aktif bağlantı (alıcı bağlamında, varsayılan koşullarla). */
+export async function activeConnection(
+  seller: Seller,
+  buyer: Buyer,
+  at: Date,
+  proposedPaymentTermDays?: number,
+): Promise<string> {
+  const requestId = await insertRequest({
+    sellerId: seller.businessId,
+    buyerId: buyer.businessId,
+    sentByUserId: seller.admin.userId,
+    status: 'accepted',
+    createdAt: at,
+    sellerLocalDate: at.toISOString().slice(0, 10),
+    ...(proposedPaymentTermDays === undefined ? {} : { proposedPaymentTermDays }),
+  });
+  return await insertConnection({
+    sellerId: seller.businessId,
+    buyerId: buyer.businessId,
+    requestId,
+    startedAt: at,
+  });
+}
+
+/** F2.14a: satıcı bağlamında koşul yazar (bekçi: yalnız satıcı, yalnız aktif bağlantı). */
+export async function setTerms(
+  seller: Seller,
+  connectionId: string,
+  terms: {
+    readonly creditLimit: string | null;
+    readonly paymentTermDays: number;
+    readonly salesRepMembershipId: string | null;
+  },
+): Promise<void> {
+  await businessRows(
+    seller.businessId,
+    `update connections
+        set credit_limit = $2, payment_term_days = $3, sales_rep_membership_id = $4,
+            terms_set_at = now(), terms_set_by_user_id = $5
+      where id = $1`,
+    [
+      connectionId,
+      terms.creditLimit,
+      terms.paymentTermDays,
+      terms.salesRepMembershipId,
+      seller.admin.userId,
+    ],
+  );
+}
+
+/** Bağlantıyı iptal eder (alıcı bağlamında; F2.15 uçları gelene kadar test kurulumu). */
+export async function cancelConnection(buyerId: string, connectionId: string, at: Date) {
+  await businessRows(
+    buyerId,
+    `update connections set status = 'cancelled', ended_at = $2, ended_by_side = 'buyer'
+      where id = $1`,
+    [connectionId, at],
   );
 }
