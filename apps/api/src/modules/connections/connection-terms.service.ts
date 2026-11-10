@@ -8,6 +8,7 @@ import type {
   ConnectionTermsSuggestion,
   ConnectionTermsUpdate,
   ConnectionView,
+  SalesRepList,
 } from '@b2b/shared';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
@@ -15,6 +16,7 @@ import { type Tx, withTenantTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { fromDecimalString, LINE_TOTAL_SCALE, toDecimalString } from '../../core/money';
 import type { TenantContext } from '../../core/tenant-context';
+import { TeamService } from '../access';
 import { isAssignableSalesRep } from './connection-policy';
 import { type ConnectionSide, toConnectionView } from './connection-view';
 import {
@@ -37,7 +39,16 @@ export class ConnectionTermsService {
     @Inject(ConnectionsRepository) private readonly repository: ConnectionsRepository,
     @Inject(AuditService) private readonly audit: AuditRecorder,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(TeamService) private readonly team: TeamService,
   ) {}
+
+  /**
+   * `GET /api/v1/connections/sales-reps` (F2.14b): koşul ekranındaki temsilci seçenekleri. Liste
+   * `isAssignableSalesRep` ile aynı küme: satıcının aktif üyeleri (Mimar K2).
+   */
+  async salesReps(tenant: TenantContext): Promise<SalesRepList> {
+    return { items: await this.team.activeMemberNames(tenant) };
+  }
 
   /**
    * `GET /api/v1/connections`: satıcı veya alıcı bakışı (işletmenin yeteneği). Satıcıda `assigned`

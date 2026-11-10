@@ -3,6 +3,7 @@ import {
   type ConnectionView,
   connectionsQuerySchema,
   connectionTermsUpdateSchema,
+  type SalesRepList,
 } from '@b2b/shared';
 import { Body, Controller, Get, Inject, Param, Patch, Query, Req } from '@nestjs/common';
 import { z } from 'zod';
@@ -26,6 +27,12 @@ export class ConnectionsController {
     @Query() query: unknown,
   ): Promise<ConnectionPage> {
     return await this.terms.list(tenant, connectionsQuerySchema.parse(query));
+  }
+
+  @Get('sales-reps')
+  @RequirePermission('connections.terms.manage')
+  async salesReps(@CurrentTenant() tenant: TenantContext): Promise<SalesRepList> {
+    return await this.terms.salesReps(tenant);
   }
 
   @Patch(':id/terms')

@@ -2,6 +2,7 @@
 // `GET /api/v1/connection-requests/outgoing`, şema `ConnectionRequest`). İstemci ve sunucu ortak.
 import { z } from 'zod';
 import { pickLocalizedText } from './localized-text';
+import type { CurrencyFormat } from './format';
 
 export const CONNECTION_REQUEST_MESSAGE_MAX = 500;
 export const CONNECTION_REQUEST_TERM_MAX_DAYS = 180;
@@ -157,6 +158,16 @@ export const connectionsQuerySchema = z
   })
   .strict();
 export type ConnectionsQuery = z.infer<typeof connectionsQuerySchema>;
+
+/** `GET /connections/sales-reps` (F2.14b): temsilci seçeneği = satıcının aktif üyesi. */
+export interface SalesRepOption {
+  readonly membershipId: string;
+  readonly fullName: string;
+}
+
+export interface SalesRepList {
+  readonly items: readonly SalesRepOption[];
+}
 
 export interface ConnectionPage {
   readonly items: readonly ConnectionView[];
@@ -483,4 +494,131 @@ export function withPendingRelation<T>(data: T, buyerId: string): T {
   }
   if ('items' in data) return { ...data, items: markItems(data.items, buyerId) };
   return data;
+}
+
+// ---- Toptancı müşteri ekranı ve koşul penceresi (F2.14b; US-024) ----
+
+/** Kredi limiti para birimi: MVP tek para birimi AZN (US-024 AC2, data-model `credit_limit`). */
+export const CREDIT_LIMIT_CURRENCY: CurrencyFormat = { code: 'AZN', symbol: '₼', decimals: 2 };
+
+/** Müşteri ekranı erişimi: görme (`connections.view`) ve koşul yönetimi (`connections.terms.manage`). */
+export interface CustomersAccess {
+  readonly view: boolean;
+  readonly manage: boolean;
+}
+
+export function customersAccess(codes: readonly string[]): CustomersAccess {
+  const has = (code: string) => codes.includes(code);
+  return { view: has('connections.view'), manage: has('connections.terms.manage') };
+}
+
+/**
+ * Kredi limiti kutusu (web + mobil): boş → `null` (limit yok); boşluk ve binlik ayırıcı boşluğu
+ * atılır, ondalık virgül noktaya çevrilir; `CREDIT_LIMIT_PATTERN` dışı geçersiz.
+ */
+export function parseCreditLimit(
+  raw: string,
+): { readonly valid: true; readonly value: string | null } | { readonly valid: false } {
+  // `\s` NBSP'yi (binlik ayırıcı) de kapsar.
+  const value = raw.replace(/\s/g, '').replace(',', '.');
+  if (value === '') return { valid: true, value: null };
+  return CREDIT_LIMIT_PATTERN.test(value) ? { valid: true, value } : { valid: false };
+}
+
+/** Koşul penceresinin başlangıç değerleri; `source` hangi değerlerin önerildiğini söyler. */
+export interface TermsFormValues {
+  readonly creditLimit: string;
+  readonly paymentTermDays: string;
+  readonly salesRepMembershipId: string;
+  readonly source: 'current' | 'previous_connection' | 'request' | 'none';
+}
+
+/**
+ * US-024 AC3 + F2.14a K4: koşul atanmışsa mevcut koşullar; atanmamışsa öneri (önceki dönem veya
+ * isteğin önerilen vadesi); yoksa boş limit, vade 0.
+ */
+export function termsFormValues(
+  connection: Pick<ConnectionView, 'termsAssigned' | 'terms' | 'suggestedTerms'>,
+): TermsFormValues {
+  if (connection.termsAssigned) {
+    return {
+      creditLimit: connection.terms.creditLimit ?? '',
+      paymentTermDays: String(connection.terms.paymentTermDays),
+      salesRepMembershipId: connection.terms.salesRepMembershipId ?? '',
+      source: 'current',
+    };
+  }
+  const suggestion = connection.suggestedTerms ?? null;
+  if (suggestion !== null) {
+    return {
+      creditLimit: suggestion.creditLimit ?? '',
+      paymentTermDays: String(suggestion.paymentTermDays),
+      salesRepMembershipId: suggestion.salesRepMembershipId ?? '',
+      source: suggestion.source,
+    };
+  }
+  return {
+    creditLimit: '',
+    paymentTermDays: String(connection.terms.paymentTermDays),
+    salesRepMembershipId: connection.terms.salesRepMembershipId ?? '',
+    source: 'none',
+  };
+}
+
+/** Pencerenin gönderdiği gövde (`ConnectionTermsUpdate`'in alt kümesi; fiyat listesi F3.6). */
+export interface TermsFormBody {
+  readonly creditLimit: string | null;
+  readonly paymentTermDays: number;
+  /** Yoksa sunucu temsilciyi değiştirmez (PATCH kısmi). */
+  readonly salesRepMembershipId?: string | null;
+}
+
+/**
+ * Pencere gövdesi: limit ve vade her zaman gönderilir. Temsilci `undefined` ise (temsilci listesi
+ * yüklenmedi/yüklenemedi) alan gönderilmez, böylece kayıtlı temsilci sessizce silinmez.
+ */
+export function termsUpdateBody(values: {
+  readonly creditLimit: string;
+  readonly paymentTermDays: string;
+  readonly salesRepMembershipId: string | undefined;
+}):
+  | { readonly ok: true; readonly body: TermsFormBody }
+  | { readonly ok: false; readonly creditLimit: boolean; readonly paymentTermDays: boolean } {
+  const creditLimit = parseCreditLimit(values.creditLimit);
+  const days = parseTermDays(values.paymentTermDays);
+  const badLimit = !creditLimit.valid;
+  const badDays = days === 'invalid' || days === undefined;
+  if (!creditLimit.valid || badDays) {
+    return { ok: false, creditLimit: badLimit, paymentTermDays: badDays };
+  }
+  const rep = values.salesRepMembershipId;
+  return {
+    ok: true,
+    body:
+      rep === undefined
+        ? { creditLimit: creditLimit.value, paymentTermDays: days }
+        : {
+            creditLimit: creditLimit.value,
+            paymentTermDays: days,
+            salesRepMembershipId: rep === '' ? null : rep,
+          },
+  };
+}
+
+/** Koşul kaydı hatası → çeviri anahtarı (ekranın kendi metni; diğerleri genel `errors.*`). */
+export function termsFailureKey(body: unknown): string {
+  const code =
+    typeof body === 'object' && body !== null && 'code' in body && typeof body.code === 'string'
+      ? body.code
+      : 'INTERNAL_ERROR';
+  if (code === 'INVALID_STATE_TRANSITION') return 'customers.error.cancelled';
+  if (code === 'NOT_FOUND') return 'customers.error.not_found';
+  if (code === 'VALIDATION_FAILED') {
+    const details =
+      'details' in (body as object) ? (body as { details?: unknown }).details : undefined;
+    if (typeof details === 'object' && details !== null && 'salesRepMembershipId' in details) {
+      return 'customers.error.invalid_sales_rep';
+    }
+  }
+  return `errors.${code}`;
 }

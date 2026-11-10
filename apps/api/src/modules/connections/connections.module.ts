@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../../core/audit';
 import { OutboxModule } from '../../core/outbox';
+import { AccessModule } from '../access';
 import { BillingModule } from '../billing';
 import { BusinessesModule } from '../businesses';
 import { FilesModule } from '../files';
@@ -22,6 +23,7 @@ import { ConnectionsRepository } from './connections.repository';
  */
 @Module({
   imports: [
+    AccessModule,
     AuditModule,
     OutboxModule,
     BillingModule,

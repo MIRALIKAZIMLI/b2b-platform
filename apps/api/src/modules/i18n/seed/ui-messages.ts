@@ -2,7 +2,8 @@
 // F1.13b: kabuk, işletme seçici, menü; F1.14b: mobil güncelleme, bağlantı yok, platform bilgisi;
 // F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni;
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
-// daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel).
+// daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
+// F2.14b: toptancı müşterileri ve bağlantı koşulları).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -2840,5 +2841,255 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Geri çək',
     ru: 'Отозвать',
     tr: 'Geri çek',
+  },
+  'customers.title': {
+    az: 'Müştərilərim',
+    ru: 'Мои клиенты',
+    tr: 'Müşterilerim',
+  },
+  'customers.description': {
+    az: 'Bağlı pərakəndəçilər və onların şərtləri: kredit limiti, ödəniş müddəti və təmsilçi.',
+    ru: 'Подключённые розничные точки и их условия: кредитный лимит, отсрочка платежа и представитель.',
+    tr: 'Bağlı perakendeciler ve koşulları: kredi limiti, ödeme vadesi ve temsilci.',
+  },
+  'customers.tabs_label': {
+    az: 'Bağlantı vəziyyəti',
+    ru: 'Статус связи',
+    tr: 'Bağlantı durumu',
+  },
+  'customers.tab.active': {
+    az: 'Aktiv',
+    ru: 'Активные',
+    tr: 'Aktif',
+  },
+  'customers.tab.cancelled': {
+    az: 'Ləğv edilib',
+    ru: 'Отменённые',
+    tr: 'İptal edilmiş',
+  },
+  'customers.no_access': {
+    az: 'Müştəriləri görmək üçün icazəniz yoxdur.',
+    ru: 'У вас нет доступа к списку клиентов.',
+    tr: 'Müşterileri görme izniniz yok.',
+  },
+  'customers.go_directory': {
+    az: 'Pərakəndəçi tap',
+    ru: 'Найти розничную точку',
+    tr: 'Perakendeci bul',
+  },
+  'customers.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Yeniden dene',
+  },
+  'customers.empty_title': {
+    az: 'Hələ müştəri yoxdur',
+    ru: 'Клиентов пока нет',
+    tr: 'Henüz müşteri yok',
+  },
+  'customers.empty_active': {
+    az: 'Pərakəndəçi sorğunuzu qəbul edəndə burada görünəcək.',
+    ru: 'Розничная точка появится здесь, когда примет ваш запрос.',
+    tr: 'Perakendeci isteğinizi kabul edince burada görünür.',
+  },
+  'customers.empty_cancelled': {
+    az: 'Ləğv edilmiş bağlantı yoxdur.',
+    ru: 'Отменённых связей нет.',
+    tr: 'İptal edilmiş bağlantı yok.',
+  },
+  'customers.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'customers.more': {
+    az: 'Daha çox göstər',
+    ru: 'Показать ещё',
+    tr: 'Daha fazla göster',
+  },
+  'customers.closed_business': {
+    az: 'Bağlanmış müəssisə',
+    ru: 'Закрытое предприятие',
+    tr: 'Kapanmış işletme',
+  },
+  'customers.row.not_assigned': {
+    az: 'Şərtlər təyin edilməyib',
+    ru: 'Условия не назначены',
+    tr: 'Koşul atanmadı',
+  },
+  'customers.row.cancelled': {
+    az: 'Ləğv edilib',
+    ru: 'Отменена',
+    tr: 'İptal edildi',
+  },
+  'customers.row.since': {
+    az: '{date} tarixindən bağlıdır',
+    ru: 'Связь с {date}',
+    tr: '{date} tarihinden beri bağlı',
+  },
+  'customers.row.ended': {
+    az: 'ləğv: {date}',
+    ru: 'отменена: {date}',
+    tr: 'iptal: {date}',
+  },
+  'customers.row.default_price_list': {
+    az: 'Standart qiymət siyahınız tətbiq olunur.',
+    ru: 'Действует ваш стандартный прайс-лист.',
+    tr: 'Varsayılan fiyat listeniz geçerli.',
+  },
+  'customers.row.credit_limit': {
+    az: 'Kredit limiti',
+    ru: 'Кредитный лимит',
+    tr: 'Kredi limiti',
+  },
+  'customers.row.no_limit': {
+    az: 'Limitsiz',
+    ru: 'Без лимита',
+    tr: 'Limitsiz',
+  },
+  'customers.row.payment_term': {
+    az: 'Ödəniş müddəti',
+    ru: 'Отсрочка',
+    tr: 'Ödeme vadesi',
+  },
+  'customers.row.days': {
+    az: '{days} gün',
+    ru: '{days} дн.',
+    tr: '{days} gün',
+  },
+  'customers.row.sales_rep': {
+    az: 'Təmsilçi',
+    ru: 'Представитель',
+    tr: 'Temsilci',
+  },
+  'customers.row.no_rep': {
+    az: 'Yoxdur',
+    ru: 'Нет',
+    tr: 'Yok',
+  },
+  'customers.row.rep_unknown': {
+    az: 'Təyin edilib',
+    ru: 'Назначен',
+    tr: 'Atandı',
+  },
+  'customers.row.assign': {
+    az: 'Şərtləri təyin et',
+    ru: 'Назначить условия',
+    tr: 'Koşulları ata',
+  },
+  'customers.row.edit': {
+    az: 'Şərtləri dəyiş',
+    ru: 'Изменить условия',
+    tr: 'Koşulları değiştir',
+  },
+  'customers.terms.title': {
+    az: 'Bağlantı şərtləri',
+    ru: 'Условия связи',
+    tr: 'Bağlantı koşulları',
+  },
+  'customers.terms.description': {
+    az: 'Şərtləri yalnız siz dəyişə bilərsiniz; pərakəndəçi kredit limitini və ödəniş müddətini görür.',
+    ru: 'Условия можете менять только вы; розничная точка видит кредитный лимит и отсрочку.',
+    tr: 'Koşulları yalnız siz değiştirebilirsiniz; perakendeci kredi limitini ve ödeme vadesini görür.',
+  },
+  'customers.terms.suggested_previous_connection': {
+    az: 'Əvvəlki bağlantının şərtləri təklif olunur. Yoxlayın və yadda saxlayın.',
+    ru: 'Предложены условия прошлой связи. Проверьте и сохраните.',
+    tr: 'Önceki bağlantının koşulları öneriliyor. Kontrol edip kaydedin.',
+  },
+  'customers.terms.suggested_request': {
+    az: 'Sorğuda təklif etdiyiniz ödəniş müddəti doldurulub. Yoxlayın və yadda saxlayın.',
+    ru: 'Подставлена отсрочка из вашего запроса. Проверьте и сохраните.',
+    tr: 'İstekte önerdiğiniz ödeme vadesi dolduruldu. Kontrol edip kaydedin.',
+  },
+  'customers.terms.credit_limit': {
+    az: 'Kredit limiti (AZN)',
+    ru: 'Кредитный лимит (AZN)',
+    tr: 'Kredi limiti (AZN)',
+  },
+  'customers.terms.credit_limit_hint': {
+    az: 'Boş qalsa limitsiz. Hələlik yalnız xəbərdarlıq üçündür.',
+    ru: 'Пусто — без лимита. Пока только для предупреждения.',
+    tr: 'Boş bırakılırsa limitsiz. Şimdilik yalnız uyarı amaçlı.',
+  },
+  'customers.terms.credit_limit_invalid': {
+    az: 'Məbləğ mənfi olmamalı, ən çox 2 onluq rəqəm.',
+    ru: 'Сумма должна быть неотрицательной, не более 2 знаков после запятой.',
+    tr: 'Tutar negatif olamaz, en çok 2 ondalık.',
+  },
+  'customers.terms.credit_limit_placeholder': {
+    az: 'Məs. 5000',
+    ru: 'Напр. 5000',
+    tr: 'Ör. 5000',
+  },
+  'customers.terms.payment_term': {
+    az: 'Ödəniş müddəti (gün)',
+    ru: 'Отсрочка (дней)',
+    tr: 'Ödeme vadesi (gün)',
+  },
+  'customers.terms.payment_term_hint': {
+    az: '0–{max} gün',
+    ru: '0–{max} дней',
+    tr: '0–{max} gün',
+  },
+  'customers.terms.payment_term_invalid': {
+    az: '0 ilə {max} arasında tam ədəd daxil edin.',
+    ru: 'Введите целое число от 0 до {max}.',
+    tr: '0 ile {max} arasında tam sayı girin.',
+  },
+  'customers.terms.sales_rep': {
+    az: 'Məsul təmsilçi',
+    ru: 'Ответственный представитель',
+    tr: 'Sorumlu temsilci',
+  },
+  'customers.terms.sales_rep_hint': {
+    az: 'Komandanızın aktiv üzvləri.',
+    ru: 'Активные участники вашей команды.',
+    tr: 'Ekibinizin aktif üyeleri.',
+  },
+  'customers.terms.sales_rep_unavailable': {
+    az: 'Komanda siyahısı yüklənmədi.',
+    ru: 'Не удалось загрузить список команды.',
+    tr: 'Ekip listesi yüklenemedi.',
+  },
+  'customers.terms.sales_rep_none': {
+    az: 'Təyin edilməyib',
+    ru: 'Не назначен',
+    tr: 'Atanmadı',
+  },
+  'customers.terms.price_list_note': {
+    az: 'Qiymət siyahısı təyin etmək kataloq hazır olanda açılacaq; indi standart siyahınız tətbiq olunur.',
+    ru: 'Назначение прайс-листа появится вместе с каталогом; сейчас действует стандартный.',
+    tr: 'Fiyat listesi atama katalogla birlikte açılacak; şimdilik varsayılan listeniz geçerli.',
+  },
+  'customers.terms.cancel': {
+    az: 'Bağla',
+    ru: 'Закрыть',
+    tr: 'Kapat',
+  },
+  'customers.terms.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'customers.terms.saving': {
+    az: 'Saxlanılır…',
+    ru: 'Сохранение…',
+    tr: 'Kaydediliyor…',
+  },
+  'customers.error.cancelled': {
+    az: 'Bu bağlantı artıq ləğv edilib; şərtlər dəyişdirilə bilməz.',
+    ru: 'Эта связь уже отменена; условия изменить нельзя.',
+    tr: 'Bu bağlantı iptal edilmiş; koşullar değiştirilemez.',
+  },
+  'customers.error.not_found': {
+    az: 'Bağlantı tapılmadı. Siyahını yeniləyin.',
+    ru: 'Связь не найдена. Обновите список.',
+    tr: 'Bağlantı bulunamadı. Listeyi yenileyin.',
+  },
+  'customers.error.invalid_sales_rep': {
+    az: 'Seçilən təmsilçi artıq komandanızda deyil.',
+    ru: 'Выбранный представитель больше не в вашей команде.',
+    tr: 'Seçilen temsilci artık ekibinizde değil.',
   },
 };

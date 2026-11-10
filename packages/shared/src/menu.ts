@@ -76,7 +76,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     dashboard,
     // F2.11b: perakendeci dizini (US-019, US-020); web + mobil (temsilci).
     { key: 'directory', anyOf: ['directory.search'], ready: true, path: 'directory' },
-    soon('customers', ['connections.view']),
+    // F2.14b: bağlı perakendeciler ve bağlantı koşulları (US-024); yalnız web.
+    { key: 'customers', anyOf: ['connections.view'], ready: true, path: 'customers' },
     // F2.12b: gönderilen bağlantı istekleri (US-021); web + mobil.
     { key: 'requests', anyOf: ['connections.request.send'], ready: true, path: 'requests' },
     soon('products', ['catalog.view']),

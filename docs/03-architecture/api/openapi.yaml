@@ -1119,6 +1119,32 @@ paths:
               schema: { $ref: '#/components/schemas/ConnectionPage' }
         '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /api/v1/connections/sales-reps:
+    get:
+      tags: [connections]
+      summary: Koşul ekranı için temsilci seçenekleri (US-024 AC2) — yalnızca seller
+      description: |
+        İzin `connections.terms.manage`. Satıcının aktif üyeleri; yalnız üyelik kimliği ve ad (telefon, rol yok).
+        `PATCH .../terms` temsilci kuralıyla aynı küme (F2.14b).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [membershipId, fullName]
+                      properties:
+                        membershipId: { type: string, format: uuid }
+                        fullName: { type: string }
+        '403': { $ref: '#/components/responses/Error' }
   /api/v1/connections/{id}/terms:
     patch:
       tags: [connections]
