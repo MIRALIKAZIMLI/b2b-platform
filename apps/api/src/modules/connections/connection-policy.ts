@@ -169,19 +169,32 @@ export function relationOf(pair: PairState, cooldown: CooldownSettings, now: Dat
  */
 export const INITIAL_PAYMENT_TERM_DAYS = 0;
 
+/**
+ * Satış temsilcisi rolünün şablon kodu (kullanıcı kararı 2026-11-10, temsilci B). Üyeliğin rolü bu
+ * şablondan kopyalanmış ya da bu şablondan türetilmiş özel rol olmalı. `0025` bekçisi aynı kodu kullanır.
+ */
+export const SALES_REP_ROLE_TEMPLATE_CODE = 'seller_sales_rep';
+
 /** Temsilci adayı üyelik (çağıran satıcının kendi üyeliği; RLS başkasınınkini göstermez). */
 export interface SalesRepCandidate {
   readonly businessId: string;
   readonly status: string;
+  /** Üyeliğin rolünün kaynak şablonu (`roles.source_template_id` → `role_templates.code`). */
+  readonly roleTemplateCode: string | null;
 }
 
 /**
- * Bağlantıya temsilci atanabilir mi (F2.14a K2, Mimar: şimdilik satıcının aktif herhangi bir
- * üyesi; kullanıcı kararı daraltırsa yalnız bu fonksiyon değişir).
+ * Bağlantıya temsilci atanabilir mi: satıcının satış temsilcisi rolündeki aktif üyesi (kullanıcı
+ * kararı 2026-11-10, B; F2.14a K2'deki "herhangi aktif üye" daraltıldı). Liste ucu da bu fonksiyonla
+ * süzer; `0025` `connections_guard` aynı kuralı DB'de uygular.
  */
 export function isAssignableSalesRep(
   candidate: SalesRepCandidate | undefined,
   sellerId: string,
 ): boolean {
-  return candidate?.businessId === sellerId && candidate.status === 'active';
+  return (
+    candidate?.businessId === sellerId &&
+    candidate.status === 'active' &&
+    candidate.roleTemplateCode === SALES_REP_ROLE_TEMPLATE_CODE
+  );
 }

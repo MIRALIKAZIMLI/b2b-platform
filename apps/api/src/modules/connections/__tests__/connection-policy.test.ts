@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canRequest,
   effectiveDailyQuota,
+  isAssignableSalesRep,
   type PairState,
   type RequestPolicyInput,
   relationOf,
@@ -199,5 +200,20 @@ describe('F2.12a dizin ilişki durumu (relationOf)', () => {
       cooldownUntil: null,
       canRequest: true,
     });
+  });
+});
+
+describe('F2.14-B1 temsilci uygunluğu (kullanıcı kararı 2026-11-10, B)', () => {
+  const SELLER = 'seller-1';
+  it('F2.14-B1 yalnız satıcının satış temsilcisi rolündeki aktif üyesi atanabilir', () => {
+    const rep = { businessId: SELLER, status: 'active', roleTemplateCode: 'seller_sales_rep' };
+    expect(isAssignableSalesRep(rep, SELLER)).toBe(true);
+    expect(isAssignableSalesRep({ ...rep, roleTemplateCode: 'seller_sales_manager' }, SELLER)).toBe(
+      false,
+    );
+    expect(isAssignableSalesRep({ ...rep, roleTemplateCode: null }, SELLER)).toBe(false);
+    expect(isAssignableSalesRep({ ...rep, status: 'removed' }, SELLER)).toBe(false);
+    expect(isAssignableSalesRep({ ...rep, businessId: 'other' }, SELLER)).toBe(false);
+    expect(isAssignableSalesRep(undefined, SELLER)).toBe(false);
   });
 });

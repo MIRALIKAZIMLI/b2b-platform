@@ -44,10 +44,25 @@ export class ConnectionTermsService {
 
   /**
    * `GET /api/v1/connections/sales-reps` (F2.14b): koşul ekranındaki temsilci seçenekleri. Liste
-   * `isAssignableSalesRep` ile aynı küme: satıcının aktif üyeleri (Mimar K2).
+   * `isAssignableSalesRep` ile süzülür: satıcının satış temsilcisi rolündeki aktif üyeleri
+   * (kullanıcı kararı 2026-11-10, B).
    */
   async salesReps(tenant: TenantContext): Promise<SalesRepList> {
-    return { items: await this.team.activeMemberNames(tenant) };
+    const members = await this.team.activeMemberRoleCodes(tenant);
+    return {
+      items: members
+        .filter((member) =>
+          isAssignableSalesRep(
+            {
+              businessId: tenant.businessId,
+              status: 'active',
+              roleTemplateCode: member.roleTemplateCode,
+            },
+            tenant.businessId,
+          ),
+        )
+        .map((member) => ({ membershipId: member.membershipId, fullName: member.fullName })),
+    };
   }
 
   /**
@@ -91,7 +106,7 @@ export class ConnectionTermsService {
   /**
    * `PATCH /api/v1/connections/{id}/terms` (US-024 AC2): kısmi güncelleme, satır kilidiyle.
    * Başkasının bağlantısı `404`; iptal edilmiş bağlantı `409 INVALID_STATE_TRANSITION`; temsilci
-   * satıcının aktif üyesi değilse `422`. Audit `connection.terms_updated` (önce/sonra).
+   * satıcının satış temsilcisi rolündeki aktif üyesi değilse `422` (var olan atama değişmedikçe denetlenmez). Audit `connection.terms_updated` (önce/sonra).
    */
   async updateTerms(
     tenant: TenantContext,

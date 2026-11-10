@@ -3043,9 +3043,9 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Sorumlu temsilci',
   },
   'customers.terms.sales_rep_hint': {
-    az: 'Komandanızın aktiv üzvləri.',
-    ru: 'Активные участники вашей команды.',
-    tr: 'Ekibinizin aktif üyeleri.',
+    az: 'Satış nümayəndəsi rolundakı aktiv üzvlər.',
+    ru: 'Активные участники с ролью торгового представителя.',
+    tr: 'Satış temsilcisi rolündeki aktif üyeler.',
   },
   'customers.terms.sales_rep_unavailable': {
     az: 'Komanda siyahısı yüklənmədi.',

@@ -31,6 +31,7 @@ export {
   membershipRegions,
   memberships,
   permissions,
+  roleTemplates,
   roles,
 } from './access.schema';
 export { type AccessSeedResult, seedAccess } from './seed/access.seed';

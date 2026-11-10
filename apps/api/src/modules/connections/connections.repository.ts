@@ -7,7 +7,7 @@ import { and, asc, desc, eq, gt, inArray, isNotNull, lt, sql } from 'drizzle-orm
 import { z } from 'zod';
 import type { Tx } from '../../core/db';
 import type { FileBucket } from '../../core/ports/file-storage';
-import { membershipRegions, memberships } from '../access';
+import { membershipRegions, memberships, roleTemplates, roles } from '../access';
 import type { PairState, SalesRepCandidate } from './connection-policy';
 import { blocks, connectionRequests, connections } from './connections.schema';
 
@@ -447,8 +447,17 @@ export class ConnectionsRepository {
   /** Temsilci adayı üyelik; `memberships` T politikası yalnız çağıranın işletmesini gösterir. */
   async salesRepCandidateTx(tx: Tx, membershipId: string): Promise<SalesRepCandidate | undefined> {
     const [row] = await tx
-      .select({ businessId: memberships.businessId, status: memberships.status })
+      .select({
+        businessId: memberships.businessId,
+        status: memberships.status,
+        roleTemplateCode: roleTemplates.code,
+      })
       .from(memberships)
+      .innerJoin(
+        roles,
+        and(eq(roles.id, memberships.roleId), eq(roles.businessId, memberships.businessId)),
+      )
+      .leftJoin(roleTemplates, eq(roleTemplates.id, roles.sourceTemplateId))
       .where(eq(memberships.id, membershipId));
     return row;
   }

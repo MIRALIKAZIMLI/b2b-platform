@@ -2068,8 +2068,9 @@ export interface paths {
         };
         /**
          * Koşul ekranı için temsilci seçenekleri (US-024 AC2) — yalnızca seller
-         * @description İzin `connections.terms.manage`. Satıcının aktif üyeleri; yalnız üyelik kimliği ve ad (telefon, rol yok).
-         *     `PATCH .../terms` temsilci kuralıyla aynı küme (F2.14b).
+         * @description İzin `connections.terms.manage`. Satıcının satış temsilcisi rolündeki (`seller_sales_rep` şablonundan
+         *     kopyalanan veya türetilen rol) aktif üyeleri; yalnız üyelik kimliği ve ad (telefon, rol yok).
+         *     `PATCH .../terms` temsilci kuralıyla aynı küme (F2.14b; kullanıcı kararı 2026-11-10, B).
          */
         get: {
             parameters: {
