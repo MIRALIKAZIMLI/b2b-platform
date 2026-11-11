@@ -218,6 +218,13 @@ export const connectionCancelSchema = z
   .strict();
 export type ConnectionCancelInput = z.infer<typeof connectionCancelSchema>;
 
+/** İstemcinin gönderdiği gövde (openapi ile aynı; `note` yoksa alan hiç yok). */
+export interface ConnectionCancelBody {
+  readonly reason: ConnectionCancelReason;
+  readonly note?: string;
+  readonly confirm: true;
+}
+
 export interface ConnectionCancelResult {
   /** İptal edilen `submitted` sipariş sayısı (F4.5'e kadar 0). */
   readonly cancelledOrders: number;
@@ -476,21 +483,30 @@ export interface PushTarget {
   readonly path: string;
 }
 
-const PUSH_TARGETS: Readonly<Record<string, PushTarget>> = {
+const PUSH_TARGETS: Readonly<Record<string, readonly PushTarget[]>> = {
   // Perakendeciye yeni istek (US-054) → gelen istekler.
-  connection_request: { area: 'buyer', path: 'incoming-requests' },
+  connection_request: [{ area: 'buyer', path: 'incoming-requests' }],
   // Toptancıya yanıt → gönderilen istekler.
-  connection_accepted: { area: 'seller', path: 'requests' },
-  connection_rejected: { area: 'seller', path: 'requests' },
+  connection_accepted: [{ area: 'seller', path: 'requests' }],
+  connection_rejected: [{ area: 'seller', path: 'requests' }],
+  // F2.15b: iptal karşı tarafa gider; alan seçili işletmeden (perakendeci → toptancılarım,
+  // toptancı → müşteriler).
+  connection_cancelled: [
+    { area: 'buyer', path: 'suppliers' },
+    { area: 'seller', path: 'customers' },
+  ],
 };
 
-/** Push `data` (`{ type, id }`) → ekran; bilinmeyen tür veya bozuk veri `undefined`. */
-export function pushRoute(data: unknown): PushTarget | undefined {
+/**
+ * Push `data` (`{ type, id }`) → ekran; bilinmeyen tür veya bozuk veri `undefined`. Alan verilirse
+ * yalnız o alanın hedefi; verilmezse ilk hedef.
+ */
+export function pushRoute(data: unknown, area?: PushTarget['area']): PushTarget | undefined {
   if (typeof data !== 'object' || data === null || !('type' in data)) return undefined;
   const type = data.type;
-  return typeof type === 'string' && Object.hasOwn(PUSH_TARGETS, type)
-    ? PUSH_TARGETS[type]
-    : undefined;
+  if (typeof type !== 'string' || !Object.hasOwn(PUSH_TARGETS, type)) return undefined;
+  const targets = PUSH_TARGETS[type] ?? [];
+  return area === undefined ? targets[0] : targets.find((target) => target.area === area);
 }
 
 /** Gönderilen isteğin ardından dizin kartının ilişkisi (sunucu yanıtıyla aynı). */
@@ -535,11 +551,53 @@ export const CREDIT_LIMIT_CURRENCY: CurrencyFormat = { code: 'AZN', symbol: '₼
 export interface CustomersAccess {
   readonly view: boolean;
   readonly manage: boolean;
+  /** F2.15b: bağlantı iptali (US-025 AC1; satıcıda admin + satış müdürü, alıcıda admin). */
+  readonly cancel: boolean;
 }
 
 export function customersAccess(codes: readonly string[]): CustomersAccess {
   const has = (code: string) => codes.includes(code);
-  return { view: has('connections.view'), manage: has('connections.terms.manage') };
+  return {
+    view: has('connections.view'),
+    manage: has('connections.terms.manage'),
+    cancel: has('connections.cancel'),
+  };
+}
+
+// ---- İptal penceresi (F2.15b; web + mobil ortak) ----
+
+/** İptal formu durumu: gerekçe seçilmeden ve ikinci onay kutusu işaretlenmeden gönderilmez. */
+export interface CancelFormState {
+  readonly reason: ConnectionCancelReason | null;
+  readonly note: string;
+  readonly confirmed: boolean;
+}
+
+export const EMPTY_CANCEL_FORM: CancelFormState = { reason: null, note: '', confirmed: false };
+
+/**
+ * Formu gövdeye çevirir; eksikse `undefined` (düğme kapalı). Not boşsa alan gönderilmez; uzun not
+ * da `undefined` (sunucu 422 verirdi).
+ */
+export function cancelBody(form: CancelFormState): ConnectionCancelBody | undefined {
+  if (form.reason === null || !form.confirmed) return undefined;
+  const note = form.note.trim();
+  if (note.length > CONNECTION_CANCEL_NOTE_MAX) return undefined;
+  return { reason: form.reason, ...(note === '' ? {} : { note }), confirm: true };
+}
+
+/** İptal ucunun liste yenileyen hataları: bağlantı artık aktif değil veya görünmüyor. */
+export const CONNECTION_CANCEL_ERROR_CODES = ['INVALID_STATE_TRANSITION', 'NOT_FOUND'] as const;
+
+/** İptal hatası → mesaj anahtarı; bilinen kodda pencere onay düğmesini kaldırır, liste yenilenir. */
+export function cancelFailure(body: unknown): RespondFailure {
+  const object = typeof body === 'object' && body !== null ? body : {};
+  const code = 'code' in object && typeof object.code === 'string' ? object.code : 'INTERNAL_ERROR';
+  const known = (CONNECTION_CANCEL_ERROR_CODES as readonly string[]).includes(code);
+  return {
+    key: known ? `connections.cancel.error.${code}` : `errors.${code}`,
+    refresh: known,
+  };
 }
 
 /**

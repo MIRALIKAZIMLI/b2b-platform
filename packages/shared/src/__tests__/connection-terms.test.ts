@@ -40,10 +40,16 @@ describe('F2.14 bağlantı koşulları ekran yardımcıları', () => {
     const item = visibleMenu('seller', ['connections.view']).find((m) => m.key === 'customers');
     expect(item).toMatchObject({ ready: true, path: 'customers' });
     expect(visibleMenu('seller', []).some((m) => m.key === 'customers')).toBe(false);
-    expect(customersAccess(['connections.view'])).toEqual({ view: true, manage: false });
+    // F2.15b: `cancel` alanı eklendi (bu kodlarda yok).
+    expect(customersAccess(['connections.view'])).toEqual({
+      view: true,
+      manage: false,
+      cancel: false,
+    });
     expect(customersAccess(['connections.view', 'connections.terms.manage'])).toEqual({
       view: true,
       manage: true,
+      cancel: false,
     });
   });
 

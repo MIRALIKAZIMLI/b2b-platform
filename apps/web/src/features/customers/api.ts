@@ -2,8 +2,9 @@
 // Toptancı müşterileri ve bağlantı koşulları (F2.14b; openapi `GET /api/v1/connections`,
 // `GET /api/v1/connections/sales-reps`, `PATCH /api/v1/connections/{id}/terms`). Yalnız
 // `packages/api-client`. PATCH idempotency anahtarı istemez (aynı gövde aynı sonucu verir).
+// F2.15b: `POST /api/v1/connections/{id}/cancel` (pencere açılınca tek `Idempotency-Key`).
 import type { ApiClient, paths } from '@b2b/api-client';
-import type { ConnectionStatus, TermsFormBody } from '@b2b/shared';
+import type { ConnectionCancelBody, ConnectionStatus, TermsFormBody } from '@b2b/shared';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { webApi } from '../../lib/session';
 import { ApiError } from '../admin-sellers/api';
@@ -82,6 +83,37 @@ export function useUpdateTerms(businessId: string | undefined) {
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: TermsFormBody }) =>
       patchTerms(webApi.client, businessId ?? '', id, body),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: [...CONNECTIONS_KEY, 'list'] }),
+  });
+}
+
+export type CancelResult =
+  paths['/api/v1/connections/{id}/cancel']['post']['responses']['200']['content']['application/json'];
+
+export async function postCancel(
+  client: ApiClient,
+  businessId: string,
+  id: string,
+  body: ConnectionCancelBody,
+  idempotencyKey: string,
+): Promise<CancelResult> {
+  const { data, error, response } = await client.POST('/api/v1/connections/{id}/cancel', {
+    params: {
+      header: { 'X-Business-Id': businessId, 'Idempotency-Key': idempotencyKey },
+      path: { id },
+    },
+    body,
+  });
+  if (data === undefined) throw new ApiError(error, response.status);
+  return data;
+}
+
+/** İptal; başarıda da hatada da liste sunucudan yenilenir (durum başka taraftan değişmiş olabilir). */
+export function useCancelConnection(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body, key }: { id: string; body: ConnectionCancelBody; key: string }) =>
+      postCancel(webApi.client, businessId ?? '', id, body, key),
     onSettled: () => queryClient.invalidateQueries({ queryKey: [...CONNECTIONS_KEY, 'list'] }),
   });
 }

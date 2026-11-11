@@ -106,7 +106,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     soon('cart', ['cart.edit']),
     soon('approvals', ['cart.approve']),
     soon('orders', ['orders.view']),
-    soon('suppliers', ['connections.cancel']),
+    // F2.15b: bağlı toptancılar ve iptal (US-025).
+    { key: 'suppliers', anyOf: ['connections.view'], ready: true, path: 'suppliers' },
     soon('ledger', ['ledger.view']),
     { key: 'team', anyOf: ['team.manage'], ready: true, path: 'team' },
     soon('audit', ['audit.view']),
