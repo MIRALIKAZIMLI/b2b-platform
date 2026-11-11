@@ -54,3 +54,4 @@
 - F2.14 takip: bağlantı temsilcisi yalnız satış temsilcisi rolündeki üye (kullanıcı kararı B, 0025)
 - F2.15a: bağlantı iptali API, ConnectionCancelledHandler kancası, iptal bildirimi, 0026 bekçi
 - F2.15b: bağlantı iptali ekranları (web + mobil), Topdançılarım ekranı, E2E-09 kısmi
+- F2.16: bağlantı isteği süre dolumu zamanlanmış işi, ops_metrics, süre doldu bildirimi

@@ -1,4 +1,4 @@
-export { ConnectionsModule } from './connections.module';
+export { ConnectionsModule, ConnectionsWorkerModule } from './connections.module';
 export { ConnectionRelationsService } from './connection-relations.service';
 export {
   canRequest,

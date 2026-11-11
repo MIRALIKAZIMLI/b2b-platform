@@ -70,6 +70,10 @@ export const SETTING_DEFINITIONS = {
   'connection.cooldown_after_buyer_cancel_days': intSetting(30, 7, 365),
   'connection.daily_request_quota': intSetting(20, 1, 1000),
   'connection.block_rate_alert_pct': intSetting(10, 1, 100),
+  // F2.16: istek süre dolumu zamanlanmış işi (US-026 AC1; aralık worker açılışında okunur).
+  'connection.request_expiry_interval_minutes': intSetting(15, 5, 60),
+  'connection.request_expiry_batch_size': intSetting(500, 50, 1000),
+  'connection.request_expiry_lock_seconds': intSetting(600, 60, 3600),
   'delivery.auto_confirm_hours': intSetting(48, 1, 720),
   'delivery.location_mismatch_meters': intSetting(300, 10, 10_000),
   'dormant.reminder_days': increasingIntListSetting([7, 30], 1, 3650),

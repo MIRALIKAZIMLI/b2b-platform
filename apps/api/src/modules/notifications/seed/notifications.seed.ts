@@ -77,6 +77,21 @@ export const NOTIFICATION_TEMPLATES: Readonly<
       body: 'Perakendeci bağlantı isteğinizi reddetti.',
     },
   },
+  // F2.16 (US-026 AC1). Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  connection_request_expired: {
+    az: {
+      title: 'Əlaqə sorğusunun müddəti bitdi',
+      body: 'Pərakəndəçi əlaqə sorğunuza vaxtında cavab vermədi. İstəsəniz yeni sorğu göndərə bilərsiniz.',
+    },
+    ru: {
+      title: 'Срок запроса на связь истёк',
+      body: 'Розничный покупатель не ответил на ваш запрос вовремя. При желании отправьте новый запрос.',
+    },
+    tr: {
+      title: 'Bağlantı isteğinin süresi doldu',
+      body: 'Perakendeci bağlantı isteğinizi süresi içinde yanıtlamadı. İsterseniz yeni istek gönderebilirsiniz.',
+    },
+  },
   // F2.15a: iptal eden işletmenin adı ve gerekçesi yok (engel de aynı metin; Mimar notu 3).
   connection_cancelled: {
     az: {

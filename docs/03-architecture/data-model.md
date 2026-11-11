@@ -135,6 +135,7 @@ Sütun listesinde `id`, `created_at`, `updated_at` her tabloda vardır ve tekrar
 | labels | jsonb | null | ör. `{"queue": "notifications"}` |
 
 İndeks: `(key, measured_at DESC)`. 90 günden eski kayıtlar gece silinir. Kaynak: [observability.md](../06-operations/observability.md) §2.
+F2.16'dan beri zamanlanmış işler her başarılı çalışmada bir satır yazar: `key = job.<iş adı>` (ör. `job.connections.expire_requests`), `value` = işlenen kayıt sayısı, `labels` boş. app_user yalnız INSERT yapar; okuma ve temizlik F6.7.
 
 #### `idempotency_keys` (S)
 

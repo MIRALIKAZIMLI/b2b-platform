@@ -199,6 +199,7 @@ describe('F1.11 bildirim uç noktaları (entegrasyon)', () => {
       connection_accepted: true,
       connection_rejected: true,
       connection_cancelled: true,
+      connection_request_expired: true,
     });
     expect(unknown.status).toBe(422);
     const stored = await withUserTx({ userId: a.id }, (tx) => repo.pushEnabled(tx, 'test'));

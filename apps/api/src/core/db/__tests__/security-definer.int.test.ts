@@ -16,6 +16,7 @@ const EXPECTED_FUNCTIONS = [
   'connection_buyer_targets',
   'connection_counterpart_admins',
   'connection_request_recipients',
+  'connection_requests_expire',
   'connection_seller_recipients',
   'connection_seller_summaries',
   'dev_sms_outbox_insert',

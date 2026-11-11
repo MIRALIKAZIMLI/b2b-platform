@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../../core/audit';
+import { OpsMetricsModule } from '../../core/ops-metrics';
 import { OutboxModule } from '../../core/outbox';
 import { AccessModule } from '../access';
 import { BillingModule } from '../billing';
@@ -16,6 +17,8 @@ import { ConnectionResponsesService } from './connection-responses.service';
 import { ConnectionTermsService } from './connection-terms.service';
 import { ConnectionsController } from './connections.controller';
 import { ConnectionsRepository } from './connections.repository';
+import { ConnectionsProcessor } from './jobs/connections.processor';
+import { ExpireRequestsJob, ExpireRequestsSchedule } from './jobs/expire-requests.job';
 
 /**
  * Bağlantı isteği (F2.12a): `POST /connection-requests`, `GET .../outgoing`; dizin ilişki
@@ -48,3 +51,18 @@ import { ConnectionsRepository } from './connections.repository';
   exports: [ConnectionRelationsService],
 })
 export class ConnectionsModule {}
+
+/**
+ * Worker (F2.16): `connections` kuyruğu tüketicisi ve süre dolumu zamanlayıcısı. Redis global
+ * RedisModule'den, kuyruklar global QueueModule'den (outbox dağıtıcısı) gelir.
+ */
+@Module({
+  imports: [OutboxModule, SettingsModule, OpsMetricsModule],
+  providers: [
+    ConnectionsRepository,
+    ExpireRequestsJob,
+    ExpireRequestsSchedule,
+    ConnectionsProcessor,
+  ],
+})
+export class ConnectionsWorkerModule {}

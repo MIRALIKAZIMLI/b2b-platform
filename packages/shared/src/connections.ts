@@ -489,6 +489,8 @@ const PUSH_TARGETS: Readonly<Record<string, readonly PushTarget[]>> = {
   // Toptancıya yanıt → gönderilen istekler.
   connection_accepted: [{ area: 'seller', path: 'requests' }],
   connection_rejected: [{ area: 'seller', path: 'requests' }],
+  // F2.16: süre dolumu toptancıya → gönderilen istekler.
+  connection_request_expired: [{ area: 'seller', path: 'requests' }],
   // F2.15b: iptal karşı tarafa gider; alan seçili işletmeden (perakendeci → toptancılarım,
   // toptancı → müşteriler).
   connection_cancelled: [
