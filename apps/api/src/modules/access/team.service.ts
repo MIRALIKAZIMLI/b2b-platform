@@ -114,6 +114,18 @@ export class TeamService {
     assertWithinActor(tenant, { isBusinessAdmin: role.isBusinessAdmin, permissions }, field);
   }
 
+  /**
+   * F2.5 S1 (kullanıcı kararı 2026-11-13, Müfettiş 13 N1): işletme admini olmayan aktör üyeyi
+   * yalnız kendi şubesine bağlar; başka şubedeki üyeyi değiştiremez ve çıkaramaz. Diğer
+   * şubeleri yalnız işletme admini yönetir. Şubesiz aktör şube kapsamlı üye yönetemez.
+   */
+  private assertBranchWithinActor(tenant: TenantContext, branchId: string | null): void {
+    if (tenant.isBusinessAdmin || branchId === null) return;
+    if (branchId !== tenant.branchId) {
+      throw new DomainError('PERMISSION_DENIED', { branchId: ['beyond_actor'] });
+    }
+  }
+
   async listMembers(tenant: TenantContext): Promise<TeamMemberView[]> {
     return await withTenantTx(tenant, async (tx) => {
       const rows = await this.repository.listMembers(tx, tenant.businessId);
@@ -163,6 +175,7 @@ export class TeamService {
         { id: member.roleId, isBusinessAdmin: member.isBusinessAdmin },
         'membership',
       );
+      this.assertBranchWithinActor(tenant, member.branchId);
       const oldRegions = (await this.repository.regionsOf(tx, [member.id])).get(member.id) ?? [];
 
       if (input.status === 'removed') {
@@ -213,6 +226,7 @@ export class TeamService {
         input.warehouseId,
         member.warehouseId,
       );
+      this.assertBranchWithinActor(tenant, branchId);
       let regionIds: readonly string[] = scopes.has('assigned') ? oldRegions : [];
       if (input.regionIds !== undefined) {
         if (!scopes.has('assigned')) throw invalid('regionIds', 'not_allowed');
@@ -338,6 +352,7 @@ export class TeamService {
       target.warehouseId,
       null,
     );
+    this.assertBranchWithinActor(tenant, branchId);
     return { branchId, warehouseId };
   }
 

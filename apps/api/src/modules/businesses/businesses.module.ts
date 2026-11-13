@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../../core/audit';
 import { OutboxModule } from '../../core/outbox';
 import { SettingsModule } from '../settings';
+import { BranchesController } from './branches.controller';
+import { BranchesRepository } from './branches.repository';
+import { BranchesService } from './branches.service';
 import { BusinessPrivacyController } from './business-privacy.controller';
 import { BusinessPrivacyService } from './business-privacy.service';
 import { BusinessProfileService } from './business-profile.service';
@@ -18,7 +21,7 @@ import { SellerSetupService } from './seller-setup.service';
 
 /**
  * İşletme çekirdek tabloları (F1.7), kimliksiz toptancı başvurusu (F2.2) ve işletme profili
- * okuma ucu (F2.3b), profil düzenleme (F2.4), görünürlük ayarları (F2.10), depolar / satıcı profili / hizmet bölgeleri (F2.6).
+ * okuma ucu (F2.3b), profil düzenleme (F2.4), görünürlük ayarları (F2.10), depolar / satıcı profili / hizmet bölgeleri (F2.6), şubeler (F2.5).
  * IpKeyService global IdentityModule'den, Redis istemcisi global RedisModule'den,
  * WarehouseLimitGate global WarehouseLimitGateModule'den (billing) gelir.
  */
@@ -31,6 +34,7 @@ import { SellerSetupService } from './seller-setup.service';
     BusinessPrivacyController,
     WarehousesController,
     SellerProfileController,
+    BranchesController,
   ],
   providers: [
     BusinessesRepository,
@@ -41,6 +45,8 @@ import { SellerSetupService } from './seller-setup.service';
     SellerApplicationsService,
     SellerSetupRepository,
     SellerSetupService,
+    BranchesRepository,
+    BranchesService,
   ],
   exports: [
     SellerSetupRepository,

@@ -286,6 +286,21 @@ export const branches = pgTable(
       'branches_approval_threshold_check',
       sql`${table.approvalRule} <> 'above_amount' or ${table.approvalThreshold} is not null`,
     ),
+    // F2.5 (T4, T5): eşik yalnız `above_amount`'ta ve sıfırdan büyük.
+    check(
+      'branches_approval_threshold_only_above_check',
+      sql`${table.approvalRule} = 'above_amount' or ${table.approvalThreshold} is null`,
+    ),
+    check(
+      'branches_approval_threshold_positive_check',
+      sql`${table.approvalThreshold} is null or ${table.approvalThreshold} > 0`,
+    ),
+    // F2.5 (T6): konum ya iki koordinatla birlikte ya hiç; aralık denetimi.
+    check('branches_geo_pair_check', sql`(${table.geoLat} is null) = (${table.geoLng} is null)`),
+    check(
+      'branches_geo_range_check',
+      sql`(${table.geoLat} is null or ${table.geoLat} between -90 and 90) and (${table.geoLng} is null or ${table.geoLng} between -180 and 180)`,
+    ),
     check('branches_status_check', sql`${table.status} in ('active', 'inactive')`),
     // F1.8a: memberships / invitations bileşik FK'sının hedefi (şube aynı işletmeden olmalı).
     unique('branches_business_id_id_uq').on(table.businessId, table.id),
