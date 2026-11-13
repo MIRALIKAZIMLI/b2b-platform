@@ -55,7 +55,14 @@ export function normalizeTeamPhone(input: string): string {
 }
 
 export type TeamFieldError =
-  'required' | 'phone_invalid' | 'too_long' | 'not_found' | 'inactive' | 'not_allowed' | 'invalid';
+  | 'required'
+  | 'phone_invalid'
+  | 'too_long'
+  | 'not_found'
+  | 'inactive'
+  | 'not_allowed'
+  | 'beyond_actor'
+  | 'invalid';
 
 export interface InvitationFormValues {
   readonly phone: string;
@@ -183,7 +190,21 @@ const FIELD_REASONS: Readonly<Record<string, TeamFieldError>> = {
   not_found: 'not_found',
   inactive: 'inactive',
   not_allowed: 'not_allowed',
+  // F2.5 S1: admin olmayan yönetici yalnız kendi şubesine bağlar (403 `PERMISSION_DENIED`).
+  beyond_actor: 'beyond_actor',
 };
+
+/**
+ * F2.5 S1: ekip formunda seçilebilecek şubeler. İşletme admini tüm aktif şubeleri seçer; admin
+ * olmayan yönetici yalnız kendi şubesini (şubesi yoksa boş liste). Liste okunamadıysa `undefined`.
+ */
+export function assignableBranches<T extends { readonly id: string }>(
+  active: readonly T[] | undefined,
+  actor: { readonly isBusinessAdmin: boolean; readonly branchId: string | null },
+): readonly T[] | undefined {
+  if (active === undefined || actor.isBusinessAdmin) return active;
+  return active.filter((item) => item.id === actor.branchId);
+}
 
 export type TeamFailure =
   | { readonly kind: 'plan_limit' }

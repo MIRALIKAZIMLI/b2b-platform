@@ -45,7 +45,12 @@ export function mobileMenu(me: Pick<Me, 'activeBusiness'>, area: MobileArea): Me
  * olan öğeler; diğerleri bağlantısız kalır. F2.4: perakendeci profili. F2.11b: dizin. F2.12b: istekler.
  */
 type MobileRoute =
-  '/business-profile' | '/directory' | '/requests' | '/incoming-requests' | '/suppliers';
+  | '/business-profile'
+  | '/directory'
+  | '/requests'
+  | '/incoming-requests'
+  | '/suppliers'
+  | '/branches';
 
 const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'buyer:profile': '/business-profile',
@@ -57,6 +62,8 @@ const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'buyer:incoming_requests': '/incoming-requests',
   // F2.15b: bağlı toptancılar ve iptal (US-025).
   'buyer:suppliers': '/suppliers',
+  // F2.5b: şubeler ve onay kuralı (US-010).
+  'buyer:branches': '/branches',
 };
 
 /** Menü `path`'i → mobil adres (push dokunuşu için; `MOBILE_ROUTES` ile aynı ekranlar). */

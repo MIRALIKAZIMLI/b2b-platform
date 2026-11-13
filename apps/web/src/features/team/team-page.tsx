@@ -4,11 +4,17 @@
 // en altta açık davetler kartı. Satır eylemleri ikincil düğme; çıkarma ve geri çekme iki adımlı
 // onaylı (rose yalnız onay kutusunda). `team.manage` yoksa bilgi kartı (menüde de görünmez, AC5).
 // F2.8: en altta "Rollar" kartı (özel rol oluşturma / düzenleme, US-014).
-import { type GrantActor, pickLocalizedText, type TimeZoneChain } from '@b2b/shared';
+import {
+  assignableBranches,
+  type GrantActor,
+  pickLocalizedText,
+  type TimeZoneChain,
+} from '@b2b/shared';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useRegionOptions } from '../admin-sellers/api';
 import { DEFAULT_TIMEZONE } from '../admin-sellers/form';
+import { useBranches } from '../branches/api';
 import { useWarehouses } from '../seller-settings/api';
 import { LoadFailed } from '../seller-settings/status';
 import { useShell } from '../shell/use-shell';
@@ -35,7 +41,10 @@ export function TeamPage() {
   const allowed = permissions.some((item) => item.code === 'team.manage');
   const capability = shell.me?.activeBusiness?.capability ?? null;
   const isSeller = capability === 'seller';
-  const canReadWarehouses = isSeller && permissions.some((item) => item.code === 'business.manage');
+  const canManageBusiness = permissions.some((item) => item.code === 'business.manage');
+  const canReadWarehouses = isSeller && canManageBusiness;
+  // F2.5b: şube listesi `business.manage` ister (T8, depolarla aynı); yoksa açıklama gösterilir.
+  const canReadBranches = capability === 'buyer' && canManageBusiness;
   const scoped = allowed ? businessId : undefined;
 
   const members = useTeamMembers(scoped);
@@ -44,6 +53,7 @@ export function TeamPage() {
   const jobTitles = useJobTitles(scoped);
   const roleTemplates = useRoleTemplates(scoped);
   const warehouses = useWarehouses(canReadWarehouses ? scoped : undefined);
+  const branches = useBranches(canReadBranches ? scoped : undefined);
   const regions = useRegionOptions(locale);
   const [inviting, setInviting] = useState(false);
 
@@ -64,17 +74,27 @@ export function TeamPage() {
       })),
     [jobTitles.data, locale],
   );
-  const scopeOptions = useMemo<ScopeOptions>(
-    () => ({
+  // F2.5 S1: admin olmayan yönetici yalnız kendi şubesini seçer (sunucu da 403 verir).
+  const self = members.data?.find((m) => m.isSelf);
+  const selfIsAdmin = self?.isBusinessAdmin ?? false;
+  const selfBranchId = self?.branchId ?? null;
+  const scopeOptions = useMemo<ScopeOptions>(() => {
+    const activeBranches = branches.data
+      ?.filter((item) => item.status === 'active')
+      .map((item) => ({ id: item.id, label: item.name }));
+    return {
       warehouses: warehouses.data
         ?.filter((item) => item.status === 'active')
         .map((item) => ({ id: item.id, label: item.name })),
-      // Şube listesi uç noktası F2.5'te (US-010); o zamana kadar şube kapsamlı rol atanamaz.
-      branches: undefined,
+      branches: branches.data?.map((item) => ({ id: item.id, label: item.name })),
+      branchChoices: assignableBranches(activeBranches, {
+        isBusinessAdmin: selfIsAdmin,
+        branchId: selfBranchId,
+      }),
+      branchOwnOnly: !selfIsAdmin,
       regions: regions.data ?? [],
-    }),
-    [warehouses.data, regions.data],
-  );
+    };
+  }, [warehouses.data, branches.data, regions.data, selfIsAdmin, selfBranchId]);
   // F2.8 (R3): rol düzenleyicide aktörün verebileceği izinler. Admin bayrağı üye listesinden
   // (`isSelf`); sunucu aynı kuralı ayrıca uygular.
   const actor = useMemo<GrantActor>(
