@@ -4,7 +4,12 @@
 // en altta açık davetler kartı. Satır eylemleri ikincil düğme; çıkarma ve geri çekme iki adımlı
 // onaylı (rose yalnız onay kutusunda). `team.manage` yoksa bilgi kartı (menüde de görünmez, AC5).
 // F2.8: en altta "Rollar" kartı (özel rol oluşturma / düzenleme, US-014).
-import { type GrantActor, pickLocalizedText, type TimeZoneChain } from '@b2b/shared';
+import {
+  assignableBranches,
+  type GrantActor,
+  pickLocalizedText,
+  type TimeZoneChain,
+} from '@b2b/shared';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useRegionOptions } from '../admin-sellers/api';
@@ -69,18 +74,27 @@ export function TeamPage() {
       })),
     [jobTitles.data, locale],
   );
-  const scopeOptions = useMemo<ScopeOptions>(
-    () => ({
+  // F2.5 S1: admin olmayan yönetici yalnız kendi şubesini seçer (sunucu da 403 verir).
+  const self = members.data?.find((m) => m.isSelf);
+  const selfIsAdmin = self?.isBusinessAdmin ?? false;
+  const selfBranchId = self?.branchId ?? null;
+  const scopeOptions = useMemo<ScopeOptions>(() => {
+    const activeBranches = branches.data
+      ?.filter((item) => item.status === 'active')
+      .map((item) => ({ id: item.id, label: item.name }));
+    return {
       warehouses: warehouses.data
         ?.filter((item) => item.status === 'active')
         .map((item) => ({ id: item.id, label: item.name })),
-      branches: branches.data
-        ?.filter((item) => item.status === 'active')
-        .map((item) => ({ id: item.id, label: item.name })),
+      branches: branches.data?.map((item) => ({ id: item.id, label: item.name })),
+      branchChoices: assignableBranches(activeBranches, {
+        isBusinessAdmin: selfIsAdmin,
+        branchId: selfBranchId,
+      }),
+      branchOwnOnly: !selfIsAdmin,
       regions: regions.data ?? [],
-    }),
-    [warehouses.data, branches.data, regions.data],
-  );
+    };
+  }, [warehouses.data, branches.data, regions.data, selfIsAdmin, selfBranchId]);
   // F2.8 (R3): rol düzenleyicide aktörün verebileceği izinler. Admin bayrağı üye listesinden
   // (`isSelf`); sunucu aynı kuralı ayrıca uygular.
   const actor = useMemo<GrantActor>(

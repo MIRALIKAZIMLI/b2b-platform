@@ -1579,6 +1579,16 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Для этой роли это поле не нужно.',
     tr: 'Bu rol için bu alan gerekmiyor.',
   },
+  'team.error.beyond_actor': {
+    az: 'Yalnız öz filialınıza bağlaya bilərsiniz.',
+    ru: 'Можно привязать только к своему филиалу.',
+    tr: 'Yalnızca kendi şubenize bağlayabilirsiniz.',
+  },
+  'team.branch_own_only': {
+    az: 'Biznes admini olmadığınız üçün yalnız öz filialınızı seçə bilərsiniz.',
+    ru: 'Вы не администратор бизнеса, поэтому можно выбрать только свой филиал.',
+    tr: 'İşletme admini olmadığınız için yalnızca kendi şubenizi seçebilirsiniz.',
+  },
   'team.error.invalid': {
     az: 'Dəyər yanlışdır.',
     ru: 'Неверное значение.',

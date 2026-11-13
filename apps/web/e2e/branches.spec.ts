@@ -4,6 +4,7 @@
 // Silme düğmesi yoktur. Ekip ekranında davet formunda şube seçimi yalnız aktif şubeleri listeler.
 import { expect, type Page, test } from '@playwright/test';
 import {
+  addBranchManager,
   addMembership,
   addRoleFromTemplate,
   addSubscription,
@@ -80,4 +81,43 @@ test('US-010 AC1 şube oluşur ve listede döner; AC3 every_order; AC4 pasifleş
   const branchSelect = form.locator('select[name="branchId"]');
   await expect(branchSelect.locator('option', { hasText: 'Mərkəz filialı' })).toHaveCount(1);
   await expect(branchSelect.locator('option', { hasText: 'Gənclik filialı' })).toHaveCount(0);
+});
+
+test('F2.5 S1 admin olmayan yönetici ekip davetinde yalnız kendi şubesini seçer', async ({
+  page,
+  browser,
+}) => {
+  const admin = await createUser('az');
+  const { businessId } = await addMembership(admin.id, 'buyer_business_admin', 'E2E Filial S1');
+  await addSubscription(businessId, 'buyer_free');
+  await addRoleFromTemplate(businessId, 'buyer_branch_admin');
+  const region = await createRegion();
+
+  await loginThroughUi(page, 'az', admin.phone);
+  await page.waitForURL('**/az/buyer');
+  await page.goto('/az/buyer/branches');
+  for (const name of ['Nərimanov filialı', 'Yasamal filialı']) {
+    await page.getByRole('button', { name: 'Yeni filial' }).click();
+    await page.getByLabel('Filialın adı').fill(name);
+    await page.getByLabel('Region').selectOption({ label: region.name });
+    await page.getByLabel('Ünvan').fill('Test küç. 1');
+    await page.getByRole('button', { name: 'Filial əlavə et' }).click();
+    await expect(page.getByTestId('branch-row').filter({ hasText: name })).toHaveCount(1);
+  }
+
+  const manager = await createUser('az');
+  await addBranchManager(manager.id, businessId, 'Yasamal filialı');
+  const other = await (await browser.newContext()).newPage();
+  await loginThroughUi(other, 'az', manager.phone);
+  await other.waitForURL('**/az/buyer');
+  await other.goto('/az/buyer/team');
+  await other.getByRole('button', { name: 'Dəvət et' }).click();
+  const form = other.getByTestId('invite-form');
+  await form.locator('select[name="roleId"]').selectOption({ label: 'Filial admini' });
+  const branchSelect = form.locator('select[name="branchId"]');
+  await expect(branchSelect.locator('option', { hasText: 'Yasamal filialı' })).toHaveCount(1);
+  await expect(branchSelect.locator('option', { hasText: 'Nərimanov filialı' })).toHaveCount(0);
+  await expect(
+    form.getByText('Biznes admini olmadığınız üçün yalnız öz filialınızı seçə bilərsiniz.'),
+  ).toBeVisible();
 });

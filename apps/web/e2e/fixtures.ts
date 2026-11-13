@@ -157,6 +157,52 @@ export async function addRoleFromTemplate(businessId: string, templateCode: stri
   });
 }
 
+/**
+ * F2.5b S1: işletmeye admin olmayan şube yöneticisi. `buyer_branch_admin` izinlerine ek olarak
+ * `team.manage` ve `business.manage` taşıyan özel rol; üyelik adı verilen şubeye bağlanır.
+ */
+export async function addBranchManager(
+  userId: string,
+  businessId: string,
+  branchName: string,
+): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    const roleId = randomUUID();
+    const template = await client.query<{ id: string; job_title_id: string }>(
+      `select t.id, j.id as job_title_id
+         from role_templates t join job_titles j on j.role_template_id = t.id and j.code = t.code
+        where t.code = 'buyer_branch_admin'`,
+    );
+    const branch = await client.query<{ id: string }>(
+      `select id from branches where business_id = $1 and name = $2`,
+      [businessId, branchName],
+    );
+    const row = template.rows[0];
+    const branchId = branch.rows[0]?.id;
+    if (row === undefined || branchId === undefined) throw new Error('şablon veya şube yok');
+    await client.query(
+      `insert into roles (id, business_id, name, capability, is_business_admin, source_template_id, is_custom)
+       values ($1, $2, '{"az": "E2E filial müdiri"}'::jsonb, 'buyer', false, $3, true)`,
+      [roleId, businessId, row.id],
+    );
+    await client.query(
+      `insert into role_permissions (role_id, permission_code, scope)
+       select $1::uuid, permission_code, default_scope from role_template_permissions where template_id = $2
+       union all select $1::uuid, 'team.manage', 'all'
+       union all select $1::uuid, 'business.manage', 'all'`,
+      [roleId, row.id],
+    );
+    await client.query(
+      `insert into memberships (id, user_id, business_id, role_id, job_title_id, branch_id)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), userId, businessId, roleId, row.job_title_id, branchId],
+    );
+    await client.query('commit');
+  });
+}
+
 /** Platform ekibi kullanıcısı (`platform_staff` S tablosu). TOTP girişte kurulur. */
 export async function createPlatformStaff(role: string): Promise<{ id: string; phone: string }> {
   const user = await createUser();
