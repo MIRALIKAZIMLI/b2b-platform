@@ -92,6 +92,22 @@ export const NOTIFICATION_TEMPLATES: Readonly<
       body: 'Perakendeci bağlantı isteğinizi süresi içinde yanıtlamadı. İsterseniz yeni istek gönderebilirsiniz.',
     },
   },
+  // F2.18 (US-016 AC2, D2 = A): perakendecinin hesabı platformca kapatıldı; toptancı adminlerine.
+  // Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  connection_closed_by_platform: {
+    az: {
+      title: 'Əlaqə sona çatdı',
+      body: 'Pərakəndəçinin hesabı bağlandığı üçün əlaqə sona çatdı. Ətraflı məlumat tətbiqdədir.',
+    },
+    ru: {
+      title: 'Связь завершена',
+      body: 'Связь завершена, так как аккаунт розничного покупателя закрыт. Подробности в приложении.',
+    },
+    tr: {
+      title: 'Bağlantı sona erdi',
+      body: 'Perakendecinin hesabı kapatıldığı için bağlantı sona erdi. Ayrıntılar uygulamada.',
+    },
+  },
   // F2.18 (US-015 AC2): VÖEN reddi. Metin gerekçe koduna göre `voen_rejected.<reason>`; kodsuz
   // eski kayıt veya bilinmeyen kodda genel metin. Taslak çeviri (AI); kullanıcı onayı bekliyor.
   voen_rejected: {

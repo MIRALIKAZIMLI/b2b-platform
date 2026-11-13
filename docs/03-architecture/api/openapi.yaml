@@ -3548,7 +3548,10 @@ components:
             - type: 'null'
         startedAt: { type: string, format: date-time }
         endedAt: { type: [string, 'null'], format: date-time }
-        endedBySide: { type: [string, 'null'], enum: [seller, buyer, null] }
+        endedBySide:
+          type: [string, 'null']
+          enum: [seller, buyer, platform, null]
+          description: '`platform` = perakendecinin hesabı platformca kapatıldı (F2.18, US-016 AC2).'
     ConnectionPage:
       type: object
       required: [items, nextCursor]

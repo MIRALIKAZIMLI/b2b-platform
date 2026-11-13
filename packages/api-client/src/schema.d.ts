@@ -7156,8 +7156,11 @@ export interface components {
             startedAt: string;
             /** Format: date-time */
             endedAt: string | null;
-            /** @enum {string|null} */
-            endedBySide: "seller" | "buyer" | null;
+            /**
+             * @description `platform` = perakendecinin hesabı platformca kapatıldı (F2.18, US-016 AC2).
+             * @enum {string|null}
+             */
+            endedBySide: "seller" | "buyer" | "platform" | null;
         };
         ConnectionPage: {
             items: components["schemas"]["Connection"][];

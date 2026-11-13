@@ -100,6 +100,13 @@ export const OUTBOX_EVENTS = {
     queue: 'notifications',
     fields: { connectionId: 'id', businessId: 'id', userId: 'id' },
   },
+  // F2.18 (US-016 AC2, D2 = A): arşivlenen perakendecinin bağlantısı platformca kapandı; toptancının
+  // her aktif admini için bir olay (`userId` alıcı, `businessId` toptancı). Bildirim
+  // `connection_closed_by_platform`.
+  'connection.platform_closed_notice': {
+    queue: 'notifications',
+    fields: { connectionId: 'id', businessId: 'id', userId: 'id' },
+  },
   // F2.18 (US-015 AC2): platform admini perakendecinin VÖEN'ini reddetti; perakendecinin her
   // aktif admini için bir olay (`userId` alıcı). Gerekçe sabit kod (serbest metin yok, §3).
   // Tüketici `notifications` (bildirim `voen_rejected`).

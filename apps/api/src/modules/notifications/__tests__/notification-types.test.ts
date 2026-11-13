@@ -121,3 +121,28 @@ describe('VÖEN reddi bildirimi (F2.18)', () => {
     }
   });
 });
+
+describe('platform kaynaklı bağlantı kapatma bildirimi (F2.18)', () => {
+  it('US-016 AC2 arşivde toptancı adminine ayrı tür, konu bağlantı', () => {
+    const payload = { connectionId: randomUUID(), businessId: randomUUID(), userId: randomUUID() };
+    expect(intentsForEvent('connection.platform_closed_notice', payload)).toEqual([
+      {
+        userId: payload.userId,
+        businessId: payload.businessId,
+        type: 'connection_closed_by_platform',
+        subjectId: payload.connectionId,
+        params: {},
+      },
+    ]);
+    expect(NOTIFICATION_EVENT_TYPES).toContain('connection.platform_closed_notice');
+  });
+
+  it('US-016 AC2 platform kapatma metni az/ru/tr, karşı taraf iptal metninden farklı', () => {
+    const platform = NOTIFICATION_TEMPLATES.connection_closed_by_platform;
+    const cancelled = NOTIFICATION_TEMPLATES.connection_cancelled;
+    expect(Object.keys(platform ?? {}).sort()).toEqual(['az', 'ru', 'tr']);
+    for (const lang of ['az', 'ru', 'tr'] as const) {
+      expect(platform?.[lang].body).not.toBe(cancelled?.[lang].body);
+    }
+  });
+});

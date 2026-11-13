@@ -141,7 +141,23 @@ export interface ConnectionView {
   readonly suggestedTerms?: ConnectionTermsSuggestion | null;
   readonly startedAt: string;
   readonly endedAt: string | null;
-  readonly endedBySide: 'seller' | 'buyer' | null;
+  /** `platform` = perakendecinin hesabı platformca kapatıldı (F2.18, US-016 AC2). */
+  readonly endedBySide: ConnectionEndedBySide | null;
+}
+
+export const CONNECTION_ENDED_BY_SIDES = ['seller', 'buyer', 'platform'] as const;
+export type ConnectionEndedBySide = (typeof CONNECTION_ENDED_BY_SIDES)[number];
+
+/**
+ * İptal edilmiş bağlantıda "kim kapattı" metninin anahtar soneki (web + mobil, `customers.row.*`).
+ * Platform kapatması karşı taraf iptali gibi gösterilmez (F2.18, Müfettiş 22 M1).
+ */
+export function connectionEndedLabel(
+  endedBySide: ConnectionEndedBySide,
+  viewerSide: 'seller' | 'buyer',
+): 'ended_by_you' | 'ended_by_other' | 'ended_by_platform' {
+  if (endedBySide === 'platform') return 'ended_by_platform';
+  return endedBySide === viewerSide ? 'ended_by_you' : 'ended_by_other';
 }
 
 // ---- Bağlantı listesi ve koşullar (F2.14a; US-024) ----

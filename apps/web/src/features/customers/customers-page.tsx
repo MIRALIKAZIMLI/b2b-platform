@@ -13,6 +13,7 @@
 // penceresini açar; iptal edilmiş satırda kimin iptal ettiği yazar (gerekçe yok, K2 = A). Perakendecide
 // "yeniden bağlan" hiçbir yerde yok (US-025 AC6).
 import {
+  connectionEndedLabel,
   CREDIT_LIMIT_CURRENCY,
   type ConnectionStatus,
   customersAccess,
@@ -80,7 +81,7 @@ function CustomerRow({
         </p>
         {!active && item.endedBySide !== null && (
           <p className="text-xs text-slate-500">
-            {t(item.endedBySide === side ? 'row.ended_by_you' : 'row.ended_by_other')}
+            {t(`row.${connectionEndedLabel(item.endedBySide, side)}`)}
           </p>
         )}
         {active && !item.termsAssigned && (

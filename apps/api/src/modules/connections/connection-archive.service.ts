@@ -2,7 +2,8 @@
 // admininin işleminde (`withPlatformTx`, platform-admin) çağrılır: aktif bağlantılar
 // `ended_by_side = platform`, `end_reason = business_archived` ile kapanır (DEFINER; durum makinesi
 // geçişi active → cancelled), `ConnectionCancelledHandler` kancaları aynı işlemde çalışır,
-// `connection.cancelled` olayı ve satıcının aktif adminlerine "bağlantı iptal edildi" bildirimi.
+// `connection.cancelled` olayı ve satıcının aktif adminlerine ayrı bildirim
+// (`connection.platform_closed_notice` → `connection_closed_by_platform`, Müfettiş 22 M2).
 // Bekleyen istekler değişmez: süre dolumuna kalır; arşivli alıcı yanıt veremez (AccessGuard),
 // satıcı arşivli alıcıya yeni istek gönderemez (VARSAYIM, Mimar notu 2).
 import { Inject, Injectable } from '@nestjs/common';
@@ -56,7 +57,7 @@ export class ConnectionArchiveService {
       });
       for (const adminId of await this.invitations.activeAdminUserIdsTx(tx, sellerId)) {
         await this.outbox.write(tx, {
-          type: 'connection.cancel_notice',
+          type: 'connection.platform_closed_notice',
           aggregateType: 'connection',
           aggregateId: connectionId,
           businessIds,

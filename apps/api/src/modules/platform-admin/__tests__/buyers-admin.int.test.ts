@@ -399,7 +399,8 @@ describe('F2.18 admin perakendeci yönetimi (entegrasyon)', () => {
           },
         },
       ]);
-      const notices = await events('connection.cancel_notice', connectionId);
+      expect(await events('connection.cancel_notice', connectionId)).toEqual([]);
+      const notices = await events('connection.platform_closed_notice', connectionId);
       expect(notices.map((n) => n.payload.userId).sort()).toEqual(
         [seller.admin.userId, sellerAdmin2.userId].sort(),
       );

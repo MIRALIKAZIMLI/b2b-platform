@@ -14,6 +14,7 @@ export const NOTIFICATION_TYPES = [
   'connection_cancelled',
   'connection_request_expired',
   'voen_rejected',
+  'connection_closed_by_platform',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -150,6 +151,23 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
           userId: event.userId,
           businessId: event.businessId,
           type: 'connection_cancelled',
+          subjectId: event.connectionId,
+          params: {},
+        },
+      ];
+    },
+  ],
+  [
+    // F2.18 (US-016 AC2, D2 = A): arşivlenen perakendecinin bağlantısı platformca kapandı; toptancının
+    // her aktif adminine ayrı tür ("karşı taraf iptal etti" değil). Perakendecinin adı girmez.
+    'connection.platform_closed_notice',
+    (payload: unknown): NotificationIntent[] => {
+      const event = connectionCancelNoticePayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.businessId,
+          type: 'connection_closed_by_platform',
           subjectId: event.connectionId,
           params: {},
         },
