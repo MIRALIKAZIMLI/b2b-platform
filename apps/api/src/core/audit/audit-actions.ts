@@ -38,6 +38,14 @@ export const AUDIT_ACTIONS = [
   'block.deleted',
   'connection.terms_updated',
   'connection.cancelled',
+  // F2.18 (US-015, US-016): platform admininin perakendeci işlemleri; hedef `business`. Gerekçe
+  // kodu ve admin notu audit'e girer; kişisel veri (telefon, ad) girmez.
+  'business.voen_verified',
+  'business.voen_rejected',
+  'business.suspended',
+  'business.unsuspended',
+  'business.archived',
+  'business.purged',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

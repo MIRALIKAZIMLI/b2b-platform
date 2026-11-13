@@ -1,4 +1,5 @@
 export { ConnectionsModule, ConnectionsWorkerModule } from './connections.module';
+export { ConnectionArchiveService } from './connection-archive.service';
 export { ConnectionRelationsService } from './connection-relations.service';
 export {
   canRequest,

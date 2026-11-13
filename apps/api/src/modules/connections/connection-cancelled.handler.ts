@@ -9,7 +9,8 @@ export interface ConnectionCancelledEvent {
   readonly connectionId: string;
   readonly sellerId: string;
   readonly buyerId: string;
-  readonly endedBySide: 'seller' | 'buyer';
+  /** F2.18: `platform` = arşivlenen perakendecinin bağlantısını platform kapattı. */
+  readonly endedBySide: 'seller' | 'buyer' | 'platform';
   readonly endedAt: Date;
   readonly endedByUserId: string;
 }

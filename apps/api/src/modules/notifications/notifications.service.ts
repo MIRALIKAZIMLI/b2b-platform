@@ -4,7 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Clock } from '../../core/clock';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
-import { renderTemplate } from './notification-template';
+import { renderTemplate, templateKeysFor, templatesFor } from './notification-template';
 import { isNotificationType, NOTIFICATION_TYPES } from './notification-types';
 import { NotificationsRepository } from './notifications.repository';
 import type { PushPlatform } from './notifications.schema';
@@ -48,9 +48,16 @@ export class NotificationsService {
       const rows = await this.repo.list(tx, cursor, limit + 1);
       const page = rows.slice(0, limit);
       const lang = await this.repo.preferredLanguage(tx, userId);
-      const templates = await this.repo.templates(tx, [...new Set(page.map((row) => row.type))]);
+      const templates = await this.repo.templates(
+        tx,
+        templateKeysFor(page.map((row) => ({ type: row.type, params: row.payload.params }))),
+      );
       const items = page.map((row): NotificationView => {
-        const text = renderTemplate(templates.get(row.type) ?? new Map(), lang, row.payload.params);
+        const text = renderTemplate(
+          templatesFor(templates, row.type, row.payload.params),
+          lang,
+          row.payload.params,
+        );
         return {
           id: row.id,
           type: row.type,

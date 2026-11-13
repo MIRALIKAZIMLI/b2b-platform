@@ -1,6 +1,7 @@
 // Bildirim türleri ve outbox olayı → bildirim eşlemesi (US-054, F1.11).
 // US-054 tablosundaki olaylar ilgili modüller yazıldıkça eklenir (her olay: tür, alıcılar, konu
 // kimliği). Alıcılar olayı yazan modülde çözülür; olay alıcı başınadır (F2.9: yeni şablon sürümü).
+import { VOEN_REJECT_REASONS } from '@b2b/shared';
 import { z } from 'zod';
 
 /** Tercih anahtarları ve şablon türleri. */
@@ -12,6 +13,7 @@ export const NOTIFICATION_TYPES = [
   'connection_rejected',
   'connection_cancelled',
   'connection_request_expired',
+  'voen_rejected',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -51,6 +53,13 @@ const connectionResponsePayload = z.object({
   sellerId: z.uuid(),
   buyerId: z.uuid(),
   userId: z.uuid(),
+});
+
+/** F2.18 (US-015 AC2): VÖEN reddi; `reason` sabit kod listesinden (şablon değişkeni). */
+const voenRejectedPayload = z.object({
+  businessId: z.uuid(),
+  userId: z.uuid(),
+  reason: z.enum(VOEN_REJECT_REASONS),
 });
 
 /** İptal bildirimi; `businessId` alıcının (karşı tarafın) işletmesi. */
@@ -143,6 +152,23 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
           type: 'connection_cancelled',
           subjectId: event.connectionId,
           params: {},
+        },
+      ];
+    },
+  ],
+  [
+    // F2.18 (US-015 AC2): perakendecinin her aktif adminine; konu işletme kimliği. Gerekçe kodu
+    // `voen_rejected.<reason>` şablonunu seçer; admin notu bildirime girmez (yalnız audit).
+    'buyer.voen_rejected',
+    (payload: unknown): NotificationIntent[] => {
+      const event = voenRejectedPayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.businessId,
+          type: 'voen_rejected',
+          subjectId: event.businessId,
+          params: { reason: event.reason },
         },
       ];
     },

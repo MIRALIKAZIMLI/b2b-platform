@@ -8,6 +8,9 @@
 //   P       : ayrıca okuma politikası satıcı ve alıcı kolonunu `app.business_id` ile karşılaştırır;
 //             her politika ifadesi `app.business_id` veya `app.is_platform` koşulu taşır (F2.12a, R18)
 //   S       : app_user'ın doğrudan SELECT izni yok
+//   Yasak liste (US-016 AC5, F2.18): fiyat, sipariş ve cari tablolarında yazma politikası (INSERT,
+//             UPDATE, DELETE, FOR ALL) `app.is_platform` taşımaz ve kiracı koşulu taşır; platform
+//             bu tablolara yazamaz. Tablo henüz yoksa kural atlanır (F3–F5'te kendiliğinden işler).
 //   D       : ek kontrol yok
 // Yorumu olmayan veya biçimi yanlış tablo da hatadır.
 // Yalnızca sistem kataloğunu okur; tablo verisine dokunmaz. Adres ve şifre yazdırmaz.
@@ -163,6 +166,45 @@ function evaluatePairPolicies(policies: readonly RlsPolicyInfo[]): string[] {
   return reasons;
 }
 
+/**
+ * US-016 AC5 (data-model §1.1): platform bağlamının yazamadığı tablolar. Bu tablolara platform
+ * politikası **asla** eklenmez; liste data-model §1.1 ile birebir aynıdır.
+ */
+export const PLATFORM_WRITE_FORBIDDEN_TABLES: readonly string[] = [
+  'orders',
+  'order_items',
+  'ledger_entries',
+  'payments',
+  'price_lists',
+  'price_list_items',
+  'customer_prices',
+];
+
+const FORBIDDEN_SET: ReadonlySet<string> = new Set(
+  PLATFORM_WRITE_FORBIDDEN_TABLES.map((name) => `public.${name}`),
+);
+
+/** Yasak listedeki tablonun yazma politikaları platform koşulu taşımaz, kiracı koşulu taşır. */
+function evaluatePlatformWriteForbidden(policies: readonly RlsPolicyInfo[]): string[] {
+  const reasons: string[] = [];
+  for (const policy of policies) {
+    if (policy.cmd === 'r') continue;
+    for (const field of REQUIRED_EXPRESSIONS[policy.cmd]) {
+      const expression = policy[field];
+      if (expression?.includes(PLATFORM_SETTING)) {
+        reasons.push(
+          `US-016 AC5: platformun yazamadığı tabloda ${COMMAND_NAMES[policy.cmd]} politikasının ${EXPRESSION_NAMES[field]} ifadesi ${PLATFORM_SETTING} koşulu taşıyor`,
+        );
+      } else if (!isDefinerOnly(policy) && !expression?.includes(TENANT_SETTING)) {
+        reasons.push(
+          `US-016 AC5: platformun yazamadığı tabloda ${COMMAND_NAMES[policy.cmd]} politikasının ${EXPRESSION_NAMES[field]} ifadesi kiracı koşulu taşımıyor`,
+        );
+      }
+    }
+  }
+  return reasons;
+}
+
 /** Bir tablonun sorunlarını döndürür; boş dizi = sorun yok. */
 export function evaluateRlsTable(info: RlsTableInfo): string[] {
   const classes = parseRlsComment(info.comment);
@@ -178,6 +220,9 @@ export function evaluateRlsTable(info: RlsTableInfo): string[] {
   if (tenantScoped && info.policyCount === 0) reasons.push('RLS politikası yok');
   if (classes.includes('G')) reasons.push(...evaluateGlobalPolicies(info.policies));
   if (classes.includes('P')) reasons.push(...evaluatePairPolicies(info.policies));
+  if (FORBIDDEN_SET.has(info.table)) {
+    reasons.push(...evaluatePlatformWriteForbidden(info.policies));
+  }
   if (classes.includes('S') && info.appUserCanSelect) {
     reasons.push("S sınıfı tabloda app_user'ın SELECT izni var");
   }

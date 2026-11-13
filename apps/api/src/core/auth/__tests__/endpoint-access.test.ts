@@ -72,6 +72,11 @@ const EXPECTED_PLATFORM: Record<string, readonly string[]> = {
   'POST /api/v1/admin/catalog/job-titles': ['super_admin', 'content'],
   'PATCH /api/v1/admin/catalog/job-titles/:id': ['super_admin', 'content'],
   'DELETE /api/v1/admin/catalog/job-titles/:id': ['super_admin', 'content'],
+  // F2.18 (productreport "Platform rolleri"): operasyon yönetir, destek yalnız görür.
+  'GET /api/v1/admin/buyers': ['super_admin', 'operations', 'support'],
+  'GET /api/v1/admin/buyers/:id': ['super_admin', 'operations', 'support'],
+  'POST /api/v1/admin/buyers/:id/verify': ['super_admin', 'operations'],
+  'POST /api/v1/admin/businesses/:id/status': ['super_admin', 'operations'],
 };
 
 function join(...parts: (string | undefined)[]): string {

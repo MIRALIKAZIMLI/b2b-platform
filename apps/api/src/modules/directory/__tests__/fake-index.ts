@@ -25,7 +25,10 @@ export class FakeBuyerDirectoryIndex extends BuyerDirectoryIndex {
           (query.verified === undefined || doc.verified === query.verified) &&
           (q === undefined || doc.legalName.toLocaleLowerCase('az').includes(q)),
       )
-      .sort((a, b) => a.legalName.localeCompare(b.legalName));
+      // F2.18 (US-015 AC2): doğrulanmışlar üstte (Meilisearch `verifiedRank:desc`).
+      .sort(
+        (a, b) => Number(b.verified) - Number(a.verified) || a.legalName.localeCompare(b.legalName),
+      );
     const page = matches.slice(query.offset, query.offset + query.limit);
     return Promise.resolve({
       ids: page.map((doc) => doc.id),

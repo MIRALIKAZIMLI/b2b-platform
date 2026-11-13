@@ -1,3 +1,9 @@
+export {
+  type BusinessForStatus,
+  BuyerAdminRepository,
+  type BuyerAdminRow,
+} from './buyer-admin.repository';
+export { BusinessStateMachine } from './business.state-machine';
 export { BUSINESS_LOGO_PORT, type BusinessLogoPort } from './business-logo.port';
 export { BusinessesModule } from './businesses.module';
 export {
@@ -18,6 +24,8 @@ export {
   SellerApplicationsRepository,
 } from './seller-applications.repository';
 export {
+  BUSINESS_STATUSES,
+  type BusinessStatus,
   CAPABILITIES,
   CAPABILITY_STATUSES,
   type Capability,

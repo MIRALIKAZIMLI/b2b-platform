@@ -11,6 +11,7 @@ import { BusinessProfileService } from './business-profile.service';
 import { ActivityTypesController } from './activity-types.controller';
 import { BusinessProfileController } from './business-profile.controller';
 import { BusinessesRepository } from './businesses.repository';
+import { BuyerAdminRepository } from './buyer-admin.repository';
 import { IpHourlyRateLimiter } from './ip-hourly-rate-limiter';
 import { SellerApplicationsController } from './seller-applications.controller';
 import { SellerApplicationsRepository } from './seller-applications.repository';
@@ -47,12 +48,14 @@ import { SellerSetupService } from './seller-setup.service';
     SellerSetupService,
     BranchesRepository,
     BranchesService,
+    BuyerAdminRepository,
   ],
   exports: [
     SellerSetupRepository,
     BusinessesRepository,
     SellerApplicationsRepository,
     IpHourlyRateLimiter,
+    BuyerAdminRepository,
   ],
 })
 export class BusinessesModule {}

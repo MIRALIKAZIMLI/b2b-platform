@@ -38,3 +38,46 @@ export function renderTemplate(
     body: fill(template.body, params),
   };
 }
+
+/**
+ * Değişkenli şablon (F2.18): bazı türlerde metin bir kod parametresine göre seçilir (ör. VÖEN red
+ * gerekçesi `voen_rejected.<reason>`). Kod serbest metin değildir (ADR-0010 §3); çevirisi
+ * şablondadır. Değişken şablon yoksa türün kendi şablonu kullanılır.
+ */
+const VARIANT_PARAM: Readonly<Record<string, string>> = { voen_rejected: 'reason' };
+
+/** Türün değişken şablon anahtarı; değişkensiz türde veya parametre yoksa undefined. */
+export function templateVariantKey(
+  type: string,
+  params: Readonly<Record<string, string | number>>,
+): string | undefined {
+  const name = VARIANT_PARAM[type];
+  if (name === undefined) return undefined;
+  const value = params[name];
+  return typeof value === 'string' && /^[a-z][a-z0-9_]*$/.test(value)
+    ? `${type}.${value}`
+    : undefined;
+}
+
+/** Okunacak şablon anahtarları (tür + varsa değişken). */
+export function templateKeysFor(
+  rows: readonly { type: string; params: Readonly<Record<string, string | number>> }[],
+): string[] {
+  const keys = new Set<string>();
+  for (const row of rows) {
+    keys.add(row.type);
+    const variant = templateVariantKey(row.type, row.params);
+    if (variant !== undefined) keys.add(variant);
+  }
+  return [...keys];
+}
+
+/** Bildirimin şablonları: önce değişken, yoksa tür. */
+export function templatesFor(
+  all: ReadonlyMap<string, TemplatesByLang>,
+  type: string,
+  params: Readonly<Record<string, string | number>>,
+): TemplatesByLang {
+  const variant = templateVariantKey(type, params);
+  return (variant === undefined ? undefined : all.get(variant)) ?? all.get(type) ?? new Map();
+}

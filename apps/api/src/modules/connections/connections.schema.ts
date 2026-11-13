@@ -112,7 +112,7 @@ export const connections = pgTable(
     check('connections_status_check', sql`${table.status} in ('active', 'cancelled')`),
     check(
       'connections_ended_by_side_check',
-      sql`${table.endedBySide} is null or ${table.endedBySide} in ('seller', 'buyer')`,
+      sql`${table.endedBySide} is null or ${table.endedBySide} in ('seller', 'buyer', 'platform')`,
     ),
     check(
       'connections_cancel_fields_check',

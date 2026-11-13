@@ -92,6 +92,78 @@ export const NOTIFICATION_TEMPLATES: Readonly<
       body: 'Perakendeci bağlantı isteğinizi süresi içinde yanıtlamadı. İsterseniz yeni istek gönderebilirsiniz.',
     },
   },
+  // F2.18 (US-015 AC2): VÖEN reddi. Metin gerekçe koduna göre `voen_rejected.<reason>`; kodsuz
+  // eski kayıt veya bilinmeyen kodda genel metin. Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  voen_rejected: {
+    az: {
+      title: 'VÖEN təsdiqlənmədi',
+      body: 'Daxil etdiyiniz VÖEN yoxlamadan keçmədi və profildən silindi. Profil bölməsində düzgün VÖEN daxil edin.',
+    },
+    ru: {
+      title: 'ИНН (VÖEN) не подтверждён',
+      body: 'Указанный VÖEN не прошёл проверку и удалён из профиля. Укажите правильный VÖEN в разделе «Профиль».',
+    },
+    tr: {
+      title: 'VÖEN doğrulanmadı',
+      body: 'Girdiğiniz VÖEN doğrulamadan geçmedi ve profilden silindi. Profil bölümünde doğru VÖEN girin.',
+    },
+  },
+  'voen_rejected.voen_not_found': {
+    az: {
+      title: 'VÖEN təsdiqlənmədi',
+      body: 'Daxil etdiyiniz VÖEN vergi sistemində tapılmadı və profildən silindi. Profil bölməsində düzgün VÖEN daxil edin.',
+    },
+    ru: {
+      title: 'ИНН (VÖEN) не подтверждён',
+      body: 'Указанный VÖEN не найден в налоговой системе и удалён из профиля. Укажите правильный VÖEN в разделе «Профиль».',
+    },
+    tr: {
+      title: 'VÖEN doğrulanmadı',
+      body: 'Girdiğiniz VÖEN vergi sisteminde bulunamadı ve profilden silindi. Profil bölümünde doğru VÖEN girin.',
+    },
+  },
+  'voen_rejected.name_mismatch': {
+    az: {
+      title: 'VÖEN təsdiqlənmədi',
+      body: 'VÖEN-ə aid ad profildəki adla uyğun gəlmir; VÖEN profildən silindi. Adı və VÖEN-i yoxlayıb yenidən daxil edin.',
+    },
+    ru: {
+      title: 'ИНН (VÖEN) не подтверждён',
+      body: 'Название по VÖEN не совпадает с названием в профиле; VÖEN удалён из профиля. Проверьте название и VÖEN и укажите их снова.',
+    },
+    tr: {
+      title: 'VÖEN doğrulanmadı',
+      body: 'VÖEN\'e kayıtlı ad profildeki ünvanla uyuşmuyor; VÖEN profilden silindi. Ünvanı ve VÖEN\'i kontrol edip yeniden girin.',
+    },
+  },
+  'voen_rejected.voen_inactive': {
+    az: {
+      title: 'VÖEN təsdiqlənmədi',
+      body: 'Daxil etdiyiniz VÖEN aktiv deyil və profildən silindi. Aktiv VÖEN-i profil bölməsində daxil edin.',
+    },
+    ru: {
+      title: 'ИНН (VÖEN) не подтверждён',
+      body: 'Указанный VÖEN неактивен и удалён из профиля. Укажите действующий VÖEN в разделе «Профиль».',
+    },
+    tr: {
+      title: 'VÖEN doğrulanmadı',
+      body: 'Girdiğiniz VÖEN aktif değil ve profilden silindi. Profil bölümünde aktif VÖEN girin.',
+    },
+  },
+  'voen_rejected.other': {
+    az: {
+      title: 'VÖEN təsdiqlənmədi',
+      body: 'Daxil etdiyiniz VÖEN yoxlamadan keçmədi və profildən silindi. Profil bölməsində düzgün VÖEN daxil edin.',
+    },
+    ru: {
+      title: 'ИНН (VÖEN) не подтверждён',
+      body: 'Указанный VÖEN не прошёл проверку и удалён из профиля. Укажите правильный VÖEN в разделе «Профиль».',
+    },
+    tr: {
+      title: 'VÖEN doğrulanmadı',
+      body: 'Girdiğiniz VÖEN doğrulamadan geçmedi ve profilden silindi. Profil bölümünde doğru VÖEN girin.',
+    },
+  },
   // F2.15a: iptal eden işletmenin adı ve gerekçesi yok (engel de aynı metin; Mimar notu 3).
   connection_cancelled: {
     az: {

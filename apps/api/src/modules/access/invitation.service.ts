@@ -83,6 +83,16 @@ export class InvitationService {
     await this.repository.expireOpenAdminInvitations(tx, businessId, now);
   }
 
+  /** İşletmenin bütün açık davetleri kapanır (F2.18 arşiv). */
+  async expireOpenInvitationsTx(tx: Tx, businessId: string, now: Date): Promise<number> {
+    return await this.repository.expireOpenInvitations(tx, businessId, now);
+  }
+
+  /** İşletmenin aktif admin üyeleri (platform işleminde bildirim alıcıları; F2.18). */
+  async activeAdminUserIdsTx(tx: Tx, businessId: string): Promise<string[]> {
+    return await this.repository.activeAdminUserIds(tx, businessId);
+  }
+
   async hasActiveAdminTx(tx: Tx, businessId: string): Promise<boolean> {
     return (await this.repository.businessesWithActiveAdmin(tx, [businessId])).has(businessId);
   }
