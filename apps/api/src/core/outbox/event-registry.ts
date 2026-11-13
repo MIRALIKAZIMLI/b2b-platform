@@ -5,7 +5,14 @@
 import { z } from 'zod';
 
 /** Kuyruk adları. Yeni kuyruk, onu tüketen iş (F1.11 ve sonrası) ile birlikte eklenir. */
-export const OUTBOX_QUEUE_NAMES = ['test', 'access', 'notifications', 'directory'] as const;
+// `connections` (F2.16): bugün outbox olayı yok; zamanlanmış süre dolumu işi bu kuyruktadır.
+export const OUTBOX_QUEUE_NAMES = [
+  'test',
+  'access',
+  'notifications',
+  'directory',
+  'connections',
+] as const;
 export type OutboxQueueName = (typeof OUTBOX_QUEUE_NAMES)[number];
 
 /** Serbest metin olmayan alan türleri. Kod alanı, seçenek listesiyle (`['a', 'b']`) tanımlanır. */
@@ -63,6 +70,13 @@ export const OUTBOX_EVENTS = {
   },
   // F2.13a (US-023 AC3–AC4, US-054 "İstek red"): red veya engel; alıcılar kabul ile aynı.
   'connection.rejected': {
+    queue: 'notifications',
+    fields: { requestId: 'id', sellerId: 'id', buyerId: 'id', userId: 'id' },
+  },
+  // F2.16 (US-026 AC1, US-054 "İstek süre doldu"): süre dolumu işi isteği `expired` yaptı;
+  // isteği gönderen + satıcı adminlerinin her biri için bir olay (`userId` alıcı). Tüketici
+  // `notifications`.
+  'connection.request_expired': {
     queue: 'notifications',
     fields: { requestId: 'id', sellerId: 'id', buyerId: 'id', userId: 'id' },
   },

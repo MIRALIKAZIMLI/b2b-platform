@@ -28,7 +28,7 @@ stateDiagram-v2
 | pending → accepted | Alıcı, `connections.request.respond` | İstek süresi dolmamış | Yeni `connections` satırı (`active`); olay `connection.accepted` |
 | pending → rejected | Alıcı, `connections.request.respond` veya `connections.block` | — | Bekleme süresi başlar; olay `connection.rejected` |
 | pending → withdrawn | İsteği gönderen satıcı | — | Olay yok |
-| pending → expired | Sistem (15 dk'da bir) | `expires_at < now()` | Olay `connection.request_expired` |
+| pending → expired | Sistem (15 dk'da bir; `connection.request_expiry_interval_minutes`) | `expires_at <= now()` (kabul/red ile aynı sınır: o andan sonra yanıtlanamaz) | Olay `connection.request_expired` (gönderen + satıcı adminlerine bildirim) |
 
 ## 2. Bağlantı (`connections.status`)
 

@@ -11,6 +11,7 @@ export const NOTIFICATION_TYPES = [
   'connection_accepted',
   'connection_rejected',
   'connection_cancelled',
+  'connection_request_expired',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -59,9 +60,12 @@ const connectionCancelNoticePayload = z.object({
   userId: z.uuid(),
 });
 
-/** Kabul / red bildirimi toptancı tarafına; konu istek kimliği (US-054 "İstek kabul / red"). */
+/**
+ * Kabul / red / süre doldu bildirimi toptancı tarafına; konu istek kimliği (US-054 "İstek kabul /
+ * red / süre doldu").
+ */
 function connectionResponseIntents(
-  type: 'connection_accepted' | 'connection_rejected',
+  type: 'connection_accepted' | 'connection_rejected' | 'connection_request_expired',
 ): (payload: unknown) => NotificationIntent[] {
   return (payload: unknown) => {
     const event = connectionResponsePayload.parse(payload);
@@ -124,6 +128,8 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
   // F2.13a: perakendeci yanıtı; perakendecinin adı bildirime girmez (yalnız kod/sayı).
   ['connection.accepted', connectionResponseIntents('connection_accepted')],
   ['connection.rejected', connectionResponseIntents('connection_rejected')],
+  // F2.16 (US-026 AC1): süre dolumu; perakendecinin adı bildirime girmez.
+  ['connection.request_expired', connectionResponseIntents('connection_request_expired')],
   [
     // F2.15a (US-054 "Bağlantı iptal edildi"): karşı tarafın adminine; konu bağlantı kimliği.
     // İptal eden işletmenin adı ve gerekçesi (engel dahil) bildirime girmez (Mimar notu 3).

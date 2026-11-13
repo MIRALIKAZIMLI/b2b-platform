@@ -54,8 +54,32 @@ describe('bildirim türleri (F2.13a)', () => {
     }
   });
 
+  it('US-026-AC1 süre doldu bildirimi toptancı işletmesi adına, konu istek', () => {
+    const payload = {
+      requestId: randomUUID(),
+      sellerId: randomUUID(),
+      buyerId: randomUUID(),
+      userId: randomUUID(),
+    };
+    expect(intentsForEvent('connection.request_expired', payload)).toEqual([
+      {
+        userId: payload.userId,
+        businessId: payload.sellerId,
+        type: 'connection_request_expired',
+        subjectId: payload.requestId,
+        params: {},
+      },
+    ]);
+    expect(NOTIFICATION_EVENT_TYPES).toContain('connection.request_expired');
+  });
+
   it('US-054 yeni türlerin az/ru/tr şablonu var', () => {
-    for (const type of ['connection_accepted', 'connection_rejected', 'connection_cancelled']) {
+    for (const type of [
+      'connection_accepted',
+      'connection_rejected',
+      'connection_cancelled',
+      'connection_request_expired',
+    ]) {
       const template = NOTIFICATION_TEMPLATES[type];
       expect(Object.keys(template ?? {}).sort()).toEqual(['az', 'ru', 'tr']);
     }

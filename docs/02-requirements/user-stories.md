@@ -246,6 +246,9 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `connection.cooldown_after_buyer_cancel_days` | 30 | tamsayı | 7 | 365 |
 | `connection.daily_request_quota` | 20 | tamsayı | 1 | 1000 |
 | `connection.block_rate_alert_pct` | 10 | tamsayı | 1 | 100 |
+| `connection.request_expiry_interval_minutes` | 15 (süresi dolan istekleri `expired` yapan işin aralığı, dakika; worker açılışında okunur, US-026, F2.16) | tamsayı | 5 | 60 |
+| `connection.request_expiry_batch_size` | 500 (süre dolumu işinde bir işlemde kapatılan istek sayısı, F2.16) | tamsayı | 50 | 1000 |
+| `connection.request_expiry_lock_seconds` | 600 (süre dolumu işinin Redis kilidinin ömrü; aynı anda tek çalışma, ADR-0011 §4, F2.16) | tamsayı | 60 | 3600 |
 | `delivery.auto_confirm_hours` | 48 | tamsayı | 1 | 720 |
 | `delivery.location_mismatch_meters` | 300 | tamsayı | 10 | 10000 |
 | `dormant.reminder_days` | 7, 30 | tamsayı listesi (artan, 1–5 eleman) | 1 | 3650 |

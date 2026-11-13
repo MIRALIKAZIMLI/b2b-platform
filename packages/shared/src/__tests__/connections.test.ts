@@ -274,6 +274,11 @@ describe('F2.13b yanıt, engel ve push yardımcıları', () => {
       area: 'seller',
       path: 'requests',
     });
+    // F2.16 (US-026 AC1): süre doldu bildirimi toptancıyı gönderilen isteklere götürür.
+    expect(pushRoute({ type: 'connection_request_expired', id: incoming.id })).toEqual({
+      area: 'seller',
+      path: 'requests',
+    });
     expect(pushRoute({ type: 'team_invitation' })).toBeUndefined();
     expect(pushRoute({ type: 'toString' })).toBeUndefined();
     expect(pushRoute(null)).toBeUndefined();

@@ -24,6 +24,14 @@ function toDate(value: Date | string | null): Date | null {
   return value instanceof Date ? value : new Date(value);
 }
 
+/** Süre dolumu işinin döndürdüğü satır (istek × bildirim alıcısı). */
+export interface ExpiredRequestRow {
+  readonly requestId: string;
+  readonly sellerId: string;
+  readonly buyerId: string;
+  readonly recipientUserId: string | null;
+}
+
 /** İstek alabilen perakendeci (onaylı `buyer`, aktif, çağıran değil). */
 export interface BuyerTarget {
   readonly id: string;
@@ -388,6 +396,29 @@ export class ConnectionsRepository {
       }
     }
     return result;
+  }
+
+  /**
+   * F2.16: süresi dolan en çok `limit` pending isteği `expired` yapar (`connection_requests_expire`,
+   * yalnız bağlamsız `withSystemTx` içinde). İstek başına bildirim alıcıları döner; alıcısı
+   * olmayan istek `recipientUserId = null` ile bir kez.
+   */
+  async expireDueRequestsTx(tx: Tx, now: Date, limit: number): Promise<ExpiredRequestRow[]> {
+    const result = await tx.execute<{
+      request_id: string;
+      seller_id: string;
+      buyer_id: string;
+      recipient_user_id: string | null;
+    }>(
+      sql`select request_id, seller_id, buyer_id, recipient_user_id
+            from connection_requests_expire(${now.toISOString()}::timestamptz, ${limit}::int)`,
+    );
+    return result.rows.map((row) => ({
+      requestId: row.request_id,
+      sellerId: row.seller_id,
+      buyerId: row.buyer_id,
+      recipientUserId: row.recipient_user_id,
+    }));
   }
 
   /** Kabul / red bildiriminin alıcıları: gönderen (aktif üyeyse) + satıcı adminleri. */
