@@ -3,7 +3,8 @@
 // F2.1b: admin toptancı ekranları, aktivasyon sayfası; F2.3b: perakendeci kaydı, veri paylaşım metni;
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
 // daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
-// F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım).
+// F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım;
+// F2.5b: şubeler ve onay kuralı).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -1394,9 +1395,9 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Bölgeler, çalışan daveti kabul ettikten sonra listede atanır.',
   },
   'team.branch_unavailable': {
-    az: 'Filial seçimi filiallar bölməsi hazır olanda aktiv olacaq.',
-    ru: 'Выбор филиала станет доступен, когда появится раздел филиалов.',
-    tr: 'Şube seçimi, şubeler bölümü hazır olunca açılacak.',
+    az: 'Filial siyahısını görmək üçün biznes parametrləri icazəsi lazımdır.',
+    ru: 'Чтобы видеть филиалы, нужно право на настройки бизнеса.',
+    tr: 'Şube listesini görmek için işletme ayarları yetkisi gerekir.',
   },
   'team.warehouse_unavailable': {
     az: 'Anbar siyahısını görmək üçün biznes parametrləri icazəsi lazımdır.',
@@ -3242,5 +3243,295 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Əlaqə tapılmadı. Siyahı yeniləndi.',
     ru: 'Связь не найдена. Список обновлён.',
     tr: 'Bağlantı bulunamadı. Liste yenilendi.',
+  },
+  'shell.menu.branches': {
+    az: 'Filiallar',
+    ru: 'Филиалы',
+    tr: 'Şubeler',
+  },
+  'branches.title': {
+    az: 'Filiallar',
+    ru: 'Филиалы',
+    tr: 'Şubeler',
+  },
+  'branches.description': {
+    az: 'Filiallarınızı, ünvanlarını və hər filialın sifariş təsdiqi qaydasını idarə edin.',
+    ru: 'Управляйте филиалами, их адресами и правилом согласования заказов для каждого филиала.',
+    tr: 'Şubelerinizi, adreslerini ve her şubenin sipariş onay kuralını yönetin.',
+  },
+  'branches.new': {
+    az: 'Yeni filial',
+    ru: 'Новый филиал',
+    tr: 'Yeni şube',
+  },
+  'branches.new_title': {
+    az: 'Yeni filial',
+    ru: 'Новый филиал',
+    tr: 'Yeni şube',
+  },
+  'branches.new_hint': {
+    az: 'Ad, region, ünvan və təsdiq qaydası mütləqdir; yer isteğe bağlıdır.',
+    ru: 'Название, регион, адрес и правило согласования обязательны; координаты — по желанию.',
+    tr: 'Ad, bölge, adres ve onay kuralı zorunlu; konum isteğe bağlı.',
+  },
+  'branches.add': {
+    az: 'Filial əlavə et',
+    ru: 'Добавить филиал',
+    tr: 'Şube ekle',
+  },
+  'branches.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'branches.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'branches.saved': {
+    az: 'Yadda saxlanıldı.',
+    ru: 'Сохранено.',
+    tr: 'Kaydedildi.',
+  },
+  'branches.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'branches.load_failed': {
+    az: 'Filiallar yüklənmədi.',
+    ru: 'Не удалось загрузить филиалы.',
+    tr: 'Şubeler yüklenemedi.',
+  },
+  'branches.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Tekrar dene',
+  },
+  'branches.list_title': {
+    az: 'Filiallarınız',
+    ru: 'Ваши филиалы',
+    tr: 'Şubeleriniz',
+  },
+  'branches.count': {
+    az: '{count} filial',
+    ru: 'Филиалов: {count}',
+    tr: '{count} şube',
+  },
+  'branches.empty': {
+    az: 'Hələ filial yoxdur',
+    ru: 'Филиалов пока нет',
+    tr: 'Henüz şube yok',
+  },
+  'branches.empty_hint': {
+    az: 'İlk filialı "Yeni filial" ilə əlavə edin.',
+    ru: 'Добавьте первый филиал кнопкой «Новый филиал».',
+    tr: 'İlk şubeyi "Yeni şube" ile ekleyin.',
+  },
+  'branches.inactive': {
+    az: 'Passiv',
+    ru: 'Неактивен',
+    tr: 'Pasif',
+  },
+  'branches.no_address': {
+    az: 'Ünvan qeyd olunmayıb',
+    ru: 'Адрес не указан',
+    tr: 'Adres girilmedi',
+  },
+  'branches.no_location': {
+    az: 'Yer qeyd olunmayıb',
+    ru: 'Координаты не указаны',
+    tr: 'Konum girilmedi',
+  },
+  'branches.edit': {
+    az: 'Düzəliş et',
+    ru: 'Изменить',
+    tr: 'Düzenle',
+  },
+  'branches.activate': {
+    az: 'Aktivləşdir',
+    ru: 'Активировать',
+    tr: 'Etkinleştir',
+  },
+  'branches.deactivate': {
+    az: 'Passivləşdir',
+    ru: 'Деактивировать',
+    tr: 'Pasifleştir',
+  },
+  'branches.no_delete_note': {
+    az: 'Filial silinmir, yalnız passivləşdirilir. Son aktiv filial və işçisi və ya açıq dəvəti olan filial passivləşdirilə bilməz.',
+    ru: 'Филиал нельзя удалить, только деактивировать. Последний активный филиал и филиал с сотрудниками или открытыми приглашениями деактивировать нельзя.',
+    tr: 'Şube silinmez, yalnız pasifleştirilir. Son aktif şube ve çalışanı veya açık daveti olan şube pasifleştirilemez.',
+  },
+  'branches.not_allowed': {
+    az: 'Filialları yalnız biznes parametrləri icazəsi olan pərakəndəçi istifadəçisi idarə edə bilər.',
+    ru: 'Филиалами может управлять только пользователь розничного бизнеса с правом на настройки бизнеса.',
+    tr: 'Şubeleri yalnız işletme ayarları yetkisi olan perakendeci kullanıcısı yönetebilir.',
+  },
+  'branches.choose': {
+    az: 'Seçin',
+    ru: 'Выберите',
+    tr: 'Seçin',
+  },
+  'branches.optional': {
+    az: '(isteğe bağlı)',
+    ru: '(необязательно)',
+    tr: '(isteğe bağlı)',
+  },
+  'branches.field.name': {
+    az: 'Filialın adı',
+    ru: 'Название филиала',
+    tr: 'Şube adı',
+  },
+  'branches.field.region': {
+    az: 'Region',
+    ru: 'Регион',
+    tr: 'Bölge',
+  },
+  'branches.field.address': {
+    az: 'Ünvan',
+    ru: 'Адрес',
+    tr: 'Adres',
+  },
+  'branches.field.rule': {
+    az: 'Sifariş təsdiqi qaydası',
+    ru: 'Правило согласования заказа',
+    tr: 'Sipariş onay kuralı',
+  },
+  'branches.field.threshold': {
+    az: 'Təsdiqsiz maksimum məbləğ',
+    ru: 'Максимальная сумма без согласования',
+    tr: 'Onaysız en yüksek tutar',
+  },
+  'branches.field.location': {
+    az: 'Xəritə yeri',
+    ru: 'Координаты',
+    tr: 'Konum',
+  },
+  'branches.field.lat': {
+    az: 'Enlik',
+    ru: 'Широта',
+    tr: 'Enlem',
+  },
+  'branches.field.lng': {
+    az: 'Uzunluq',
+    ru: 'Долгота',
+    tr: 'Boylam',
+  },
+  'branches.threshold_hint': {
+    az: 'Səbət bu məbləğdən çox olanda təsdiqə düşür; bərabər olanda birbaşa göndərilir.',
+    ru: 'Корзина уходит на согласование, если сумма больше порога; при равенстве отправляется сразу.',
+    tr: 'Sepet bu tutarın üstündeyse onaya düşer; eşitse doğrudan gönderilir.',
+  },
+  'branches.rule.every_order.title': {
+    az: 'Hər sifariş',
+    ru: 'Каждый заказ',
+    tr: 'Her sipariş',
+  },
+  'branches.rule.every_order.hint': {
+    az: 'Hər səbəti filial admini təsdiqləyir.',
+    ru: 'Каждую корзину согласует администратор филиала.',
+    tr: 'Her sepeti şube admini onaylar.',
+  },
+  'branches.rule.above_amount.title': {
+    az: 'Məbləğdən yuxarı',
+    ru: 'Выше суммы',
+    tr: 'Tutarın üstü',
+  },
+  'branches.rule.above_amount.hint': {
+    az: 'Yalnız həddən yuxarı səbətlər təsdiqə düşür.',
+    ru: 'На согласование уходят только корзины выше порога.',
+    tr: 'Yalnız eşiğin üstündeki sepetler onaya düşer.',
+  },
+  'branches.rule.none.title': {
+    az: 'Təsdiqsiz',
+    ru: 'Без согласования',
+    tr: 'Onaysız',
+  },
+  'branches.rule.none.hint': {
+    az: 'İşçilər səbəti birbaşa göndərir.',
+    ru: 'Сотрудники отправляют корзину сразу.',
+    tr: 'Çalışanlar sepeti doğrudan gönderir.',
+  },
+  'branches.rule_badge.every_order': {
+    az: 'Hər sifariş təsdiqlənir',
+    ru: 'Согласование каждого заказа',
+    tr: 'Her sipariş onaylı',
+  },
+  'branches.rule_badge.above_amount': {
+    az: '{amount} {currency} üstü təsdiq',
+    ru: 'Согласование выше {amount} {currency}',
+    tr: '{amount} {currency} üstü onaylı',
+  },
+  'branches.rule_badge.none': {
+    az: 'Təsdiqsiz',
+    ru: 'Без согласования',
+    tr: 'Onaysız',
+  },
+  'branches.use_my_location': {
+    az: 'Yerimi istifadə et',
+    ru: 'Моё местоположение',
+    tr: 'Konumumu kullan',
+  },
+  'branches.locating': {
+    az: 'Yer təyin olunur…',
+    ru: 'Определяем местоположение…',
+    tr: 'Konum bulunuyor…',
+  },
+  'branches.location_denied': {
+    az: 'Yerə icazə verilmədi. Koordinatları əl ilə daxil edin.',
+    ru: 'Доступ к местоположению запрещён. Введите координаты вручную.',
+    tr: 'Konum izni verilmedi. Koordinatları elle girin.',
+  },
+  'branches.location_unavailable': {
+    az: 'Yer təyin oluna bilmədi. Koordinatları əl ilə daxil edin.',
+    ru: 'Не удалось определить местоположение. Введите координаты вручную.',
+    tr: 'Konum alınamadı. Koordinatları elle girin.',
+  },
+  'branches.location_hint': {
+    az: 'Filialda olarkən "Yerimi istifadə et" düyməsinə basın və ya koordinatları daxil edin. Çatdırılma yerinin yoxlanması üçün lazımdır.',
+    ru: 'Нажмите «Моё местоположение», находясь в филиале, или введите координаты. Нужны для проверки места доставки.',
+    tr: 'Şubedeyken "Konumumu kullan"a basın veya koordinatları girin. Teslim yerinin kontrolü için kullanılır.',
+  },
+  'branches.error.required': {
+    az: 'Bu sahə mütləqdir.',
+    ru: 'Обязательное поле.',
+    tr: 'Bu alan zorunlu.',
+  },
+  'branches.error.too_long': {
+    az: 'Mətn çox uzundur.',
+    ru: 'Слишком длинный текст.',
+    tr: 'Metin çok uzun.',
+  },
+  'branches.error.invalid_amount': {
+    az: 'Məbləği 150 və ya 150.50 kimi yazın.',
+    ru: 'Укажите сумму как 150 или 150.50.',
+    tr: 'Tutarı 150 veya 150.50 gibi yazın.',
+  },
+  'branches.error.positive': {
+    az: 'Məbləğ sıfırdan böyük olmalıdır.',
+    ru: 'Сумма должна быть больше нуля.',
+    tr: 'Tutar sıfırdan büyük olmalı.',
+  },
+  'branches.error.invalid_coordinate': {
+    az: 'Koordinat yanlışdır.',
+    ru: 'Неверная координата.',
+    tr: 'Koordinat geçersiz.',
+  },
+  'branches.error.geo_pair': {
+    az: 'Enlik və uzunluğu birlikdə daxil edin.',
+    ru: 'Укажите широту и долготу вместе.',
+    tr: 'Enlem ve boylamı birlikte girin.',
+  },
+  'branches.error.last_active': {
+    az: 'Son aktiv filial passivləşdirilə bilməz.',
+    ru: 'Последний активный филиал нельзя деактивировать.',
+    tr: 'Son aktif şube pasifleştirilemez.',
+  },
+  'branches.error.in_use': {
+    az: 'Bu filialda {members} aktiv işçi və {invitations} açıq dəvət var. Əvvəlcə işçiləri başqa filiala keçirin və dəvətləri geri çəkin.',
+    ru: 'В этом филиале активных сотрудников: {members}, открытых приглашений: {invitations}. Сначала переведите сотрудников в другой филиал и отзовите приглашения.',
+    tr: 'Bu şubede {members} aktif çalışan ve {invitations} açık davet var. Önce çalışanları başka şubeye taşıyın ve davetleri geri çekin.',
   },
 };

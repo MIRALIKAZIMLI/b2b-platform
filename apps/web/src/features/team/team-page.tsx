@@ -9,6 +9,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useRegionOptions } from '../admin-sellers/api';
 import { DEFAULT_TIMEZONE } from '../admin-sellers/form';
+import { useBranches } from '../branches/api';
 import { useWarehouses } from '../seller-settings/api';
 import { LoadFailed } from '../seller-settings/status';
 import { useShell } from '../shell/use-shell';
@@ -35,7 +36,10 @@ export function TeamPage() {
   const allowed = permissions.some((item) => item.code === 'team.manage');
   const capability = shell.me?.activeBusiness?.capability ?? null;
   const isSeller = capability === 'seller';
-  const canReadWarehouses = isSeller && permissions.some((item) => item.code === 'business.manage');
+  const canManageBusiness = permissions.some((item) => item.code === 'business.manage');
+  const canReadWarehouses = isSeller && canManageBusiness;
+  // F2.5b: şube listesi `business.manage` ister (T8, depolarla aynı); yoksa açıklama gösterilir.
+  const canReadBranches = capability === 'buyer' && canManageBusiness;
   const scoped = allowed ? businessId : undefined;
 
   const members = useTeamMembers(scoped);
@@ -44,6 +48,7 @@ export function TeamPage() {
   const jobTitles = useJobTitles(scoped);
   const roleTemplates = useRoleTemplates(scoped);
   const warehouses = useWarehouses(canReadWarehouses ? scoped : undefined);
+  const branches = useBranches(canReadBranches ? scoped : undefined);
   const regions = useRegionOptions(locale);
   const [inviting, setInviting] = useState(false);
 
@@ -69,11 +74,12 @@ export function TeamPage() {
       warehouses: warehouses.data
         ?.filter((item) => item.status === 'active')
         .map((item) => ({ id: item.id, label: item.name })),
-      // Şube listesi uç noktası F2.5'te (US-010); o zamana kadar şube kapsamlı rol atanamaz.
-      branches: undefined,
+      branches: branches.data
+        ?.filter((item) => item.status === 'active')
+        .map((item) => ({ id: item.id, label: item.name })),
       regions: regions.data ?? [],
     }),
-    [warehouses.data, regions.data],
+    [warehouses.data, branches.data, regions.data],
   );
   // F2.8 (R3): rol düzenleyicide aktörün verebileceği izinler. Admin bayrağı üye listesinden
   // (`isSelf`); sunucu aynı kuralı ayrıca uygular.

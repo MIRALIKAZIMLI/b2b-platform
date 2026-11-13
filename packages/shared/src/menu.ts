@@ -110,6 +110,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     { key: 'suppliers', anyOf: ['connections.view'], ready: true, path: 'suppliers' },
     soon('ledger', ['ledger.view']),
     { key: 'team', anyOf: ['team.manage'], ready: true, path: 'team' },
+    // F2.5b: şubeler ve onay kuralı (US-010); web + mobil.
+    { key: 'branches', anyOf: ['business.manage'], ready: true, path: 'branches' },
     soon('audit', ['audit.view']),
     // F2.4: işletme profili ve VÖEN (US-006); gizlilik ayarları F2.10'da aynı sayfaya eklenir.
     { key: 'profile', anyOf: ['business.manage'], ready: true, path: 'profile' },

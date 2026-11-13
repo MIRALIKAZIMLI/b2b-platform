@@ -56,3 +56,4 @@
 - F2.15b: bağlantı iptali ekranları (web + mobil), Topdançılarım ekranı, E2E-09 kısmi
 - F2.16: bağlantı isteği süre dolumu zamanlanmış işi, ops_metrics, süre doldu bildirimi
 - F2.5a: şubeler API (liste, oluşturma, düzenleme, pasifleştirme), onay kuralı fonksiyonu, ekip yöneticisinin şube kapsamı
+- F2.5b: web ve mobil şube ekranları ("konumumu kullan"), ekip ekranında şube seçimi

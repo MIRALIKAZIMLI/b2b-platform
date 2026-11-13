@@ -1,7 +1,7 @@
 'use client';
 // Rolün gerektirdiği kapsam alanları (F2.7 K9): şube veya depo seçimi, `assigned` rolde bölgeler.
-// Şube listesi uç noktası F2.5'te gelir; o zamana kadar şube kapsamlı rol seçilince açıklama gösterilir
-// ve kaydet pasif kalır. Depo listesi `business.manage` ister; okunamazsa açıklama gösterilir.
+// Şube ve depo listesi `business.manage` ister (F2.5b T8); okunamazsa açıklama gösterilir ve kaydet
+// pasif kalır. Admin olmayan yönetici yalnız kendi şubesine bağlayabilir (S1); sunucu 403 verir.
 import { filterRegionOptions, type ScopeNeeds, type TeamFieldError } from '@b2b/shared';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';

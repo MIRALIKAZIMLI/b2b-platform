@@ -14,6 +14,7 @@ export * from './platform-roles';
 export * from './privacy';
 export * from './role-catalog';
 export * from './seller-setup';
+export * from './branches';
 export * from './settings';
 export * from './team';
 export * from './team-roles';
