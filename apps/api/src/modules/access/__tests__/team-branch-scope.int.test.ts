@@ -187,6 +187,52 @@ describe('F2.5 S1 şube kapsamı: yönetici yalnız kendi şubesi', () => {
     expect(row).toEqual({ branch_id: branchY, status: 'active' });
   });
 
+  it('F2.5-K1 admin olmayan yönetici başka şubenin davetini geri çekemez 403; kendi şubesininkini çeker', async () => {
+    const other = await invite(admin, branchY);
+    expect(other.status, JSON.stringify(other.body)).toBe(201);
+    const otherId = (other.body as { invitationId: string }).invitationId;
+    const denied = await http()
+      .post(`/api/v1/team/invitations/${otherId}/revoke`)
+      .set(manager.auth);
+    expect(denied.status).toBe(403);
+    expect((denied.body as ErrorJson).details).toMatchObject({ branchId: ['beyond_actor'] });
+    const still = await one<{ open: boolean }>(
+      'select expires_at > now() as open from invitations where id = $1',
+      [otherId],
+    );
+    expect(still.open).toBe(true);
+
+    const own = await invite(manager, branchX);
+    expect(own.status, JSON.stringify(own.body)).toBe(201);
+    const ownId = (own.body as { invitationId: string }).invitationId;
+    const revoked = await http().post(`/api/v1/team/invitations/${ownId}/revoke`).set(manager.auth);
+    expect(revoked.status).toBe(204);
+  });
+
+  it('F2.5-D2 şube pasifleştirme ile aynı şubeye eşzamanlı davet: ikisi birden başarılı olmaz', async () => {
+    for (let round = 0; round < 5; round += 1) {
+      const target = await branch(`Yarış ${String(round)}`);
+      const [invited, deactivated] = await Promise.all([
+        invite(admin, target),
+        http().patch(`/api/v1/branches/${target}`).set(admin.auth).send({ status: 'inactive' }),
+      ]);
+      const outcome = [invited.status, deactivated.status];
+      // Ya davet önce (201) ve pasifleştirme 409 branch_in_use, ya pasifleştirme önce (200) ve davet 422.
+      expect([
+        [201, 409],
+        [422, 200],
+      ]).toContainEqual(outcome);
+      const row = await one<{ status: string; open: number }>(
+        `select b.status,
+                (select count(*)::int from invitations i
+                  where i.branch_id = b.id and i.accepted_at is null and i.expires_at > now()) as open
+           from branches b where b.id = $1`,
+        [target],
+      );
+      expect(row.status === 'inactive' && row.open > 0).toBe(false);
+    }
+  });
+
   it('F2.5-S1 işletme admini her şubeye atar ve davet eder', async () => {
     const id = await staffIn(branchX);
     const moved = await patchMember(admin, id, { branchId: branchY });

@@ -116,7 +116,8 @@ export class TeamService {
 
   /**
    * F2.5 S1 (kullanıcı kararı 2026-11-13, Müfettiş 13 N1): işletme admini olmayan aktör üyeyi
-   * yalnız kendi şubesine bağlar; başka şubedeki üyeyi değiştiremez ve çıkaramaz. Diğer
+   * yalnız kendi şubesine bağlar; başka şubedeki üyeyi değiştiremez ve çıkaramaz, başka şubenin
+   * davetini geri çekemez (K1, Mimar kararı). Diğer
    * şubeleri yalnız işletme admini yönetir. Şubesiz aktör şube kapsamlı üye yönetemez.
    */
   private assertBranchWithinActor(tenant: TenantContext, branchId: string | null): void {
@@ -289,6 +290,18 @@ export class TeamService {
   ): Promise<void> {
     const now = this.clock.now();
     await withTenantTx(tenant, async (tx) => {
+      // F2.5 K1 (Mimar kararı, S1'in uzantısı): admin olmayan yönetici yalnız kendi şubesinin
+      // davetini geri çeker; başka şubenin davetinde 403.
+      if (!tenant.isBusinessAdmin) {
+        const open = await this.repository.lockOpenInvitationBranch(
+          tx,
+          tenant.businessId,
+          invitationId,
+          now,
+        );
+        if (open === undefined) throw new DomainError('NOT_FOUND');
+        this.assertBranchWithinActor(tenant, open.branchId);
+      }
       if (!(await this.repository.expireOpenInvitation(tx, tenant.businessId, invitationId, now))) {
         throw new DomainError('NOT_FOUND');
       }
