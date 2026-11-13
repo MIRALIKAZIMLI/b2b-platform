@@ -55,3 +55,4 @@
 - F2.15a: bağlantı iptali API, ConnectionCancelledHandler kancası, iptal bildirimi, 0026 bekçi
 - F2.15b: bağlantı iptali ekranları (web + mobil), Topdançılarım ekranı, E2E-09 kısmi
 - F2.16: bağlantı isteği süre dolumu zamanlanmış işi, ops_metrics, süre doldu bildirimi
+- F2.5a: şubeler API (liste, oluşturma, düzenleme, pasifleştirme), onay kuralı fonksiyonu, ekip yöneticisinin şube kapsamı

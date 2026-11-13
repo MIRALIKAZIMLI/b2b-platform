@@ -43,3 +43,9 @@ export {
 export { requireVoen, type VoenHolder } from './voen-guard';
 export { SellerSetupRepository } from './seller-setup.repository';
 export { WarehouseLimitGate } from './warehouse-limit.gate';
+export {
+  BRANCH_APPROVAL_RULES,
+  type BranchApprovalRule,
+  requiresBranchApproval,
+} from './branch-approval';
+export { BranchUsageGate } from './branch-usage.gate';

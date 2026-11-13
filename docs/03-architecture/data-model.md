@@ -441,6 +441,8 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 
 Benzersiz `(business_id, id)`: memberships / invitations bileşik FK hedefi (F1.8a).
 
+**F2.5 (`0028_branches.sql`, US-010):** CHECK'ler: eşik yalnız `above_amount`'ta (`branches_approval_threshold_only_above_check`) ve > 0; `geo_lat`/`geo_lng` ikisi birden dolu ya da boş, −90..90 / −180..180. Silme yok, yalnız `status = inactive`; son aktif şube ve aktif üyesi / açık daveti olan şube pasifleşemez (servis, işletme satırı kilidiyle; üye/davet sayımı `BranchUsageGate`, uygulaması `access`; atama ve davet şube satırını `FOR SHARE` okur). Eşiğe tam eşit toplam onaysız gider (kullanıcı kararı S4). Kural hesabı tek yerde: `businesses` `requiresBranchApproval` (F4 sepeti kullanır). Ekip: işletme admini olmayan yönetici üyeyi yalnız kendi şubesine bağlar, başka şubedeki üyeyi değiştiremez (kullanıcı kararı 2026-11-13, `team.service`) ve başka şubenin davetini geri çekemez (Mimar kararı K1).
+
 #### `warehouses` (T) — `business_id`, `name`, `address_line`, `is_default bool`, `status (active/inactive)`; benzersiz `(business_id, id)` (bileşik FK hedefi); işletme başına tek `is_default` (kısmi benzersiz indeks)
 
 #### `seller_applications` (G — yalnızca platform okur)

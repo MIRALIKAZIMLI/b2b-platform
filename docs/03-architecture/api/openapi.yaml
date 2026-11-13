@@ -455,7 +455,10 @@ paths:
   /api/v1/branches:
     get:
       tags: [business]
-      summary: Şubeler
+      summary: Şubeler (F2.5; yalnız `buyer` yeteneği)
+      description: >
+        İzin `business.manage` (T8; ekip ekranı şube listesini depolardaki gibi bu izinle doldurur).
+        İşletmenin `buyer` yeteneği yoksa `403 CAPABILITY_REQUIRED`. Aktifler önce, sonra ada göre.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       responses:
         '200':
@@ -463,27 +466,63 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/Branch' } }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       tags: [business]
-      summary: Şube oluştur (US-010)
+      summary: Şube oluştur (US-010 AC1, AC3)
+      description: >
+        `approvalRule` verilmezse `every_order` (AC3). `approvalThreshold` yalnız `above_amount`'ta ve
+        orada zorunlu; > 0, en çok 2 ondalık. `lat` ve `lng` birlikte verilir. Bilinmeyen bölge 422.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/BranchInput' }
       responses:
-        '201': { description: Oluşturuldu }
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Branch' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/branches/{id}:
+    get:
+      tags: [business]
+      summary: Şube
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Şube
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Branch' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
     patch:
       tags: [business]
-      summary: Şube güncelle / pasifleştir
+      summary: Şube güncelle / pasifleştir (US-010 AC4)
+      description: >
+        Kısmi. Silme ucu yoktur; şube `status: inactive` ile pasifleşir. Kural `above_amount` dışına
+        geçince eşik silinir; `above_amount`'ta eşik (gelen ya da mevcut) yoksa 422. `lat`/`lng`
+        birlikte; ikisi `null` konumu siler. Son aktif şube pasifleşemez:
+        `409 INVALID_STATE_TRANSITION` (`reason: last_active_branch`). Aktif üyesi veya açık daveti olan
+        şube pasifleşemez: `409 INVALID_STATE_TRANSITION` (`reason: branch_in_use`, `members`, `invitations`).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       requestBody:
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/BranchInput' }
+            schema: { $ref: '#/components/schemas/BranchPatch' }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Branch' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/business/seller-profile:
     get:
       tags: [business]
@@ -3285,22 +3324,44 @@ components:
         showContactName: { type: boolean }
         showPersonalContact: { type: boolean }
     Branch:
-      allOf:
-        - $ref: '#/components/schemas/BranchInput'
-        - type: object
-          properties:
-            id: { type: string, format: uuid }
+      type: object
+      required: [id, name, regionId, addressLine, lat, lng, approvalRule, approvalThreshold, status]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        regionId: { type: [string, 'null'], format: uuid }
+        addressLine: { type: [string, 'null'], description: Kayıtta açılan varsayılan şubede boş (F2.3a) }
+        lat: { type: [number, 'null'] }
+        lng: { type: [number, 'null'] }
+        approvalRule: { type: string, enum: [every_order, above_amount, none] }
+        approvalThreshold: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
+        status: { type: string, enum: [active, inactive] }
     BranchInput:
       type: object
+      additionalProperties: false
       required: [name, regionId, addressLine]
       properties:
-        name: { type: string }
+        name: { type: string, minLength: 1, maxLength: 120 }
         regionId: { type: string, format: uuid }
-        addressLine: { type: string }
-        lat: { type: number }
-        lng: { type: number }
+        addressLine: { type: string, minLength: 1, maxLength: 300 }
+        lat: { type: number, minimum: -90, maximum: 90 }
+        lng: { type: number, minimum: -180, maximum: 180 }
+        approvalRule: { type: string, enum: [every_order, above_amount, none], default: every_order }
+        approvalThreshold:
+          oneOf: [ { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,2})?$' }, { type: 'null' } ]
+    BranchPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        regionId: { type: string, format: uuid }
+        addressLine: { type: string, minLength: 1, maxLength: 300 }
+        lat: { type: [number, 'null'], minimum: -90, maximum: 90 }
+        lng: { type: [number, 'null'], minimum: -180, maximum: 180 }
         approvalRule: { type: string, enum: [every_order, above_amount, none] }
-        approvalThreshold: { $ref: '#/components/schemas/Decimal' }
+        approvalThreshold:
+          oneOf: [ { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,2})?$' }, { type: 'null' } ]
         status: { type: string, enum: [active, inactive] }
     Warehouse:
       type: object

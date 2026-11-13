@@ -734,7 +734,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Şubeler */
+        /**
+         * Şubeler (F2.5; yalnız `buyer` yeteneği)
+         * @description İzin `business.manage` (T8; ekip ekranı şube listesini depolardaki gibi bu izinle doldurur). İşletmenin `buyer` yeteneği yoksa `403 CAPABILITY_REQUIRED`. Aktifler önce, sonra ada göre.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -755,10 +758,14 @@ export interface paths {
                         "application/json": components["schemas"]["Branch"][];
                     };
                 };
+                403: components["responses"]["Error"];
             };
         };
         put?: never;
-        /** Şube oluştur (US-010) */
+        /**
+         * Şube oluştur (US-010 AC1, AC3)
+         * @description `approvalRule` verilmezse `every_order` (AC3). `approvalThreshold` yalnız `above_amount`'ta ve orada zorunlu; > 0, en çok 2 ondalık. `lat` ve `lng` birlikte verilir. Bilinmeyen bölge 422.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -779,8 +786,12 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Branch"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -796,13 +807,42 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Şube */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Şube */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Branch"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Şube güncelle / pasifleştir */
+        /**
+         * Şube güncelle / pasifleştir (US-010 AC4)
+         * @description Kısmi. Silme ucu yoktur; şube `status: inactive` ile pasifleşir. Kural `above_amount` dışına geçince eşik silinir; `above_amount`'ta eşik (gelen ya da mevcut) yoksa 422. `lat`/`lng` birlikte; ikisi `null` konumu siler. Son aktif şube pasifleşemez: `409 INVALID_STATE_TRANSITION` (`reason: last_active_branch`). Aktif üyesi veya açık daveti olan şube pasifleşemez: `409 INVALID_STATE_TRANSITION` (`reason: branch_in_use`, `members`, `invitations`).
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -816,7 +856,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["BranchInput"];
+                    "application/json": components["schemas"]["BranchPatch"];
                 };
             };
             responses: {
@@ -825,8 +865,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Branch"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         trace?: never;
@@ -6880,9 +6926,21 @@ export interface components {
             showContactName: boolean;
             showPersonalContact: boolean;
         };
-        Branch: components["schemas"]["BranchInput"] & {
+        Branch: {
             /** Format: uuid */
-            id?: string;
+            id: string;
+            name: string;
+            /** Format: uuid */
+            regionId: string | null;
+            /** @description Kayıtta açılan varsayılan şubede boş (F2.3a) */
+            addressLine: string | null;
+            lat: number | null;
+            lng: number | null;
+            /** @enum {string} */
+            approvalRule: "every_order" | "above_amount" | "none";
+            approvalThreshold: components["schemas"]["Decimal"] | null;
+            /** @enum {string} */
+            status: "active" | "inactive";
         };
         BranchInput: {
             name: string;
@@ -6891,9 +6949,23 @@ export interface components {
             addressLine: string;
             lat?: number;
             lng?: number;
+            /**
+             * @default every_order
+             * @enum {string}
+             */
+            approvalRule: "every_order" | "above_amount" | "none";
+            approvalThreshold?: string | null;
+        };
+        BranchPatch: {
+            name?: string;
+            /** Format: uuid */
+            regionId?: string;
+            addressLine?: string;
+            lat?: number | null;
+            lng?: number | null;
             /** @enum {string} */
             approvalRule?: "every_order" | "above_amount" | "none";
-            approvalThreshold?: components["schemas"]["Decimal"];
+            approvalThreshold?: string | null;
             /** @enum {string} */
             status?: "active" | "inactive";
         };

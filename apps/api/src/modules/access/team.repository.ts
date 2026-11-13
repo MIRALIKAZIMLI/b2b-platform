@@ -169,12 +169,16 @@ export class TeamRepository {
     return new Set(rows.map((row) => row.id));
   }
 
-  /** İşletmenin şubesinin durumu; başka işletmenin veya olmayan şube undefined. */
+  /**
+   * İşletmenin şubesinin durumu; başka işletmenin veya olmayan şube undefined. `FOR SHARE`:
+   * eşzamanlı pasifleştirme (F2.5 S3, satırı `FOR UPDATE` kilitler) ile atama / davet sıraya girer.
+   */
   async branchStatus(tx: Tx, businessId: string, branchId: string): Promise<string | undefined> {
     const rows = await tx
       .select({ status: branches.status })
       .from(branches)
-      .where(and(eq(branches.businessId, businessId), eq(branches.id, branchId)));
+      .where(and(eq(branches.businessId, businessId), eq(branches.id, branchId)))
+      .for('share');
     return rows[0]?.status;
   }
 
@@ -295,6 +299,28 @@ export class TeamRepository {
         ),
       )
       .orderBy(asc(invitations.createdAt), asc(invitations.id));
+  }
+
+  /** Açık davetin şubesi (kilitli); açık davet yoksa undefined (F2.5 K1). */
+  async lockOpenInvitationBranch(
+    tx: Tx,
+    businessId: string,
+    invitationId: string,
+    now: Date,
+  ): Promise<{ branchId: string | null } | undefined> {
+    const rows = await tx
+      .select({ branchId: invitations.branchId })
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.businessId, businessId),
+          eq(invitations.id, invitationId),
+          isNull(invitations.acceptedAt),
+          gt(invitations.expiresAt, now),
+        ),
+      )
+      .for('update');
+    return rows[0];
   }
 
   /** Açık daveti kapatır (`expires_at = now`); kapandıysa true. */

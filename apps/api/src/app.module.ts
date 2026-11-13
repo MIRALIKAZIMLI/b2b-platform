@@ -18,7 +18,7 @@ import { RedisModule } from './infrastructure/redis';
 import { SearchModule } from './infrastructure/search';
 import { SmsModule, type SmsRetryPolicy } from './infrastructure/sms';
 import { StorageModule } from './infrastructure/storage';
-import { AccessModule } from './modules/access';
+import { AccessModule, BranchUsageGateModule } from './modules/access';
 import { AppConfigModule } from './modules/app-config';
 import { BillingModule, WarehouseLimitGateModule } from './modules/billing';
 import { BusinessesModule } from './modules/businesses';
@@ -65,6 +65,7 @@ export class AppModule implements NestModule {
         BillingModule,
         WarehouseLimitGateModule,
         AccessModule,
+        BranchUsageGateModule,
         NotificationsModule,
         FilesModule,
         BusinessLogoPortModule,
