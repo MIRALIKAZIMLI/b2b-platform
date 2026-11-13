@@ -133,7 +133,7 @@ export const NOTIFICATION_TEMPLATES: Readonly<
     },
     tr: {
       title: 'VÖEN doğrulanmadı',
-      body: 'VÖEN\'e kayıtlı ad profildeki ünvanla uyuşmuyor; VÖEN profilden silindi. Ünvanı ve VÖEN\'i kontrol edip yeniden girin.',
+      body: "VÖEN'e kayıtlı ad profildeki ünvanla uyuşmuyor; VÖEN profilden silindi. Ünvanı ve VÖEN'i kontrol edip yeniden girin.",
     },
   },
   'voen_rejected.voen_inactive': {

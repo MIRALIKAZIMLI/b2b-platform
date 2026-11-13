@@ -4,11 +4,7 @@
 // istekte DB'den okunur (`403 BUSINESS_SUSPENDED`); bağlantı ve açık istekler askıda değişmez
 // (US-016 AC1). Dizin olay ile yenilenir (`buyer.profile_changed`; askıda/arşivde indeksten düşer).
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type {
-  BusinessStatusActionInput,
-  BuyerAdminFilter,
-  VoenDecision,
-} from '@b2b/shared';
+import type { BusinessStatusActionInput, BuyerAdminFilter, VoenDecision } from '@b2b/shared';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
 import { type Tx, withPlatformTx } from '../../core/db';
@@ -92,7 +88,9 @@ export class BuyersAdminService {
 
   /** openapi `GET /admin/buyers/{id}` (US-015 AC1 kayıt ayrıntısı); arşivli → 404. */
   async get(actor: PlatformActor, id: string): Promise<BuyerAdminView> {
-    return await withPlatformTx(actor, async (tx) => toView(await this.requireBuyer(tx, id, false)));
+    return await withPlatformTx(actor, async (tx) =>
+      toView(await this.requireBuyer(tx, id, false)),
+    );
   }
 
   /** openapi `POST /admin/buyers/{id}/verify` (US-015 AC2). */

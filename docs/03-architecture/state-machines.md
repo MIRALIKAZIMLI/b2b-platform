@@ -37,12 +37,14 @@ stateDiagram-v2
     [*] --> active: istek kabul edildi
     active --> cancelled: toptancı iptal eder
     active --> cancelled: perakendeci iptal eder / engeller
+    active --> cancelled: platform (perakendeci arşivlendi)
     cancelled --> [*]
 ```
 
 | Geçiş | Kim | Koşul | Yan etki |
 | --- | --- | --- | --- |
 | active → cancelled | Satıcı veya alıcı, `connections.cancel` | Gerekçe ve ikinci onay | `submitted` siparişler `cancelled`; o satıcının sepet kalemleri silinir; `ended_by_side`; alıcı iptalinde bekleme süresi başlar; olay `connection.cancelled` |
+| active → cancelled | Platform (alıcı arşivlenince, F2.18) | Alıcı `archived` | `ended_by_side = platform`, `end_reason = business_archived`; aynı kancalar ve `connection.cancelled`; satıcı adminlerine "bağlantı iptal edildi". Yalnız migrator sahipli `business_close_archived_connections` yazar |
 
 Kodda `ConnectionStateMachine` (F2.15a); tablo dışı geçiş `409 INVALID_STATE_TRANSITION`. Engel de bu geçişi kullanır (`end_reason = blocked`); sepet/sipariş yan etkileri `ConnectionCancelledHandler` kancalarıyla aynı işlemde (F4.5).
 
@@ -186,6 +188,13 @@ stateDiagram-v2
     suspended --> archived: platform admini "sil"
     archived --> [*]
 ```
+
+| Geçiş | Kim | Koşul | Yan etki |
+| --- | --- | --- | --- |
+| active → suspended, suspended → active | Platform admini (`super_admin`, `operations`), `POST /admin/businesses/{id}/status` | Gerekçe (yalnız audit) | Kullanıcılar işletme bağlamlı uçlarda `403 BUSINESS_SUSPENDED`; dizinden düşer / döner; bağlantı, istek, sipariş değişmez (US-016 AC1) |
+| active/suspended/dormant → archived | Platform admini, `archive` (= "sil"), yalnız perakendeci | Gerekçe | Geçmiş yoksa kayıt kalıcı silinir (`business_purge`, AC3); varsa `person_data` silinir, açık davetler kapanır, aktif bağlantılar platformca kapanır (§2), istek kayıtları korunur (AC2). "Geçmiş" = bağlantı, bağlantı isteği, engel (sipariş/belge/cari F3–F5'te eklenir) |
+
+Kodda `BusinessStateMachine` (F2.18); tablo dışı geçiş `409 INVALID_STATE_TRANSITION`. `archived` son durumdur.
 
 `buyer_profiles.dormant_stage`: `none` → `reminded_7` → `reminded_30` → `warned` (90. gün) → `deactivated` (120. gün). Girişte `none`'a döner. Yalnızca hiç bağlantı, sipariş veya cari kaydı olmayan alıcılara uygulanır (US-027 AC5).
 

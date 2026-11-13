@@ -7,7 +7,12 @@ import { Injectable } from '@nestjs/common';
 import type { BuyerAdminFilter } from '@b2b/shared';
 import { and, desc, eq, isNotNull, isNull, ne, sql, type SQL } from 'drizzle-orm';
 import type { Tx } from '../../core/db';
-import { type BusinessStatus, businessCapabilities, businesses, personData } from './businesses.schema';
+import {
+  type BusinessStatus,
+  businessCapabilities,
+  businesses,
+  personData,
+} from './businesses.schema';
 
 export interface BuyerAdminRow {
   readonly id: string;

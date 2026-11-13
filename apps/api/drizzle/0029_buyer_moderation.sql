@@ -10,7 +10,7 @@
 -- İki fonksiyon migrator sahipli SECURITY DEFINER; çağıran denetimi içeride: platform bağlamı
 -- (`app.is_platform = 'true'`, `app.user_id` dolu, `app.business_id` boş), aksi `42501`. Platform
 -- politikaları (`TO public`) migrator için de geçerlidir; ek olarak yalnız migrator'a açık iki
--- politika: `notifications_definer_delete`, `connections_definer_platform_update`.
+-- politika grubu: `notifications_definer_select/_delete`, `connections_definer_platform_update`.
 -- Mevcut satırlar değiştirilmez.
 ALTER TABLE "connections" DROP CONSTRAINT "connections_ended_by_side_check";--> statement-breakpoint
 ALTER TABLE "connections" ADD CONSTRAINT "connections_ended_by_side_check" CHECK ("connections"."ended_by_side" is null or "connections"."ended_by_side" in ('seller', 'buyer', 'platform'));
@@ -158,6 +158,10 @@ END;
 $$;
 --> statement-breakpoint
 REVOKE ALL ON FUNCTION "memberships_last_admin_guard"() FROM PUBLIC;
+--> statement-breakpoint
+-- DELETE, silinecek satırları SELECT politikasıyla da görmeyi gerektirir.
+CREATE POLICY "notifications_definer_select" ON "notifications" FOR SELECT TO migrator
+  USING (current_setting('app.is_platform', true) = 'true');
 --> statement-breakpoint
 CREATE POLICY "notifications_definer_delete" ON "notifications" FOR DELETE TO migrator
   USING (current_setting('app.is_platform', true) = 'true');

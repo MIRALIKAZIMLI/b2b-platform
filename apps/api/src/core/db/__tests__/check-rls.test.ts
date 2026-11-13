@@ -187,7 +187,8 @@ describe('evaluateRlsTable — P sınıfı (F2.12a, R18)', () => {
 });
 
 describe('evaluateRlsTable — platformun yazamadığı tablolar (F2.18, US-016 AC5)', () => {
-  const TENANT = "(business_id = (NULLIF(current_setting('app.business_id'::text, true), ''::text))::uuid)";
+  const TENANT =
+    "(business_id = (NULLIF(current_setting('app.business_id'::text, true), ''::text))::uuid)";
   const tenantPolicies: RlsPolicyInfo[] = [policy('*', TENANT, TENANT)];
 
   it('US-016 AC5: liste data-model §1.1 ile aynı', () => {
@@ -205,9 +206,9 @@ describe('evaluateRlsTable — platformun yazamadığı tablolar (F2.18, US-016 
   });
 
   it('US-016 AC5: yalnız kiracı politikası olan yasak tablo → başarılı', () => {
-    expect(
-      evaluateRlsTable(table({ table: 'public.orders', policies: tenantPolicies })),
-    ).toEqual([]);
+    expect(evaluateRlsTable(table({ table: 'public.orders', policies: tenantPolicies }))).toEqual(
+      [],
+    );
   });
 
   it.each(PLATFORM_WRITE_FORBIDDEN_TABLES)(
