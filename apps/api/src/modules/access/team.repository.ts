@@ -169,12 +169,16 @@ export class TeamRepository {
     return new Set(rows.map((row) => row.id));
   }
 
-  /** İşletmenin şubesinin durumu; başka işletmenin veya olmayan şube undefined. */
+  /**
+   * İşletmenin şubesinin durumu; başka işletmenin veya olmayan şube undefined. `FOR SHARE`:
+   * eşzamanlı pasifleştirme (F2.5 S3, satırı `FOR UPDATE` kilitler) ile atama / davet sıraya girer.
+   */
   async branchStatus(tx: Tx, businessId: string, branchId: string): Promise<string | undefined> {
     const rows = await tx
       .select({ status: branches.status })
       .from(branches)
-      .where(and(eq(branches.businessId, businessId), eq(branches.id, branchId)));
+      .where(and(eq(branches.businessId, businessId), eq(branches.id, branchId)))
+      .for('share');
     return rows[0]?.status;
   }
 

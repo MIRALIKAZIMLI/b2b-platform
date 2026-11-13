@@ -48,3 +48,4 @@ export {
   type BranchApprovalRule,
   requiresBranchApproval,
 } from './branch-approval';
+export { BranchUsageGate } from './branch-usage.gate';

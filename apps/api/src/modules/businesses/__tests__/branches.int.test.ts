@@ -6,6 +6,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from '../../../../test/http-app';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
+import { randomTestPhone } from '../../../../test/users';
 import { REDIS_CLIENT } from '../../../infrastructure/redis';
 import { TokenService } from '../../identity';
 import {
@@ -241,6 +242,63 @@ describe('F2.5 şubeler ve onay kuralı (US-010)', () => {
         code: 'INVALID_STATE_TRANSITION',
         details: { reason: 'last_active_branch' },
       });
+    });
+
+    it('US-010-AC4 S3 aktif üyesi olan şube pasifleşemez 409; üye taşınınca pasifleşir', async () => {
+      const who = await buyer();
+      await created(who, { ...valid(), name: 'Ana' });
+      const target = await created(who, { ...valid(), name: 'Üyeli' });
+      const userId = await addMemberFromTemplate(who.businessId, 'buyer_branch_staff');
+      await platformRows(
+        'update memberships set branch_id = $1 where business_id = $2 and user_id = $3',
+        [target.id, who.businessId, userId],
+      );
+      const blocked = await patch(who, target.id, { status: 'inactive' });
+      expect(blocked.status).toBe(409);
+      expect(blocked.body as ErrorJson).toMatchObject({
+        code: 'INVALID_STATE_TRANSITION',
+        details: { reason: 'branch_in_use', members: 1, invitations: 0 },
+      });
+      await platformRows(
+        "update memberships set status = 'removed' where business_id = $1 and user_id = $2",
+        [who.businessId, userId],
+      );
+      expect((await patch(who, target.id, { status: 'inactive' })).status).toBe(200);
+    });
+
+    it('US-010-AC4 S3 açık daveti olan şube pasifleşemez 409; davet geri çekilince pasifleşir', async () => {
+      const who = await buyer();
+      await created(who, { ...valid(), name: 'Ana' });
+      const target = await created(who, { ...valid(), name: 'Davetli' });
+      await addMemberFromTemplate(who.businessId, 'buyer_branch_staff');
+      const [ids] = await platformRows<{ role_id: string; job_title_id: string }>(
+        `select r.id as role_id, j.id as job_title_id
+           from roles r join role_templates t on t.id = r.source_template_id
+           join job_titles j on j.code = t.code
+          where r.business_id = $1 and t.code = 'buyer_branch_staff' and not r.is_custom`,
+        [who.businessId],
+      );
+      const invited = await http().post('/api/v1/team/invitations').set(who.auth).send({
+        phone: randomTestPhone(),
+        fullName: 'Davetli işçi',
+        roleId: ids?.role_id,
+        jobTitleId: ids?.job_title_id,
+        branchId: target.id,
+      });
+      expect(invited.status, JSON.stringify(invited.body)).toBe(201);
+      const blocked = await patch(who, target.id, { status: 'inactive' });
+      expect(blocked.status).toBe(409);
+      expect((blocked.body as ErrorJson).details).toMatchObject({
+        reason: 'branch_in_use',
+        members: 0,
+        invitations: 1,
+      });
+      const invitationId = (invited.body as { invitationId: string }).invitationId;
+      const revoked = await http()
+        .post(`/api/v1/team/invitations/${invitationId}/revoke`)
+        .set(who.auth);
+      expect(revoked.status).toBe(204);
+      expect((await patch(who, target.id, { status: 'inactive' })).status).toBe(200);
     });
 
     it('US-010-AC4 eşzamanlı iki pasifleştirme en az bir aktif şube bırakır', async () => {

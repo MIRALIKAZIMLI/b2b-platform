@@ -841,7 +841,7 @@ export interface paths {
         head?: never;
         /**
          * Şube güncelle / pasifleştir (US-010 AC4)
-         * @description Kısmi. Silme ucu yoktur; şube `status: inactive` ile pasifleşir. Kural `above_amount` dışına geçince eşik silinir; `above_amount`'ta eşik (gelen ya da mevcut) yoksa 422. `lat`/`lng` birlikte; ikisi `null` konumu siler. Son aktif şube pasifleşemez: `409 INVALID_STATE_TRANSITION` (`reason: last_active_branch`).
+         * @description Kısmi. Silme ucu yoktur; şube `status: inactive` ile pasifleşir. Kural `above_amount` dışına geçince eşik silinir; `above_amount`'ta eşik (gelen ya da mevcut) yoksa 422. `lat`/`lng` birlikte; ikisi `null` konumu siler. Son aktif şube pasifleşemez: `409 INVALID_STATE_TRANSITION` (`reason: last_active_branch`). Aktif üyesi veya açık daveti olan şube pasifleşemez: `409 INVALID_STATE_TRANSITION` (`reason: branch_in_use`, `members`, `invitations`).
          */
         patch: {
             parameters: {

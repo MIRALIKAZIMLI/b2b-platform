@@ -11,6 +11,11 @@ describe('requiresBranchApproval (US-010 AC2)', () => {
     expect(requiresBranchApproval('above_amount', m('500'), m('120.5'))).toBe(false);
   });
 
+  it('US-010-AC2 S4 eşiğe tam eşit toplam doğrudan gönderilir (kullanıcı kararı 2026-11-13)', () => {
+    expect(requiresBranchApproval('above_amount', m('500.00'), m('500'))).toBe(false);
+    expect(requiresBranchApproval('above_amount', m('500.00'), m('500.0001'))).toBe(true);
+  });
+
   it('US-010-AC2 every_order her zaman, none hiçbir zaman onaya düşer', () => {
     expect(requiresBranchApproval('every_order', null, m('0.01'))).toBe(true);
     expect(requiresBranchApproval('none', null, m('999999.99'))).toBe(false);

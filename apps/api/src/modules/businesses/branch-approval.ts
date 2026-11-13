@@ -9,7 +9,8 @@ export type BranchApprovalRule = (typeof BRANCH_APPROVAL_RULES)[number];
  * Sepet şube onayına düşer mi?
  * - `every_order`: her zaman.
  * - `none`: hiçbir zaman.
- * - `above_amount`: toplam eşiğin üstündeyse. Eşik `above_amount`'ta her zaman doludur
+ * - `above_amount`: toplam eşiğin üstündeyse (eşit = onaysız; eşik onaysız en yüksek tutardır).
+ *   Eşik `above_amount`'ta her zaman doludur
  *   (`branches_approval_threshold_check`); boş gelirse güvenli taraf: onaya düşer.
  */
 export function requiresBranchApproval(
@@ -23,6 +24,7 @@ export function requiresBranchApproval(
     case 'none':
       return false;
     case 'above_amount':
+      // S4 (kullanıcı kararı 2026-11-13): eşiğe tam eşit toplam doğrudan gönderilir.
       return threshold === null ? true : cartTotal.greaterThan(threshold);
   }
 }

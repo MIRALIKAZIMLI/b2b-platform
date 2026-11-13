@@ -35,3 +35,4 @@ export {
   roles,
 } from './access.schema';
 export { type AccessSeedResult, seedAccess } from './seed/access.seed';
+export { BranchUsageGateModule } from './branch-usage-gate.module';

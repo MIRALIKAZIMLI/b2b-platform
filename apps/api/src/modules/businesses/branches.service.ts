@@ -5,7 +5,9 @@
 //   `above_amount`'ta eşik yoksa 422 (PATCH kısmi olduğundan mevcut eşik de sayılır).
 // - Konum ya iki koordinatla birlikte ya hiç (T6). Geçersiz değerler 0028 CHECK'leriyle de reddedilir.
 // - AC4: silme ucu yok (T2), yalnız pasifleştirme. Son aktif şube pasifleşemez (T3) →
-//   `409 INVALID_STATE_TRANSITION`. Eşzamanlı iki pasifleştirme işletme satırı kilidiyle sıraya girer.
+//   `409 INVALID_STATE_TRANSITION` (`last_active_branch`). Aktif üyesi veya açık daveti olan şube
+//   pasifleşemez (S3, kullanıcı kararı 2026-11-13) → 409 (`branch_in_use`). Eşzamanlı iki
+//   pasifleştirme işletme satırı kilidiyle sıraya girer.
 import { Inject, Injectable } from '@nestjs/common';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
@@ -15,6 +17,7 @@ import { IdGenerator } from '../../core/id-generator';
 import type { TenantContext } from '../../core/tenant-context';
 import type { BranchApprovalRule } from './branch-approval';
 import { type BranchPatch, type BranchRow, BranchesRepository } from './branches.repository';
+import { BranchUsageGate } from './branch-usage.gate';
 import { BusinessesRepository } from './businesses.repository';
 
 export interface BranchGeo {
@@ -80,6 +83,7 @@ export class BranchesService {
   constructor(
     @Inject(BranchesRepository) private readonly repository: BranchesRepository,
     @Inject(BusinessesRepository) private readonly businesses: BusinessesRepository,
+    @Inject(BranchUsageGate) private readonly usage: BranchUsageGate,
     @Inject(AuditService) private readonly audit: AuditRecorder,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
     @Inject(Clock) private readonly clock: Clock,
@@ -196,6 +200,15 @@ export class BranchesService {
       if (patch.status === 'inactive') {
         if ((await this.repository.countOtherActiveTx(tx, tenant.businessId, id)) === 0) {
           throw new DomainError('INVALID_STATE_TRANSITION', { reason: 'last_active_branch' });
+        }
+        // S3 (kullanıcı kararı 2026-11-13): aktif üyesi / açık daveti olan şube pasifleşemez.
+        const bound = await this.usage.countBoundTx(tx, tenant.businessId, id, now);
+        if (bound.members > 0 || bound.invitations > 0) {
+          throw new DomainError('INVALID_STATE_TRANSITION', {
+            reason: 'branch_in_use',
+            members: bound.members,
+            invitations: bound.invitations,
+          });
         }
       }
       if (Object.keys(patch).length === 0) return current;
