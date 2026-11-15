@@ -251,10 +251,14 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `connection.request_expiry_lock_seconds` | 600 (süre dolumu işinin Redis kilidinin ömrü; aynı anda tek çalışma, ADR-0011 §4, F2.16) | tamsayı | 60 | 3600 |
 | `delivery.auto_confirm_hours` | 48 | tamsayı | 1 | 720 |
 | `delivery.location_mismatch_meters` | 300 | tamsayı | 10 | 10000 |
-| `dormant.reminder_days` | 7, 30 | tamsayı listesi (artan, 1–5 eleman) | 1 | 3650 |
+| `dormant.reminder_days` | 7, 30 | tamsayı listesi (artan, 1–2 eleman; aşamalar `reminded_7`, `reminded_30`, F2.17) | 1 | 3650 |
 | `dormant.warning_day` | 90 | tamsayı | 1 | 3650 |
 | `dormant.deactivate_day` | 120 | tamsayı | 1 | 3650 |
 | `dormant.delete_day` | 180 | tamsayı | 1 | 3650 |
+| `dormant.job_hour_utc` | 2 (bağlantısız hesap gece işinin saati, UTC; worker açılışında okunur, US-027, F2.17) | tamsayı | 0 | 23 |
+| `dormant.batch_size` | 500 (gece işinde bir turda işlenen perakendeci sayısı, F2.17) | tamsayı | 50 | 1000 |
+| `dormant.lock_seconds` | 1800 (gece işinin Redis kilidinin ömrü; aynı anda tek çalışma, ADR-0011 §4, F2.17) | tamsayı | 60 | 7200 |
+| `dormant.touch_min_interval_minutes` | 60 (giriş/oturum yenilemede sayacın en sık yeniden yazılma aralığı, dakika; F2.17) | tamsayı | 1 | 1440 |
 | `invitation.seller_activation_days` | 7 | tamsayı (gün; toptancı aktivasyon davetinin geçerliliği, US-009 AC3) | 1 | 30 |
 | `invitation.team_days` | 7 | tamsayı (gün; ekip davetinin geçerliliği, US-013 AC1, F2.7) | 1 | 30 |
 | `onboarding.seller_mode` | `manual` | seçenek: `manual` | — | — |
@@ -700,6 +704,8 @@ Bir toptancı admini olarak mevcut Excel listemi içe aktarmak istiyorum; böyle
 | Yeni bağlantı isteği | Perakendeci adminleri |
 | İstek kabul / red / süre doldu | İsteği gönderen + toptancı adminleri |
 | Bağlantı iptal edildi | Karşı tarafın adminleri |
+| Bağlantısız hesap: profil hatırlatması (US-027 AC1), "30 gün sonra pasifleşecek" uyarısı (AC2) | Perakendeci adminleri (F2.17 varsayımı V1) |
+| Bağlantısız hesap: bölgede yeni perakendeci (US-027 AC1) | Hizmet bölgesi eşleşen toptancıların adminleri; perakendeci dizinde gizliyse veya toptancıyı engellediyse gitmez (F2.17 varsayımı V1) |
 | Sepet onaya gönderildi / geri gönderildi | Şube adminleri / gönderen kullanıcı |
 | Yeni sipariş | Toptancının sipariş onay izni olanlar |
 | Sipariş onaylandı / düzenlendi / reddedildi | Siparişi gönderen + şube adminleri |

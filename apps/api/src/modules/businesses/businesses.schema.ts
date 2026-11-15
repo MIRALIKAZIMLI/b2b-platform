@@ -218,6 +218,8 @@ export const buyerProfiles = pgTable(
     listedInDirectory: boolean('listed_in_directory').notNull().default(true),
     dormantStage: text('dormant_stage').notNull().default('none'),
     dormantStageAt: timestamp('dormant_stage_at', { withTimezone: true }),
+    // F2.17: bağlantısız hesap sayacının başlangıcı (kayıt; giriş/oturum yenilemede yeniden).
+    dormantSince: timestamp('dormant_since', { withTimezone: true }).notNull().defaultNow(),
     ...timestamps,
   },
   (table) => [

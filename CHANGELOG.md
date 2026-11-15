@@ -59,3 +59,4 @@
 - F2.5b: web ve mobil şube ekranları ("konumumu kullan"), ekip ekranında şube seçimi
 - F2.18a: admin perakendeci moderasyonu API (VÖEN doğrula/reddet, askıya al, sil = arşiv/kalıcı silme), 0029, check-rls US-016 AC5 kuralı
 - F2.18b: web admin "Perakendeciler" ekranı (filtre, kayıt penceresi, VÖEN doğrula/reddet, askıya al/kaldır/sil iki adımlı onay; destek yalnız görür)
+- F2.17: bağlantısız hesap politikası (gece işi, giriş sayacı, 180. gün silme/arşiv)

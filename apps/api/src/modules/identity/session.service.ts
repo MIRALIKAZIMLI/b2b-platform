@@ -5,6 +5,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { SettingKey, SettingValue } from '@b2b/shared';
+import { InjectPinoLogger } from 'nestjs-pino';
 import { z } from 'zod';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
@@ -12,12 +13,21 @@ import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
 import { SettingsService } from '../settings';
 import type { DeviceType, PlatformRole } from './identity.schema';
+import { LoginActivityHook } from './login-activity.hook';
 import { TotpRepository } from './totp/totp.repository';
 import { OtpService } from './otp.service';
 import { type ActiveSession, type SelfProfilePatch, SessionRepository } from './session.repository';
 import { TokenService } from './token.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+export interface SessionLog {
+  warn(obj: Record<string, unknown>, msg: string): void;
+}
+
+function errorName(error: unknown): string {
+  return error instanceof Error ? error.name : 'unknown';
+}
 const REFRESH_TOKEN_BYTES = 32;
 /** `device` gelmezse (Mimar kararı 6). */
 const DEFAULT_DEVICE_TYPE: DeviceType = 'web';
@@ -123,6 +133,8 @@ export class SessionService {
     @Inject(IdGenerator) private readonly ids: IdGenerator,
     @Inject(TotpRepository)
     private readonly totp: Pick<TotpRepository, 'platformRole' | 'isEnabled'>,
+    @Inject(LoginActivityHook) private readonly activity: LoginActivityHook,
+    @InjectPinoLogger(SessionService.name) private readonly log: SessionLog,
   ) {}
 
   /** POST /auth/otp/verify (SF-01). */
@@ -171,6 +183,7 @@ export class SessionService {
       now,
       expiresAt: await this.refreshExpiry(now),
     });
+    await this.notifyActivity(userId, now);
     const access = await this.tokens.signAccess({ userId, sessionId });
     return {
       nextStep: 'none',
@@ -211,6 +224,7 @@ export class SessionService {
 
     switch (result.result) {
       case 'rotated': {
+        await this.notifyActivity(result.userId, now);
         const access = await this.tokens.signAccess({
           userId: result.userId,
           sessionId: result.sessionId,
@@ -279,6 +293,21 @@ export class SessionService {
   /** Web cookie ömrü (`auth.refresh_token_days`, F1.13a). */
   async refreshTokenMaxAgeSeconds(): Promise<number> {
     return (await this.settings.get('auth.refresh_token_days')) * (DAY_MS / 1000);
+  }
+
+  /**
+   * F2.17 (US-027 AC3): bağlantısız hesap sayacı. Hata yutulur ve loglanır (yalnız olay adı ve
+   * hata türü; kişisel veri yok): giriş ve yenileme bu yüzden asla düşmez (Mimar notu 2).
+   */
+  private async notifyActivity(userId: string, now: Date): Promise<void> {
+    try {
+      await this.activity.onActivity(userId, now);
+    } catch (error) {
+      this.log.warn(
+        { event: 'identity.login_activity_failed', errorName: errorName(error) },
+        'giriş etkinliği kancası başarısız',
+      );
+    }
   }
 
   private async refreshExpiry(now: Date): Promise<Date> {

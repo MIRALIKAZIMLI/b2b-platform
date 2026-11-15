@@ -15,6 +15,7 @@ interface FunctionRow {
 const EXPECTED_FUNCTIONS = [
   'business_close_archived_connections',
   'business_purge',
+  'buyer_dormant_touch',
   'connection_buyer_targets',
   'connection_counterpart_admins',
   'connection_request_recipients',
@@ -27,6 +28,10 @@ const EXPECTED_FUNCTIONS = [
   'directory_buyer_documents',
   'directory_buyer_exact_match',
   'directory_buyer_page',
+  'dormant_advance',
+  'dormant_archive',
+  'dormant_recipients',
+  'dormant_scan',
   'idempotency_complete',
   'idempotency_lookup_by_phone',
   'idempotency_release',

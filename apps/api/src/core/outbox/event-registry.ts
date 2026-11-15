@@ -118,6 +118,24 @@ export const OUTBOX_EVENTS = {
       reason: ['voen_not_found', 'name_mismatch', 'voen_inactive', 'other'],
     },
   },
+  // F2.17 (US-027 AC1): bağlantısız perakendeciye profil hatırlatması; perakendecinin her aktif
+  // admini için bir olay (`userId` alıcı). Tüketici `notifications` (`dormant_profile_reminder`).
+  'buyer.dormant_reminder': {
+    queue: 'notifications',
+    fields: { businessId: 'id', userId: 'id', stage: ['reminded_7', 'reminded_30'] },
+  },
+  // F2.17 (US-027 AC1): hizmet bölgesi eşleşen toptancının her aktif admini için "bölgede yeni
+  // perakendeci" (`businessId` toptancı, `buyerId` perakendeci). Bildirim `new_buyer_in_region`.
+  'buyer.dormant_new_buyer': {
+    queue: 'notifications',
+    fields: { buyerId: 'id', businessId: 'id', userId: 'id' },
+  },
+  // F2.17 (US-027 AC2): "hesabınız N gün sonra pasifleşecek"; perakendecinin her aktif admini için
+  // bir olay. `days` = `dormant.deactivate_day − dormant.warning_day`. Bildirim `dormant_warning`.
+  'buyer.dormant_warning': {
+    queue: 'notifications',
+    fields: { businessId: 'id', userId: 'id', days: 'integer' },
+  },
 } as const satisfies Record<string, OutboxEventDefinition>;
 
 export type OutboxEventType = keyof typeof OUTBOX_EVENTS;

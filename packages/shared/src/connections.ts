@@ -513,6 +513,11 @@ const PUSH_TARGETS: Readonly<Record<string, readonly PushTarget[]>> = {
     { area: 'buyer', path: 'suppliers' },
     { area: 'seller', path: 'customers' },
   ],
+  // F2.17 (US-027): bağlantısız perakendeciye hatırlatma ve uyarı → profil; toptancıya bölgede
+  // yeni perakendeci → dizin.
+  dormant_profile_reminder: [{ area: 'buyer', path: 'profile' }],
+  dormant_warning: [{ area: 'buyer', path: 'profile' }],
+  new_buyer_in_region: [{ area: 'seller', path: 'directory' }],
 };
 
 /**

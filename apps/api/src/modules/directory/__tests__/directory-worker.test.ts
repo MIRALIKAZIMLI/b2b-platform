@@ -7,6 +7,7 @@ import { DIRECTORY_EVENT_TYPES, DIRECTORY_REINDEX_JOB } from '../directory-event
 import { DirectoryReindexService } from '../directory-reindex.service';
 import { DirectoryReindexSchedule, reindexCronPattern } from '../directory-schedule';
 import { DirectoryProcessor } from '../directory.processor';
+import { DORMANT_ACCOUNTS_JOB } from '../jobs/dormant-accounts.job';
 
 class MemoryLock implements RedisLockClient {
   readonly values = new Map<string, string>();
@@ -38,8 +39,15 @@ const settings = {
 function processor() {
   const indexer = { refresh: vi.fn(() => Promise.resolve()) };
   const reindex = { run: vi.fn(() => Promise.resolve({ status: 'done' as const, indexed: 2 })) };
+  const dormant = { run: vi.fn(() => Promise.resolve({ status: 'done' as const, processed: 3 })) };
   const log = { info: vi.fn(), warn: vi.fn() };
-  return { indexer, reindex, log, processor: new DirectoryProcessor(indexer, reindex, log) };
+  return {
+    indexer,
+    reindex,
+    dormant,
+    log,
+    processor: new DirectoryProcessor(indexer, reindex, dormant, log),
+  };
 }
 
 describe('F2.11a directory kuyruğu', () => {
@@ -123,6 +131,17 @@ describe('F2.11a directory kuyruğu', () => {
       DIRECTORY_REINDEX_JOB,
       { pattern: '0 3 * * *', tz: 'UTC' },
       { name: DIRECTORY_REINDEX_JOB, data: {} },
+    );
+  });
+
+  it('F2.17 directory.dormant_accounts işi bağlantısız hesap işini çalıştırır', async () => {
+    const { processor: p, dormant, reindex, log } = processor();
+    await p.process({ name: DORMANT_ACCOUNTS_JOB, data: {} });
+    expect(dormant.run).toHaveBeenCalledOnce();
+    expect(reindex.run).not.toHaveBeenCalled();
+    expect(log.info).toHaveBeenCalledWith(
+      { event: DORMANT_ACCOUNTS_JOB, status: 'done', processed: 3 },
+      'bağlantısız hesap gece işi',
     );
   });
 });
