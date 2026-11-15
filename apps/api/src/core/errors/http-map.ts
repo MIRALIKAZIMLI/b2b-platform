@@ -56,6 +56,7 @@ export const ERROR_HTTP_STATUS = {
   FILE_INVALID: 422,
   IMPORT_TOO_MANY_ROWS: 422,
   SETTING_OUT_OF_RANGE: 422,
+  SETTING_SCOPE_NOT_ALLOWED: 422,
   // F2.9 (US-012 AC3): kullanımdaki unvan silinemez, yalnız pasifleştirilir.
   JOB_TITLE_IN_USE: 409,
   INTERNAL_ERROR: 500,

@@ -218,6 +218,13 @@
       "when": 1794750959609,
       "tag": "0030_dormant_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794753512803,
+      "tag": "0031_settings_admin_list",
+      "breakpoints": true
     }
   ]
 }

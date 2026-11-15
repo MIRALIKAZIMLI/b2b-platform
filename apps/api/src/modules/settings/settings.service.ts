@@ -4,9 +4,15 @@ import {
   DORMANT_SETTING_KEYS,
   isSettingKey,
   parseSettingValue,
+  SETTING_KEYS,
   type SettingKey,
+  type SettingMeta,
+  type SettingScope,
+  type SettingSource,
   type SettingValue,
   settingDefault,
+  settingMetaOf,
+  settingScopesOf,
 } from '@b2b/shared';
 import {
   type AuditRecorder,
@@ -14,10 +20,12 @@ import {
   AuditService,
   settingAuditTargetId,
 } from '../../core/audit';
+import type { Tx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { SettingsCache } from './settings.cache';
 import type {
   SettingLayers,
+  SettingScopeRow,
   SettingsCachePort,
   SettingsRepositoryPort,
   SettingTarget,
@@ -36,6 +44,18 @@ export interface SettingActor {
   readonly userId: string;
   /** Audit için istek bilgisi; HTTP ucu (controller) verir. */
   readonly context?: AuditRequestContext;
+}
+
+/** Admin ayar ekranının bir satırı (openapi `AdminSettingItem`, F2.19). */
+export interface AdminSettingView extends SettingMeta {
+  readonly key: SettingKey;
+  readonly scopes: readonly SettingScope[];
+  /** Bu kapsamdaki geçerli kayıt; yoksa (veya kayıt geçersizse) null. */
+  readonly value: unknown;
+  /** Bu kapsamda kayıt yokken geçerli olan değer ve kaynağı. */
+  readonly inheritedValue: unknown;
+  readonly inheritedFrom: SettingSource;
+  readonly updatedAt: Date | null;
 }
 
 /**
@@ -92,6 +112,57 @@ export class SettingsService {
       }),
     );
     await this.cache.invalidate(key, target);
+  }
+
+  /**
+   * Admin ekranı (F2.19, US-017 AC1): kapsamdaki her anahtarın değeri ve mirası. Çağıranın
+   * platform işleminde (`settings_admin_list` yalnız platform bağlamında çalışır). İşletme
+   * kapsamında miras = işletmenin güncel planı → platform → kod varsayılanı.
+   */
+  async listForScopeTx(tx: Tx, target: SettingTarget): Promise<AdminSettingView[]> {
+    const rows = await this.repository.listScopeTx(tx, target);
+    const byScope = {
+      platform: new Map<string, SettingScopeRow>(),
+      plan: new Map<string, SettingScopeRow>(),
+      business: new Map<string, SettingScopeRow>(),
+    };
+    for (const row of rows) byScope[row.scope].set(row.key, row);
+
+    const inheritanceOrder: readonly ('plan' | 'platform')[] =
+      target.scope === 'business' ? ['plan', 'platform'] : target.scope === 'plan' ? ['platform'] : [];
+    return SETTING_KEYS.map((key) => {
+      const own = byScope[target.scope].get(key);
+      const ownValue = own === undefined ? undefined : this.validOrWarn(key, own);
+      let inheritedValue: unknown = settingDefault(key);
+      let inheritedFrom: SettingSource = 'default';
+      for (const scope of inheritanceOrder) {
+        const row = byScope[scope].get(key);
+        const valid = row === undefined ? undefined : this.validOrWarn(key, row);
+        if (valid !== undefined) {
+          inheritedValue = valid.value;
+          inheritedFrom = scope;
+          break;
+        }
+      }
+      return {
+        key,
+        ...settingMetaOf(key),
+        scopes: settingScopesOf(key),
+        value: ownValue === undefined ? null : ownValue.value,
+        inheritedValue,
+        inheritedFrom,
+        updatedAt: ownValue === undefined ? null : (own?.updatedAt ?? null),
+      };
+    });
+  }
+
+  private validOrWarn(key: SettingKey, row: SettingScopeRow): { value: unknown } | undefined {
+    const parsed = parseSettingValue(key, row.value);
+    if (parsed.ok) return { value: parsed.value };
+    this.logger.warn(
+      `settings.invalid_value: kayıtlı değer geçersiz, ekranda yok sayılıyor (anahtar: ${key}, kapsam: ${row.scope})`,
+    );
+    return undefined;
   }
 
   private async loadLayers(key: SettingKey, businessId?: string): Promise<SettingLayers> {

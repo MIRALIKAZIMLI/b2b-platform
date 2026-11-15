@@ -2628,14 +2628,42 @@ paths:
   /api/v1/admin/settings:
     get:
       tags: [admin]
-      summary: Ayarlar (kapsam ile)
-      parameters: [ { name: scope, in: query, schema: { type: string, enum: [platform, plan, business] } }, { name: scopeId, in: query, schema: { type: string, format: uuid } } ]
+      summary: Ayarlar (kapsam ile; US-017, F2.19; platform rolü super_admin)
+      description: >
+        Kayıttaki (`packages/shared/src/settings.ts`) her anahtar için bu kapsamdaki değer (yoksa
+        `null`) ve bu kapsamda değer olmasaydı geçerli olacak miras değer ile kaynağı döner. Miras:
+        platform kapsamında kod varsayılanı; plan kapsamında platform → varsayılan; işletme
+        kapsamında işletmenin güncel aboneliğinin planı → platform → varsayılan. `scope=platform`
+        iken `scopeId` verilmez; `plan` ve `business` için zorunludur. Olmayan plan veya işletme `404`.
+      parameters:
+        - { name: scope, in: query, schema: { type: string, enum: [platform, plan, business], default: platform } }
+        - { name: scopeId, in: query, schema: { type: string, format: uuid } }
       responses:
-        '200': { description: Ayarlar }
+        '200':
+          description: Ayarlar (kayıt sırasıyla)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scope, scopeId, items]
+                properties:
+                  scope: { type: string, enum: [platform, plan, business] }
+                  scopeId: { type: [string, 'null'], format: uuid }
+                  items: { type: array, items: { $ref: '#/components/schemas/AdminSettingItem' } }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
     put:
       tags: [admin]
-      summary: Ayar güncelle (US-017)
+      summary: Ayar güncelle (US-017; platform rolü super_admin)
+      description: >
+        Değer anahtarın tipine, alt/üst sınırına ve çapraz kuralına (`dormant.*`) uymazsa `422
+        SETTING_OUT_OF_RANGE` (US-017 AC3). Anahtar bu kapsamda yazılamıyorsa (`scopes`, US-017
+        "Kapsam") `422 SETTING_SCOPE_NOT_ALLOWED`. Eski ve yeni değer aynı işlemde audit'e yazılır
+        (`setting.updated`, US-017 AC2). Olmayan plan veya işletme `404`. Yanıt, güncellenen
+        anahtarın bu kapsamdaki güncel hâlidir.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -2647,7 +2675,13 @@ paths:
                 key: { type: string }
                 value: {}
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSettingItem' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
   /api/v1/admin/plans:
     get:
@@ -3096,6 +3130,7 @@ components:
         - FILE_INVALID
         - IMPORT_TOO_MANY_ROWS
         - SETTING_OUT_OF_RANGE
+        - SETTING_SCOPE_NOT_ALLOWED
         - JOB_TITLE_IN_USE
         - INTERNAL_ERROR
     PhoneE164:
@@ -3908,6 +3943,21 @@ components:
         status: { type: string, enum: [pending, approved, rejected] }
         businessId: { type: [string, 'null'], format: uuid, description: Onayda açılan işletme }
         createdAt: { type: string, format: date-time }
+    AdminSettingItem:
+      type: object
+      description: Ayar ekranı satırı (F2.19). `value` bu kapsamdaki kayıt; `inheritedValue` kayıt yokken geçerli değer.
+      required: [key, kind, scopes, value, inheritedValue, inheritedFrom, updatedAt]
+      properties:
+        key: { type: string }
+        kind: { type: string, enum: [int, int_list, bool, enum, version, url, country_codes] }
+        min: { type: integer }
+        max: { type: integer }
+        options: { type: array, items: { type: string } }
+        scopes: { type: array, items: { type: string, enum: [platform, plan, business] } }
+        value: { description: Bu kapsamdaki değer; yoksa null }
+        inheritedValue: { description: Bu kapsamda değer yokken geçerli olan değer }
+        inheritedFrom: { type: string, enum: [plan, platform, default] }
+        updatedAt: { type: [string, 'null'], format: date-time }
     AdminPlan:
       type: object
       required: [id, code, name, capability, price, currencyCode, period, isActive]

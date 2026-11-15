@@ -255,6 +255,11 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, ErrorMessageText>> = {
     ru: 'Значение настройки вне допустимых пределов.',
     tr: 'Ayar değeri izin verilen sınırların dışında.',
   },
+  SETTING_SCOPE_NOT_ALLOWED: {
+    az: 'Bu ayar yalnız platform səviyyəsində dəyişdirilə bilər.',
+    ru: 'Эту настройку можно изменить только на уровне платформы.',
+    tr: 'Bu ayar yalnızca platform düzeyinde değiştirilebilir.',
+  },
   JOB_TITLE_IN_USE: {
     az: 'Bu vəzifə istifadədədir; silinə bilməz, yalnız deaktiv edilə bilər.',
     ru: 'Эта должность используется: удалить нельзя, можно только деактивировать.',

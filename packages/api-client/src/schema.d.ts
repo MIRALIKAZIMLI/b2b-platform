@@ -5905,7 +5905,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ayarlar (kapsam ile) */
+        /**
+         * Ayarlar (kapsam ile; US-017, F2.19; platform rolü super_admin)
+         * @description Kayıttaki (`packages/shared/src/settings.ts`) her anahtar için bu kapsamdaki değer (yoksa `null`) ve bu kapsamda değer olmasaydı geçerli olacak miras değer ile kaynağı döner. Miras: platform kapsamında kod varsayılanı; plan kapsamında platform → varsayılan; işletme kapsamında işletmenin güncel aboneliğinin planı → platform → varsayılan. `scope=platform` iken `scopeId` verilmez; `plan` ve `business` için zorunludur. Olmayan plan veya işletme `404`.
+         */
         get: {
             parameters: {
                 query?: {
@@ -5918,16 +5921,30 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Ayarlar */
+                /** @description Ayarlar (kayıt sırasıyla) */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            scope: "platform" | "plan" | "business";
+                            /** Format: uuid */
+                            scopeId: string | null;
+                            items: components["schemas"]["AdminSettingItem"][];
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
-        /** Ayar güncelle (US-017) */
+        /**
+         * Ayar güncelle (US-017; platform rolü super_admin)
+         * @description Değer anahtarın tipine, alt/üst sınırına ve çapraz kuralına (`dormant.*`) uymazsa `422 SETTING_OUT_OF_RANGE` (US-017 AC3). Anahtar bu kapsamda yazılamıyorsa (`scopes`, US-017 "Kapsam") `422 SETTING_SCOPE_NOT_ALLOWED`. Eski ve yeni değer aynı işlemde audit'e yazılır (`setting.updated`, US-017 AC2). Olmayan plan veya işletme `404`. Yanıt, güncellenen anahtarın bu kapsamdaki güncel hâlidir.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -5935,7 +5952,7 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
                         /** @enum {string} */
@@ -5953,8 +5970,12 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["AdminSettingItem"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 422: components["responses"]["Error"];
             };
         };
@@ -6711,7 +6732,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "JOB_TITLE_IN_USE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "SETTING_SCOPE_NOT_ALLOWED" | "JOB_TITLE_IN_USE" | "INTERNAL_ERROR";
         /** @example +994501234567 */
         PhoneE164: string;
         Voen: string;
@@ -7552,6 +7573,24 @@ export interface components {
             businessId: string | null;
             /** Format: date-time */
             createdAt: string;
+        };
+        /** @description Ayar ekranı satırı (F2.19). `value` bu kapsamdaki kayıt; `inheritedValue` kayıt yokken geçerli değer. */
+        AdminSettingItem: {
+            key: string;
+            /** @enum {string} */
+            kind: "int" | "int_list" | "bool" | "enum" | "version" | "url" | "country_codes";
+            min?: number;
+            max?: number;
+            options?: string[];
+            scopes: ("platform" | "plan" | "business")[];
+            /** @description Bu kapsamdaki değer; yoksa null */
+            value: unknown;
+            /** @description Bu kapsamda değer yokken geçerli olan değer */
+            inheritedValue: unknown;
+            /** @enum {string} */
+            inheritedFrom: "plan" | "platform" | "default";
+            /** Format: date-time */
+            updatedAt: string | null;
         };
         AdminPlan: {
             /** Format: uuid */
