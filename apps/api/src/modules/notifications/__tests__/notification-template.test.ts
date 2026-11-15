@@ -1,6 +1,12 @@
 // F1.11-AC5: şablon kullanıcının dilinde; çeviri yoksa `az` (US-058 AC3).
 import { describe, expect, it } from 'vitest';
-import { renderTemplate, type TemplateText } from '../notification-template';
+import {
+  renderTemplate,
+  templateKeysFor,
+  templatesFor,
+  templateVariantKey,
+  type TemplateText,
+} from '../notification-template';
 import { intentsForEvent, isNotificationType } from '../notification-types';
 
 const templates = new Map<string, TemplateText>([
@@ -72,5 +78,31 @@ describe('bildirim türleri (birim)', () => {
       },
     ]);
     expect(isNotificationType('role_template_version')).toBe(true);
+  });
+});
+
+describe('değişkenli şablon (F2.18)', () => {
+  const base = new Map<string, TemplateText>([['az', { title: 'Genel', body: 'Genel metin' }]]);
+  const variant = new Map<string, TemplateText>([['az', { title: 'Ad', body: 'Ad uyuşmuyor' }]]);
+  const all = new Map([
+    ['voen_rejected', base],
+    ['voen_rejected.name_mismatch', variant],
+  ]);
+
+  it('US-015 AC2 gerekçe kodunun şablonu seçilir, yoksa genel şablon', () => {
+    expect(templatesFor(all, 'voen_rejected', { reason: 'name_mismatch' })).toBe(variant);
+    expect(templatesFor(all, 'voen_rejected', { reason: 'other' })).toBe(base);
+    expect(templatesFor(all, 'voen_rejected', {})).toBe(base);
+  });
+
+  it('US-015 AC2 değişken yalnız tanımlı türde ve kod biçiminde', () => {
+    expect(templateVariantKey('connection_request', { reason: 'x' })).toBeUndefined();
+    expect(templateVariantKey('voen_rejected', { reason: 'Serbest Metin!' })).toBeUndefined();
+    expect(
+      templateKeysFor([
+        { type: 'voen_rejected', params: { reason: 'other' } },
+        { type: 'test', params: {} },
+      ]),
+    ).toEqual(['voen_rejected', 'voen_rejected.other', 'test']);
   });
 });

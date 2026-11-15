@@ -1,6 +1,7 @@
 // F2.13a (US-054 "İstek kabul / red"): yanıt olayları toptancı tarafındaki alıcıya bildirim olur;
 // F2.15a: iptal bildirimi alıcı başına `connection.cancel_notice`; `connection.cancelled` bildirim değil.
 import { randomUUID } from 'node:crypto';
+import { VOEN_REJECT_REASONS } from '@b2b/shared';
 import { describe, expect, it } from 'vitest';
 import { intentsForEvent, NOTIFICATION_EVENT_TYPES } from '../notification-types';
 import { NOTIFICATION_TEMPLATES } from '../seed/notifications.seed';
@@ -82,6 +83,66 @@ describe('bildirim türleri (F2.13a)', () => {
     ]) {
       const template = NOTIFICATION_TEMPLATES[type];
       expect(Object.keys(template ?? {}).sort()).toEqual(['az', 'ru', 'tr']);
+    }
+  });
+});
+
+describe('VÖEN reddi bildirimi (F2.18)', () => {
+  it('US-015 AC2 olay perakendeci adminine gerekçe koduyla bildirim olur', () => {
+    const payload = { businessId: randomUUID(), userId: randomUUID(), reason: 'name_mismatch' };
+    expect(intentsForEvent('buyer.voen_rejected', payload)).toEqual([
+      {
+        userId: payload.userId,
+        businessId: payload.businessId,
+        type: 'voen_rejected',
+        subjectId: payload.businessId,
+        params: { reason: 'name_mismatch' },
+      },
+    ]);
+    expect(NOTIFICATION_EVENT_TYPES).toContain('buyer.voen_rejected');
+  });
+
+  it('US-015 AC2 listede olmayan gerekçe (serbest metin) reddedilir', () => {
+    expect(() =>
+      intentsForEvent('buyer.voen_rejected', {
+        businessId: randomUUID(),
+        userId: randomUUID(),
+        reason: '<b>serbest metin</b>',
+      }),
+    ).toThrow();
+  });
+
+  it('US-015 AC2 her gerekçe kodunun ve genel metnin az/ru/tr şablonu var', () => {
+    for (const key of [
+      'voen_rejected',
+      ...VOEN_REJECT_REASONS.map((reason) => `voen_rejected.${reason}`),
+    ]) {
+      expect(Object.keys(NOTIFICATION_TEMPLATES[key] ?? {}).sort()).toEqual(['az', 'ru', 'tr']);
+    }
+  });
+});
+
+describe('platform kaynaklı bağlantı kapatma bildirimi (F2.18)', () => {
+  it('US-016 AC2 arşivde toptancı adminine ayrı tür, konu bağlantı', () => {
+    const payload = { connectionId: randomUUID(), businessId: randomUUID(), userId: randomUUID() };
+    expect(intentsForEvent('connection.platform_closed_notice', payload)).toEqual([
+      {
+        userId: payload.userId,
+        businessId: payload.businessId,
+        type: 'connection_closed_by_platform',
+        subjectId: payload.connectionId,
+        params: {},
+      },
+    ]);
+    expect(NOTIFICATION_EVENT_TYPES).toContain('connection.platform_closed_notice');
+  });
+
+  it('US-016 AC2 platform kapatma metni az/ru/tr, karşı taraf iptal metninden farklı', () => {
+    const platform = NOTIFICATION_TEMPLATES.connection_closed_by_platform;
+    const cancelled = NOTIFICATION_TEMPLATES.connection_cancelled;
+    expect(Object.keys(platform ?? {}).sort()).toEqual(['az', 'ru', 'tr']);
+    for (const lang of ['az', 'ru', 'tr'] as const) {
+      expect(platform?.[lang].body).not.toBe(cancelled?.[lang].body);
     }
   });
 });

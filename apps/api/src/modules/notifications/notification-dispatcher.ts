@@ -25,7 +25,7 @@ import {
   type PushDeliverJob,
   type PushReceiptsJob,
 } from './notification-jobs';
-import { renderTemplate } from './notification-template';
+import { renderTemplate, templateKeysFor, templatesFor } from './notification-template';
 import { intentsForEvent, type NotificationIntent } from './notification-types';
 import { NotificationsRepository } from './notifications.repository';
 
@@ -132,7 +132,10 @@ export class NotificationDispatcher {
       const notification = await this.repo.findById(tx, job.notificationId);
       if (notification === undefined) return undefined;
       const lang = await this.repo.preferredLanguage(tx, job.userId);
-      const templates = await this.repo.templates(tx, [notification.type]);
+      const templates = await this.repo.templates(
+        tx,
+        templateKeysFor([{ type: notification.type, params: notification.payload.params }]),
+      );
       const tokens = await this.repo.tokens(tx, job.tokenIds);
       return { notification, lang, templates, tokens };
     });
@@ -140,7 +143,7 @@ export class NotificationDispatcher {
 
     const { notification } = prepared;
     const text = renderTemplate(
-      prepared.templates.get(notification.type) ?? new Map(),
+      templatesFor(prepared.templates, notification.type, notification.payload.params),
       prepared.lang,
       notification.payload.params,
     );

@@ -20,9 +20,24 @@ export const BUYER_DIRECTORY_INDEX_UID = 'buyer_directory';
 export const BUYER_DIRECTORY_SETTINGS: Settings = {
   searchableAttributes: ['legalName'],
   filterableAttributes: ['regionId', 'cityId', 'activityTypeId', 'verified'],
-  sortableAttributes: ['legalName'],
+  // F2.18 (US-015 AC2): doğrulanmış perakendeci üstte. `verifiedRank` (1/0) yalnız indekste.
+  // Sorgusuz listede önce rozet, sonra ünvan; aramada metin uygunluğu önce gelir, eşit uygunlukta
+  // rozet üstte (varsayılan sıralama kuralları; VARSAYIM, PR'da).
+  sortableAttributes: ['verifiedRank', 'legalName'],
   displayedAttributes: ['*'],
 };
+
+/** İndekse yazılan belge: port belgesi + sıralama alanı (F2.18). */
+type IndexedDocument = BuyerDirectoryDocument & { readonly verifiedRank: 0 | 1 };
+
+function toIndexed(document: BuyerDirectoryDocument): IndexedDocument {
+  return { ...document, verifiedRank: document.verified ? 1 : 0 };
+}
+
+/** US-015 AC2: doğrulanmışlar üstte; sorgusuz listede sonra ünvan sırası. */
+export function buyerDirectorySort(q: string | undefined): string[] {
+  return q === undefined ? ['verifiedRank:desc', 'legalName:asc'] : ['verifiedRank:desc'];
+}
 
 export interface MeiliOptions {
   readonly url: string;
@@ -86,7 +101,7 @@ export class MeiliBuyerDirectoryIndex extends BuyerDirectoryIndex {
           offset: query.offset,
           limit: query.limit + 1,
           attributesToRetrieve: ['id'],
-          ...(query.q === undefined ? { sort: ['legalName:asc'] } : {}),
+          sort: buyerDirectorySort(query.q),
         });
       const ids = result.hits.map((hit) => hit.id);
       return { ids: ids.slice(0, query.limit), hasMore: ids.length > query.limit };
@@ -135,8 +150,8 @@ export class MeiliBuyerDirectoryIndex extends BuyerDirectoryIndex {
   private async addTo(uid: string, documents: readonly BuyerDirectoryDocument[]): Promise<void> {
     if (documents.length === 0) return;
     const task = await this.client
-      .index<BuyerDirectoryDocument>(uid)
-      .addDocuments([...documents], { primaryKey: 'id' })
+      .index<IndexedDocument>(uid)
+      .addDocuments(documents.map(toIndexed), { primaryKey: 'id' })
       .waitTask();
     assertSucceeded(task, 'addDocuments');
   }

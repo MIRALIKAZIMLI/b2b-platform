@@ -146,6 +146,24 @@ describe.runIf(runs)('F2.11a Meilisearch buyer_directory indeksi', () => {
     expect(next).toEqual({ ids: [b.id], hasMore: false });
   });
 
+  it('US-015 AC2: doğrulanmış perakendeci sorgusuz listede üstte, sonra ünvan sırası', async () => {
+    const city = randomUUID();
+    const tag = randomUUID().slice(0, 8);
+    const alma = doc({ legalName: `Alma ${tag}`, regionId: city, cityId: city });
+    const zeta = doc({ legalName: `Zəfər ${tag}`, regionId: city, cityId: city, verified: true });
+    const bahar = doc({ legalName: `Bəhər ${tag}`, regionId: city, cityId: city });
+    await index.upsert([alma, zeta, bahar]);
+    const result = await index.search({
+      q: undefined,
+      regionGroups: [[city]],
+      activityTypeId: undefined,
+      verified: undefined,
+      offset: 0,
+      limit: 20,
+    });
+    expect(result.ids).toEqual([zeta.id, alma.id, bahar.id]);
+  });
+
   it('F2.11b: indeks yoksa arama boş döner; filtre değeri UUID değilse hata', async () => {
     const missing = new MeiliBuyerDirectoryIndex(
       { url: host, indexPrefix: `${prefix}none_`, ...(apiKey === undefined ? {} : { apiKey }) },

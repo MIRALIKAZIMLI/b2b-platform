@@ -193,6 +193,22 @@ export class AccessRepository {
     await tx.insert(invitations).values(row);
   }
 
+  /** İşletmenin bütün açık davetlerini `now` ile kapatır (F2.18 arşiv); kapanan sayı. */
+  async expireOpenInvitations(tx: Tx, businessId: string, now: Date): Promise<number> {
+    const rows = await tx
+      .update(invitations)
+      .set({ expiresAt: now })
+      .where(
+        and(
+          eq(invitations.businessId, businessId),
+          isNull(invitations.acceptedAt),
+          gt(invitations.expiresAt, now),
+        ),
+      )
+      .returning({ id: invitations.id });
+    return rows.length;
+  }
+
   /** İşletmenin açık (kabul edilmemiş, süresi dolmamış) admin davetlerini `now` ile kapatır. */
   async expireOpenAdminInvitations(tx: Tx, businessId: string, now: Date): Promise<void> {
     await tx
@@ -212,6 +228,23 @@ export class AccessRepository {
           ),
         ),
       );
+  }
+
+  /** İşletmenin aktif admin üyelerinin kullanıcı kimlikleri (bildirim alıcıları; F2.18). */
+  async activeAdminUserIds(tx: Tx, businessId: string): Promise<string[]> {
+    const rows = await tx
+      .selectDistinct({ userId: memberships.userId })
+      .from(memberships)
+      .innerJoin(roles, eq(roles.id, memberships.roleId))
+      .where(
+        and(
+          eq(memberships.businessId, businessId),
+          eq(memberships.status, 'active'),
+          eq(roles.isBusinessAdmin, true),
+        ),
+      )
+      .orderBy(memberships.userId);
+    return rows.map((row) => row.userId);
   }
 
   /** İşletmelerin aktif admin üyeliği olanları. */

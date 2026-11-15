@@ -13,6 +13,8 @@ interface FunctionRow {
 }
 
 const EXPECTED_FUNCTIONS = [
+  'business_close_archived_connections',
+  'business_purge',
   'connection_buyer_targets',
   'connection_counterpart_admins',
   'connection_request_recipients',

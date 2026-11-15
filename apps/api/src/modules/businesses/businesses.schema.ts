@@ -39,6 +39,10 @@ export type Capability = (typeof CAPABILITIES)[number];
 export const CAPABILITY_STATUSES = ['pending', 'approved', 'suspended'] as const;
 export type CapabilityStatus = (typeof CAPABILITY_STATUSES)[number];
 
+/** `businesses.status` (data-model §4 businesses; state-machines §9). */
+export const BUSINESS_STATUSES = ['active', 'suspended', 'dormant', 'archived'] as const;
+export type BusinessStatus = (typeof BUSINESS_STATUSES)[number];
+
 export const activityTypes = pgTable('activity_types', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: jsonb('name').notNull(),

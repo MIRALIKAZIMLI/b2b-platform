@@ -5648,7 +5648,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Perakendeciler (filtre: moderasyon bekleyen, bağlantısız aşama, askıda) */
+        /**
+         * Perakendeciler (F2.18, US-015 AC1; platform rolü super_admin, operations, support)
+         * @description Filtre: `all` (arşivliler hariç), `voen_pending` (VÖEN girilmiş, doğrulanmamış; moderasyon kuyruğu), `dormant` (bağlantısız hesap aşaması, F2.17 doldurur), `suspended`. Yeniden eskiye.
+         */
         get: {
             parameters: {
                 query?: {
@@ -5667,8 +5670,58 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["AdminBuyer"][];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/buyers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Perakendeci kaydı (F2.18, US-015 AC1; super_admin, operations, support)
+         * @description Toptancı, arşivli veya olmayan kayıt `404`. e-taxes.gov.az bağlantısı istemcide.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Kayıt */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBuyer"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -5688,7 +5741,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** VÖEN doğrula / reddet (US-015) */
+        /**
+         * VÖEN doğrula / reddet (F2.18, US-015 AC2; super_admin, operations)
+         * @description `verify`: `verified_at`, `verified_by` yazılır; dizinde rozet ve üstte sıralama. `reject`: VÖEN (ve türetilen hukuki tip) temizlenir; perakendecinin aktif adminlerine `voen_rejected` bildirimi (metin gerekçe koduna göre). Gerekçe sabit kod listesidir (outbox yükü ve bildirim serbest metin taşımaz, ADR-0010 §3); `note` yalnız audit'e yazılır. VÖEN yoksa `422 VOEN_REQUIRED`; zaten doğrulanmışsa `409 INVALID_STATE_TRANSITION`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -5698,23 +5754,35 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
+                        /** @constant */
+                        decision: "verify";
+                    } | {
+                        /** @constant */
+                        decision: "reject";
                         /** @enum {string} */
-                        decision: "verify" | "reject";
-                        reason?: string;
+                        reason: "voen_not_found" | "name_mismatch" | "voen_inactive" | "other";
+                        /** @description Yalnız audit; perakendeciye gitmez */
+                        note?: string;
                     };
                 };
             };
             responses: {
-                /** @description Güncellendi */
+                /** @description Güncel kayıt */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["AdminBuyer"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -5732,7 +5800,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Askıya al / kaldır / arşivle (US-016) */
+        /**
+         * Askıya al / kaldır / sil (F2.18, US-016 AC1–AC3; super_admin, operations)
+         * @description Geçişler `BusinessStateMachine` ile (state-machines §9); tablo dışı `409 INVALID_STATE_TRANSITION`. `suspend` / `unsuspend` her işletmede: kullanıcıları işletme bağlamlı uçlarda `403 BUSINESS_SUSPENDED` alır, dizinden düşer; bağlantı, istek ve siparişler değişmez (AC1). `archive` (= admin "sil") yalnız perakendecide (değilse `422`): geçmişi (bağlantı, bağlantı isteği, engel; sipariş/belge/cari F3–F5) yoksa kayıt ve kişisel veri kalıcı silinir (`outcome: deleted`, AC3); varsa arşivlenir, `person_data` silinir, açık davetler kapanır, aktif bağlantılar platformca kapanır (`ended_by_side = platform`, `end_reason = business_archived`; toptancı adminlerine "bağlantı iptal edildi") (AC2). Arşivli veya olmayan işletme `404`. `reason` yalnız audit'te.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -5742,7 +5813,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
                         /** @enum {string} */
@@ -5752,13 +5823,29 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Güncellendi */
+                /** @description Sonuç */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            outcome: "updated" | "archived" | "deleted";
+                            /**
+                             * @description Kalıcı silmede null
+                             * @enum {string|null}
+                             */
+                            status: "active" | "suspended" | "archived" | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -7069,8 +7156,11 @@ export interface components {
             startedAt: string;
             /** Format: date-time */
             endedAt: string | null;
-            /** @enum {string|null} */
-            endedBySide: "seller" | "buyer" | null;
+            /**
+             * @description `platform` = perakendecinin hesabı platformca kapatıldı (F2.18, US-016 AC2).
+             * @enum {string|null}
+             */
+            endedBySide: "seller" | "buyer" | "platform" | null;
         };
         ConnectionPage: {
             items: components["schemas"]["Connection"][];
@@ -7423,6 +7513,24 @@ export interface components {
              * @enum {string}
              */
             activation: "pending" | "accepted" | "expired";
+        };
+        /** @description Platform admininin gördüğü perakendeci kaydı (F2.18). Kişisel veri yok. */
+        AdminBuyer: {
+            /** Format: uuid */
+            id: string;
+            legalName: string;
+            voen: string | null;
+            /** @enum {string|null} */
+            legalType: "legal_entity" | "individual_entrepreneur" | null;
+            /** Format: uuid */
+            regionId: string;
+            /** @enum {string} */
+            status: "active" | "suspended" | "dormant";
+            /** Format: date-time */
+            verifiedAt: string | null;
+            profileCompleteness: number;
+            /** Format: date-time */
+            createdAt: string;
         };
         /** @description Toptancı başvurusu (US-008). contactName ve phone kişisel veridir (yalnız platform). */
         SellerApplication: {

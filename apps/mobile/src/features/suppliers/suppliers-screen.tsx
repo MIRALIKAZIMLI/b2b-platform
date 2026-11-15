@@ -6,6 +6,7 @@
 //   sayfasını açar. "Yeniden bağlan" hiçbir yerde yok (US-025 AC6).
 // - Aşağı çekince yenilenir; boş durum sekmeye göre; hata kartında yeniden dene.
 import {
+  connectionEndedLabel,
   CREDIT_LIMIT_CURRENCY,
   type ConnectionStatus,
   CONNECTION_STATUSES,
@@ -68,11 +69,7 @@ function SupplierCard({
       </Text>
       {!active && item.endedBySide !== null && (
         <Text style={styles.meta}>
-          {t(
-            item.endedBySide === 'buyer'
-              ? 'customers.row.ended_by_you'
-              : 'customers.row.ended_by_other',
-          )}
+          {t(`customers.row.${connectionEndedLabel(item.endedBySide, 'buyer')}`)}
         </Text>
       )}
       <View style={styles.terms}>

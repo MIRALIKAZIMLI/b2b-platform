@@ -3119,6 +3119,12 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Отменено другой стороной',
     tr: 'Karşı taraf iptal etti',
   },
+  // F2.18 (US-016 AC2): perakendecinin hesabı platformca kapatıldı (`endedBySide = platform`).
+  'customers.row.ended_by_platform': {
+    az: 'Pərakəndəçinin hesabı bağlandığı üçün əlaqə sona çatıb',
+    ru: 'Связь завершена, так как аккаунт розничного покупателя закрыт',
+    tr: 'Perakendecinin hesabı kapatıldığı için bağlantı sona erdi',
+  },
   'suppliers.title': {
     az: 'Topdançılarım',
     ru: 'Мои поставщики',

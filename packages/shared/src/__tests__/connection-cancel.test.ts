@@ -2,6 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   CONNECTION_CANCEL_NOTE_MAX,
+  CONNECTION_ENDED_BY_SIDES,
+  connectionEndedLabel,
   cancelBody,
   cancelFailure,
   connectionCancelSchema,
@@ -83,5 +85,15 @@ describe('F2.15b bağlantı iptali (ortak)', () => {
     expect(pushRoute(data)).toEqual({ area: 'buyer', path: 'suppliers' });
     // Tek alanlı türde başka alan istenirse hedef yok.
     expect(pushRoute({ type: 'connection_request' }, 'seller')).toBeUndefined();
+  });
+});
+
+describe('connectionEndedLabel (F2.18)', () => {
+  it('US-016 AC2 platform kapatması karşı taraf iptali olarak gösterilmez', () => {
+    expect(connectionEndedLabel('platform', 'seller')).toBe('ended_by_platform');
+    expect(connectionEndedLabel('platform', 'buyer')).toBe('ended_by_platform');
+    expect(connectionEndedLabel('seller', 'seller')).toBe('ended_by_you');
+    expect(connectionEndedLabel('buyer', 'seller')).toBe('ended_by_other');
+    expect(CONNECTION_ENDED_BY_SIDES).toEqual(['seller', 'buyer', 'platform']);
   });
 });

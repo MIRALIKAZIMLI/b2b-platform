@@ -85,7 +85,13 @@ export const OUTBOX_EVENTS = {
   // bu olay ileride önbellek tüketicileri (F3/F4) içindir, bugün bildirime dönüşmez.
   'connection.cancelled': {
     queue: 'notifications',
-    fields: { connectionId: 'id', sellerId: 'id', buyerId: 'id', endedBySide: ['seller', 'buyer'] },
+    fields: {
+      connectionId: 'id',
+      sellerId: 'id',
+      buyerId: 'id',
+      // F2.18: `platform` = arşivlenen perakendecinin bağlantısı (D2 = A).
+      endedBySide: ['seller', 'buyer', 'platform'],
+    },
   },
   // F2.15a (US-054 "Bağlantı iptal edildi"): karşı tarafın her aktif admini için bir olay (`userId`
   // alıcı, `businessId` alıcının işletmesi = karşı taraf). Gerekçe (engel dahil) ve iptal eden yüke
@@ -93,6 +99,24 @@ export const OUTBOX_EVENTS = {
   'connection.cancel_notice': {
     queue: 'notifications',
     fields: { connectionId: 'id', businessId: 'id', userId: 'id' },
+  },
+  // F2.18 (US-016 AC2, D2 = A): arşivlenen perakendecinin bağlantısı platformca kapandı; toptancının
+  // her aktif admini için bir olay (`userId` alıcı, `businessId` toptancı). Bildirim
+  // `connection_closed_by_platform`.
+  'connection.platform_closed_notice': {
+    queue: 'notifications',
+    fields: { connectionId: 'id', businessId: 'id', userId: 'id' },
+  },
+  // F2.18 (US-015 AC2): platform admini perakendecinin VÖEN'ini reddetti; perakendecinin her
+  // aktif admini için bir olay (`userId` alıcı). Gerekçe sabit kod (serbest metin yok, §3).
+  // Tüketici `notifications` (bildirim `voen_rejected`).
+  'buyer.voen_rejected': {
+    queue: 'notifications',
+    fields: {
+      businessId: 'id',
+      userId: 'id',
+      reason: ['voen_not_found', 'name_mismatch', 'voen_inactive', 'other'],
+    },
   },
 } as const satisfies Record<string, OutboxEventDefinition>;
 

@@ -343,6 +343,23 @@ export class ConnectionsRepository {
   }
 
   /**
+   * F2.18 (D2 = A): arşivlenen alıcının aktif bağlantılarını kapatır (migrator sahipli DEFINER
+   * `business_close_archived_connections`; yalnız platform işleminde, işletme önce `archived`).
+   */
+  async closeArchivedBuyerConnectionsTx(
+    tx: Tx,
+    buyerId: string,
+    now: Date,
+  ): Promise<{ connectionId: string; sellerId: string }[]> {
+    const result = await tx.execute<{ connection_id: string; seller_id: string }>(
+      sql`select connection_id, seller_id
+            from business_close_archived_connections(${buyerId}::uuid, ${now.toISOString()}::timestamptz)
+           order by connection_id`,
+    );
+    return result.rows.map((row) => ({ connectionId: row.connection_id, sellerId: row.seller_id }));
+  }
+
+  /**
    * İptal edilmiş bağlantıda karşı tarafın aktif işletme adminleri (`connection_counterpart_admins`,
    * DEFINER, F2.15a): yalnız kullanıcı kimliği.
    */

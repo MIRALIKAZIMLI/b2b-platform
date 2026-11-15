@@ -2496,42 +2496,119 @@ paths:
   /api/v1/admin/buyers:
     get:
       tags: [admin]
-      summary: "Perakendeciler (filtre: moderasyon bekleyen, bağlantısız aşama, askıda)"
-      parameters: [ { name: filter, in: query, schema: { type: string, enum: [all, voen_pending, dormant, suspended] } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      summary: "Perakendeciler (F2.18, US-015 AC1; platform rolü super_admin, operations, support)"
+      description: >
+        Filtre: `all` (arşivliler hariç), `voen_pending` (VÖEN girilmiş, doğrulanmamış; moderasyon
+        kuyruğu), `dormant` (bağlantısız hesap aşaması, F2.17 doldurur), `suspended`. Yeniden eskiye.
+      parameters: [ { name: filter, in: query, schema: { type: string, enum: [all, voen_pending, dormant, suspended], default: all } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/AdminBuyer' } }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/buyers/{id}:
+    get:
+      tags: [admin]
+      summary: "Perakendeci kaydı (F2.18, US-015 AC1; super_admin, operations, support)"
+      description: Toptancı, arşivli veya olmayan kayıt `404`. e-taxes.gov.az bağlantısı istemcide.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Kayıt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBuyer' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /api/v1/admin/buyers/{id}/verify:
     post:
       tags: [admin]
-      summary: VÖEN doğrula / reddet (US-015)
+      summary: "VÖEN doğrula / reddet (F2.18, US-015 AC2; super_admin, operations)"
+      description: >
+        `verify`: `verified_at`, `verified_by` yazılır; dizinde rozet ve üstte sıralama.
+        `reject`: VÖEN (ve türetilen hukuki tip) temizlenir; perakendecinin aktif adminlerine
+        `voen_rejected` bildirimi (metin gerekçe koduna göre). Gerekçe sabit kod listesidir (outbox
+        yükü ve bildirim serbest metin taşımaz, ADR-0010 §3); `note` yalnız audit'e yazılır.
+        VÖEN yoksa `422 VOEN_REQUIRED`; zaten doğrulanmışsa `409 INVALID_STATE_TRANSITION`.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [decision]
-              properties:
-                decision: { type: string, enum: [verify, reject] }
-                reason: { type: string }
+              oneOf:
+                - type: object
+                  additionalProperties: false
+                  required: [decision]
+                  properties:
+                    decision: { type: string, const: verify }
+                - type: object
+                  additionalProperties: false
+                  required: [decision, reason]
+                  properties:
+                    decision: { type: string, const: reject }
+                    reason: { type: string, enum: [voen_not_found, name_mismatch, voen_inactive, other] }
+                    note: { type: string, minLength: 3, maxLength: 500, description: Yalnız audit; perakendeciye gitmez }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Güncel kayıt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBuyer' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/admin/businesses/{id}/status:
     post:
       tags: [admin]
-      summary: Askıya al / kaldır / arşivle (US-016)
+      summary: "Askıya al / kaldır / sil (F2.18, US-016 AC1–AC3; super_admin, operations)"
+      description: >
+        Geçişler `BusinessStateMachine` ile (state-machines §9); tablo dışı `409
+        INVALID_STATE_TRANSITION`. `suspend` / `unsuspend` her işletmede: kullanıcıları işletme
+        bağlamlı uçlarda `403 BUSINESS_SUSPENDED` alır, dizinden düşer; bağlantı, istek ve
+        siparişler değişmez (AC1). `archive` (= admin "sil") yalnız perakendecide (değilse `422`):
+        geçmişi (bağlantı, bağlantı isteği, engel; sipariş/belge/cari F3–F5) yoksa kayıt ve kişisel
+        veri kalıcı silinir (`outcome: deleted`, AC3); varsa arşivlenir, `person_data` silinir,
+        açık davetler kapanır, aktif bağlantılar platformca kapanır (`ended_by_side = platform`,
+        `end_reason = business_archived`; toptancı adminlerine "bağlantı iptal edildi") (AC2).
+        Arşivli veya olmayan işletme `404`. `reason` yalnız audit'te.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [action, reason]
               properties:
                 action: { type: string, enum: [suspend, unsuspend, archive] }
-                reason: { type: string }
+                reason: { type: string, minLength: 3, maxLength: 500 }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Sonuç
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, outcome, status]
+                properties:
+                  id: { type: string, format: uuid }
+                  outcome: { type: string, enum: [updated, archived, deleted] }
+                  status: { type: [string, 'null'], enum: [active, suspended, archived, null], description: Kalıcı silmede null }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/admin/buyers/merge:
     post:
       tags: [admin]
@@ -3471,7 +3548,10 @@ components:
             - type: 'null'
         startedAt: { type: string, format: date-time }
         endedAt: { type: [string, 'null'], format: date-time }
-        endedBySide: { type: [string, 'null'], enum: [seller, buyer, null] }
+        endedBySide:
+          type: [string, 'null']
+          enum: [seller, buyer, platform, null]
+          description: '`platform` = perakendecinin hesabı platformca kapatıldı (F2.18, US-016 AC2).'
     ConnectionPage:
       type: object
       required: [items, nextCursor]
@@ -3799,6 +3879,20 @@ components:
           type: string
           enum: [pending, accepted, expired]
           description: accepted = aktif admin üyeliği var; pending = süresi dolmamış açık davet var
+    AdminBuyer:
+      type: object
+      description: Platform admininin gördüğü perakendeci kaydı (F2.18). Kişisel veri yok.
+      required: [id, legalName, voen, legalType, regionId, status, verifiedAt, profileCompleteness, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        legalName: { type: string }
+        voen: { type: [string, 'null'] }
+        legalType: { type: [string, 'null'], enum: [legal_entity, individual_entrepreneur, null] }
+        regionId: { type: string, format: uuid }
+        status: { type: string, enum: [active, suspended, dormant] }
+        verifiedAt: { type: [string, 'null'], format: date-time }
+        profileCompleteness: { type: integer, minimum: 0, maximum: 100 }
+        createdAt: { type: string, format: date-time }
     SellerApplication:
       type: object
       description: Toptancı başvurusu (US-008). contactName ve phone kişisel veridir (yalnız platform).

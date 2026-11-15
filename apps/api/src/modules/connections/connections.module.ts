@@ -9,6 +9,7 @@ import { FilesModule } from '../files';
 import { SettingsModule } from '../settings';
 import { BlocksController } from './blocks.controller';
 import { CONNECTION_CANCELLED_HANDLERS } from './connection-cancelled.handler';
+import { ConnectionArchiveService } from './connection-archive.service';
 import { ConnectionCancellationService } from './connection-cancellation.service';
 import { ConnectionRelationsService } from './connection-relations.service';
 import { ConnectionRequestsController } from './connection-requests.controller';
@@ -45,10 +46,11 @@ import { ExpireRequestsJob, ExpireRequestsSchedule } from './jobs/expire-request
     ConnectionTermsService,
     ConnectionRelationsService,
     ConnectionCancellationService,
+    ConnectionArchiveService,
     // F2.15a: kanca listesi; `cart` ve `orders` uygulamaları F4.5'te eklenir.
     { provide: CONNECTION_CANCELLED_HANDLERS, useValue: [] },
   ],
-  exports: [ConnectionRelationsService],
+  exports: [ConnectionRelationsService, ConnectionArchiveService],
 })
 export class ConnectionsModule {}
 

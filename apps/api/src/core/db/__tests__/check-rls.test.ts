@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   evaluateRlsTable,
+  PLATFORM_WRITE_FORBIDDEN_TABLES,
   parseRlsComment,
   type RlsPolicyInfo,
   type RlsTableInfo,
@@ -182,5 +183,71 @@ describe('evaluateRlsTable — P sınıfı (F2.12a, R18)', () => {
         pTable([...P_POLICIES, { ...policy('r', 'true', null), roles: ['public'] }]),
       ),
     ).not.toEqual([]);
+  });
+});
+
+describe('evaluateRlsTable — platformun yazamadığı tablolar (F2.18, US-016 AC5)', () => {
+  const TENANT =
+    "(business_id = (NULLIF(current_setting('app.business_id'::text, true), ''::text))::uuid)";
+  const tenantPolicies: RlsPolicyInfo[] = [policy('*', TENANT, TENANT)];
+
+  it('US-016 AC5: liste data-model §1.1 ile aynı', () => {
+    expect([...PLATFORM_WRITE_FORBIDDEN_TABLES].sort()).toEqual(
+      [
+        'customer_prices',
+        'ledger_entries',
+        'order_items',
+        'orders',
+        'payments',
+        'price_list_items',
+        'price_lists',
+      ].sort(),
+    );
+  });
+
+  it('US-016 AC5: yalnız kiracı politikası olan yasak tablo → başarılı', () => {
+    expect(evaluateRlsTable(table({ table: 'public.orders', policies: tenantPolicies }))).toEqual(
+      [],
+    );
+  });
+
+  it.each(PLATFORM_WRITE_FORBIDDEN_TABLES)(
+    'US-016 AC5: %s tablosunda platform yazma politikası → hata',
+    (name) => {
+      const policies = [...tenantPolicies, policy('w', PLATFORM, PLATFORM)];
+      const reasons = evaluateRlsTable(table({ table: `public.${name}`, policies }));
+      expect(reasons.some((r) => r.startsWith('US-016 AC5'))).toBe(true);
+    },
+  );
+
+  it('US-016 AC5: FOR ALL içinde kiracı veya platform (OR) → hata', () => {
+    const either = `(${TENANT} OR ${PLATFORM})`;
+    const reasons = evaluateRlsTable(
+      table({ table: 'public.ledger_entries', policies: [policy('*', either, either)] }),
+    );
+    expect(reasons.length).toBeGreaterThan(0);
+  });
+
+  it('US-016 AC5: koşulsuz yazma politikası (USING true) → hata', () => {
+    const reasons = evaluateRlsTable(
+      table({ table: 'public.payments', policies: [policy('d', 'true', null)] }),
+    );
+    expect(reasons).toEqual([
+      'US-016 AC5: platformun yazamadığı tabloda DELETE politikasının USING ifadesi kiracı koşulu taşımıyor',
+    ]);
+  });
+
+  it('US-016 AC5: platform okuma (SELECT) politikası yazma sayılmaz', () => {
+    const policies = [...tenantPolicies, policy('r', PLATFORM, null)];
+    expect(evaluateRlsTable(table({ table: 'public.price_lists', policies }))).toEqual([]);
+  });
+
+  it('US-016 AC5: aynı adlı başka şemadaki tablo kurala girmez', () => {
+    const policies = [policy('w', PLATFORM, PLATFORM)];
+    expect(
+      evaluateRlsTable(table({ table: 'archive.orders', policies })).some((r) =>
+        r.startsWith('US-016 AC5'),
+      ),
+    ).toBe(false);
   });
 });
