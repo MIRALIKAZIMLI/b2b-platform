@@ -58,3 +58,4 @@
 - F2.5a: şubeler API (liste, oluşturma, düzenleme, pasifleştirme), onay kuralı fonksiyonu, ekip yöneticisinin şube kapsamı
 - F2.5b: web ve mobil şube ekranları ("konumumu kullan"), ekip ekranında şube seçimi
 - F2.18a: admin perakendeci moderasyonu API (VÖEN doğrula/reddet, askıya al, sil = arşiv/kalıcı silme), 0029, check-rls US-016 AC5 kuralı
+- F2.18b: web admin "Perakendeciler" ekranı (filtre, kayıt penceresi, VÖEN doğrula/reddet, askıya al/kaldır/sil iki adımlı onay; destek yalnız görür)

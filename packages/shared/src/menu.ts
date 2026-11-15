@@ -3,6 +3,7 @@
 // görünmez. Bu yalnızca görünümdür; asıl yetki kontrolü API'dedir.
 // Öğe → izin eşlemesi c4-component §5 kodlarıyla (tip `@b2b/shared` PermissionCode). `anyOf` boşsa
 // öğe herkese açıktır (açılış sayfası = dashboard). Metin: `shell.menu.<key>` çeviri anahtarı.
+import { BUYER_ADMIN_READ_ROLES } from './buyer-moderation';
 import type { PermissionCode } from './permissions';
 import type { PlatformRole } from './platform-roles';
 import { CATALOG_ADMIN_ROLES } from './role-catalog';
@@ -54,6 +55,14 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
       ready: true,
       path: 'seller-applications',
       platformRoles: SELLER_ADMIN_ROLES,
+    },
+    // F2.18b: perakendeci moderasyonu (US-015, US-016); destek yalnız görür (yazma düğmeleri yok).
+    {
+      key: 'buyers',
+      anyOf: [],
+      ready: true,
+      path: 'buyers',
+      platformRoles: BUYER_ADMIN_READ_ROLES,
     },
     // F2.9b: unvan ve rol şablonu kataloğu (US-012), süper admin + içerik (V1).
     {
