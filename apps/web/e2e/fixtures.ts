@@ -366,3 +366,23 @@ export async function createActiveConnection(
   });
   return connectionId;
 }
+
+/** F2.18b: işletmeye VÖEN yazar (0016 tetikleyicisi hukuki tipi türetir; doğrulama boş kalır). */
+export async function setBusinessVoen(businessId: string, voen: string): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    await client.query('update businesses set voen = $2 where id = $1', [businessId, voen]);
+    await client.query('commit');
+  });
+}
+
+/** F2.18b: işletme durumunu doğrudan yazar (ör. `dormant`; F2.17 gelene kadar başka yolu yok). */
+export async function setBusinessStatus(businessId: string, status: string): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    await client.query('update businesses set status = $2 where id = $1', [businessId, status]);
+    await client.query('commit');
+  });
+}

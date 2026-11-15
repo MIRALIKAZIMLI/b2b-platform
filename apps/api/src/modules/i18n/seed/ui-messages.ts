@@ -3550,4 +3550,445 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'В этом филиале активных сотрудников: {members}, открытых приглашений: {invitations}. Сначала переведите сотрудников в другой филиал и отзовите приглашения.',
     tr: 'Bu şubede {members} aktif çalışan ve {invitations} açık davet var. Önce çalışanları başka şubeye taşıyın ve davetleri geri çekin.',
   },
+  // F2.18b: admin perakendeciler ekranı (US-015, US-016). Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  'shell.menu.buyers': {
+    az: 'Pərakəndəçilər',
+    ru: 'Розничные покупатели',
+    tr: 'Perakendeciler',
+  },
+  'adminBuyers.eyebrow': {
+    az: 'Platforma',
+    ru: 'Платформа',
+    tr: 'Platform',
+  },
+  'adminBuyers.title': {
+    az: 'Pərakəndəçilər',
+    ru: 'Розничные покупатели',
+    tr: 'Perakendeciler',
+  },
+  'adminBuyers.description': {
+    az: 'VÖEN-ləri yoxlayın, hesabları dayandırın və ya silin. Bütün dəyişikliklər audit jurnalına yazılır.',
+    ru: 'Проверяйте VÖEN, приостанавливайте или удаляйте аккаунты. Все изменения записываются в журнал аудита.',
+    tr: "VÖEN'leri kontrol edin, hesapları askıya alın veya silin. Tüm değişiklikler denetim kaydına yazılır.",
+  },
+  'adminBuyers.filters_label': {
+    az: 'Süzgəc',
+    ru: 'Фильтр',
+    tr: 'Filtre',
+  },
+  'adminBuyers.filter.all': {
+    az: 'Hamısı',
+    ru: 'Все',
+    tr: 'Tümü',
+  },
+  'adminBuyers.filter.voen_pending': {
+    az: 'VÖEN yoxlaması',
+    ru: 'Проверка VÖEN',
+    tr: 'VÖEN kontrolü',
+  },
+  'adminBuyers.filter.dormant': {
+    az: 'Passiv',
+    ru: 'Неактивные',
+    tr: 'Pasif',
+  },
+  'adminBuyers.filter.suspended': {
+    az: 'Dayandırılıb',
+    ru: 'Приостановлены',
+    tr: 'Askıda',
+  },
+  'adminBuyers.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Tekrar dene',
+  },
+  'adminBuyers.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'adminBuyers.more': {
+    az: 'Daha çox göstər',
+    ru: 'Показать ещё',
+    tr: 'Daha fazla göster',
+  },
+  'adminBuyers.empty_title': {
+    az: 'Burada heç kim yoxdur',
+    ru: 'Здесь пока никого нет',
+    tr: 'Burada kimse yok',
+  },
+  'adminBuyers.empty.all': {
+    az: 'Hələ qeydiyyatdan keçmiş pərakəndəçi yoxdur.',
+    ru: 'Зарегистрированных розничных покупателей пока нет.',
+    tr: 'Henüz kayıtlı perakendeci yok.',
+  },
+  'adminBuyers.empty.voen_pending': {
+    az: 'Yoxlama gözləyən VÖEN yoxdur. Növbə boşdur.',
+    ru: 'Нет VÖEN, ожидающих проверки. Очередь пуста.',
+    tr: 'Kontrol bekleyen VÖEN yok. Kuyruk boş.',
+  },
+  'adminBuyers.empty.dormant': {
+    az: 'Passiv hesab yoxdur.',
+    ru: 'Неактивных аккаунтов нет.',
+    tr: 'Pasif hesap yok.',
+  },
+  'adminBuyers.empty.suspended': {
+    az: 'Dayandırılmış hesab yoxdur.',
+    ru: 'Приостановленных аккаунтов нет.',
+    tr: 'Askıya alınmış hesap yok.',
+  },
+  'adminBuyers.voen_state.verified': {
+    az: 'VÖEN təsdiqlənib',
+    ru: 'VÖEN подтверждён',
+    tr: 'VÖEN doğrulandı',
+  },
+  'adminBuyers.voen_state.pending': {
+    az: 'VÖEN yoxlanılır',
+    ru: 'VÖEN на проверке',
+    tr: 'VÖEN kontrolde',
+  },
+  'adminBuyers.voen_state.missing': {
+    az: 'VÖEN yoxdur',
+    ru: 'Без VÖEN',
+    tr: 'VÖEN yok',
+  },
+  'adminBuyers.status.active': {
+    az: 'Aktiv',
+    ru: 'Активен',
+    tr: 'Aktif',
+  },
+  'adminBuyers.status.suspended': {
+    az: 'Dayandırılıb',
+    ru: 'Приостановлен',
+    tr: 'Askıda',
+  },
+  'adminBuyers.status.dormant': {
+    az: 'Passiv',
+    ru: 'Неактивен',
+    tr: 'Pasif',
+  },
+  'adminBuyers.legal_type.legal_entity': {
+    az: 'Hüquqi şəxs',
+    ru: 'Юридическое лицо',
+    tr: 'Tüzel kişi',
+  },
+  'adminBuyers.legal_type.individual_entrepreneur': {
+    az: 'Fərdi sahibkar',
+    ru: 'Индивидуальный предприниматель',
+    tr: 'Bireysel girişimci',
+  },
+  'adminBuyers.row.created': {
+    az: 'Qeydiyyat: {date}',
+    ru: 'Регистрация: {date}',
+    tr: 'Kayıt: {date}',
+  },
+  'adminBuyers.row.profile': {
+    az: 'Profil',
+    ru: 'Профиль',
+    tr: 'Profil',
+  },
+  'adminBuyers.row.completeness': {
+    az: 'Profil {value}% doludur',
+    ru: 'Профиль заполнен на {value}%',
+    tr: 'Profil %{value} dolu',
+  },
+  'adminBuyers.row.open': {
+    az: 'Aç',
+    ru: 'Открыть',
+    tr: 'Aç',
+  },
+  'adminBuyers.dialog.eyebrow': {
+    az: 'Pərakəndəçi',
+    ru: 'Розничный покупатель',
+    tr: 'Perakendeci',
+  },
+  'adminBuyers.dialog.title': {
+    az: 'Pərakəndəçi qeydi',
+    ru: 'Карточка покупателя',
+    tr: 'Perakendeci kaydı',
+  },
+  'adminBuyers.dialog.close': {
+    az: 'Bağla',
+    ru: 'Закрыть',
+    tr: 'Kapat',
+  },
+  'adminBuyers.field.voen': {
+    az: 'VÖEN',
+    ru: 'VÖEN',
+    tr: 'VÖEN',
+  },
+  'adminBuyers.field.none': {
+    az: 'Daxil edilməyib',
+    ru: 'Не указан',
+    tr: 'Girilmedi',
+  },
+  'adminBuyers.field.e_taxes': {
+    az: 'e-taxes.gov.az-da yoxla',
+    ru: 'Проверить на e-taxes.gov.az',
+    tr: "e-taxes.gov.az'da kontrol et",
+  },
+  'adminBuyers.field.legal_type': {
+    az: 'Hüquqi forma',
+    ru: 'Правовая форма',
+    tr: 'Hukuki tip',
+  },
+  'adminBuyers.field.region': {
+    az: 'Region',
+    ru: 'Регион',
+    tr: 'Bölge',
+  },
+  'adminBuyers.field.status': {
+    az: 'Vəziyyət',
+    ru: 'Статус',
+    tr: 'Durum',
+  },
+  'adminBuyers.field.verified_at': {
+    az: 'Təsdiq tarixi',
+    ru: 'Дата подтверждения',
+    tr: 'Doğrulama tarihi',
+  },
+  'adminBuyers.field.not_verified': {
+    az: 'Təsdiqlənməyib',
+    ru: 'Не подтверждён',
+    tr: 'Doğrulanmadı',
+  },
+  'adminBuyers.field.created_at': {
+    az: 'Qeydiyyat tarixi',
+    ru: 'Дата регистрации',
+    tr: 'Kayıt tarihi',
+  },
+  'adminBuyers.field.completeness': {
+    az: 'Profilin doluluğu',
+    ru: 'Заполненность профиля',
+    tr: 'Profil doluluğu',
+  },
+  'adminBuyers.voen.title': {
+    az: 'VÖEN qərarı',
+    ru: 'Решение по VÖEN',
+    tr: 'VÖEN kararı',
+  },
+  'adminBuyers.voen.hint': {
+    az: 'VÖEN-i e-taxes.gov.az-da yoxlayın: ad və vəziyyət uyğun gəlirsə təsdiqləyin. Təsdiqlənmiş pərakəndəçi kataloqda nişanla və yuxarıda görünür.',
+    ru: 'Проверьте VÖEN на e-taxes.gov.az: если название и статус совпадают, подтвердите. Подтверждённый покупатель отображается в каталоге со значком и выше остальных.',
+    tr: "VÖEN'i e-taxes.gov.az'da kontrol edin: ünvan ve durum uyuyorsa doğrulayın. Doğrulanmış perakendeci dizinde rozetle ve üstte görünür.",
+  },
+  'adminBuyers.voen.verify': {
+    az: 'Təsdiqlə',
+    ru: 'Подтвердить',
+    tr: 'Doğrula',
+  },
+  'adminBuyers.voen.reject': {
+    az: 'Rədd et',
+    ru: 'Отклонить',
+    tr: 'Reddet',
+  },
+  'adminBuyers.voen.verified_done': {
+    az: 'VÖEN təsdiqləndi.',
+    ru: 'VÖEN подтверждён.',
+    tr: 'VÖEN doğrulandı.',
+  },
+  'adminBuyers.working': {
+    az: 'Göndərilir…',
+    ru: 'Отправка…',
+    tr: 'Gönderiliyor…',
+  },
+  'adminBuyers.manage.title': {
+    az: 'Hesabın idarəsi',
+    ru: 'Управление аккаунтом',
+    tr: 'Hesap yönetimi',
+  },
+  'adminBuyers.read_only': {
+    az: 'Sizin yalnız baxmaq hüququnuz var. Dəyişiklikləri əməliyyat komandası edir.',
+    ru: 'У вас только право просмотра. Изменения вносит операционная команда.',
+    tr: 'Yalnız görüntüleme yetkiniz var. Değişiklikleri operasyon ekibi yapar.',
+  },
+  'adminBuyers.back': {
+    az: 'Geri',
+    ru: 'Назад',
+    tr: 'Geri',
+  },
+  'adminBuyers.optional': {
+    az: '(istəyə bağlı)',
+    ru: '(необязательно)',
+    tr: '(isteğe bağlı)',
+  },
+  'adminBuyers.reason': {
+    az: 'Səbəb',
+    ru: 'Причина',
+    tr: 'Gerekçe',
+  },
+  'adminBuyers.reason_hint': {
+    az: 'Yalnız audit jurnalına yazılır, pərakəndəçi görmür.',
+    ru: 'Записывается только в журнал аудита, покупатель её не видит.',
+    tr: 'Yalnız denetim kaydına yazılır, perakendeci görmez.',
+  },
+  'adminBuyers.note_error.too_short': {
+    az: 'Ən azı 3 simvol yazın.',
+    ru: 'Введите не менее 3 символов.',
+    tr: 'En az 3 karakter yazın.',
+  },
+  'adminBuyers.note_error.too_long': {
+    az: 'Ən çox 500 simvol.',
+    ru: 'Не более 500 символов.',
+    tr: 'En fazla 500 karakter.',
+  },
+  'adminBuyers.reject.eyebrow': {
+    az: 'VÖEN-i rədd et',
+    ru: 'Отклонить VÖEN',
+    tr: "VÖEN'i reddet",
+  },
+  'adminBuyers.reject.hint': {
+    az: 'VÖEN silinəcək və pərakəndəçinin adminlərinə seçdiyiniz səbəblə bildiriş gedəcək. Onlar düzgün VÖEN-i yenidən daxil edə bilərlər.',
+    ru: 'VÖEN будет удалён, администраторы покупателя получат уведомление с выбранной причиной. Они смогут ввести правильный VÖEN заново.',
+    tr: "VÖEN silinir ve perakendecinin adminlerine seçtiğiniz gerekçeyle bildirim gider. Doğru VÖEN'i yeniden girebilirler.",
+  },
+  'adminBuyers.reject.reason': {
+    az: 'Səbəb (pərakəndəçi görür)',
+    ru: 'Причина (видит покупатель)',
+    tr: 'Gerekçe (perakendeci görür)',
+  },
+  'adminBuyers.reject.reasons.voen_not_found': {
+    az: 'VÖEN tapılmadı',
+    ru: 'VÖEN не найден',
+    tr: 'VÖEN bulunamadı',
+  },
+  'adminBuyers.reject.reasons.name_mismatch': {
+    az: 'Ad uyğun gəlmir',
+    ru: 'Название не совпадает',
+    tr: 'Ünvan uyuşmuyor',
+  },
+  'adminBuyers.reject.reasons.voen_inactive': {
+    az: 'VÖEN aktiv deyil',
+    ru: 'VÖEN неактивен',
+    tr: 'VÖEN aktif değil',
+  },
+  'adminBuyers.reject.reasons.other': {
+    az: 'Digər səbəb',
+    ru: 'Другая причина',
+    tr: 'Diğer',
+  },
+  'adminBuyers.reject.note': {
+    az: 'Daxili qeyd',
+    ru: 'Внутренняя заметка',
+    tr: 'İç not',
+  },
+  'adminBuyers.reject.note_hint': {
+    az: 'Yalnız audit jurnalına yazılır, pərakəndəçi görmür.',
+    ru: 'Записывается только в журнал аудита, покупатель её не видит.',
+    tr: 'Yalnız denetim kaydına yazılır, perakendeci görmez.',
+  },
+  'adminBuyers.reject.submit': {
+    az: 'VÖEN-i rədd et',
+    ru: 'Отклонить VÖEN',
+    tr: "VÖEN'i reddet",
+  },
+  'adminBuyers.action.suspend.open': {
+    az: 'Dayandır',
+    ru: 'Приостановить',
+    tr: 'Askıya al',
+  },
+  'adminBuyers.action.suspend.eyebrow': {
+    az: 'Hesabı dayandır',
+    ru: 'Приостановить аккаунт',
+    tr: 'Hesabı askıya al',
+  },
+  'adminBuyers.action.suspend.point_1': {
+    az: 'İşçilər daxil ola bilər, amma heç bir əməliyyat edə bilməz; pərakəndəçi kataloqdan çıxır.',
+    ru: 'Сотрудники смогут войти, но не смогут ничего делать; покупатель исчезнет из каталога.',
+    tr: 'Çalışanlar giriş yapabilir ama hiçbir işlem yapamaz; perakendeci dizinden düşer.',
+  },
+  'adminBuyers.action.suspend.point_2': {
+    az: 'Əlaqələr və sorğular olduğu kimi qalır. İstənilən vaxt geri qaytara bilərsiniz.',
+    ru: 'Связи и запросы остаются без изменений. Вы сможете вернуть аккаунт в любой момент.',
+    tr: 'Bağlantılar ve istekler olduğu gibi kalır. İstediğiniz zaman geri alabilirsiniz.',
+  },
+  'adminBuyers.action.suspend.confirm': {
+    az: 'Bəli, «{name}» hesabını dayandırıram.',
+    ru: 'Да, приостанавливаю аккаунт «{name}».',
+    tr: 'Evet, «{name}» hesabını askıya alıyorum.',
+  },
+  'adminBuyers.action.suspend.submit': {
+    az: 'Dayandır',
+    ru: 'Приостановить',
+    tr: 'Askıya al',
+  },
+  'adminBuyers.action.unsuspend.open': {
+    az: 'Dayandırmanı götür',
+    ru: 'Снять приостановку',
+    tr: 'Askıdan kaldır',
+  },
+  'adminBuyers.action.unsuspend.eyebrow': {
+    az: 'Hesabı bərpa et',
+    ru: 'Восстановить аккаунт',
+    tr: 'Hesabı geri aç',
+  },
+  'adminBuyers.action.unsuspend.point_1': {
+    az: 'İşçilər yenidən işləyə bilər.',
+    ru: 'Сотрудники снова смогут работать.',
+    tr: 'Çalışanlar yeniden çalışabilir.',
+  },
+  'adminBuyers.action.unsuspend.point_2': {
+    az: 'Pərakəndəçi kataloqa qayıdır.',
+    ru: 'Покупатель вернётся в каталог.',
+    tr: 'Perakendeci dizine geri döner.',
+  },
+  'adminBuyers.action.unsuspend.confirm': {
+    az: 'Bəli, «{name}» hesabını bərpa edirəm.',
+    ru: 'Да, восстанавливаю аккаунт «{name}».',
+    tr: 'Evet, «{name}» hesabını geri açıyorum.',
+  },
+  'adminBuyers.action.unsuspend.submit': {
+    az: 'Bərpa et',
+    ru: 'Восстановить',
+    tr: 'Geri aç',
+  },
+  'adminBuyers.action.archive.open': {
+    az: 'Sil',
+    ru: 'Удалить',
+    tr: 'Sil',
+  },
+  'adminBuyers.action.archive.eyebrow': {
+    az: 'Hesabı sil',
+    ru: 'Удалить аккаунт',
+    tr: 'Hesabı sil',
+  },
+  'adminBuyers.action.archive.point_1': {
+    az: 'Əlaqə, sorğu və ya bloklama tarixçəsi varsa hesab arxivlənir: şəxsi məlumatlar silinir, aktiv əlaqələr bağlanır, topdançılara bildiriş gedir.',
+    ru: 'Если есть история связей, запросов или блокировок, аккаунт архивируется: персональные данные удаляются, активные связи закрываются, оптовики получают уведомление.',
+    tr: 'Bağlantı, istek veya engel geçmişi varsa hesap arşivlenir: kişisel veriler silinir, aktif bağlantılar kapanır, toptancılara bildirim gider.',
+  },
+  'adminBuyers.action.archive.point_2': {
+    az: 'Tarixçə yoxdursa hesab və bütün məlumatları həmişəlik silinir. Bu addım geri qaytarılmır.',
+    ru: 'Если истории нет, аккаунт и все его данные удаляются навсегда. Это действие необратимо.',
+    tr: 'Geçmiş yoksa hesap ve tüm verileri kalıcı olarak silinir. Bu işlem geri alınamaz.',
+  },
+  'adminBuyers.action.archive.confirm': {
+    az: 'Bəli, «{name}» hesabını silirəm və bunun geri qaytarılmadığını başa düşürəm.',
+    ru: 'Да, удаляю аккаунт «{name}» и понимаю, что это необратимо.',
+    tr: 'Evet, «{name}» hesabını siliyorum ve bunun geri alınamayacağını anlıyorum.',
+  },
+  'adminBuyers.action.archive.submit': {
+    az: 'Hesabı sil',
+    ru: 'Удалить аккаунт',
+    tr: 'Hesabı sil',
+  },
+  'adminBuyers.done.suspended': {
+    az: '«{name}» dayandırıldı.',
+    ru: '«{name}» приостановлен.',
+    tr: '«{name}» askıya alındı.',
+  },
+  'adminBuyers.done.unsuspended': {
+    az: '«{name}» bərpa edildi.',
+    ru: '«{name}» восстановлен.',
+    tr: '«{name}» geri açıldı.',
+  },
+  'adminBuyers.done.archived': {
+    az: '«{name}» arxivləndi: şəxsi məlumatlar silindi, tarixçə saxlanıldı.',
+    ru: '«{name}» архивирован: персональные данные удалены, история сохранена.',
+    tr: '«{name}» arşivlendi: kişisel veriler silindi, geçmiş korundu.',
+  },
+  'adminBuyers.done.deleted': {
+    az: '«{name}» həmişəlik silindi.',
+    ru: '«{name}» удалён навсегда.',
+    tr: '«{name}» kalıcı olarak silindi.',
+  },
 };

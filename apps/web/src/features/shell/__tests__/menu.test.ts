@@ -98,6 +98,7 @@ describe('İzinden menü', () => {
       'dashboard',
       'sellers',
       'seller_applications',
+      'buyers',
       'role_templates',
       'job_titles',
     ]);
@@ -105,15 +106,19 @@ describe('İzinden menü', () => {
       'dashboard',
       'sellers',
       'seller_applications',
+      'buyers',
     ]);
     expect(visibleMenu('admin', [], 'content').map((item) => item.key)).toEqual([
       'dashboard',
       'role_templates',
       'job_titles',
     ]);
-    for (const role of ['support', null]) {
-      expect(visibleMenu('admin', [], role).map((item) => item.key)).toEqual(['dashboard']);
-    }
+    // F2.18b: destek yalnız perakendecileri görür (yazma düğmeleri ekranda gizli).
+    expect(visibleMenu('admin', [], 'support').map((item) => item.key)).toEqual([
+      'dashboard',
+      'buyers',
+    ]);
+    expect(visibleMenu('admin', [], null).map((item) => item.key)).toEqual(['dashboard']);
     expect(MENUS.admin.find((item) => item.key === 'sellers')?.path).toBe('sellers');
     expect(MENUS.admin.find((item) => item.key === 'seller_applications')?.path).toBe(
       'seller-applications',
