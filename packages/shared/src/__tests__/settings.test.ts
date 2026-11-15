@@ -119,6 +119,15 @@ describe('ayar kaydı (shared/settings.ts)', () => {
     expect(parseSettingValue('dormant.reminder_days', [])).toEqual({ ok: false });
   });
 
+  it('F2.17: dormant.reminder_days en fazla 2 eleman (aşamalar reminded_7, reminded_30)', () => {
+    expect(parseSettingValue('dormant.reminder_days', [5, 20])).toEqual({
+      ok: true,
+      value: [5, 20],
+    });
+    expect(parseSettingValue('dormant.reminder_days', [7, 30, 60])).toEqual({ ok: false });
+    expect(parseSettingValue('push.retry_delays_minutes', [1, 5, 15]).ok).toBe(true);
+  });
+
   it('F1.4-AC2: üst sınır aşılırsa reddedilir', () => {
     expect(parseSettingValue('connection.block_rate_alert_pct', 101)).toEqual({ ok: false });
     expect(parseSettingValue('sms.daily_cap', 0)).toEqual({ ok: true, value: 0 });

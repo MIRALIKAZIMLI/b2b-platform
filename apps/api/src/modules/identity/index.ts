@@ -33,3 +33,4 @@ export { parsePhoneE164, type ParsedPhone } from './phone';
 export { type TransactionalSms, TransactionalSmsService } from './transactional-sms.service';
 export { type DirectoryUser, isPhoneTakenError, UserDirectory } from './user-directory';
 export { type CookieReply, deliverRefreshToken, isWebClient } from './refresh-cookie';
+export { LoginActivityHook } from './login-activity.hook';

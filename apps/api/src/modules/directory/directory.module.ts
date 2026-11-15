@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../../core/audit';
+import { OpsMetricsModule } from '../../core/ops-metrics';
+import { OutboxModule } from '../../core/outbox';
 import { BusinessesModule } from '../businesses';
 import { ConnectionsModule } from '../connections';
 import { FilesModule } from '../files';
@@ -12,6 +15,8 @@ import { DirectoryReindexService } from './directory-reindex.service';
 import { DirectoryReindexSchedule } from './directory-schedule';
 import { DirectoryProcessor } from './directory.processor';
 import { DirectoryRepository } from './directory.repository';
+import { DormantAccountsJob, DormantAccountsSchedule } from './jobs/dormant-accounts.job';
+import { DormantRepository } from './jobs/dormant.repository';
 
 /**
  * Yeniden indeksleme (F2.11a): `search:reindex` komutu bunu doğrudan kullanır.
@@ -29,10 +34,19 @@ import { DirectoryRepository } from './directory.repository';
 })
 export class DirectoryIndexModule {}
 
-/** Worker: `directory` kuyruğu tüketicisi ve gece yeniden indeksleme zamanlayıcısı. */
+/**
+ * Worker: `directory` kuyruğu tüketicisi, gece yeniden indeksleme zamanlayıcısı ve bağlantısız
+ * hesap gece işi (F2.17).
+ */
 @Module({
-  imports: [DirectoryIndexModule, SettingsModule],
-  providers: [DirectoryProcessor, DirectoryReindexSchedule],
+  imports: [DirectoryIndexModule, SettingsModule, AuditModule, OutboxModule, OpsMetricsModule],
+  providers: [
+    DirectoryProcessor,
+    DirectoryReindexSchedule,
+    DormantRepository,
+    DormantAccountsJob,
+    DormantAccountsSchedule,
+  ],
 })
 export class DirectoryWorkerModule {}
 

@@ -15,6 +15,9 @@ export const NOTIFICATION_TYPES = [
   'connection_request_expired',
   'voen_rejected',
   'connection_closed_by_platform',
+  'dormant_profile_reminder',
+  'new_buyer_in_region',
+  'dormant_warning',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -90,6 +93,23 @@ function connectionResponseIntents(
     ];
   };
 }
+
+/** F2.17 (US-027): bağlantısız hesap olayları. */
+const dormantReminderPayload = z.object({
+  businessId: z.uuid(),
+  userId: z.uuid(),
+  stage: z.enum(['reminded_7', 'reminded_30']),
+});
+const dormantNewBuyerPayload = z.object({
+  buyerId: z.uuid(),
+  businessId: z.uuid(),
+  userId: z.uuid(),
+});
+const dormantWarningPayload = z.object({
+  businessId: z.uuid(),
+  userId: z.uuid(),
+  days: z.number().int(),
+});
 
 /** Outbox olay türü → bildirimler. Yük outbox'ta zaten doğrulanmıştır; burada yeniden okunur. */
 const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = new Map([
@@ -187,6 +207,55 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
           type: 'voen_rejected',
           subjectId: event.businessId,
           params: { reason: event.reason },
+        },
+      ];
+    },
+  ],
+  [
+    // F2.17 (US-027 AC1): perakendeci adminine profil hatırlatması; konu işletme kimliği.
+    'buyer.dormant_reminder',
+    (payload: unknown): NotificationIntent[] => {
+      const event = dormantReminderPayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.businessId,
+          type: 'dormant_profile_reminder',
+          subjectId: event.businessId,
+          params: {},
+        },
+      ];
+    },
+  ],
+  [
+    // F2.17 (US-027 AC1): toptancı adminine "bölgede yeni perakendeci"; konu perakendecinin
+    // kimliği (dizinde açılır). Perakendecinin adı bildirime girmez (yalnız kod/sayı).
+    'buyer.dormant_new_buyer',
+    (payload: unknown): NotificationIntent[] => {
+      const event = dormantNewBuyerPayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.businessId,
+          type: 'new_buyer_in_region',
+          subjectId: event.buyerId,
+          params: {},
+        },
+      ];
+    },
+  ],
+  [
+    // F2.17 (US-027 AC2): perakendeci adminine "N gün sonra pasifleşecek"; konu işletme kimliği.
+    'buyer.dormant_warning',
+    (payload: unknown): NotificationIntent[] => {
+      const event = dormantWarningPayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.businessId,
+          type: 'dormant_warning',
+          subjectId: event.businessId,
+          params: { days: event.days },
         },
       ];
     },

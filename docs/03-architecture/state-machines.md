@@ -192,11 +192,16 @@ stateDiagram-v2
 | Geçiş | Kim | Koşul | Yan etki |
 | --- | --- | --- | --- |
 | active → suspended, suspended → active | Platform admini (`super_admin`, `operations`), `POST /admin/businesses/{id}/status` | Gerekçe (yalnız audit) | Kullanıcılar işletme bağlamlı uçlarda `403 BUSINESS_SUSPENDED`; dizinden düşer / döner; bağlantı, istek, sipariş değişmez (US-016 AC1) |
+| active → dormant | Sistem (gece işi `directory.dormant_accounts`, F2.17) | Aşama `warned` ve uyarıdan en az `deactivate_day − warning_day` gün geçti; sayaç ≥ `deactivate_day` | Aşama `deactivated`; dizinden düşer (US-027 AC3); audit `business.dormant_deactivated` |
+| dormant → active | Sistem, işletmenin aktif üyesi giriş yapınca veya oturumunu yenileyince (`buyer_dormant_touch`, F2.17) | — | Aşama `none`, sayaç sıfır; dizine döner; audit `business.reactivated` |
+| dormant → archived | Sistem (gece işi, F2.17) | Aşama `deactivated`, pasifleşmeden en az `delete_day − deactivate_day` gün geçti; sayaç ≥ `delete_day` | Kullanıcı kararı S1 = B (admin "sil" ile aynı): geçmiş (istek, engel) yoksa kayıt kalıcı silinir (audit `business.dormant_purged`), varsa `person_data` silinir, açık davetler kapanır (audit `business.dormant_archived`); dizinden düşer (US-027 AC4) |
 | active/suspended/dormant → archived | Platform admini, `archive` (= "sil"), yalnız perakendeci | Gerekçe | Geçmiş yoksa kayıt kalıcı silinir (`business_purge`, AC3); varsa `person_data` silinir, açık davetler kapanır, aktif bağlantılar platformca kapanır (§2), istek kayıtları korunur (AC2). "Geçmiş" = bağlantı, bağlantı isteği, engel (sipariş/belge/cari F3–F5'te eklenir) |
 
 Kodda `BusinessStateMachine` (F2.18); tablo dışı geçiş `409 INVALID_STATE_TRANSITION`. `archived` son durumdur.
 
 `buyer_profiles.dormant_stage`: `none` → `reminded_7` → `reminded_30` → `warned` (90. gün) → `deactivated` (120. gün). Girişte `none`'a döner. Yalnızca hiç bağlantı, sipariş veya cari kaydı olmayan alıcılara uygulanır (US-027 AC5).
+
+Ayrıntı (F2.17): sayaç `buyer_profiles.dormant_since`'tan sayılır (gün = geçen süre / 24 saat, saat dilimi yok); işletmenin herhangi bir aktif üyesi giriş yapınca veya oturumunu yenileyince aşama `none`'a döner ve sayaç yeniden başlar (bu yüzden düzenli giren hesap hatırlatma almaz ve pasifleşmez). Gece işi her perakendeciyi bir adım ilerletir: vadesi gelen en yüksek hatırlatma (`reminded_7` = `dormant.reminder_days[0]`, `reminded_30` = `[1]`; eskiler atlanır) veya sayaç `warning_day`'i geçtiyse doğrudan `warned`. `deactivated` ve arşiv yalnız bir önceki aşamadan, aradaki gün farkı kadar sonra (uyarıdaki "30 gün sonra" sözü ve AC4 "son bildirim gönderilmiş" koşulu). "Kayıt" = alıcının herhangi bir `connections` satırı (iptal dahil); bekleyen istek veya engel politikayı durdurmaz.
 
 ## 10. İşletme yeteneği (`business_capabilities.status`)
 

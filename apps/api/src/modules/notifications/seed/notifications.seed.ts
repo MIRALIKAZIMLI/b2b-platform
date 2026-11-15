@@ -108,6 +108,49 @@ export const NOTIFICATION_TEMPLATES: Readonly<
       body: 'Perakendecinin hesabı kapatıldığı için bağlantı sona erdi. Ayrıntılar uygulamada.',
     },
   },
+  // F2.17 (US-027 AC1–AC2): bağlantısız hesap. Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  dormant_profile_reminder: {
+    az: {
+      title: 'Profilinizi tamamlayın',
+      body: 'Hələ heç bir topdançı ilə əlaqəniz yoxdur. Profilinizi tamamlayın ki, bölgənizdəki topdançılar sizi tapsın.',
+    },
+    ru: {
+      title: 'Заполните профиль',
+      body: 'У вас пока нет связи ни с одним оптовиком. Заполните профиль, чтобы оптовики вашего региона могли вас найти.',
+    },
+    tr: {
+      title: 'Profilinizi tamamlayın',
+      body: 'Henüz hiçbir toptancıyla bağlantınız yok. Bölgenizdeki toptancılar sizi bulabilsin diye profilinizi tamamlayın.',
+    },
+  },
+  new_buyer_in_region: {
+    az: {
+      title: 'Bölgənizdə yeni pərakəndəçi',
+      body: 'Xidmət bölgənizdə hələ heç bir topdançı ilə əlaqəsi olmayan pərakəndəçi var. Kataloqda baxıb əlaqə sorğusu göndərə bilərsiniz.',
+    },
+    ru: {
+      title: 'Новый розничный покупатель в вашем регионе',
+      body: 'В вашем регионе обслуживания есть розничный покупатель без связей с оптовиками. Посмотрите каталог и отправьте запрос на связь.',
+    },
+    tr: {
+      title: 'Bölgenizde yeni perakendeci',
+      body: 'Hizmet bölgenizde henüz hiçbir toptancıyla bağlantısı olmayan bir perakendeci var. Dizine bakıp bağlantı isteği gönderebilirsiniz.',
+    },
+  },
+  dormant_warning: {
+    az: {
+      title: 'Hesabınız passivləşəcək',
+      body: 'Hesabınız {days} gün sonra passivləşəcək. Bunun qarşısını almaq üçün tətbiqə daxil olun.',
+    },
+    ru: {
+      title: 'Аккаунт станет неактивным',
+      body: 'Ваш аккаунт станет неактивным через {days} дн. Чтобы этого не произошло, войдите в приложение.',
+    },
+    tr: {
+      title: 'Hesabınız pasifleşecek',
+      body: 'Hesabınız {days} gün sonra pasifleşecek. Bunu önlemek için uygulamaya giriş yapın.',
+    },
+  },
   // F2.18 (US-015 AC2): VÖEN reddi. Metin gerekçe koduna göre `voen_rejected.<reason>`; kodsuz
   // eski kayıt veya bilinmeyen kodda genel metin. Taslak çeviri (AI); kullanıcı onayı bekliyor.
   voen_rejected: {

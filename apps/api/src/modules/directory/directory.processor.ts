@@ -2,6 +2,7 @@
 // - Outbox olayları (`buyer.registered`, `buyer.privacy_changed`, `buyer.profile_changed`):
 //   perakendecinin indeks belgesi yenilenir veya silinir.
 // - `directory.reindex`: gece tam yeniden indeksleme (kilitliyse atlanır).
+// - `directory.dormant_accounts`: bağlantısız hesap gece işi (F2.17, US-027).
 // Hata fırlatılırsa BullMQ işi yeniden dener; loga kişisel veri yazılmaz (yalnız kimlik).
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject } from '@nestjs/common';
@@ -14,6 +15,7 @@ import {
 } from './directory-events';
 import { DirectoryIndexer } from './directory-indexer';
 import { DirectoryReindexService } from './directory-reindex.service';
+import { DORMANT_ACCOUNTS_JOB, DormantAccountsJob } from './jobs/dormant-accounts.job';
 
 export interface DirectoryLog {
   info(obj: Record<string, unknown>, msg: string): void;
@@ -26,6 +28,7 @@ export class DirectoryProcessor extends WorkerHost {
     @Inject(DirectoryIndexer) private readonly indexer: Pick<DirectoryIndexer, 'refresh'>,
     @Inject(DirectoryReindexService)
     private readonly reindex: Pick<DirectoryReindexService, 'run'>,
+    @Inject(DormantAccountsJob) private readonly dormant: Pick<DormantAccountsJob, 'run'>,
     @InjectPinoLogger(DirectoryProcessor.name) private readonly log: DirectoryLog,
   ) {
     super();
@@ -35,6 +38,11 @@ export class DirectoryProcessor extends WorkerHost {
     if (job.name === DIRECTORY_REINDEX_JOB) {
       const outcome = await this.reindex.run();
       this.log.info({ event: 'directory.reindex', ...outcome }, 'dizin yeniden indeksleme');
+      return;
+    }
+    if (job.name === DORMANT_ACCOUNTS_JOB) {
+      const outcome = await this.dormant.run();
+      this.log.info({ event: DORMANT_ACCOUNTS_JOB, ...outcome }, 'bağlantısız hesap gece işi');
       return;
     }
     if (DIRECTORY_EVENT_TYPES.includes(job.name)) {

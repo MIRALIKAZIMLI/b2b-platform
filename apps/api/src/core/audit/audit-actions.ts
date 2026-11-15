@@ -46,6 +46,12 @@ export const AUDIT_ACTIONS = [
   'business.unsuspended',
   'business.archived',
   'business.purged',
+  // F2.17 (US-027): bağlantısız hesap; hedef `business`. Pasifleşme ve arşiv aktörü `system`,
+  // yeniden açılma aktörü giriş yapan kullanıcı. Kişisel veri girmez (yalnız aşama ve sayılar).
+  'business.dormant_deactivated',
+  'business.dormant_archived',
+  'business.dormant_purged',
+  'business.reactivated',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

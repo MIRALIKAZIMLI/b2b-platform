@@ -280,6 +280,20 @@ describe('F2.13b yanıt, engel ve push yardımcıları', () => {
       path: 'requests',
     });
     expect(pushRoute({ type: 'team_invitation' })).toBeUndefined();
+  });
+
+  it('US-027-AC1 bağlantısız hesap bildirimleri: perakendeci profile, toptancı dizine gider', () => {
+    const id = '00000000-0000-7000-8000-000000000001';
+    expect(pushRoute({ type: 'dormant_profile_reminder', id })).toEqual({
+      area: 'buyer',
+      path: 'profile',
+    });
+    expect(pushRoute({ type: 'dormant_warning', id })).toEqual({ area: 'buyer', path: 'profile' });
+    expect(pushRoute({ type: 'new_buyer_in_region', id })).toEqual({
+      area: 'seller',
+      path: 'directory',
+    });
+    expect(pushRoute({ type: 'new_buyer_in_region', id }, 'buyer')).toBeUndefined();
     expect(pushRoute({ type: 'toString' })).toBeUndefined();
     expect(pushRoute(null)).toBeUndefined();
     expect(pushRoute('connection_request')).toBeUndefined();

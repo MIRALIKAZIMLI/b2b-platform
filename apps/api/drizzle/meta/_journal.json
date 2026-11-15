@@ -211,6 +211,13 @@
       "when": 1794572620929,
       "tag": "0029_buyer_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794750959609,
+      "tag": "0030_dormant_accounts",
+      "breakpoints": true
     }
   ]
 }

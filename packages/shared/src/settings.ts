@@ -39,11 +39,12 @@ function increasingIntListSetting(
   defaultValue: number[],
   min: number,
   max: number,
+  maxItems = 5,
 ): SettingDefinition<number[]> {
   const schema = z
     .array(z.number().int().min(min).max(max))
     .min(1)
-    .max(5)
+    .max(maxItems)
     .refine((days) => days.every((day, index) => index === 0 || day > (days[index - 1] ?? day)));
   return { schema, default: defaultValue, min, max };
 }
@@ -76,10 +77,16 @@ export const SETTING_DEFINITIONS = {
   'connection.request_expiry_lock_seconds': intSetting(600, 60, 3600),
   'delivery.auto_confirm_hours': intSetting(48, 1, 720),
   'delivery.location_mismatch_meters': intSetting(300, 10, 10_000),
-  'dormant.reminder_days': increasingIntListSetting([7, 30], 1, 3650),
+  // F2.17: en fazla 2 hatırlatma (aşamalar `reminded_7`, `reminded_30`; data-model `buyer_profiles`).
+  'dormant.reminder_days': increasingIntListSetting([7, 30], 1, 3650, 2),
   'dormant.warning_day': intSetting(90, 1, 3650),
   'dormant.deactivate_day': intSetting(120, 1, 3650),
   'dormant.delete_day': intSetting(180, 1, 3650),
+  // F2.17 (US-027): gece işi saati (UTC), parti boyu, kilit ömrü; giriş kancasının yazma aralığı.
+  'dormant.job_hour_utc': intSetting(2, 0, 23),
+  'dormant.batch_size': intSetting(500, 50, 1000),
+  'dormant.lock_seconds': intSetting(1800, 60, 7200),
+  'dormant.touch_min_interval_minutes': intSetting(60, 1, 1440),
   'invitation.seller_activation_days': intSetting(7, 1, 30),
   // F2.7: ekip davetinin geçerliliği (US-013 AC1; Mimar K10).
   'invitation.team_days': intSetting(7, 1, 30),

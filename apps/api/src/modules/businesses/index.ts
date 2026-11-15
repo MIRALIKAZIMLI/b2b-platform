@@ -57,3 +57,4 @@ export {
   requiresBranchApproval,
 } from './branch-approval';
 export { BranchUsageGate } from './branch-usage.gate';
+export { DormantActivityService, LoginActivityHookModule } from './dormant-activity.service';
