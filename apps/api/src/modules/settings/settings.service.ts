@@ -129,7 +129,11 @@ export class SettingsService {
     for (const row of rows) byScope[row.scope].set(row.key, row);
 
     const inheritanceOrder: readonly ('plan' | 'platform')[] =
-      target.scope === 'business' ? ['plan', 'platform'] : target.scope === 'plan' ? ['platform'] : [];
+      target.scope === 'business'
+        ? ['plan', 'platform']
+        : target.scope === 'plan'
+          ? ['platform']
+          : [];
     return SETTING_KEYS.map((key) => {
       const own = byScope[target.scope].get(key);
       const ownValue = own === undefined ? undefined : this.validOrWarn(key, own);

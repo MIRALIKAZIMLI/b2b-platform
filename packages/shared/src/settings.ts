@@ -8,7 +8,8 @@ export const SETTING_SCOPES = ['platform', 'plan', 'business'] as const;
 export type SettingScope = (typeof SETTING_SCOPES)[number];
 
 /** Ayar ekranında değer düzenleyicisinin türü (F2.19). */
-export type SettingKind = 'int' | 'int_list' | 'bool' | 'enum' | 'version' | 'url' | 'country_codes';
+export type SettingKind =
+  'int' | 'int_list' | 'bool' | 'enum' | 'version' | 'url' | 'country_codes';
 
 interface SettingDefinition<T> {
   readonly kind: SettingKind;
@@ -33,7 +34,13 @@ function layered<T>(definition: SettingDefinition<T>): SettingDefinition<T> {
 }
 
 function intSetting(defaultValue: number, min: number, max: number): SettingDefinition<number> {
-  return { kind: 'int', schema: z.number().int().min(min).max(max), default: defaultValue, min, max };
+  return {
+    kind: 'int',
+    schema: z.number().int().min(min).max(max),
+    default: defaultValue,
+    min,
+    max,
+  };
 }
 
 function boolSetting(defaultValue: boolean): SettingDefinition<boolean> {

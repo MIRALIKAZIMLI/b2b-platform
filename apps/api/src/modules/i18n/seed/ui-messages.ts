@@ -3992,11 +3992,6 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: '«{name}» kalıcı olarak silindi.',
   },
   // F2.19: admin ayarlar ekranı (US-017). Çeviriler taslak; kullanıcı onayı bekliyor.
-  'shell.menu.settings_admin': {
-    az: 'Ayarlar',
-    ru: 'Настройки',
-    tr: 'Ayarlar',
-  },
   'adminSettings.eyebrow': {
     az: 'Platforma',
     ru: 'Платформа',

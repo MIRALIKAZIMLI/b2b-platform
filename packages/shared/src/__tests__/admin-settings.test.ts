@@ -45,7 +45,9 @@ describe('F2.19 istek şemaları', () => {
   it('F2.19-AC1: sorgu varsayılanı platform; plan ve işletme scopeId ister', () => {
     expect(adminSettingsQuerySchema.parse({})).toEqual({ scope: 'platform' });
     expect(adminSettingsQuerySchema.safeParse({ scope: 'plan' }).success).toBe(false);
-    expect(adminSettingsQuerySchema.safeParse({ scope: 'platform', scopeId: id }).success).toBe(false);
+    expect(adminSettingsQuerySchema.safeParse({ scope: 'platform', scopeId: id }).success).toBe(
+      false,
+    );
     expect(adminSettingsQuerySchema.parse({ scope: 'business', scopeId: id }).scopeId).toBe(id);
   });
 

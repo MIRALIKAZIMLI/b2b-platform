@@ -30,7 +30,12 @@ export const adminSettingUpdateSchema = z.discriminatedUnion('scope', [
     key: settingKeySchema,
     value: z.unknown(),
   }),
-  z.object({ scope: z.literal('plan'), scopeId: z.uuid(), key: settingKeySchema, value: z.unknown() }),
+  z.object({
+    scope: z.literal('plan'),
+    scopeId: z.uuid(),
+    key: settingKeySchema,
+    value: z.unknown(),
+  }),
   z.object({
     scope: z.literal('business'),
     scopeId: z.uuid(),

@@ -455,7 +455,9 @@ describe('SettingsService (birim)', () => {
     it('F2.19-AC1: geçersiz kayıtlı değer ekranda yok sayılır', async () => {
       repo.platform.set('connection.cooldown_after_reject_days', 3);
       const items = await service.listForScopeTx(tx, { scope: 'plan', planId: randomUUID() });
-      expect(items.find((item) => item.key === 'connection.cooldown_after_reject_days')).toMatchObject({
+      expect(
+        items.find((item) => item.key === 'connection.cooldown_after_reject_days'),
+      ).toMatchObject({
         value: null,
         inheritedValue: 30,
         inheritedFrom: 'default',

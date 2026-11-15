@@ -113,7 +113,11 @@ describe('F2.19 admin ayarlar (entegrasyon)', () => {
   });
 
   it('F2.19-AC1: platform kapsamına yazılır; yanıt güncel satırdır', async () => {
-    const response = await put({ scope: 'platform', key: 'onboarding.seller_mode', value: 'manual' });
+    const response = await put({
+      scope: 'platform',
+      key: 'onboarding.seller_mode',
+      value: 'manual',
+    });
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ key: 'onboarding.seller_mode', value: 'manual' });
     expect((response.body as ItemJson).updatedAt).not.toBeNull();
@@ -125,7 +129,10 @@ describe('F2.19 admin ayarlar (entegrasyon)', () => {
 
     const planWrite = await put({ scope: 'plan', scopeId: planId, key, value: 10 });
     expect(planWrite.status).toBe(200);
-    expect(planWrite.body).toMatchObject({ value: 10, inheritedFrom: expect.any(String) as string });
+    expect(planWrite.body).toMatchObject({
+      value: 10,
+      inheritedFrom: expect.any(String) as string,
+    });
 
     const before = await list({ scope: 'business', scopeId: businessId });
     expect(item(before.body, key)).toMatchObject({
@@ -136,7 +143,11 @@ describe('F2.19 admin ayarlar (entegrasyon)', () => {
 
     const businessWrite = await put({ scope: 'business', scopeId: businessId, key, value: 3 });
     expect(businessWrite.status).toBe(200);
-    expect(businessWrite.body).toMatchObject({ value: 3, inheritedValue: 10, inheritedFrom: 'plan' });
+    expect(businessWrite.body).toMatchObject({
+      value: 3,
+      inheritedValue: 10,
+      inheritedFrom: 'plan',
+    });
 
     const settings = app.get(SettingsService);
     expect(await settings.get(key, businessId)).toBe(3);
@@ -187,7 +198,12 @@ describe('F2.19 admin ayarlar (entegrasyon)', () => {
   });
 
   it('F2.19-AC5: yalnız platform anahtarı plan/işletmede 422 SETTING_SCOPE_NOT_ALLOWED', async () => {
-    const response = await put({ scope: 'plan', scopeId: planId, key: 'otp.max_attempts', value: 3 });
+    const response = await put({
+      scope: 'plan',
+      scopeId: planId,
+      key: 'otp.max_attempts',
+      value: 3,
+    });
     expect(response.status).toBe(422);
     expect(code(response.body)).toBe('SETTING_SCOPE_NOT_ALLOWED');
   });
