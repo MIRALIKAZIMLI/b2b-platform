@@ -3967,9 +3967,9 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Evet, «{name}» hesabını siliyorum ve bunun geri alınamayacağını anlıyorum.',
   },
   'adminBuyers.action.archive.submit': {
-    az: 'Həmişəlik sil',
-    ru: 'Удалить навсегда',
-    tr: 'Kalıcı olarak sil',
+    az: 'Hesabı sil',
+    ru: 'Удалить аккаунт',
+    tr: 'Hesabı sil',
   },
   'adminBuyers.done.suspended': {
     az: '«{name}» dayandırıldı.',

@@ -11,6 +11,7 @@ import {
   createUser,
   loginPlatformThroughUi,
   randomVoen,
+  setBusinessStatus,
   setBusinessVoen,
 } from './fixtures';
 
@@ -88,6 +89,7 @@ test('US-016 AC1–AC3 dayandır, bərpa et, sil (tarixçəsiz həmişəlik, əl
   const target = await buyer(`E2E Dayandır ${suffix}`, false);
   const fresh = await buyer(`E2E Sil ${suffix}`, false);
   const linked = await buyer(`E2E Arxiv ${suffix}`, false);
+  const dormant = await buyer(`E2E Passiv ${suffix}`, false);
   const sellerUser = await createUser();
   const seller = await addMembership(
     sellerUser.id,
@@ -107,16 +109,24 @@ test('US-016 AC1–AC3 dayandır, bərpa et, sil (tarixçəsiz həmişəlik, əl
   await expect(page.getByRole('status').filter({ hasText: 'bərpa edildi' })).toBeVisible();
   await expect(row(page, target.id)).toHaveCount(0);
 
+  // Müfettiş 23 M1: pasif (dormant) kayıtta "Dayandır" yok (§9: dormant → suspended geçişi yok).
+  await setBusinessStatus(dormant.id, 'dormant');
+  await page.getByRole('tab', { name: 'Passiv' }).click();
+  await row(page, dormant.id).getByRole('button', { name: 'Aç' }).click();
+  await expect(dialog(page).getByRole('button', { name: 'Sil', exact: true })).toBeVisible();
+  await expect(dialog(page).getByRole('button', { name: 'Dayandır', exact: true })).toHaveCount(0);
+  await dialog(page).getByRole('button', { name: 'Bağla' }).click();
+
   // AC3: geçmişsiz kayıt kalıcı silinir.
   await page.getByRole('tab', { name: 'Hamısı' }).click();
   await row(page, fresh.id).getByRole('button', { name: 'Aç' }).click();
-  await statusAction(page, 'Sil', 'Həmişəlik sil', 'Mükərrər hesab');
+  await statusAction(page, 'Sil', 'Hesabı sil', 'Mükərrər hesab');
   await expect(page.getByRole('status').filter({ hasText: 'həmişəlik silindi' })).toBeVisible();
   await expect(row(page, fresh.id)).toHaveCount(0);
 
   // AC2: bağlantılı kayıt arşivlenir.
   await row(page, linked.id).getByRole('button', { name: 'Aç' }).click();
-  await statusAction(page, 'Sil', 'Həmişəlik sil', 'Mükərrər hesab');
+  await statusAction(page, 'Sil', 'Hesabı sil', 'Mükərrər hesab');
   await expect(page.getByRole('status').filter({ hasText: 'arxivləndi' })).toBeVisible();
   await expect(row(page, linked.id)).toHaveCount(0);
 });

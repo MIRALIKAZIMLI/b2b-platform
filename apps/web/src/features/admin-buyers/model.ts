@@ -30,12 +30,19 @@ export interface BuyerActions {
   readonly status: readonly BusinessStatusAction[];
 }
 
+const STATUS_ACTIONS: Readonly<Record<BuyerLike['status'], readonly BusinessStatusAction[]>> = {
+  active: ['suspend', 'archive'],
+  suspended: ['unsuspend', 'archive'],
+  dormant: ['archive'],
+};
+
 const NONE: BuyerActions = { verify: false, reject: false, status: [] };
 
 /**
  * Kayıt penceresinde gösterilecek eylemler. Destek rolü (ve rolsüz) yalnız görür. VÖEN kararı
- * yalnız kuyruktaki kayıtta; askıya alma aktif/pasif (dormant) kayıtta, kaldırma askıdakinde;
- * "sil" (archive) her durumda (state-machines §9).
+ * yalnız kuyruktaki kayıtta. Durum eylemleri state-machines §9 geçiş tablosuyla aynı: askıya alma
+ * yalnız aktif kayıtta (pasif → askı geçişi yok, Müfettiş 23 M1), kaldırma askıdakinde; "sil"
+ * (archive) her durumda.
  */
 export function buyerActions(buyer: BuyerLike, role: string | null): BuyerActions {
   if (!platformRoleAllows(BUYER_ADMIN_WRITE_ROLES, role)) return NONE;
@@ -43,7 +50,7 @@ export function buyerActions(buyer: BuyerLike, role: string | null): BuyerAction
   return {
     verify: pending,
     reject: pending,
-    status: [buyer.status === 'suspended' ? 'unsuspend' : 'suspend', 'archive'],
+    status: STATUS_ACTIONS[buyer.status],
   };
 }
 

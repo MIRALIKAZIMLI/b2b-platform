@@ -29,10 +29,10 @@ describe('buyerActions', () => {
     expect(buyerActions({ ...pending, voen: null }, 'operations').verify).toBe(false);
   });
 
-  it('US-016 AC1 askıya al aktif/pasif kayıtta, kaldır askıdakinde; sil her durumda', () => {
+  it('US-016 AC1 askıya al yalnız aktif kayıtta, kaldır askıdakinde; sil her durumda (§9)', () => {
     expect(buyerActions(verified, 'operations').status).toEqual(['suspend', 'archive']);
+    // Müfettiş 23 M1: dormant → suspended geçişi yok (409); pasif kayıtta yalnız "sil".
     expect(buyerActions({ ...verified, status: 'dormant' }, 'operations').status).toEqual([
-      'suspend',
       'archive',
     ]);
     expect(buyerActions({ ...verified, status: 'suspended' }, 'operations').status).toEqual([
