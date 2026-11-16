@@ -362,6 +362,8 @@ Onayımı bekle.
 - **Kabul:** US-029 AC1–AC2; kategori derinliği ≤ 3.
 - **Test:** Entegrasyon.
 
+> **Bölündü (Mimar, 2026-11-16):** F3.2a — API + migration `0033` + seed (kategori, marka, faaliyet alanı; marka talebi). F3.2b — admin katalog ekranları. Kart: `docs/tasks/F3.2a.md`; faz spesifikasyonu `docs/tasks/F3-faz-spesifikasyonu.md`.
+
 ### F3.3 — Ürün, varyant, ambalaj
 
 - **Belgeler:** US-030 AC1, AC2, AC4–AC6.

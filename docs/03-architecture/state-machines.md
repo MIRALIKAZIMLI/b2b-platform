@@ -248,3 +248,26 @@ stateDiagram-v2
 | pending → rejected | Platform rolü `super_admin`, `operations` | — | `reviewed_by` yazılır; audit `seller_application.rejected` |
 
 `approved` ve `rejected` son durumlardır; başka geçiş `409 INVALID_STATE_TRANSITION`. Reddedilen başvurudan sonra aynı VÖEN ile yeni başvuru yapılabilir.
+
+## 13. Marka (`brands.status`)
+
+F3.2a (US-029 AC2, R37, V5). Kod: `BrandStateMachine` (`apps/api/src/modules/catalog/brand.state-machine.ts`).
+
+```mermaid
+stateDiagram-v2
+    [*] --> requested: toptancı marka talebi gönderir
+    [*] --> active: admin markayı doğrudan açar
+    requested --> active: admin onaylar
+    requested --> rejected: admin reddeder
+    active --> [*]
+    rejected --> [*]
+```
+
+| Geçiş | Kim | Koşul (guard) | Yan etki |
+| --- | --- | --- | --- |
+| → requested | `catalog.manage` izinli toptancı kullanıcısı (`POST /catalog/brands`) | Yalnız `brand_request_create` (SECURITY DEFINER); onaylı ve aktif toptancı; ad tekliği (K1, 422 `name: [taken]`); kayan 24 saatte `catalog.brand_request_daily_limit` (429 `RATE_LIMITED`) | Audit `brand.requested` (işletme = toptancı); yalnız talep eden görür (V5) |
+| → active (doğrudan) | Platform rolü `super_admin`, `content` (`POST /admin/catalog/brands`) | Ad tekliği | Audit `brand.created` |
+| requested → active | Platform rolü `super_admin`, `content` (`PATCH /admin/catalog/brands/{id}`) | — | `decided_at`, `decided_by_user_id`; audit `brand.approved`; talebi gönderen (aktif üyeyse) + toptancı adminlerine `brand_request_approved` |
+| requested → rejected | Aynı | — | `decided_at`, `decided_by_user_id`; audit `brand.rejected`; bildirim `brand_request_rejected`; ad serbest kalır. Ürünün markasının boşalması F3.3a (V5) |
+
+`active` ve `rejected` son durumlardır; başka geçiş `409 INVALID_STATE_TRANSITION`. Marka silinmez (R38); `active` marka `is_active = false` ile pasifleşir (yeni üründe seçilemez), aktiflik başka durumda değişmez (409).

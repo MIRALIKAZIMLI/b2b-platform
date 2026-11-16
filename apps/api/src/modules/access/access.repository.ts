@@ -247,6 +247,21 @@ export class AccessRepository {
     return rows.map((row) => row.userId);
   }
 
+  /** Kullanıcı işletmenin aktif üyesi mi (F3.2a: marka kararı bildiriminin alıcısı). */
+  async isActiveMember(tx: Tx, businessId: string, userId: string): Promise<boolean> {
+    const rows = await tx
+      .select({ id: memberships.id })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.businessId, businessId),
+          eq(memberships.userId, userId),
+          eq(memberships.status, 'active'),
+        ),
+      );
+    return rows.length > 0;
+  }
+
   /** İşletmelerin aktif admin üyeliği olanları. */
   async businessesWithActiveAdmin(tx: Tx, businessIds: readonly string[]): Promise<Set<string>> {
     if (businessIds.length === 0) return new Set();

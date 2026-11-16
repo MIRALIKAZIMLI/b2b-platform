@@ -136,6 +136,13 @@ export const OUTBOX_EVENTS = {
     queue: 'notifications',
     fields: { businessId: 'id', userId: 'id', days: 'integer' },
   },
+  // F3.2a (US-029 AC2, kart K5): admin marka talebini onayladı / reddetti; talebi gönderen (hâlâ
+  // aktif üyeyse) ve toptancının aktif adminleri için birer olay (`userId` alıcı, `businessId`
+  // toptancı). Marka adı serbest metin olduğu için yüke girmez; uygulama talebi API'den açar.
+  'brand.request_decided': {
+    queue: 'notifications',
+    fields: { brandId: 'id', businessId: 'id', userId: 'id', decision: ['approved', 'rejected'] },
+  },
 } as const satisfies Record<string, OutboxEventDefinition>;
 
 export type OutboxEventType = keyof typeof OUTBOX_EVENTS;

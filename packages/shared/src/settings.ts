@@ -93,6 +93,8 @@ function countryCodeListSetting(defaultValue: string[]): SettingDefinition<strin
 }
 
 export const SETTING_DEFINITIONS = {
+  // F3.2a: toptancı başına kayan 24 saatte marka talebi sınırı (R37, kart K2).
+  'catalog.brand_request_daily_limit': layered(intSetting(10, 1, 100)),
   'connection.request_ttl_days': intSetting(14, 1, 90),
   'connection.cooldown_after_reject_days': layered(intSetting(30, 7, 365)),
   'connection.cooldown_after_buyer_cancel_days': layered(intSetting(30, 7, 365)),

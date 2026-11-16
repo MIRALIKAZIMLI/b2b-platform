@@ -19,6 +19,8 @@ import { SellersController } from './sellers.controller';
 import { SellersService } from './sellers.service';
 import { SettingsAdminController } from './settings-admin.controller';
 import { SettingsAdminService } from './settings-admin.service';
+import { TaxonomyAdminController } from './taxonomy-admin.controller';
+import { TaxonomyAdminService } from './taxonomy-admin.service';
 import { UnitsAdminController } from './units-admin.controller';
 import { UnitsAdminService } from './units-admin.service';
 
@@ -29,7 +31,7 @@ export interface PlatformAdminOptions {
 
 /**
  * Platform admin uçları (F2.1a: toptancı açma, aktivasyon daveti, plan listesi; F2.2: başvurular; F2.9: unvan ve rol
- * şablonu kataloğu; F2.18: perakendeci moderasyonu, askıya alma, "sil"; F2.19: ayarlar; F3.1: birim kataloğu). Platform bağlamı
+ * şablonu kataloğu; F2.18: perakendeci moderasyonu, askıya alma, "sil"; F2.19: ayarlar; F3.1: birim kataloğu; F3.2a: kategori, marka, faaliyet alanı). Platform bağlamı
  * (`withPlatformTx`) yalnızca bu modülde açılır (c4 §3.7); uçlar `@RequirePlatformRole`.
  */
 @Module({})
@@ -53,6 +55,7 @@ export class PlatformAdminModule {
         SellerApplicationsAdminController,
         RoleCatalogController,
         UnitsAdminController,
+        TaxonomyAdminController,
         BuyersAdminController,
         SettingsAdminController,
       ],
@@ -61,6 +64,7 @@ export class PlatformAdminModule {
         SellerApplicationsAdminService,
         RoleCatalogAdminService,
         UnitsAdminService,
+        TaxonomyAdminService,
         BuyersAdminService,
         BuyerArchiveService,
         SettingsAdminService,
