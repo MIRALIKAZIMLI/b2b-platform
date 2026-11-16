@@ -238,6 +238,36 @@ export const NOTIFICATION_TEMPLATES: Readonly<
       body: 'Karşı taraf sizinle bağlantıyı iptal etti. Ayrıntılar uygulamada.',
     },
   },
+  // F3.2a (US-029 AC2, K5): marka talebi kararı; marka adı bildirime girmez (serbest metin).
+  // Taslak çeviri (AI); kullanıcı onayı bekliyor.
+  brand_request_approved: {
+    az: {
+      title: 'Brend sorğusu təsdiqləndi',
+      body: 'Göndərdiyiniz brend sorğusu təsdiqləndi. Brendi artıq məhsullarda seçə bilərsiniz.',
+    },
+    ru: {
+      title: 'Запрос бренда одобрен',
+      body: 'Ваш запрос на добавление бренда одобрен. Теперь бренд можно выбрать в товарах.',
+    },
+    tr: {
+      title: 'Marka talebi onaylandı',
+      body: 'Gönderdiğiniz marka talebi onaylandı. Markayı artık ürünlerde seçebilirsiniz.',
+    },
+  },
+  brand_request_rejected: {
+    az: {
+      title: 'Brend sorğusu rədd edildi',
+      body: 'Göndərdiyiniz brend sorğusu rədd edildi. Ətraflı məlumat tətbiqdədir.',
+    },
+    ru: {
+      title: 'Запрос бренда отклонён',
+      body: 'Ваш запрос на добавление бренда отклонён. Подробности в приложении.',
+    },
+    tr: {
+      title: 'Marka talebi reddedildi',
+      body: 'Gönderdiğiniz marka talebi reddedildi. Ayrıntılar uygulamada.',
+    },
+  },
 };
 
 export interface NotificationsSeedResult {

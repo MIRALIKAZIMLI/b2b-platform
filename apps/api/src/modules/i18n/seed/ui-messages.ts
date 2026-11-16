@@ -4197,6 +4197,12 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Изменено: {date}',
     tr: 'Değiştirildi: {date}',
   },
+  // F3.2a: marka talebi sınırı (taslak çeviri).
+  'adminSettings.group.catalog': {
+    az: 'Kataloq',
+    ru: 'Каталог',
+    tr: 'Katalog',
+  },
   'adminSettings.group.connection': {
     az: 'Bağlantı sorğuları',
     ru: 'Запросы на связь',
@@ -4306,6 +4312,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Pərakəndəçi kataloqu',
     ru: 'Каталог розничных покупателей',
     tr: 'Perakendeci dizini',
+  },
+  'adminSettings.key.catalog.brand_request_daily_limit': {
+    az: 'Gündəlik brend sorğusu limiti (24 saat)',
+    ru: 'Лимит запросов бренда в сутки (24 часа)',
+    tr: 'Günlük marka talebi sınırı (24 saat)',
   },
   'adminSettings.key.connection.request_ttl_days': {
     az: 'Sorğunun etibarlılıq müddəti (gün)',

@@ -13,6 +13,7 @@ interface FunctionRow {
 }
 
 const EXPECTED_FUNCTIONS = [
+  'brand_request_create',
   'business_close_archived_connections',
   'business_purge',
   'buyer_dormant_touch',

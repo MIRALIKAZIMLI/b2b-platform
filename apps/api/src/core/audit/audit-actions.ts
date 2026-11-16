@@ -57,6 +57,16 @@ export const AUDIT_ACTIONS = [
   'unit.updated',
   'unit_conversion.saved',
   'unit_conversion.deleted',
+  // F3.2a (US-029): kategori, marka, faaliyet alanı (G). Marka talebi toptancı işletmesine yazılır.
+  'category.created',
+  'category.updated',
+  'brand.created',
+  'brand.updated',
+  'brand.requested',
+  'brand.approved',
+  'brand.rejected',
+  'activity_type.created',
+  'activity_type.updated',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -76,6 +86,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // kataloğu, işletmesiz kayıt `business_id = null`; before/after ad, izinler, sürüm, aktiflik).
 // unit / unit_conversion: hedef kimliği birim kodu (`KGM`) / `<from>:<to>` (`KGM:GRM`); F3.1 admin
 // kataloğu, `business_id = null`; before/after ad, kısaltma, ondalık izni, aktiflik, oran.
+// category / brand / activity_type: hedef kimliği kayıt kimliği (G; F3.2a). Admin işlemi
+// `business_id = null`; marka talebi (`brand.requested`) talep eden toptancının işletmesiyle.
 // connection: hedef kimliği bağlantı (connections.id; F2.13a kabul, after: istek kimliği, veri
 // paylaşım onayı, vade). block: hedef kimliği engellenen satıcı (sellerId; işletme = alıcı).
 export const AUDIT_TARGET_TYPES = [
@@ -95,6 +107,9 @@ export const AUDIT_TARGET_TYPES = [
   'block',
   'unit',
   'unit_conversion',
+  'category',
+  'brand',
+  'activity_type',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

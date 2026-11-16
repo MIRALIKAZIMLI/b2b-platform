@@ -1325,30 +1325,82 @@ paths:
   /api/v1/catalog/categories:
     get:
       tags: [catalog]
-      summary: Kategori ağacı
+      summary: Kategori ağacı (F3.2a, US-029)
+      description: >-
+        Giriş yapmış her kullanıcı (`@Authenticated`). Düz liste (seviye, sıra); yalnız kendisi ve
+        bütün üstleri aktif düğümler (pasif üstün altı da gizlenir, AC4). Ağaç istemcide `parentId`
+        ile kurulur; en çok 3 seviye.
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Category' } }
+        '401': { $ref: '#/components/responses/Error' }
   /api/v1/catalog/brands:
     get:
       tags: [catalog]
-      summary: Markalar
-      parameters: [ { name: q, in: query, schema: { type: string } } ]
+      summary: Markalar (F3.2a)
+      description: >-
+        Giriş yapmış her kullanıcı. Yalnız onaylı (`active`) ve aktif markalar, ada göre; onay bekleyen
+        talepler dönmez (V5; toptancı kendi taleplerini `GET /catalog/brand-requests` ile görür).
+        `q` adın içinde büyük/küçük harf duyarsız arar.
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/BrandOption' } }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [catalog]
       summary: Marka talebi (US-029 AC2)
+      description: >-
+        İzin `catalog.manage` (yetenek `seller`). Talep `requested` durumunda açılır, admin onayına
+        düşer; onaylanana kadar yalnız talep eden toptancı görür (V5). Ad büyük/küçük harf ve kenar
+        boşluğu duyarsız tektir: aktif marka veya bekleyen başka bir talep aynı adı taşıyorsa 422
+        `name: [taken]` (kimin talep ettiği söylenmez; reddedilen ad yeniden talep edilebilir, K1).
+        İşletme başına kayan 24 saatte en çok `catalog.brand_request_daily_limit` talep (varsayılan
+        10, K2); aşılırsa 429 `RATE_LIMITED`.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [name]
               properties:
-                name: { type: string }
+                name: { type: string, minLength: 1, maxLength: 80 }
       responses:
-        '201': { description: Talep oluştu }
+        '201':
+          description: Talep oluştu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BrandRequest' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/v1/catalog/brand-requests:
+    get:
+      tags: [catalog]
+      summary: Toptancının kendi marka talepleri (F3.2a)
+      description: >-
+        İzin `catalog.view` (yetenek `seller`). Bekleyen, onaylanan ve reddedilen talepler, yeniden
+        eskiye (en çok 500).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/BrandRequest' } }
+        '403': { $ref: '#/components/responses/Error' }
   /api/v1/catalog/activity-types:
     get:
       tags: [catalog]
@@ -2735,11 +2787,12 @@ paths:
   /api/v1/admin/catalog/{kind}:
     post:
       tags: [admin]
-      summary: Genel katalog kaydı oluştur (categories, brands, activity-types, regions)
+      summary: Genel katalog kaydı oluştur (regions)
       description: >-
-        Unvan ve rol şablonu (`job-titles`, `role-templates`, F2.9) ve birimler (`units`,
-        `unit-conversions`, F3.1) kendi yollarında tanımlıdır.
-      parameters: [ { name: kind, in: path, required: true, schema: { type: string, enum: [categories, brands, activity-types, regions] } } ]
+        Unvan ve rol şablonu (`job-titles`, `role-templates`, F2.9), birimler (`units`,
+        `unit-conversions`, F3.1), kategori, marka ve faaliyet alanı (`categories`, `brands`,
+        `activity-types`, F3.2a) kendi yollarında tanımlıdır.
+      parameters: [ { name: kind, in: path, required: true, schema: { type: string, enum: [regions] } } ]
       requestBody:
         content:
           application/json:
@@ -2757,6 +2810,197 @@ paths:
             schema: { type: object }
       responses:
         '200': { description: Güncellendi }
+  /api/v1/admin/catalog/categories:
+    get:
+      tags: [admin]
+      summary: Kategoriler, pasifler dahil (F3.2a, US-029)
+      description: Platform rolü `super_admin` veya `content` (F2.9 V1 ile aynı). Düz liste (seviye, sıra).
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Category' } }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [admin]
+      summary: Kategori oluştur (US-029 AC1)
+      description: >-
+        `parentId` yoksa üst kategori (seviye 1). Üst yoksa 422 `parentId: [not_found]`, pasifse
+        `parentId: [inactive]`, 3. seviyedeyse `parentId: [max_depth]` (ağaç ≤ 3). Aynı üst altında
+        herhangi bir dilde aynı ad 422 `name: [taken]` (K3). Üst kategori sonradan değişmez (K4).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                parentId: { type: [string, 'null'], format: uuid }
+                name: { $ref: '#/components/schemas/CatalogName' }
+                sortOrder: { $ref: '#/components/schemas/SortOrder' }
+      responses:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/catalog/categories/{id}:
+    patch:
+      tags: [admin]
+      summary: Kategoriyi güncelle / pasifleştir
+      description: >-
+        Silme ucu yoktur (R38): kategori yalnız pasifleşir. Pasif kategori ve altı ürün formu
+        listesinde görünmez; onu kullanan kayıtlar etkilenmez.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CatalogEntryPatch' }
+      responses:
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/catalog/brands:
+    get:
+      tags: [admin]
+      summary: Markalar ve marka talepleri (F3.2a, US-029 AC2)
+      description: >-
+        Platform rolü `super_admin` veya `content`. Yeniden eskiye, en çok 500; `status=requested`
+        onay kuyruğudur. Talep eden işletme `requestedBy` alanında.
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [requested, active, rejected] } }
+        - { name: q, in: query, schema: { type: string, maxLength: 80 } }
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/AdminBrand' } }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [admin]
+      summary: Marka oluştur (US-029 AC1)
+      description: >-
+        Admin markası doğrudan `active` açılır. Ad tekliği `POST /catalog/brands` ile aynı (422
+        `name: [taken]`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBrand' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/catalog/brands/{id}:
+    patch:
+      tags: [admin]
+      summary: Marka talebini onayla / reddet, adı düzelt, pasifleştir
+      description: >-
+        `status`: `requested → active` (onay) veya `requested → rejected` (red); başka geçiş 409
+        `INVALID_STATE_TRANSITION` (state-machines §13). Karar talebi gönderen (hâlâ aktif üyeyse) ve
+        toptancının aktif adminlerine bildirilir (`brand_request_approved` / `brand_request_rejected`).
+        `isActive` yalnız `active` markada değişir (aksi 409). Silme ucu yoktur (R38).
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+                status: { type: string, enum: [active, rejected] }
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBrand' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/catalog/activity-types:
+    get:
+      tags: [admin]
+      summary: Faaliyet alanları, pasifler dahil (F3.2a)
+      description: Platform rolü `super_admin` veya `content`. Kayıt formu listesi `GET /catalog/activity-types` (yalnız aktifler).
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ActivityTypeAdmin' } }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [admin]
+      summary: Faaliyet alanı oluştur (US-029 AC1)
+      description: >-
+        Herhangi bir dilde var olan bir adla 422 `name: [taken]`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { $ref: '#/components/schemas/CatalogName' }
+                sortOrder: { $ref: '#/components/schemas/SortOrder' }
+      responses:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityTypeAdmin' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/catalog/activity-types/{id}:
+    patch:
+      tags: [admin]
+      summary: Faaliyet alanını güncelle / pasifleştir
+      description: Silme ucu yoktur (R38). Pasif tür kayıt formunda görünmez; onu seçmiş perakendeciler etkilenmez.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CatalogEntryPatch' }
+      responses:
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityTypeAdmin' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/admin/catalog/units:
     get:
       tags: [admin]
@@ -3509,6 +3753,67 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/Unit' } }
         conversions: { type: array, items: { $ref: '#/components/schemas/UnitConversion' } }
+    SortOrder:
+      description: Listede sıra (küçük önce).
+      type: integer
+      minimum: 0
+      maximum: 10000
+    CatalogEntryPatch:
+      description: Kategori / faaliyet alanı güncellemesi (F3.2a); en az bir alan.
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { $ref: '#/components/schemas/CatalogName' }
+        sortOrder: { $ref: '#/components/schemas/SortOrder' }
+        isActive: { type: boolean }
+    Category:
+      type: object
+      required: [id, parentId, name, depth, sortOrder, isActive]
+      properties:
+        id: { type: string, format: uuid }
+        parentId: { type: [string, 'null'], format: uuid }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        depth: { type: integer, minimum: 1, maximum: 3 }
+        sortOrder: { type: integer }
+        isActive: { type: boolean }
+    BrandOption:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, description: Marka adı tek metin (F3 V4) }
+    BrandRequest:
+      type: object
+      required: [id, name, status, isActive, createdAt, decidedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [requested, active, rejected] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        decidedAt: { type: [string, 'null'], format: date-time }
+    AdminBrand:
+      allOf:
+        - { $ref: '#/components/schemas/BrandRequest' }
+        - type: object
+          required: [requestedBy]
+          properties:
+            requestedBy:
+              type: [object, 'null']
+              description: Talep eden toptancı; admin markasında null
+              required: [businessId, legalName]
+              properties:
+                businessId: { type: string, format: uuid }
+                legalName: { type: [string, 'null'] }
+    ActivityTypeAdmin:
+      type: object
+      required: [id, name, sortOrder, isActive]
+      properties:
+        id: { type: string, format: uuid }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        sortOrder: { type: integer }
+        isActive: { type: boolean }
     AdminRoleTemplate:
       type: object
       required: [id, code, name, capability, isBusinessAdmin, version, permissions, updatedAt]

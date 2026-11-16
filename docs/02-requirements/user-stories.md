@@ -239,10 +239,11 @@ Bir platform admini olarak süreleri, kotaları ve politikaları kod değiştirm
 
 Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages/shared/src/settings.ts`). Sınır dışı veya yanlış tipte değer `SETTING_OUT_OF_RANGE` ile reddedilir.
 
-**Kapsam (F2.19):** Plan ve işletme kapsamında yalnızca kodun işletmeyle okuduğu anahtarlar yazılabilir: `connection.cooldown_after_reject_days`, `connection.cooldown_after_buyer_cancel_days`, `connection.daily_request_quota` ([productreport](../productreport.md) "Admin tarafından yönetilen ayarlar"), `security.require_admin_2fa`, `files.upload_url_ttl_minutes`, `files.download_url_ttl_minutes`, `files.image_max_mb`, `files.xlsx_max_mb`, `invitation.team_days`, `directory.search_max_per_minute`. Diğer anahtarlar yalnızca platform kapsamındadır; plan veya işletme kapsamında yazma `SETTING_SCOPE_NOT_ALLOWED` ile reddedilir. Bir anahtar işletmeyle okunmaya başladığında kayıttaki `scopes` alanı aynı PR'da güncellenir.
+**Kapsam (F2.19):** Plan ve işletme kapsamında yalnızca kodun işletmeyle okuduğu anahtarlar yazılabilir: `connection.cooldown_after_reject_days`, `connection.cooldown_after_buyer_cancel_days`, `connection.daily_request_quota` ([productreport](../productreport.md) "Admin tarafından yönetilen ayarlar"), `security.require_admin_2fa`, `files.upload_url_ttl_minutes`, `files.download_url_ttl_minutes`, `files.image_max_mb`, `files.xlsx_max_mb`, `invitation.team_days`, `directory.search_max_per_minute`, `catalog.brand_request_daily_limit` (F3.2a). Diğer anahtarlar yalnızca platform kapsamındadır; plan veya işletme kapsamında yazma `SETTING_SCOPE_NOT_ALLOWED` ile reddedilir. Bir anahtar işletmeyle okunmaya başladığında kayıttaki `scopes` alanı aynı PR'da güncellenir.
 
 | Anahtar | Varsayılan | Tip | Alt sınır | Üst sınır |
 | --- | --- | --- | --- | --- |
+| `catalog.brand_request_daily_limit` | 10 (toptancı başına kayan 24 saatte marka talebi, US-029 AC2, F3.2a K2) | tamsayı | 1 | 100 |
 | `connection.request_ttl_days` | 14 | tamsayı | 1 | 90 |
 | `connection.cooldown_after_reject_days` | 30 | tamsayı | 7 | 365 |
 | `connection.cooldown_after_buyer_cancel_days` | 30 | tamsayı | 7 | 365 |
@@ -714,6 +715,7 @@ Bir toptancı admini olarak mevcut Excel listemi içe aktarmak istiyorum; böyle
 | Sipariş yola çıktı / teslim edildi (onay bekliyor) | Şube adminleri |
 | Teslim itirazı | Toptancı adminleri + depo |
 | Yeni teslimat atandı | Kargocu |
+| Marka talebi onaylandı / reddedildi (US-029 AC2) | Talebi gönderen (hâlâ aktif üyeyse) + toptancı adminleri (F3.2a K5) |
 
 ### US-055 — Plan ve hak sistemi
 

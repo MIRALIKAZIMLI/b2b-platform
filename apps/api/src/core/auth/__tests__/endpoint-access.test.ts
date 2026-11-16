@@ -25,6 +25,9 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'GET /api/v1/catalog/regions': 'public',
   // F3.1: birim kataloğu, giriş yeterli (ürün formu; kart K4).
   'GET /api/v1/catalog/units': 'authenticated',
+  // F3.2a: kategori ağacı ve aktif markalar, giriş yeterli (ürün formu, perakendeci süzgeci).
+  'GET /api/v1/catalog/categories': 'authenticated',
+  'GET /api/v1/catalog/brands': 'authenticated',
   'GET /api/v1/dev/sms-outbox': 'public',
   // Yerel dosya deposu (ADR-0023): erişim token'daki HMAC imzası ve süreyle.
   'PUT /api/v1/dev/storage': 'public',
@@ -80,6 +83,16 @@ const EXPECTED_PLATFORM: Record<string, readonly string[]> = {
   'PATCH /api/v1/admin/catalog/units/:code': ['super_admin', 'content'],
   'PUT /api/v1/admin/catalog/unit-conversions': ['super_admin', 'content'],
   'DELETE /api/v1/admin/catalog/unit-conversions/:fromCode/:toCode': ['super_admin', 'content'],
+  // F3.2a: kategori, marka, faaliyet alanı (US-029), aynı roller; silme ucu yok (R38).
+  'GET /api/v1/admin/catalog/categories': ['super_admin', 'content'],
+  'POST /api/v1/admin/catalog/categories': ['super_admin', 'content'],
+  'PATCH /api/v1/admin/catalog/categories/:id': ['super_admin', 'content'],
+  'GET /api/v1/admin/catalog/brands': ['super_admin', 'content'],
+  'POST /api/v1/admin/catalog/brands': ['super_admin', 'content'],
+  'PATCH /api/v1/admin/catalog/brands/:id': ['super_admin', 'content'],
+  'GET /api/v1/admin/catalog/activity-types': ['super_admin', 'content'],
+  'POST /api/v1/admin/catalog/activity-types': ['super_admin', 'content'],
+  'PATCH /api/v1/admin/catalog/activity-types/:id': ['super_admin', 'content'],
   // F2.18 (productreport "Platform rolleri"): operasyon yönetir, destek yalnız görür.
   'GET /api/v1/admin/buyers': ['super_admin', 'operations', 'support'],
   'GET /api/v1/admin/buyers/:id': ['super_admin', 'operations', 'support'],

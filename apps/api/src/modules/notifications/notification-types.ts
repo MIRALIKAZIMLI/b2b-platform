@@ -18,6 +18,8 @@ export const NOTIFICATION_TYPES = [
   'dormant_profile_reminder',
   'new_buyer_in_region',
   'dormant_warning',
+  'brand_request_approved',
+  'brand_request_rejected',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -109,6 +111,14 @@ const dormantWarningPayload = z.object({
   businessId: z.uuid(),
   userId: z.uuid(),
   days: z.number().int(),
+});
+
+/** F3.2a: marka talebi kararı. */
+const brandDecidedPayload = z.object({
+  brandId: z.uuid(),
+  businessId: z.uuid(),
+  userId: z.uuid(),
+  decision: z.enum(['approved', 'rejected']),
 });
 
 /** Outbox olay türü → bildirimler. Yük outbox'ta zaten doğrulanmıştır; burada yeniden okunur. */
@@ -256,6 +266,23 @@ const EVENTS: ReadonlyMap<string, (payload: unknown) => NotificationIntent[]> = 
           type: 'dormant_warning',
           subjectId: event.businessId,
           params: { days: event.days },
+        },
+      ];
+    },
+  ],
+  [
+    // F3.2a (US-029 AC2, K5): marka talebi kararı toptancıya; konu marka kimliği. Marka adı
+    // serbest metin olduğu için bildirime girmez; uygulama talep listesini API'den açar.
+    'brand.request_decided',
+    (payload: unknown): NotificationIntent[] => {
+      const event = brandDecidedPayload.parse(payload);
+      return [
+        {
+          userId: event.userId,
+          businessId: event.businessId,
+          type: event.decision === 'approved' ? 'brand_request_approved' : 'brand_request_rejected',
+          subjectId: event.brandId,
+          params: {},
         },
       ];
     },

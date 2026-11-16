@@ -93,6 +93,26 @@ export class InvitationService {
     return await this.repository.activeAdminUserIds(tx, businessId);
   }
 
+  /**
+   * Talebi gönderen (hâlâ aktif üyeyse) + aktif adminler, tekrarsız (F3.2a K5: marka kararı
+   * bildiriminin alıcıları; platform işleminde).
+   */
+  async requesterAndAdminUserIdsTx(
+    tx: Tx,
+    businessId: string,
+    requesterUserId: string | null,
+  ): Promise<string[]> {
+    const admins = await this.repository.activeAdminUserIds(tx, businessId);
+    if (
+      requesterUserId === null ||
+      admins.includes(requesterUserId) ||
+      !(await this.repository.isActiveMember(tx, businessId, requesterUserId))
+    ) {
+      return admins;
+    }
+    return [requesterUserId, ...admins];
+  }
+
   async hasActiveAdminTx(tx: Tx, businessId: string): Promise<boolean> {
     return (await this.repository.businessesWithActiveAdmin(tx, [businessId])).has(businessId);
   }

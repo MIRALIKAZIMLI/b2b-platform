@@ -2450,7 +2450,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Kategori ağacı */
+        /**
+         * Kategori ağacı (F3.2a, US-029)
+         * @description Giriş yapmış her kullanıcı (`@Authenticated`). Düz liste (seviye, sıra); yalnız kendisi ve bütün üstleri aktif düğümler (pasif üstün altı da gizlenir, AC4). Ağaç istemcide `parentId` ile kurulur; en çok 3 seviye.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -2465,8 +2468,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Category"][];
+                    };
                 };
+                401: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -2484,11 +2490,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Markalar */
+        /**
+         * Markalar (F3.2a)
+         * @description Giriş yapmış her kullanıcı. Yalnız onaylı (`active`) ve aktif markalar, ada göre; onay bekleyen talepler dönmez (V5; toptancı kendi taleplerini `GET /catalog/brand-requests` ile görür). `q` adın içinde büyük/küçük harf duyarsız arar.
+         */
         get: {
             parameters: {
                 query?: {
                     q?: string;
+                    limit?: number;
                 };
                 header?: never;
                 path?: never;
@@ -2501,12 +2511,19 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["BrandOption"][];
+                    };
                 };
+                401: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
-        /** Marka talebi (US-029 AC2) */
+        /**
+         * Marka talebi (US-029 AC2)
+         * @description İzin `catalog.manage` (yetenek `seller`). Talep `requested` durumunda açılır, admin onayına düşer; onaylanana kadar yalnız talep eden toptancı görür (V5). Ad büyük/küçük harf ve kenar boşluğu duyarsız tektir: aktif marka veya bekleyen başka bir talep aynı adı taşıyorsa 422 `name: [taken]` (kimin talep ettiği söylenmez; reddedilen ad yeniden talep edilebilir, K1). İşletme başına kayan 24 saatte en çok `catalog.brand_request_daily_limit` talep (varsayılan 10, K2); aşılırsa 429 `RATE_LIMITED`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2516,7 +2533,7 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
                         name: string;
@@ -2529,10 +2546,57 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["BrandRequest"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+                429: components["responses"]["Error"];
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/brand-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Toptancının kendi marka talepleri (F3.2a)
+         * @description İzin `catalog.view` (yetenek `seller`). Bekleyen, onaylanan ve reddedilen talepler, yeniden eskiye (en çok 500).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BrandRequest"][];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6111,15 +6175,15 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Genel katalog kaydı oluştur (categories, brands, activity-types, regions)
-         * @description Unvan ve rol şablonu (`job-titles`, `role-templates`, F2.9) ve birimler (`units`, `unit-conversions`, F3.1) kendi yollarında tanımlıdır.
+         * Genel katalog kaydı oluştur (regions)
+         * @description Unvan ve rol şablonu (`job-titles`, `role-templates`, F2.9), birimler (`units`, `unit-conversions`, F3.1), kategori, marka ve faaliyet alanı (`categories`, `brands`, `activity-types`, F3.2a) kendi yollarında tanımlıdır.
          */
         post: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    kind: "categories" | "brands" | "activity-types" | "regions";
+                    kind: "regions";
                 };
                 cookie?: never;
             };
@@ -6181,6 +6245,377 @@ export interface paths {
                     };
                     content?: never;
                 };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kategoriler, pasifler dahil (F3.2a, US-029)
+         * @description Platform rolü `super_admin` veya `content` (F2.9 V1 ile aynı). Düz liste (seviye, sıra).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Category"][];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        /**
+         * Kategori oluştur (US-029 AC1)
+         * @description `parentId` yoksa üst kategori (seviye 1). Üst yoksa 422 `parentId: [not_found]`, pasifse `parentId: [inactive]`, 3. seviyedeyse `parentId: [max_depth]` (ağaç ≤ 3). Aynı üst altında herhangi bir dilde aynı ad 422 `name: [taken]` (K3). Üst kategori sonradan değişmez (K4).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        parentId?: string | null;
+                        name: components["schemas"]["CatalogName"];
+                        sortOrder?: components["schemas"]["SortOrder"];
+                    };
+                };
+            };
+            responses: {
+                /** @description Oluşturuldu */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Category"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Kategoriyi güncelle / pasifleştir
+         * @description Silme ucu yoktur (R38): kategori yalnız pasifleşir. Pasif kategori ve altı ürün formu listesinde görünmez; onu kullanan kayıtlar etkilenmez.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CatalogEntryPatch"];
+                };
+            };
+            responses: {
+                /** @description Güncellendi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Category"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Markalar ve marka talepleri (F3.2a, US-029 AC2)
+         * @description Platform rolü `super_admin` veya `content`. Yeniden eskiye, en çok 500; `status=requested` onay kuyruğudur. Talep eden işletme `requestedBy` alanında.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "requested" | "active" | "rejected";
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBrand"][];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        /**
+         * Marka oluştur (US-029 AC1)
+         * @description Admin markası doğrudan `active` açılır. Ad tekliği `POST /catalog/brands` ile aynı (422 `name: [taken]`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Oluşturuldu */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBrand"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/brands/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Marka talebini onayla / reddet, adı düzelt, pasifleştir
+         * @description `status`: `requested → active` (onay) veya `requested → rejected` (red); başka geçiş 409 `INVALID_STATE_TRANSITION` (state-machines §13). Karar talebi gönderen (hâlâ aktif üyeyse) ve toptancının aktif adminlerine bildirilir (`brand_request_approved` / `brand_request_rejected`). `isActive` yalnız `active` markada değişir (aksi 409). Silme ucu yoktur (R38).
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        /** @enum {string} */
+                        status?: "active" | "rejected";
+                        isActive?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Güncellendi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBrand"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/activity-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Faaliyet alanları, pasifler dahil (F3.2a)
+         * @description Platform rolü `super_admin` veya `content`. Kayıt formu listesi `GET /catalog/activity-types` (yalnız aktifler).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActivityTypeAdmin"][];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        /**
+         * Faaliyet alanı oluştur (US-029 AC1)
+         * @description Herhangi bir dilde var olan bir adla 422 `name: [taken]`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: components["schemas"]["CatalogName"];
+                        sortOrder?: components["schemas"]["SortOrder"];
+                    };
+                };
+            };
+            responses: {
+                /** @description Oluşturuldu */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActivityTypeAdmin"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/activity-types/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Faaliyet alanını güncelle / pasifleştir
+         * @description Silme ucu yoktur (R38). Pasif tür kayıt formunda görünmez; onu seçmiş perakendeciler etkilenmez.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CatalogEntryPatch"];
+                };
+            };
+            responses: {
+                /** @description Güncellendi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActivityTypeAdmin"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         trace?: never;
@@ -7199,6 +7634,57 @@ export interface components {
         UnitCatalog: {
             items: components["schemas"]["Unit"][];
             conversions: components["schemas"]["UnitConversion"][];
+        };
+        /** @description Listede sıra (küçük önce). */
+        SortOrder: number;
+        /** @description Kategori / faaliyet alanı güncellemesi (F3.2a); en az bir alan. */
+        CatalogEntryPatch: {
+            name?: components["schemas"]["CatalogName"];
+            sortOrder?: components["schemas"]["SortOrder"];
+            isActive?: boolean;
+        };
+        Category: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            parentId: string | null;
+            name: components["schemas"]["LocalizedText"];
+            depth: number;
+            sortOrder: number;
+            isActive: boolean;
+        };
+        BrandOption: {
+            /** Format: uuid */
+            id: string;
+            /** @description Marka adı tek metin (F3 V4) */
+            name: string;
+        };
+        BrandRequest: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            status: "requested" | "active" | "rejected";
+            isActive: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            decidedAt: string | null;
+        };
+        AdminBrand: components["schemas"]["BrandRequest"] & {
+            /** @description Talep eden toptancı; admin markasında null */
+            requestedBy: {
+                /** Format: uuid */
+                businessId: string;
+                legalName: string | null;
+            } | null;
+        };
+        ActivityTypeAdmin: {
+            /** Format: uuid */
+            id: string;
+            name: components["schemas"]["LocalizedText"];
+            sortOrder: number;
+            isActive: boolean;
         };
         AdminRoleTemplate: {
             /** Format: uuid */

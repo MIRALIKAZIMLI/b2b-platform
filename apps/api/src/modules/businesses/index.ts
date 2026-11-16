@@ -36,6 +36,8 @@ export {
 // Başka modüllerin FK'ları için tablo tanımı (ör. subscriptions.business_id, F1.4b;
 // memberships.branch_id / warehouse_id, F1.8a).
 export { branches, businesses, warehouses } from './businesses.schema';
+// F3.2a: faaliyet alanı admin yönetimi catalog modülünde (c4 §2 catalog → businesses).
+export { activityTypes } from './businesses.schema';
 export {
   profileCompleteness,
   PROFILE_FIELDS,
