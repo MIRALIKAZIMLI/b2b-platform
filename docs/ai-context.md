@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-16 (F3.2a: kategori, marka, faaliyet alanı API).
+Son güncelleme: 2026-11-16 (F3.2b: admin kategori, marka, faaliyet alanı ekranları).
 
 ## 1. Mimari özeti
 
@@ -136,6 +136,7 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F2.19 | Admin ayarlar (US-017): `GET/PUT /admin/settings` yalnız `super_admin` (T1). `0031` DEFINER `settings_admin_list` (yalnız platform bağlamı). Kayıtta anahtar başına `scopes` (`layered`); plan/işletme yalnız kodun işletmeyle okuduğu anahtarlarda, aksi `SETTING_SCOPE_NOT_ALLOWED` (US-017 "Kapsam"; kısıt admin ucunda, `SettingsService.set` genel). Yeni anahtar işletmeyle okunmaya başlarsa `layered(...)` + US-017 paragrafı aynı PR'da. Web `features/admin-settings` |
 | F3.1 | Birim kataloğu (US-028): yeni `catalog` modülü; `0032` `units` (PK UN/ECE `code`, silinmez: app_user'a DELETE yok) + `unit_conversions` (G). `GET /catalog/units` `@Authenticated` (yalnız aktif); admin `GET|POST /admin/catalog/units`, `PATCH .../units/{code}`, `PUT|DELETE .../unit-conversions` (`super_admin` + `content`). Aynı tür ve tek yön servis kuralı (422). Seed `seedCatalog` (19 birim, 5 dönüşüm). Web `features/admin-units` |
 | F3.2a | Kategori, marka, faaliyet alanı (US-029): `0033` `categories` (G, `depth` tetikleyiciyle ≤ 3, üst değişmez) + `brands` (G, okuma: aktif + kendi talebi + platform; `is_active`); silme yok (R38; `activity_types` silme politikası kalktı). Talep yalnız DEFINER `brand_request_create` (R37; kayan 24 saat `catalog.brand_request_daily_limit`, `CT001` → 429). `BrandStateMachine` (§13). `GET /catalog/categories|brands` `@Authenticated`; `POST /catalog/brands` `catalog.manage`, `GET /catalog/brand-requests` `catalog.view`; admin `/admin/catalog/categories|brands|activity-types` (`super_admin` + `content`). Karar bildirimi `brand.request_decided` → talep eden + adminler. Seed 8 üst + 43 alt kategori. K1–K6 Mimar onaylı varsayım (kart) |
+| F3.2b | Web admin ekranları `/admin/categories` (girintili ağaç, satırdan alt kategori, 3. seviyede yok, pasif üstün altı "üst pasif"), `/admin/brands` (sekmeler talepler/onaylı/reddedilen + arama; onay tek tık, red onay penceresiyle), `/admin/activity-types`; menü `CATALOG_ADMIN_ROLES`. Ortak: `taxonomyFormBody`, `brandFormBody`, `taxonomyFailure`, `categoryTree` (`@b2b/shared`). E2E yardımcı `createBrandRequest`. Çeviriler `adminTaxonomy.*` taslak |
 
 **Sıradaki:** F3.2b admin katalog ekranları → F3.3a (faz spesifikasyonu `tasks/F3-faz-spesifikasyonu.md`); not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 

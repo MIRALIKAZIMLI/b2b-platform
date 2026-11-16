@@ -386,3 +386,24 @@ export async function setBusinessStatus(businessId: string, status: string): Pro
     await client.query('commit');
   });
 }
+
+/**
+ * Toptancının bekleyen marka talebi (F3.2b): `POST /catalog/brands` ile aynı satır (`requested`,
+ * talep eden işletme ve kullanıcı); platform bağlamında, migrator ile.
+ */
+export async function createBrandRequest(
+  businessId: string,
+  userId: string,
+  name: string,
+): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    await client.query(
+      `insert into brands (id, name, status, requested_by_business_id, requested_by_user_id)
+       values ($1, $2, 'requested', $3, $4)`,
+      [randomUUID(), name, businessId, userId],
+    );
+    await client.query('commit');
+  });
+}

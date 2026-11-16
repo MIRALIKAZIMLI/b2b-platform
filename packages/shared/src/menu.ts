@@ -88,6 +88,29 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
       path: 'units',
       platformRoles: CATALOG_ADMIN_ROLES,
     },
+    // F3.2b: kategori ağacı, markalar (talep onayı), faaliyet alanları (US-029); F3.2a uçlarıyla
+    // aynı roller (süper admin + içerik).
+    {
+      key: 'categories',
+      anyOf: [],
+      ready: true,
+      path: 'categories',
+      platformRoles: CATALOG_ADMIN_ROLES,
+    },
+    {
+      key: 'brands',
+      anyOf: [],
+      ready: true,
+      path: 'brands',
+      platformRoles: CATALOG_ADMIN_ROLES,
+    },
+    {
+      key: 'activity_types',
+      anyOf: [],
+      ready: true,
+      path: 'activity-types',
+      platformRoles: CATALOG_ADMIN_ROLES,
+    },
     // F2.19: sistem ayarları (US-017), yalnız süper admin (T1).
     {
       key: 'settings',
