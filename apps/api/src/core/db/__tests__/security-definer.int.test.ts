@@ -51,6 +51,7 @@ const EXPECTED_FUNCTIONS = [
   'platform_staff_role',
   'push_token_register',
   'seller_application_submit',
+  'settings_admin_list',
   'settings_get',
   'settings_put',
   'subscription_start_self_signup',

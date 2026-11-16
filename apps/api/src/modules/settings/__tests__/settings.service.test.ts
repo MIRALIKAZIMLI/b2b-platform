@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import type { SettingKey } from '@b2b/shared';
+import { SETTING_KEYS, type SettingKey } from '@b2b/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AuditEntry, AuditRecorder } from '../../../core/audit';
 import type { Tx } from '../../../core/db';
 import { DomainError } from '../../../core/errors/domain-error';
 import type {
   SettingLayers,
+  SettingScopeRow,
   SettingsCacheLookup,
   SettingsCachePort,
   SettingsRepositoryPort,
@@ -42,6 +43,34 @@ class FakeRepository implements SettingsRepositoryPort {
       if (this.business.has(businessKey)) layers.business = this.business.get(businessKey);
     }
     return Promise.resolve(layers);
+  }
+
+  /** F2.19: kapsam + miras satırları (`settings_admin_list` ile aynı seçim). */
+  listScopeTx(_tx: Tx, target: SettingTarget): Promise<SettingScopeRow[]> {
+    const at = new Date('2026-11-15T10:00:00Z');
+    const rows: SettingScopeRow[] = [...this.platform].map(([key, value]) => ({
+      scope: 'platform',
+      key,
+      value,
+      updatedAt: at,
+    }));
+    const planId =
+      target.scope === 'plan'
+        ? target.planId
+        : target.scope === 'business'
+          ? this.planOf.get(target.businessId)
+          : undefined;
+    for (const [compound, value] of this.plan) {
+      const [id, key] = compound.split(':') as [string, string];
+      if (id === planId) rows.push({ scope: 'plan', key, value, updatedAt: at });
+    }
+    if (target.scope === 'business') {
+      for (const [compound, value] of this.business) {
+        const [id, key] = compound.split(':') as [string, string];
+        if (id === target.businessId) rows.push({ scope: 'business', key, value, updatedAt: at });
+      }
+    }
+    return Promise.resolve(rows);
   }
 
   async write(
@@ -374,5 +403,65 @@ describe('SettingsService (birim)', () => {
     await domainErrorCode(service.set('connection.cooldown_after_reject_days', 6, platform, actor));
 
     expect(audit.entries).toEqual([]);
+  });
+
+  describe('F2.19 listForScopeTx (admin ekranı)', () => {
+    const tx = {} as Tx;
+
+    it('F2.19-AC1: platform kapsamı kendi değerini, miras olarak kod varsayılanını döner', async () => {
+      repo.platform.set('connection.daily_request_quota', 40);
+      const items = await service.listForScopeTx(tx, { scope: 'platform' });
+      const quota = items.find((item) => item.key === 'connection.daily_request_quota');
+      expect(quota).toMatchObject({
+        kind: 'int',
+        min: 1,
+        max: 1000,
+        value: 40,
+        inheritedValue: 20,
+        inheritedFrom: 'default',
+      });
+      expect(quota?.scopes).toEqual(['platform', 'plan', 'business']);
+      const ttl = items.find((item) => item.key === 'otp.code_ttl_minutes');
+      expect(ttl).toMatchObject({ value: null, updatedAt: null, scopes: ['platform'] });
+      expect(items).toHaveLength(SETTING_KEYS.length);
+    });
+
+    it('F2.19-AC1: işletme kapsamında miras en özel kapsamdan gelir (plan → platform → varsayılan)', async () => {
+      const businessId = randomUUID();
+      const planId = randomUUID();
+      repo.planOf.set(businessId, planId);
+      repo.platform.set('connection.daily_request_quota', 40);
+      repo.plan.set(`${planId}:connection.daily_request_quota`, 100);
+      repo.platform.set('connection.cooldown_after_reject_days', 45);
+      repo.business.set(`${businessId}:invitation.team_days`, 3);
+      const items = await service.listForScopeTx(tx, { scope: 'business', businessId });
+      const byKey = new Map(items.map((item) => [item.key, item]));
+      expect(byKey.get('connection.daily_request_quota')).toMatchObject({
+        value: null,
+        inheritedValue: 100,
+        inheritedFrom: 'plan',
+      });
+      expect(byKey.get('connection.cooldown_after_reject_days')).toMatchObject({
+        inheritedValue: 45,
+        inheritedFrom: 'platform',
+      });
+      expect(byKey.get('invitation.team_days')).toMatchObject({
+        value: 3,
+        inheritedValue: 7,
+        inheritedFrom: 'default',
+      });
+    });
+
+    it('F2.19-AC1: geçersiz kayıtlı değer ekranda yok sayılır', async () => {
+      repo.platform.set('connection.cooldown_after_reject_days', 3);
+      const items = await service.listForScopeTx(tx, { scope: 'plan', planId: randomUUID() });
+      expect(
+        items.find((item) => item.key === 'connection.cooldown_after_reject_days'),
+      ).toMatchObject({
+        value: null,
+        inheritedValue: 30,
+        inheritedFrom: 'default',
+      });
+    });
   });
 });

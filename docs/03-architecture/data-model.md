@@ -274,6 +274,7 @@ Erişim (S sınıfı, F1.4a): `app_user`'ın tabloda hiçbir izni yoktur. `migra
 
 - `settings_get(p_key text, p_business_id uuid)` → `(scope, value)` satırları: platform satırı ve (`p_business_id` verildiyse) işletme satırı ile işletmenin güncel aboneliğinin (`subscriptions.status IN ('active','grace','read_only')`) planına ait `scope = 'plan'` satırı (F1.4b). İşletme ve plan satırları yalnızca `p_business_id = app.business_id` iken veya platform bağlamında döner.
 - `settings_put(p_scope text, p_scope_id uuid, p_key text, p_value jsonb) RETURNS jsonb`: yalnızca platform bağlamında (`app.is_platform = 'true'`); `updated_by` = `app.user_id`. Aynı kapsamdaki önceki değeri döner (yoksa `NULL`); `SettingsService.set` bunu aynı işlemde audit'e eski değer olarak yazar (US-017 AC2, F1.9). Değer doğrulaması uygulamada (`SettingsService`).
+- `settings_admin_list(p_scope text, p_scope_id uuid)` → `(scope, key, value, updated_at)` satırları (F2.19, admin ayar ekranı): yalnızca platform bağlamında (aksi `42501`). Platform satırları; `p_scope = 'plan'` ise o planın satırları; `p_scope = 'business'` ise işletmenin satırları ve işletmenin güncel aboneliğinin planının satırları (`settings_get` ile aynı plan seçimi).
 
 SECURITY DEFINER fonksiyonlarda search_path her zaman `pg_catalog, public, pg_temp` ile (pg_temp en sonda) sabitlenir.
 

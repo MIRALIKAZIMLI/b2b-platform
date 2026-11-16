@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { type Tx, withPlatformTx, withSystemTx, withTenantTx } from '../../core/db';
 import type {
   SettingLayers,
+  SettingScopeRow,
   SettingsRepositoryPort,
   SettingTarget,
   SettingWriteHook,
@@ -12,6 +13,13 @@ import type {
 interface LayerRow extends Record<string, unknown> {
   scope: string;
   value: unknown;
+}
+
+interface ScopeRow extends Record<string, unknown> {
+  scope: 'platform' | 'plan' | 'business';
+  key: string;
+  value: unknown;
+  updated_at: Date | string;
 }
 
 interface PutRow extends Record<string, unknown> {
@@ -47,6 +55,22 @@ export class SettingsRepository implements SettingsRepositoryPort {
     return layers;
   }
 
+  /**
+   * `settings_admin_list` (F2.19): yalnız platform bağlamında çalışır (aksi 42501); çağıranın
+   * `withPlatformTx` işleminde.
+   */
+  async listScopeTx(tx: Tx, target: SettingTarget): Promise<SettingScopeRow[]> {
+    const result = await tx.execute<ScopeRow>(
+      sql`select scope, key, value, updated_at from settings_admin_list(${target.scope}, ${scopeIdOf(target)}::uuid)`,
+    );
+    return result.rows.map((row) => ({
+      scope: row.scope,
+      key: row.key,
+      value: row.value,
+      updatedAt: new Date(row.updated_at),
+    }));
+  }
+
   async write(
     target: SettingTarget,
     key: SettingKey,
@@ -54,12 +78,7 @@ export class SettingsRepository implements SettingsRepositoryPort {
     userId: string,
     afterWrite: SettingWriteHook,
   ): Promise<void> {
-    const scopeId =
-      target.scope === 'business'
-        ? target.businessId
-        : target.scope === 'plan'
-          ? target.planId
-          : null;
+    const scopeId = scopeIdOf(target);
     const json = JSON.stringify(value);
     await withPlatformTx({ userId }, async (tx) => {
       const result = await tx.execute<PutRow>(
@@ -68,4 +87,10 @@ export class SettingsRepository implements SettingsRepositoryPort {
       await afterWrite(tx, result.rows[0]?.previous ?? null);
     });
   }
+}
+
+function scopeIdOf(target: SettingTarget): string | null {
+  if (target.scope === 'business') return target.businessId;
+  if (target.scope === 'plan') return target.planId;
+  return null;
 }

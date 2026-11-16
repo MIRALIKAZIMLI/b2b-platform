@@ -1,4 +1,5 @@
 // İstemci ve sunucunun paylaştığı kod (hata kodları, izin kodları, ayarlar, env şeması).
+export * from './admin-settings';
 export * from './business-profile';
 export * from './buyer-moderation';
 export * from './connections';

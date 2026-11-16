@@ -28,8 +28,18 @@ export interface SettingsCacheLookup {
   readonly planVersion: string;
 }
 
+/** Bir kapsamın ekran okuması için ham satır (`settings_admin_list`, F2.19). */
+export interface SettingScopeRow {
+  readonly scope: 'platform' | 'plan' | 'business';
+  readonly key: string;
+  readonly value: unknown;
+  readonly updatedAt: Date;
+}
+
 export interface SettingsRepositoryPort {
   read(key: SettingKey, businessId?: string): Promise<SettingLayers>;
+  /** Çağıranın platform işleminde kapsamın (ve mirasının) bütün satırları (F2.19). */
+  listScopeTx(tx: Tx, target: SettingTarget): Promise<SettingScopeRow[]>;
   /**
    * Değeri yazar ve aynı işlemde `afterWrite(tx, previous)` çağırır (audit, US-017 AC2).
    * `previous` aynı kapsamdaki önceki ham değerdir; satır yoksa null. `afterWrite` hata verirse

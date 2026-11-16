@@ -3991,4 +3991,635 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: '«{name}» удалён навсегда.',
     tr: '«{name}» kalıcı olarak silindi.',
   },
+  // F2.19: admin ayarlar ekranı (US-017). Çeviriler taslak; kullanıcı onayı bekliyor.
+  'adminSettings.eyebrow': {
+    az: 'Platforma',
+    ru: 'Платформа',
+    tr: 'Platform',
+  },
+  'adminSettings.title': {
+    az: 'Sistem ayarları',
+    ru: 'Системные настройки',
+    tr: 'Sistem ayarları',
+  },
+  'adminSettings.description': {
+    az: 'Müddətləri, kvotaları və qaydaları kodu dəyişmədən idarə edin. Ən xüsusi səviyyə qüvvədədir: müəssisə → plan → platforma.',
+    ru: 'Управляйте сроками, квотами и правилами без изменения кода. Действует самый частный уровень: предприятие → план → платформа.',
+    tr: 'Süreleri, kotaları ve kuralları kod değiştirmeden yönetin. En özel düzey geçerlidir: işletme → plan → platform.',
+  },
+  'adminSettings.scope_label': {
+    az: 'Səviyyə',
+    ru: 'Уровень',
+    tr: 'Kapsam',
+  },
+  'adminSettings.scope.platform': {
+    az: 'Platforma',
+    ru: 'Платформа',
+    tr: 'Platform',
+  },
+  'adminSettings.scope.plan': {
+    az: 'Plan',
+    ru: 'План',
+    tr: 'Plan',
+  },
+  'adminSettings.scope.business': {
+    az: 'Müəssisə',
+    ru: 'Предприятие',
+    tr: 'İşletme',
+  },
+  'adminSettings.plan_label': {
+    az: 'Plan',
+    ru: 'План',
+    tr: 'Plan',
+  },
+  'adminSettings.plan_placeholder': {
+    az: 'Plan seçin',
+    ru: 'Выберите план',
+    tr: 'Plan seçin',
+  },
+  'adminSettings.business_label': {
+    az: 'Müəssisə',
+    ru: 'Предприятие',
+    tr: 'İşletme',
+  },
+  'adminSettings.business_placeholder': {
+    az: 'Müəssisə seçin',
+    ru: 'Выберите предприятие',
+    tr: 'İşletme seçin',
+  },
+  'adminSettings.business_group.sellers': {
+    az: 'Topdançılar',
+    ru: 'Оптовики',
+    tr: 'Toptancılar',
+  },
+  'adminSettings.business_group.buyers': {
+    az: 'Pərakəndəçilər',
+    ru: 'Розничные покупатели',
+    tr: 'Perakendeciler',
+  },
+  'adminSettings.load_more': {
+    az: 'Daha çox yüklə',
+    ru: 'Загрузить ещё',
+    tr: 'Daha fazla yükle',
+  },
+  'adminSettings.pick_target': {
+    az: 'Ayarları görmək üçün yuxarıdan seçim edin.',
+    ru: 'Выберите вариант выше, чтобы увидеть настройки.',
+    tr: 'Ayarları görmek için yukarıdan seçim yapın.',
+  },
+  'adminSettings.scoped_note': {
+    az: 'Bu səviyyədə yalnız plana və ya müəssisəyə görə dəyişə bilən ayarlar göstərilir. Digərləri yalnız platforma səviyyəsindədir.',
+    ru: 'На этом уровне показаны только настройки, которые могут различаться по плану или предприятию. Остальные задаются только на уровне платформы.',
+    tr: 'Bu kapsamda yalnızca plana veya işletmeye göre değişebilen ayarlar gösterilir. Diğerleri yalnızca platform düzeyindedir.',
+  },
+  'adminSettings.search_label': {
+    az: 'Ayar axtar',
+    ru: 'Поиск настройки',
+    tr: 'Ayar ara',
+  },
+  'adminSettings.search_placeholder': {
+    az: 'Ad və ya açar',
+    ru: 'Название или ключ',
+    tr: 'Ad veya anahtar',
+  },
+  'adminSettings.empty_search': {
+    az: 'Axtarışa uyğun ayar tapılmadı.',
+    ru: 'Настройки по запросу не найдены.',
+    tr: 'Aramaya uygun ayar bulunamadı.',
+  },
+  'adminSettings.source.here': {
+    az: 'Bu səviyyədə',
+    ru: 'На этом уровне',
+    tr: 'Bu kapsamda',
+  },
+  'adminSettings.source.plan': {
+    az: 'Plandan',
+    ru: 'Из плана',
+    tr: 'Plandan',
+  },
+  'adminSettings.source.platform': {
+    az: 'Platformadan',
+    ru: 'С платформы',
+    tr: 'Platformdan',
+  },
+  'adminSettings.source.default': {
+    az: 'Standart',
+    ru: 'По умолчанию',
+    tr: 'Varsayılan',
+  },
+  'adminSettings.inherited_hint': {
+    az: 'Bu səviyyədə dəyər yoxdur; qüvvədə olan: {value}',
+    ru: 'На этом уровне значения нет; действует: {value}',
+    tr: 'Bu kapsamda değer yok; geçerli olan: {value}',
+  },
+  'adminSettings.overrides_hint': {
+    az: 'Bu səviyyə olmasaydı: {value} ({source})',
+    ru: 'Без этого уровня: {value} ({source})',
+    tr: 'Bu kapsam olmasaydı: {value} ({source})',
+  },
+  'adminSettings.edit': {
+    az: 'Dəyişdir',
+    ru: 'Изменить',
+    tr: 'Değiştir',
+  },
+  'adminSettings.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'adminSettings.saving': {
+    az: 'Yadda saxlanılır…',
+    ru: 'Сохранение…',
+    tr: 'Kaydediliyor…',
+  },
+  'adminSettings.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'adminSettings.saved': {
+    az: 'Yadda saxlandı',
+    ru: 'Сохранено',
+    tr: 'Kaydedildi',
+  },
+  'adminSettings.value_label': {
+    az: 'Yeni dəyər',
+    ru: 'Новое значение',
+    tr: 'Yeni değer',
+  },
+  'adminSettings.hint.int': {
+    az: 'Tam ədəd, {min}–{max}',
+    ru: 'Целое число, {min}–{max}',
+    tr: 'Tam sayı, {min}–{max}',
+  },
+  'adminSettings.hint.int_list': {
+    az: 'Artan sıra ilə, vergüllə: {min}–{max}',
+    ru: 'По возрастанию, через запятую: {min}–{max}',
+    tr: 'Artan sırada, virgülle: {min}–{max}',
+  },
+  'adminSettings.hint.version': {
+    az: 'Format: 1.2.3',
+    ru: 'Формат: 1.2.3',
+    tr: 'Biçim: 1.2.3',
+  },
+  'adminSettings.hint.url': {
+    az: 'Boş və ya https:// ünvanı',
+    ru: 'Пусто или адрес https://',
+    tr: 'Boş veya https:// adresi',
+  },
+  'adminSettings.hint.country_codes': {
+    az: 'Vergüllə: +994, +90',
+    ru: 'Через запятую: +994, +90',
+    tr: 'Virgülle: +994, +90',
+  },
+  'adminSettings.invalid': {
+    az: 'Dəyər icazə verilən hədlərdən kənardadır.',
+    ru: 'Значение вне допустимых пределов.',
+    tr: 'Değer izin verilen sınırların dışında.',
+  },
+  'adminSettings.bool.true': {
+    az: 'Bəli',
+    ru: 'Да',
+    tr: 'Evet',
+  },
+  'adminSettings.bool.false': {
+    az: 'Xeyr',
+    ru: 'Нет',
+    tr: 'Hayır',
+  },
+  'adminSettings.empty_value': {
+    az: '(boş)',
+    ru: '(пусто)',
+    tr: '(boş)',
+  },
+  'adminSettings.updated_at': {
+    az: 'Dəyişdirilib: {date}',
+    ru: 'Изменено: {date}',
+    tr: 'Değiştirildi: {date}',
+  },
+  'adminSettings.group.connection': {
+    az: 'Bağlantı sorğuları',
+    ru: 'Запросы на связь',
+    tr: 'Bağlantı istekleri',
+  },
+  'adminSettings.group.delivery': {
+    az: 'Çatdırılma',
+    ru: 'Доставка',
+    tr: 'Teslimat',
+  },
+  'adminSettings.group.dormant': {
+    az: 'Bağlantısız hesablar',
+    ru: 'Аккаунты без связей',
+    tr: 'Bağlantısız hesaplar',
+  },
+  'adminSettings.group.invitation': {
+    az: 'Dəvətlər',
+    ru: 'Приглашения',
+    tr: 'Davetler',
+  },
+  'adminSettings.group.onboarding': {
+    az: 'Qeydiyyat',
+    ru: 'Регистрация',
+    tr: 'Kayıt',
+  },
+  'adminSettings.group.seller_application': {
+    az: 'Topdançı müraciəti',
+    ru: 'Заявка оптовика',
+    tr: 'Toptancı başvurusu',
+  },
+  'adminSettings.group.buyer_registration': {
+    az: 'Pərakəndəçi qeydiyyatı',
+    ru: 'Регистрация розничного покупателя',
+    tr: 'Perakendeci kaydı',
+  },
+  'adminSettings.group.legal': {
+    az: 'Hüquqi mətnlər',
+    ru: 'Юридические тексты',
+    tr: 'Hukuki metinler',
+  },
+  'adminSettings.group.sms': {
+    az: 'SMS',
+    ru: 'SMS',
+    tr: 'SMS',
+  },
+  'adminSettings.group.otp': {
+    az: 'Təsdiq kodu (OTP)',
+    ru: 'Код подтверждения (OTP)',
+    tr: 'Doğrulama kodu (OTP)',
+  },
+  'adminSettings.group.auth': {
+    az: 'Sessiyalar',
+    ru: 'Сессии',
+    tr: 'Oturumlar',
+  },
+  'adminSettings.group.access': {
+    az: 'İcazələr',
+    ru: 'Права доступа',
+    tr: 'İzinler',
+  },
+  'adminSettings.group.security': {
+    az: 'Təhlükəsizlik',
+    ru: 'Безопасность',
+    tr: 'Güvenlik',
+  },
+  'adminSettings.group.mobile': {
+    az: 'Mobil tətbiq',
+    ru: 'Мобильное приложение',
+    tr: 'Mobil uygulama',
+  },
+  'adminSettings.group.system': {
+    az: 'Sistem',
+    ru: 'Система',
+    tr: 'Sistem',
+  },
+  'adminSettings.group.idempotency': {
+    az: 'Təkrar sorğudan qoruma',
+    ru: 'Защита от повторных запросов',
+    tr: 'Tekrar istek koruması',
+  },
+  'adminSettings.group.outbox': {
+    az: 'Hadisə növbəsi',
+    ru: 'Очередь событий',
+    tr: 'Olay kuyruğu',
+  },
+  'adminSettings.group.push': {
+    az: 'Push bildirişləri',
+    ru: 'Push-уведомления',
+    tr: 'Push bildirimleri',
+  },
+  'adminSettings.group.files': {
+    az: 'Fayllar',
+    ru: 'Файлы',
+    tr: 'Dosyalar',
+  },
+  'adminSettings.group.settings': {
+    az: 'Ayarlar keşi',
+    ru: 'Кэш настроек',
+    tr: 'Ayar önbelleği',
+  },
+  'adminSettings.group.i18n': {
+    az: 'Tərcümələr',
+    ru: 'Переводы',
+    tr: 'Çeviriler',
+  },
+  'adminSettings.group.directory': {
+    az: 'Pərakəndəçi kataloqu',
+    ru: 'Каталог розничных покупателей',
+    tr: 'Perakendeci dizini',
+  },
+  'adminSettings.key.connection.request_ttl_days': {
+    az: 'Sorğunun etibarlılıq müddəti (gün)',
+    ru: 'Срок действия запроса (дни)',
+    tr: 'İsteğin geçerlilik süresi (gün)',
+  },
+  'adminSettings.key.connection.cooldown_after_reject_days': {
+    az: 'Rəddən sonra gözləmə (gün)',
+    ru: 'Ожидание после отказа (дни)',
+    tr: 'Ret sonrası bekleme (gün)',
+  },
+  'adminSettings.key.connection.cooldown_after_buyer_cancel_days': {
+    az: 'Pərakəndəçi ləğvindən sonra gözləmə (gün)',
+    ru: 'Ожидание после отмены покупателем (дни)',
+    tr: 'Perakendeci iptali sonrası bekleme (gün)',
+  },
+  'adminSettings.key.connection.daily_request_quota': {
+    az: 'Gündəlik sorğu kvotası',
+    ru: 'Дневная квота запросов',
+    tr: 'Günlük istek kotası',
+  },
+  'adminSettings.key.connection.block_rate_alert_pct': {
+    az: 'Bloklanma faizi xəbərdarlıq həddi (%)',
+    ru: 'Порог оповещения о блокировках (%)',
+    tr: 'Engellenme oranı uyarı eşiği (%)',
+  },
+  'adminSettings.key.connection.request_expiry_interval_minutes': {
+    az: 'Vaxtı keçən sorğuların yoxlanma aralığı (dəq)',
+    ru: 'Интервал проверки просроченных запросов (мин)',
+    tr: 'Süresi dolan istek kontrol aralığı (dk)',
+  },
+  'adminSettings.key.connection.request_expiry_batch_size': {
+    az: 'Vaxtı keçən sorğular: bir dəfəyə say',
+    ru: 'Просроченные запросы: за один проход',
+    tr: 'Süresi dolan istekler: tek seferde sayı',
+  },
+  'adminSettings.key.connection.request_expiry_lock_seconds': {
+    az: 'Vaxtı keçən sorğular: kilid müddəti (san)',
+    ru: 'Просроченные запросы: время блокировки (с)',
+    tr: 'Süresi dolan istekler: kilit süresi (sn)',
+  },
+  'adminSettings.key.delivery.auto_confirm_hours': {
+    az: 'Avtomatik təsdiq (saat)',
+    ru: 'Автоподтверждение (часы)',
+    tr: 'Otomatik onay (saat)',
+  },
+  'adminSettings.key.delivery.location_mismatch_meters': {
+    az: 'Ünvan uyğunsuzluğu həddi (metr)',
+    ru: 'Порог несовпадения адреса (м)',
+    tr: 'Konum uyuşmazlığı eşiği (metre)',
+  },
+  'adminSettings.key.dormant.reminder_days': {
+    az: 'Xatırlatma günləri',
+    ru: 'Дни напоминаний',
+    tr: 'Hatırlatma günleri',
+  },
+  'adminSettings.key.dormant.warning_day': {
+    az: 'Xəbərdarlıq günü',
+    ru: 'День предупреждения',
+    tr: 'Uyarı günü',
+  },
+  'adminSettings.key.dormant.deactivate_day': {
+    az: 'Passivləşdirmə günü',
+    ru: 'День деактивации',
+    tr: 'Pasifleştirme günü',
+  },
+  'adminSettings.key.dormant.delete_day': {
+    az: 'Silinmə günü',
+    ru: 'День удаления',
+    tr: 'Silme günü',
+  },
+  'adminSettings.key.dormant.job_hour_utc': {
+    az: 'Gecə işinin saatı (UTC)',
+    ru: 'Час ночной задачи (UTC)',
+    tr: 'Gece işinin saati (UTC)',
+  },
+  'adminSettings.key.dormant.batch_size': {
+    az: 'Gecə işi: bir dəfəyə say',
+    ru: 'Ночная задача: за один проход',
+    tr: 'Gece işi: tek seferde sayı',
+  },
+  'adminSettings.key.dormant.lock_seconds': {
+    az: 'Gecə işi: kilid müddəti (san)',
+    ru: 'Ночная задача: время блокировки (с)',
+    tr: 'Gece işi: kilit süresi (sn)',
+  },
+  'adminSettings.key.dormant.touch_min_interval_minutes': {
+    az: 'Fəaliyyət qeydinin minimum aralığı (dəq)',
+    ru: 'Мин. интервал записи активности (мин)',
+    tr: 'Etkinlik kaydının en kısa aralığı (dk)',
+  },
+  'adminSettings.key.invitation.seller_activation_days': {
+    az: 'Topdançı aktivləşdirmə dəvəti (gün)',
+    ru: 'Приглашение на активацию оптовика (дни)',
+    tr: 'Toptancı aktivasyon daveti (gün)',
+  },
+  'adminSettings.key.invitation.team_days': {
+    az: 'Komanda dəvəti (gün)',
+    ru: 'Приглашение в команду (дни)',
+    tr: 'Ekip daveti (gün)',
+  },
+  'adminSettings.key.onboarding.seller_mode': {
+    az: 'Topdançı qeydiyyat rejimi',
+    ru: 'Режим регистрации оптовика',
+    tr: 'Toptancı kayıt modu',
+  },
+  'adminSettings.key.seller_application.ip_max_per_hour': {
+    az: 'IP üzrə saatlıq müraciət limiti',
+    ru: 'Лимит заявок с IP в час',
+    tr: 'IP başına saatlik başvuru sınırı',
+  },
+  'adminSettings.key.buyer_registration.ip_max_per_hour': {
+    az: 'IP üzrə saatlıq qeydiyyat limiti',
+    ru: 'Лимит регистраций с IP в час',
+    tr: 'IP başına saatlik kayıt sınırı',
+  },
+  'adminSettings.key.onboarding.buyer_plan_code': {
+    az: 'Yeni pərakəndəçinin planı',
+    ru: 'План нового розничного покупателя',
+    tr: 'Yeni perakendecinin planı',
+  },
+  'adminSettings.key.legal.data_sharing_version': {
+    az: 'Məlumat paylaşımı mətninin versiyası',
+    ru: 'Версия текста об обмене данными',
+    tr: 'Veri paylaşım metninin sürümü',
+  },
+  'adminSettings.key.sms.daily_cap': {
+    az: 'Gündəlik SMS limiti',
+    ru: 'Дневной лимит SMS',
+    tr: 'Günlük SMS sınırı',
+  },
+  'adminSettings.key.sms.allowed_country_codes': {
+    az: 'İcazəli ölkə kodları',
+    ru: 'Разрешённые коды стран',
+    tr: 'İzinli ülke kodları',
+  },
+  'adminSettings.key.otp.code_ttl_minutes': {
+    az: 'Kodun etibarlılıq müddəti (dəq)',
+    ru: 'Срок действия кода (мин)',
+    tr: 'Kodun geçerlilik süresi (dk)',
+  },
+  'adminSettings.key.otp.resend_interval_seconds': {
+    az: 'Təkrar göndərmə aralığı (san)',
+    ru: 'Интервал повторной отправки (с)',
+    tr: 'Yeniden gönderme aralığı (sn)',
+  },
+  'adminSettings.key.otp.max_per_hour': {
+    az: 'Nömrə üzrə saatlıq kod limiti',
+    ru: 'Лимит кодов на номер в час',
+    tr: 'Numara başına saatlik kod sınırı',
+  },
+  'adminSettings.key.otp.max_attempts': {
+    az: 'Səhv cəhd limiti',
+    ru: 'Лимит неверных попыток',
+    tr: 'Yanlış deneme sınırı',
+  },
+  'adminSettings.key.otp.lock_minutes': {
+    az: 'Kilid müddəti (dəq)',
+    ru: 'Время блокировки (мин)',
+    tr: 'Kilit süresi (dk)',
+  },
+  'adminSettings.key.otp.ip_max_per_hour': {
+    az: 'IP üzrə saatlıq kod limiti',
+    ru: 'Лимит кодов с IP в час',
+    tr: 'IP başına saatlik kod sınırı',
+  },
+  'adminSettings.key.otp.fail_window_minutes': {
+    az: 'Səhv cəhdlərin sayılma pəncərəsi (dəq)',
+    ru: 'Окно подсчёта неверных попыток (мин)',
+    tr: 'Yanlış deneme sayım penceresi (dk)',
+  },
+  'adminSettings.key.auth.access_token_minutes': {
+    az: 'Giriş açarının ömrü (dəq)',
+    ru: 'Срок жизни токена доступа (мин)',
+    tr: 'Erişim anahtarı ömrü (dk)',
+  },
+  'adminSettings.key.auth.refresh_token_days': {
+    az: 'Yeniləmə açarının ömrü (gün)',
+    ru: 'Срок жизни токена обновления (дни)',
+    tr: 'Yenileme anahtarı ömrü (gün)',
+  },
+  'adminSettings.key.access.permission_cache_seconds': {
+    az: 'İcazə keşinin ömrü (san)',
+    ru: 'Срок кэша прав (с)',
+    tr: 'İzin önbelleği ömrü (sn)',
+  },
+  'adminSettings.key.security.require_admin_2fa': {
+    az: 'Admin üçün iki mərhələli giriş məcburidir',
+    ru: 'Двухфакторный вход для админа обязателен',
+    tr: 'Admin için iki adımlı giriş zorunlu',
+  },
+  'adminSettings.key.mobile.min_version.ios': {
+    az: 'Minimum versiya: iOS',
+    ru: 'Минимальная версия: iOS',
+    tr: 'En düşük sürüm: iOS',
+  },
+  'adminSettings.key.mobile.min_version.android': {
+    az: 'Minimum versiya: Android',
+    ru: 'Минимальная версия: Android',
+    tr: 'En düşük sürüm: Android',
+  },
+  'adminSettings.key.mobile.recommended_version.ios': {
+    az: 'Tövsiyə olunan versiya: iOS',
+    ru: 'Рекомендуемая версия: iOS',
+    tr: 'Önerilen sürüm: iOS',
+  },
+  'adminSettings.key.mobile.recommended_version.android': {
+    az: 'Tövsiyə olunan versiya: Android',
+    ru: 'Рекомендуемая версия: Android',
+    tr: 'Önerilen sürüm: Android',
+  },
+  'adminSettings.key.mobile.store_url.ios': {
+    az: 'Mağaza ünvanı: iOS',
+    ru: 'Ссылка на магазин: iOS',
+    tr: 'Mağaza adresi: iOS',
+  },
+  'adminSettings.key.mobile.store_url.android': {
+    az: 'Mağaza ünvanı: Android',
+    ru: 'Ссылка на магазин: Android',
+    tr: 'Mağaza adresi: Android',
+  },
+  'adminSettings.key.system.maintenance': {
+    az: 'Texniki xidmət rejimi',
+    ru: 'Режим обслуживания',
+    tr: 'Bakım modu',
+  },
+  'adminSettings.key.idempotency.ttl_hours': {
+    az: 'Cavabın saxlanma müddəti (saat)',
+    ru: 'Срок хранения ответа (часы)',
+    tr: 'Yanıt saklama süresi (saat)',
+  },
+  'adminSettings.key.idempotency.lock_seconds': {
+    az: 'Kilid müddəti (san)',
+    ru: 'Время блокировки (с)',
+    tr: 'Kilit süresi (sn)',
+  },
+  'adminSettings.key.outbox.max_attempts': {
+    az: 'Maksimum cəhd sayı',
+    ru: 'Максимум попыток',
+    tr: 'En fazla deneme',
+  },
+  'adminSettings.key.outbox.poll_interval_ms': {
+    az: 'Yoxlama aralığı (ms)',
+    ru: 'Интервал опроса (мс)',
+    tr: 'Yoklama aralığı (ms)',
+  },
+  'adminSettings.key.outbox.batch_size': {
+    az: 'Bir dəfəyə hadisə sayı',
+    ru: 'Событий за один проход',
+    tr: 'Tek seferde olay sayısı',
+  },
+  'adminSettings.key.push.retry_delays_minutes': {
+    az: 'Təkrar cəhd gözləmələri (dəq)',
+    ru: 'Задержки повторных попыток (мин)',
+    tr: 'Yeniden deneme beklemeleri (dk)',
+  },
+  'adminSettings.key.push.receipt_check_minutes': {
+    az: 'Çatdırılma yoxlaması (dəq)',
+    ru: 'Проверка доставки (мин)',
+    tr: 'Teslim kontrolü (dk)',
+  },
+  'adminSettings.key.push.batch_size': {
+    az: 'Bir sorğuda mesaj sayı',
+    ru: 'Сообщений в одном запросе',
+    tr: 'Tek istekte mesaj sayısı',
+  },
+  'adminSettings.key.files.upload_url_ttl_minutes': {
+    az: 'Yükləmə linkinin ömrü (dəq)',
+    ru: 'Срок ссылки загрузки (мин)',
+    tr: 'Yükleme bağlantısı ömrü (dk)',
+  },
+  'adminSettings.key.files.download_url_ttl_minutes': {
+    az: 'Endirmə linkinin ömrü (dəq)',
+    ru: 'Срок ссылки скачивания (мин)',
+    tr: 'İndirme bağlantısı ömrü (dk)',
+  },
+  'adminSettings.key.files.image_max_mb': {
+    az: 'Şəkil üçün maksimum ölçü (MB)',
+    ru: 'Макс. размер изображения (МБ)',
+    tr: 'Görsel için en büyük boyut (MB)',
+  },
+  'adminSettings.key.files.xlsx_max_mb': {
+    az: 'Excel faylı üçün maksimum ölçü (MB)',
+    ru: 'Макс. размер файла Excel (МБ)',
+    tr: 'Excel dosyası için en büyük boyut (MB)',
+  },
+  'adminSettings.key.settings.cache_ttl_seconds': {
+    az: 'Ayarlar keşinin ömrü (san)',
+    ru: 'Срок кэша настроек (с)',
+    tr: 'Ayar önbelleği ömrü (sn)',
+  },
+  'adminSettings.key.i18n.cache_ttl_seconds': {
+    az: 'Tərcümə keşinin ömrü (san)',
+    ru: 'Срок кэша переводов (с)',
+    tr: 'Çeviri önbelleği ömrü (sn)',
+  },
+  'adminSettings.key.directory.reindex_hour_utc': {
+    az: 'Gecə indeksləmə saatı (UTC)',
+    ru: 'Час ночной индексации (UTC)',
+    tr: 'Gece yeniden indeksleme saati (UTC)',
+  },
+  'adminSettings.key.directory.reindex_batch_size': {
+    az: 'İndeksləmə: bir dəfəyə say',
+    ru: 'Индексация: за один проход',
+    tr: 'İndeksleme: tek seferde sayı',
+  },
+  'adminSettings.key.directory.reindex_lock_seconds': {
+    az: 'İndeksləmə: kilid müddəti (san)',
+    ru: 'Индексация: время блокировки (с)',
+    tr: 'İndeksleme: kilit süresi (sn)',
+  },
+  'adminSettings.key.directory.search_max_per_minute': {
+    az: 'İstifadəçi üzrə dəqiqəlik axtarış limiti',
+    ru: 'Лимит поиска на пользователя в минуту',
+    tr: 'Kullanıcı başına dakikalık arama sınırı',
+  },
 };

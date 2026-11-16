@@ -3,6 +3,7 @@
 // görünmez. Bu yalnızca görünümdür; asıl yetki kontrolü API'dedir.
 // Öğe → izin eşlemesi c4-component §5 kodlarıyla (tip `@b2b/shared` PermissionCode). `anyOf` boşsa
 // öğe herkese açıktır (açılış sayfası = dashboard). Metin: `shell.menu.<key>` çeviri anahtarı.
+import { SETTINGS_ADMIN_ROLES } from './admin-settings';
 import { BUYER_ADMIN_READ_ROLES } from './buyer-moderation';
 import type { PermissionCode } from './permissions';
 import type { PlatformRole } from './platform-roles';
@@ -78,6 +79,14 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
       ready: true,
       path: 'job-titles',
       platformRoles: CATALOG_ADMIN_ROLES,
+    },
+    // F2.19: sistem ayarları (US-017), yalnız süper admin (T1).
+    {
+      key: 'settings',
+      anyOf: [],
+      ready: true,
+      path: 'settings',
+      platformRoles: SETTINGS_ADMIN_ROLES,
     },
   ],
   // productreport "Toptancı — Web"; `audit` c4 §5 (`audit.view`, US-057).

@@ -7,31 +7,58 @@ import { z } from 'zod';
 export const SETTING_SCOPES = ['platform', 'plan', 'business'] as const;
 export type SettingScope = (typeof SETTING_SCOPES)[number];
 
+/** Ayar ekranında değer düzenleyicisinin türü (F2.19). */
+export type SettingKind =
+  'int' | 'int_list' | 'bool' | 'enum' | 'version' | 'url' | 'country_codes';
+
 interface SettingDefinition<T> {
+  readonly kind: SettingKind;
   readonly schema: z.ZodType<T>;
   readonly default: T;
+  /** Seçenek ayarlarında izinli değerler. */
+  readonly options?: readonly string[];
   /** Sayısal alt sınır (liste ayarlarında her eleman için). */
   readonly min?: number;
   /** Sayısal üst sınır (liste ayarlarında her eleman için). */
   readonly max?: number;
+  /**
+   * Yazılabildiği kapsamlar (F2.19 T2). Verilmezse yalnız `platform`: kod bu anahtarı işletmesiz
+   * okur, plan/işletme değeri etkisiz kalırdı. Plan ve işletme yalnız `layered` anahtarlarda açık.
+   */
+  readonly scopes?: readonly SettingScope[];
+}
+
+/** Kod bu anahtarı işletmeyle okur (`SettingsService.get(key, businessId)`); üç kapsam da açık. */
+function layered<T>(definition: SettingDefinition<T>): SettingDefinition<T> {
+  return { ...definition, scopes: SETTING_SCOPES };
 }
 
 function intSetting(defaultValue: number, min: number, max: number): SettingDefinition<number> {
-  return { schema: z.number().int().min(min).max(max), default: defaultValue, min, max };
+  return {
+    kind: 'int',
+    schema: z.number().int().min(min).max(max),
+    default: defaultValue,
+    min,
+    max,
+  };
 }
 
 function boolSetting(defaultValue: boolean): SettingDefinition<boolean> {
-  return { schema: z.boolean(), default: defaultValue };
+  return { kind: 'bool', schema: z.boolean(), default: defaultValue };
 }
 
 function versionSetting(defaultValue: string): SettingDefinition<string> {
-  return { schema: z.string().regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}$/), default: defaultValue };
+  return {
+    kind: 'version',
+    schema: z.string().regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}$/),
+    default: defaultValue,
+  };
 }
 
 /** Boş metin (ayarlanmamış) veya `https://` adresi. */
 function httpsUrlSetting(defaultValue: string): SettingDefinition<string> {
   const schema = z.union([z.literal(''), z.url({ protocol: /^https$/ }).max(500)]);
-  return { schema, default: defaultValue };
+  return { kind: 'url', schema, default: defaultValue };
 }
 
 /** Artan sırada (tekrarsız) tamsayı listesi. */
@@ -46,14 +73,14 @@ function increasingIntListSetting(
     .min(1)
     .max(maxItems)
     .refine((days) => days.every((day, index) => index === 0 || day > (days[index - 1] ?? day)));
-  return { schema, default: defaultValue, min, max };
+  return { kind: 'int_list', schema, default: defaultValue, min, max };
 }
 
 function enumSetting<const T extends readonly [string, ...string[]]>(
   options: T,
   defaultValue: T[number],
 ): SettingDefinition<T[number]> {
-  return { schema: z.enum(options), default: defaultValue };
+  return { kind: 'enum', schema: z.enum(options), default: defaultValue, options };
 }
 
 /** Telefon ülke kodu listesi (`+` ve 1–4 rakam). */
@@ -62,14 +89,14 @@ function countryCodeListSetting(defaultValue: string[]): SettingDefinition<strin
     .array(z.string().regex(/^\+\d{1,4}$/))
     .min(1)
     .max(20);
-  return { schema, default: defaultValue };
+  return { kind: 'country_codes', schema, default: defaultValue };
 }
 
 export const SETTING_DEFINITIONS = {
   'connection.request_ttl_days': intSetting(14, 1, 90),
-  'connection.cooldown_after_reject_days': intSetting(30, 7, 365),
-  'connection.cooldown_after_buyer_cancel_days': intSetting(30, 7, 365),
-  'connection.daily_request_quota': intSetting(20, 1, 1000),
+  'connection.cooldown_after_reject_days': layered(intSetting(30, 7, 365)),
+  'connection.cooldown_after_buyer_cancel_days': layered(intSetting(30, 7, 365)),
+  'connection.daily_request_quota': layered(intSetting(20, 1, 1000)),
   'connection.block_rate_alert_pct': intSetting(10, 1, 100),
   // F2.16: istek süre dolumu zamanlanmış işi (US-026 AC1; aralık worker açılışında okunur).
   'connection.request_expiry_interval_minutes': intSetting(15, 5, 60),
@@ -89,7 +116,7 @@ export const SETTING_DEFINITIONS = {
   'dormant.touch_min_interval_minutes': intSetting(60, 1, 1440),
   'invitation.seller_activation_days': intSetting(7, 1, 30),
   // F2.7: ekip davetinin geçerliliği (US-013 AC1; Mimar K10).
-  'invitation.team_days': intSetting(7, 1, 30),
+  'invitation.team_days': layered(intSetting(7, 1, 30)),
   'onboarding.seller_mode': enumSetting(['manual'] as const, 'manual'),
   'seller_application.ip_max_per_hour': intSetting(5, 1, 100),
   // F2.3a: kimliksiz perakendeci kaydı (US-005). IP başına saatlik sınır; kayıtta atanan ücretsiz
@@ -110,7 +137,7 @@ export const SETTING_DEFINITIONS = {
   'auth.access_token_minutes': intSetting(15, 5, 60),
   'auth.refresh_token_days': intSetting(30, 1, 90),
   'access.permission_cache_seconds': intSetting(60, 1, 3600),
-  'security.require_admin_2fa': boolSetting(false),
+  'security.require_admin_2fa': layered(boolSetting(false)),
   'mobile.min_version.ios': versionSetting('0.0.0'),
   'mobile.min_version.android': versionSetting('0.0.0'),
   'mobile.recommended_version.ios': versionSetting('0.0.0'),
@@ -126,10 +153,10 @@ export const SETTING_DEFINITIONS = {
   'push.retry_delays_minutes': increasingIntListSetting([1, 5, 15], 1, 1440),
   'push.receipt_check_minutes': intSetting(15, 1, 1440),
   'push.batch_size': intSetting(100, 1, 100),
-  'files.upload_url_ttl_minutes': intSetting(10, 1, 60),
-  'files.download_url_ttl_minutes': intSetting(5, 1, 60),
-  'files.image_max_mb': intSetting(5, 1, 20),
-  'files.xlsx_max_mb': intSetting(10, 1, 50),
+  'files.upload_url_ttl_minutes': layered(intSetting(10, 1, 60)),
+  'files.download_url_ttl_minutes': layered(intSetting(5, 1, 60)),
+  'files.image_max_mb': layered(intSetting(5, 1, 20)),
+  'files.xlsx_max_mb': layered(intSetting(10, 1, 50)),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
   'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
   // F2.11a: perakendeci dizini gece tam yeniden indeksleme (ADR-0011 §1, §4).
@@ -137,7 +164,7 @@ export const SETTING_DEFINITIONS = {
   'directory.reindex_batch_size': intSetting(500, 50, 1000),
   'directory.reindex_lock_seconds': intSetting(1800, 60, 7200),
   // F2.11b: kullanıcı başına dakikada dizin araması (US-019 AC5).
-  'directory.search_max_per_minute': intSetting(60, 10, 600),
+  'directory.search_max_per_minute': layered(intSetting(60, 10, 600)),
 } as const satisfies Record<string, SettingDefinition<unknown>>;
 
 type Definitions = typeof SETTING_DEFINITIONS;
@@ -152,6 +179,36 @@ const SETTING_KEY_SET: ReadonlySet<string> = new Set(SETTING_KEYS);
 
 export function isSettingKey(value: unknown): value is SettingKey {
   return typeof value === 'string' && SETTING_KEY_SET.has(value);
+}
+
+/** Anahtarın yazılabildiği kapsamlar (F2.19 T2; verilmemişse yalnız platform). */
+export function settingScopesOf(key: SettingKey): readonly SettingScope[] {
+  const definition: SettingDefinition<unknown> = SETTING_DEFINITIONS[key];
+  return definition.scopes ?? ['platform'];
+}
+
+/** Ekran için anahtar bilgisi: tür, sınırlar, seçenekler (değer doğrulaması yine `parseSettingValue`). */
+export interface SettingMeta {
+  readonly kind: SettingKind;
+  readonly min?: number;
+  readonly max?: number;
+  readonly options?: readonly string[];
+}
+
+/** Anahtarın düzenleyici bilgisi (F2.19). */
+export function settingMetaOf(key: SettingKey): SettingMeta {
+  const definition: SettingDefinition<unknown> = SETTING_DEFINITIONS[key];
+  return {
+    kind: definition.kind,
+    ...(definition.min === undefined ? {} : { min: definition.min }),
+    ...(definition.max === undefined ? {} : { max: definition.max }),
+    ...(definition.options === undefined ? {} : { options: definition.options }),
+  };
+}
+
+/** Ekrandaki grup: anahtarın ilk parçası (`connection`, `otp`…); çeviri `adminSettings.group.<ad>`. */
+export function settingGroupOf(key: SettingKey): string {
+  return key.slice(0, key.indexOf('.'));
 }
 
 /** Koddaki varsayılan (her çağrıda yeni kopya; liste değerleri değiştirilemez olsun diye). */

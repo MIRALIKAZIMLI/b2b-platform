@@ -94,6 +94,7 @@ describe('İzinden menü', () => {
 
   it('F2.1b-AC5: "Toptancılar" yalnız super_admin ve operations rolüne görünür (S1)', () => {
     // F2.2b: "Başvurular" aynı rollerle eklendi. F2.9b: katalog öğeleri süper admin + içerik (V1).
+    // F2.19: "Ayarlar" yalnız süper admin (T1).
     expect(keys('admin', [], 'super_admin')).toEqual([
       'dashboard',
       'sellers',
@@ -101,6 +102,7 @@ describe('İzinden menü', () => {
       'buyers',
       'role_templates',
       'job_titles',
+      'settings',
     ]);
     expect(visibleMenu('admin', [], 'operations').map((item) => item.key)).toEqual([
       'dashboard',

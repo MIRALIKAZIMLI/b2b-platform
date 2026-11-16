@@ -77,6 +77,9 @@ const EXPECTED_PLATFORM: Record<string, readonly string[]> = {
   'GET /api/v1/admin/buyers/:id': ['super_admin', 'operations', 'support'],
   'POST /api/v1/admin/buyers/:id/verify': ['super_admin', 'operations'],
   'POST /api/v1/admin/businesses/:id/status': ['super_admin', 'operations'],
+  // F2.19 T1 (productreport "Platform rolleri": Süper Admin = ayarlar).
+  'GET /api/v1/admin/settings': ['super_admin'],
+  'PUT /api/v1/admin/settings': ['super_admin'],
 };
 
 function join(...parts: (string | undefined)[]): string {
