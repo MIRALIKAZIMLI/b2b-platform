@@ -4,7 +4,7 @@
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
 // daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
 // F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım;
-// F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu).
+// F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu; F3.2b: kategori, marka, faaliyet alanı).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -4938,5 +4938,426 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Sil',
     ru: 'Удалить',
     tr: 'Sil',
+  },
+  // F3.2b: admin kategori, marka, faaliyet alanı ekranları (US-029).
+  'shell.menu.categories': {
+    az: 'Kateqoriyalar',
+    ru: 'Категории',
+    tr: 'Kategoriler',
+  },
+  'shell.menu.brands': {
+    az: 'Brendlər',
+    ru: 'Бренды',
+    tr: 'Markalar',
+  },
+  'shell.menu.activity_types': {
+    az: 'Fəaliyyət sahələri',
+    ru: 'Сферы деятельности',
+    tr: 'Faaliyet alanları',
+  },
+  'adminTaxonomy.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'adminTaxonomy.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'adminTaxonomy.edit': {
+    az: 'Düzəlt',
+    ru: 'Изменить',
+    tr: 'Düzenle',
+  },
+  'adminTaxonomy.active': {
+    az: 'Aktiv',
+    ru: 'Активна',
+    tr: 'Aktif',
+  },
+  'adminTaxonomy.inactive': {
+    az: 'Deaktiv',
+    ru: 'Неактивна',
+    tr: 'Pasif',
+  },
+  'adminTaxonomy.activate': {
+    az: 'Aktiv et',
+    ru: 'Активировать',
+    tr: 'Aktifleştir',
+  },
+  'adminTaxonomy.deactivate': {
+    az: 'Deaktiv et',
+    ru: 'Деактивировать',
+    tr: 'Pasifleştir',
+  },
+  'adminTaxonomy.activated': {
+    az: 'Aktiv edildi.',
+    ru: 'Активировано.',
+    tr: 'Aktifleştirildi.',
+  },
+  'adminTaxonomy.deactivated': {
+    az: 'Deaktiv edildi.',
+    ru: 'Деактивировано.',
+    tr: 'Pasifleştirildi.',
+  },
+  'adminTaxonomy.created': {
+    az: 'Yaradıldı.',
+    ru: 'Создано.',
+    tr: 'Oluşturuldu.',
+  },
+  'adminTaxonomy.updated': {
+    az: 'Dəyişikliklər yadda saxlanıldı.',
+    ru: 'Изменения сохранены.',
+    tr: 'Değişiklikler kaydedildi.',
+  },
+  'adminTaxonomy.sort_value': {
+    az: 'Sıra: {value}',
+    ru: 'Порядок: {value}',
+    tr: 'Sıra: {value}',
+  },
+  'adminTaxonomy.sort_hint': {
+    az: 'Kiçik nömrə siyahıda yuxarıda görünür (0–10000).',
+    ru: 'Меньший номер выше в списке (0–10000).',
+    tr: 'Küçük numara listede üstte görünür (0–10000).',
+  },
+  'adminTaxonomy.field.sort_order': {
+    az: 'Sıra nömrəsi',
+    ru: 'Порядковый номер',
+    tr: 'Sıra numarası',
+  },
+  'adminTaxonomy.field.parent': {
+    az: 'Üst kateqoriya',
+    ru: 'Родительская категория',
+    tr: 'Üst kategori',
+  },
+  'adminTaxonomy.error.sort_order': {
+    az: '0 ilə 10000 arasında tam ədəd yazın.',
+    ru: 'Введите целое число от 0 до 10000.',
+    tr: '0 ile 10000 arasında tam sayı girin.',
+  },
+  'adminTaxonomy.failure.name_taken': {
+    az: 'Bu ad artıq var.',
+    ru: 'Такое название уже есть.',
+    tr: 'Bu ad zaten var.',
+  },
+  'adminTaxonomy.failure.parent_not_found': {
+    az: 'Üst kateqoriya tapılmadı. Səhifəni yeniləyin.',
+    ru: 'Родительская категория не найдена. Обновите страницу.',
+    tr: 'Üst kategori bulunamadı. Sayfayı yenileyin.',
+  },
+  'adminTaxonomy.failure.parent_inactive': {
+    az: 'Deaktiv kateqoriyaya alt kateqoriya əlavə etmək olmaz.',
+    ru: 'Нельзя добавить подкатегорию в неактивную категорию.',
+    tr: 'Pasif kategoriye alt kategori eklenemez.',
+  },
+  'adminTaxonomy.failure.max_depth': {
+    az: 'Kateqoriya ağacı ən çox 3 səviyyəlidir.',
+    ru: 'Дерево категорий — не более 3 уровней.',
+    tr: 'Kategori ağacı en çok 3 seviyelidir.',
+  },
+  'adminTaxonomy.failure.invalid_transition': {
+    az: 'Bu əməliyyat bu statusda mümkün deyil. Səhifəni yeniləyin.',
+    ru: 'Это действие недоступно в текущем статусе. Обновите страницу.',
+    tr: 'Bu işlem bu durumda yapılamaz. Sayfayı yenileyin.',
+  },
+  'adminTaxonomy.failure.not_found': {
+    az: 'Qeyd tapılmadı. Səhifəni yeniləyin.',
+    ru: 'Запись не найдена. Обновите страницу.',
+    tr: 'Kayıt bulunamadı. Sayfayı yenileyin.',
+  },
+  'adminTaxonomy.failure.invalid': {
+    az: 'Məlumatı yoxlayın.',
+    ru: 'Проверьте данные.',
+    tr: 'Bilgileri kontrol edin.',
+  },
+  'adminTaxonomy.category.title': {
+    az: 'Kateqoriyalar',
+    ru: 'Категории',
+    tr: 'Kategoriler',
+  },
+  'adminTaxonomy.category.description': {
+    az: 'Məhsul kateqoriyalarının ağacı (ən çox 3 səviyyə). Topdançılar məhsul formunda yalnız aktiv kateqoriyaları seçə bilir.',
+    ru: 'Дерево категорий товаров (не более 3 уровней). Оптовики выбирают в форме товара только активные категории.',
+    tr: 'Ürün kategorisi ağacı (en çok 3 seviye). Toptancılar ürün formunda yalnızca aktif kategorileri seçebilir.',
+  },
+  'adminTaxonomy.category.create_open': {
+    az: 'Yeni üst kateqoriya',
+    ru: 'Новая категория верхнего уровня',
+    tr: 'Yeni üst kategori',
+  },
+  'adminTaxonomy.category.create_root_title': {
+    az: 'Yeni üst kateqoriya',
+    ru: 'Новая категория верхнего уровня',
+    tr: 'Yeni üst kategori',
+  },
+  'adminTaxonomy.category.create_child_title': {
+    az: 'Yeni alt kateqoriya',
+    ru: 'Новая подкатегория',
+    tr: 'Yeni alt kategori',
+  },
+  'adminTaxonomy.category.edit_title': {
+    az: 'Kateqoriyanı düzəlt',
+    ru: 'Изменить категорию',
+    tr: 'Kategoriyi düzenle',
+  },
+  'adminTaxonomy.category.editor_hint': {
+    az: 'Ad az, ru, tr dillərində məcburidir. Üst kateqoriya sonradan dəyişmir.',
+    ru: 'Название на az, ru, tr обязательно. Родительская категория потом не меняется.',
+    tr: 'Ad az, ru, tr dillerinde zorunludur. Üst kategori sonradan değişmez.',
+  },
+  'adminTaxonomy.category.list_title': {
+    az: 'Kateqoriya ağacı',
+    ru: 'Дерево категорий',
+    tr: 'Kategori ağacı',
+  },
+  'adminTaxonomy.category.summary': {
+    az: '{total} kateqoriya · {active} görünür',
+    ru: 'Категорий: {total} · видимых: {active}',
+    tr: '{total} kategori · {active} görünür',
+  },
+  'adminTaxonomy.category.empty': {
+    az: 'Hələ kateqoriya yoxdur.',
+    ru: 'Категорий пока нет.',
+    tr: 'Henüz kategori yok.',
+  },
+  'adminTaxonomy.category.level': {
+    az: '{depth}. səviyyə',
+    ru: 'Уровень {depth}',
+    tr: '{depth}. seviye',
+  },
+  'adminTaxonomy.category.children': {
+    az: '{count} alt kateqoriya',
+    ru: 'Подкатегорий: {count}',
+    tr: '{count} alt kategori',
+  },
+  'adminTaxonomy.category.add_child': {
+    az: 'Alt kateqoriya',
+    ru: 'Подкатегория',
+    tr: 'Alt kategori',
+  },
+  'adminTaxonomy.category.parent_inactive': {
+    az: 'Üst kateqoriya deaktivdir',
+    ru: 'Родитель неактивен',
+    tr: 'Üst kategori pasif',
+  },
+  'adminTaxonomy.category.no_delete_hint': {
+    az: 'Kateqoriyalar silinmir, yalnız deaktiv edilir. Deaktiv kateqoriya və onun altındakılar məhsul formunda görünmür; mövcud məhsullar dəyişmir.',
+    ru: 'Категории не удаляются, только деактивируются. Неактивная категория и её подкатегории не видны в форме товара; существующие товары не меняются.',
+    tr: 'Kategoriler silinmez, yalnızca pasifleştirilir. Pasif kategori ve altındakiler ürün formunda görünmez; mevcut ürünler değişmez.',
+  },
+  'adminTaxonomy.activity.title': {
+    az: 'Fəaliyyət sahələri',
+    ru: 'Сферы деятельности',
+    tr: 'Faaliyet alanları',
+  },
+  'adminTaxonomy.activity.description': {
+    az: 'Pərakəndəçi qeydiyyat formundakı fəaliyyət sahələri siyahısı.',
+    ru: 'Список сфер деятельности в форме регистрации розничного покупателя.',
+    tr: 'Perakendeci kayıt formundaki faaliyet alanları listesi.',
+  },
+  'adminTaxonomy.activity.create_open': {
+    az: 'Yeni fəaliyyət sahəsi',
+    ru: 'Новая сфера деятельности',
+    tr: 'Yeni faaliyet alanı',
+  },
+  'adminTaxonomy.activity.create_title': {
+    az: 'Yeni fəaliyyət sahəsi',
+    ru: 'Новая сфера деятельности',
+    tr: 'Yeni faaliyet alanı',
+  },
+  'adminTaxonomy.activity.edit_title': {
+    az: 'Fəaliyyət sahəsini düzəlt',
+    ru: 'Изменить сферу деятельности',
+    tr: 'Faaliyet alanını düzenle',
+  },
+  'adminTaxonomy.activity.editor_hint': {
+    az: 'Ad az, ru, tr dillərində məcburidir; heç bir dildə təkrarlana bilməz.',
+    ru: 'Название на az, ru, tr обязательно и не может повторяться ни на одном языке.',
+    tr: 'Ad az, ru, tr dillerinde zorunludur; hiçbir dilde tekrarlanamaz.',
+  },
+  'adminTaxonomy.activity.list_title': {
+    az: 'Siyahı',
+    ru: 'Список',
+    tr: 'Liste',
+  },
+  'adminTaxonomy.activity.empty': {
+    az: 'Hələ fəaliyyət sahəsi yoxdur.',
+    ru: 'Сфер деятельности пока нет.',
+    tr: 'Henüz faaliyet alanı yok.',
+  },
+  'adminTaxonomy.activity.no_delete_hint': {
+    az: 'Fəaliyyət sahələri silinmir. Deaktiv sahə qeydiyyat formunda görünmür; onu seçmiş pərakəndəçilər dəyişmir.',
+    ru: 'Сферы деятельности не удаляются. Неактивная сфера не видна в форме регистрации; выбравшие её покупатели не затрагиваются.',
+    tr: 'Faaliyet alanları silinmez. Pasif alan kayıt formunda görünmez; onu seçmiş perakendeciler etkilenmez.',
+  },
+  'adminTaxonomy.brand.title': {
+    az: 'Brendlər',
+    ru: 'Бренды',
+    tr: 'Markalar',
+  },
+  'adminTaxonomy.brand.description': {
+    az: 'Topdançıların brend sorğularını təsdiqləyin və ya rədd edin, brendləri idarə edin.',
+    ru: 'Одобряйте или отклоняйте запросы оптовиков на бренды и управляйте брендами.',
+    tr: 'Toptancıların marka taleplerini onaylayın veya reddedin, markaları yönetin.',
+  },
+  'adminTaxonomy.brand.create_open': {
+    az: 'Yeni brend',
+    ru: 'Новый бренд',
+    tr: 'Yeni marka',
+  },
+  'adminTaxonomy.brand.create_title': {
+    az: 'Yeni brend',
+    ru: 'Новый бренд',
+    tr: 'Yeni marka',
+  },
+  'adminTaxonomy.brand.edit_title': {
+    az: 'Brend adını düzəlt',
+    ru: 'Изменить название бренда',
+    tr: 'Marka adını düzenle',
+  },
+  'adminTaxonomy.brand.editor_hint': {
+    az: 'Brend adı bütün dillərdə eynidir. Böyük-kiçik hərf fərqi nəzərə alınmır; eyni ad təkrarlana bilməz.',
+    ru: 'Название бренда одинаково на всех языках. Регистр не учитывается; повторять название нельзя.',
+    tr: 'Marka adı tüm dillerde aynıdır. Büyük/küçük harf fark etmez; aynı ad tekrarlanamaz.',
+  },
+  'adminTaxonomy.brand.field_name': {
+    az: 'Brend adı',
+    ru: 'Название бренда',
+    tr: 'Marka adı',
+  },
+  'adminTaxonomy.brand.created': {
+    az: 'Brend yaradıldı və aktivdir.',
+    ru: 'Бренд создан и активен.',
+    tr: 'Marka oluşturuldu ve aktif.',
+  },
+  'adminTaxonomy.brand.tabs_label': {
+    az: 'Brend statusu',
+    ru: 'Статус бренда',
+    tr: 'Marka durumu',
+  },
+  'adminTaxonomy.brand.tab.requested': {
+    az: 'Sorğular',
+    ru: 'Запросы',
+    tr: 'Talepler',
+  },
+  'adminTaxonomy.brand.tab.active': {
+    az: 'Təsdiqlənmiş',
+    ru: 'Одобренные',
+    tr: 'Onaylı',
+  },
+  'adminTaxonomy.brand.tab.rejected': {
+    az: 'Rədd edilmiş',
+    ru: 'Отклонённые',
+    tr: 'Reddedilen',
+  },
+  'adminTaxonomy.brand.search_label': {
+    az: 'Brend axtar',
+    ru: 'Поиск бренда',
+    tr: 'Marka ara',
+  },
+  'adminTaxonomy.brand.search_placeholder': {
+    az: 'Ada görə axtar…',
+    ru: 'Поиск по названию…',
+    tr: 'Ada göre ara…',
+  },
+  'adminTaxonomy.brand.empty.requested': {
+    az: 'Gözləyən sorğu yoxdur.',
+    ru: 'Нет ожидающих запросов.',
+    tr: 'Bekleyen talep yok.',
+  },
+  'adminTaxonomy.brand.empty.active': {
+    az: 'Hələ təsdiqlənmiş brend yoxdur.',
+    ru: 'Одобренных брендов пока нет.',
+    tr: 'Henüz onaylı marka yok.',
+  },
+  'adminTaxonomy.brand.empty.rejected': {
+    az: 'Rədd edilmiş brend yoxdur.',
+    ru: 'Отклонённых брендов нет.',
+    tr: 'Reddedilen marka yok.',
+  },
+  'adminTaxonomy.brand.no_match': {
+    az: 'Axtarışa uyğun brend tapılmadı.',
+    ru: 'Бренды по запросу не найдены.',
+    tr: 'Aramaya uyan marka bulunamadı.',
+  },
+  'adminTaxonomy.brand.badge.requested': {
+    az: 'Gözləyir',
+    ru: 'Ожидает',
+    tr: 'Bekliyor',
+  },
+  'adminTaxonomy.brand.badge.rejected': {
+    az: 'Rədd edilib',
+    ru: 'Отклонён',
+    tr: 'Reddedildi',
+  },
+  'adminTaxonomy.brand.by_platform': {
+    az: 'Platforma tərəfindən',
+    ru: 'Добавлен платформой',
+    tr: 'Platform ekledi',
+  },
+  'adminTaxonomy.brand.by_seller': {
+    az: 'Sorğu: {name}',
+    ru: 'Запрос: {name}',
+    tr: 'Talep eden: {name}',
+  },
+  'adminTaxonomy.brand.unknown_seller': {
+    az: 'Topdançı',
+    ru: 'Оптовик',
+    tr: 'Toptancı',
+  },
+  'adminTaxonomy.brand.created_on': {
+    az: '{date}',
+    ru: '{date}',
+    tr: '{date}',
+  },
+  'adminTaxonomy.brand.decided_on': {
+    az: 'Qərar: {date}',
+    ru: 'Решение: {date}',
+    tr: 'Karar: {date}',
+  },
+  'adminTaxonomy.brand.approve': {
+    az: 'Təsdiqlə',
+    ru: 'Одобрить',
+    tr: 'Onayla',
+  },
+  'adminTaxonomy.brand.reject': {
+    az: 'Rədd et',
+    ru: 'Отклонить',
+    tr: 'Reddet',
+  },
+  'adminTaxonomy.brand.approved': {
+    az: 'Brend təsdiqləndi; topdançıya bildiriş göndərildi.',
+    ru: 'Бренд одобрен; оптовику отправлено уведомление.',
+    tr: 'Marka onaylandı; toptancıya bildirim gönderildi.',
+  },
+  'adminTaxonomy.brand.rejected': {
+    az: 'Sorğu rədd edildi; topdançıya bildiriş göndərildi.',
+    ru: 'Запрос отклонён; оптовику отправлено уведомление.',
+    tr: 'Talep reddedildi; toptancıya bildirim gönderildi.',
+  },
+  'adminTaxonomy.brand.reject_eyebrow': {
+    az: 'Brend sorğusu',
+    ru: 'Запрос бренда',
+    tr: 'Marka talebi',
+  },
+  'adminTaxonomy.brand.reject_title': {
+    az: '«{name}» sorğusu rədd edilsin?',
+    ru: 'Отклонить запрос «{name}»?',
+    tr: '«{name}» talebi reddedilsin mi?',
+  },
+  'adminTaxonomy.brand.reject_body': {
+    az: 'Bu qərar geri alınmır. Topdançıya bildiriş gedəcək; eyni ad sonra yenidən sorğu edilə bilər.',
+    ru: 'Это решение нельзя отменить. Оптовик получит уведомление; то же название можно будет запросить снова.',
+    tr: 'Bu karar geri alınamaz. Toptancıya bildirim gider; aynı ad sonra yeniden talep edilebilir.',
+  },
+  'adminTaxonomy.brand.reject_confirm': {
+    az: 'Bəli, rədd et',
+    ru: 'Да, отклонить',
+    tr: 'Evet, reddet',
+  },
+  'adminTaxonomy.brand.no_delete_hint': {
+    az: 'Brendlər silinmir. Deaktiv brend məhsul formunda seçilmir; mövcud məhsullar dəyişmir.',
+    ru: 'Бренды не удаляются. Неактивный бренд нельзя выбрать в форме товара; существующие товары не меняются.',
+    tr: 'Markalar silinmez. Pasif marka ürün formunda seçilemez; mevcut ürünler değişmez.',
   },
 };

@@ -92,9 +92,22 @@ describe('İzinden menü', () => {
     ]);
   });
 
+  it('F3.2b-AC5 kategori, marka, faaliyet alanı öğeleri yalnız süper admin ve içerik ekibine görünür', () => {
+    const taxonomy = ['categories', 'brands', 'activity_types'];
+    for (const role of ['super_admin', 'content'] as const) {
+      const visible = visibleMenu('admin', [], role).map((item) => item.key);
+      expect(taxonomy.every((key) => visible.includes(key))).toBe(true);
+    }
+    for (const role of ['operations', 'support', null] as const) {
+      const visible = visibleMenu('admin', [], role).map((item) => item.key);
+      expect(taxonomy.some((key) => visible.includes(key))).toBe(false);
+    }
+  });
+
   it('F2.1b-AC5: "Toptancılar" yalnız super_admin ve operations rolüne görünür (S1)', () => {
     // F2.2b: "Başvurular" aynı rollerle eklendi. F2.9b: katalog öğeleri süper admin + içerik (V1).
-    // F2.19: "Ayarlar" yalnız süper admin (T1).
+    // F2.19: "Ayarlar" yalnız süper admin (T1). F3.2b-AC5: kategori, marka, faaliyet alanı
+    // öğeleri F3.2a uçlarıyla aynı roller (süper admin + içerik); operasyon görmez.
     expect(keys('admin', [], 'super_admin')).toEqual([
       'dashboard',
       'sellers',
@@ -103,6 +116,9 @@ describe('İzinden menü', () => {
       'role_templates',
       'job_titles',
       'units',
+      'categories',
+      'brands',
+      'activity_types',
       'settings',
     ]);
     expect(visibleMenu('admin', [], 'operations').map((item) => item.key)).toEqual([
@@ -116,6 +132,9 @@ describe('İzinden menü', () => {
       'role_templates',
       'job_titles',
       'units',
+      'categories',
+      'brands',
+      'activity_types',
     ]);
     // F2.18b: destek yalnız perakendecileri görür (yazma düğmeleri ekranda gizli).
     expect(visibleMenu('admin', [], 'support').map((item) => item.key)).toEqual([
@@ -123,6 +142,7 @@ describe('İzinden menü', () => {
       'buyers',
     ]);
     expect(visibleMenu('admin', [], null).map((item) => item.key)).toEqual(['dashboard']);
+    expect(MENUS.admin.find((item) => item.key === 'activity_types')?.path).toBe('activity-types');
     expect(MENUS.admin.find((item) => item.key === 'sellers')?.path).toBe('sellers');
     expect(MENUS.admin.find((item) => item.key === 'seller_applications')?.path).toBe(
       'seller-applications',

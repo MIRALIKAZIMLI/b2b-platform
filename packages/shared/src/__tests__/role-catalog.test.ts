@@ -89,7 +89,16 @@ describe('F2.9 admin katalog formları', () => {
 
   it('F2.9 V1 menü: katalog öğeleri süper admin ve içerik ekibine, operasyona değil', () => {
     const keys = (role: string) => visibleMenu('admin', [], role).map((item) => item.key);
-    expect(keys('content')).toEqual(['dashboard', 'role_templates', 'job_titles', 'units']);
+    // F3.1 birimler, F3.2b kategori/marka/faaliyet alanı aynı rollerle eklendi.
+    expect(keys('content')).toEqual([
+      'dashboard',
+      'role_templates',
+      'job_titles',
+      'units',
+      'categories',
+      'brands',
+      'activity_types',
+    ]);
     expect(keys('super_admin')).toContain('job_titles');
     expect(keys('operations')).not.toContain('role_templates');
   });
