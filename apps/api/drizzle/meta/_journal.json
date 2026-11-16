@@ -239,6 +239,13 @@
       "when": 1794822626247,
       "tag": "0033_catalog_taxonomy",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794840995549,
+      "tag": "0034_products",
+      "breakpoints": true
     }
   ]
 }

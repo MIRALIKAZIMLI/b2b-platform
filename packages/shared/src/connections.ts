@@ -89,6 +89,16 @@ export interface ConnectionSellerSummary {
   readonly logoUrl: string | null;
   /** Tanıtım metni (dil → metin); yoksa null. */
   readonly description: Readonly<Record<string, string>> | null;
+  /**
+   * Toptancının kategorileri (F3.3a, S3 = A): `active` ürünlerinin aktif kök kategorileri, sıra
+   * numarasıyla; ürünü olmayan toptancıda boş.
+   */
+  readonly categories: readonly ConnectionSellerCategory[];
+}
+
+export interface ConnectionSellerCategory {
+  readonly id: string;
+  readonly name: Readonly<Record<string, string>>;
 }
 
 /** Gelen bekleyen istek: mesaj ve önerilen vade `ConnectionRequestView`'da. */

@@ -64,6 +64,8 @@ export interface SellerSummaryRow {
   readonly legalName: string;
   readonly description: Record<string, string> | null;
   readonly logo: { readonly bucket: FileBucket; readonly objectKey: string } | null;
+  /** F3.3a (S3 = A): `active` ürünlerin aktif kök kategorileri. */
+  readonly categories: readonly { readonly id: string; readonly name: Record<string, string> }[];
 }
 
 interface SummaryDbRow extends Record<string, unknown> {
@@ -72,6 +74,7 @@ interface SummaryDbRow extends Record<string, unknown> {
   description: Record<string, string> | null;
   logo_bucket: string | null;
   logo_object_key: string | null;
+  categories: { id: string; name: Record<string, string> }[] | null;
 }
 export type NewConnectionRequestRow = typeof connectionRequests.$inferInsert;
 
@@ -409,6 +412,10 @@ export class ConnectionsRepository {
             row.logo_object_key !== null
               ? { bucket: row.logo_bucket, objectKey: row.logo_object_key }
               : null,
+          categories: (row.categories ?? []).map((category) => ({
+            id: category.id,
+            name: category.name,
+          })),
         });
       }
     }

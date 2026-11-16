@@ -371,6 +371,8 @@ Onayımı bekle.
 - **Kabul:** Belirtilen AC'ler; satış birimi kuralları (`min_order_qty`, `order_multiple`); SKU benzersizliği.
 - **Test:** Birim (ambalaj dönüşümü) + entegrasyon + izolasyon.
 
+> **Bölündü (Mimar, 2026-11-16):** F3.3a — API + migration `0034` (ürün, varyant, ambalaj, görünürlük; S3 satıcı kategorileri). F3.3b — web ürün listesi ve formu. Kart: `docs/tasks/F3.3a.md`.
+
 ### F3.4 — Ürün görselleri
 
 - **Belgeler:** US-030 AC3.

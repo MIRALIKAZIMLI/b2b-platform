@@ -84,7 +84,7 @@ describe('F2.13a bağlantı yanıtı kiracı izolasyonu ve bekçiler', () => {
       .rows;
     expect(rows).toHaveLength(1);
     expect(Object.keys(rows[0] ?? {}).sort()).toEqual(
-      ['description', 'id', 'legal_name', 'logo_bucket', 'logo_object_key'].sort(),
+      ['categories', 'description', 'id', 'legal_name', 'logo_bucket', 'logo_object_key'].sort(),
     );
     expect(rows[0]?.id).toBe(sellerA.businessId);
     // İlişkisiz perakendeci aynı satıcıyı göremez.

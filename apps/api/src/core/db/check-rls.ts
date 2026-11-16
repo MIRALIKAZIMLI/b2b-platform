@@ -178,6 +178,11 @@ export const PLATFORM_WRITE_FORBIDDEN_TABLES: readonly string[] = [
   'price_lists',
   'price_list_items',
   'customer_prices',
+  // F3.3a (R39): ürün tabloları; platform yalnız okur.
+  'products',
+  'product_variants',
+  'product_packaging',
+  'product_visibility',
 ];
 
 const FORBIDDEN_SET: ReadonlySet<string> = new Set(

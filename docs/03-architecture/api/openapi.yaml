@@ -1433,15 +1433,45 @@ paths:
   /api/v1/products:
     get:
       tags: [catalog]
-      summary: Kendi ürünlerim (seller)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: q, in: query, schema: { type: string } }, { name: status, in: query, schema: { type: string } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      summary: Kendi ürünlerim (seller; F3.3a)
+      description: >-
+        İzin `catalog.view` (yetenek `seller`); perakendeci 403. Yeniden eskiye, imleçli. `q`: SKU
+        öneki veya herhangi bir dildeki ad (içerir, büyük/küçük harf duyarsız). Ad bütün dilleriyle
+        döner; gösterim dili istemcide (`pickLocalizedText`, US-030 AC4).
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { name: q, in: query, schema: { type: string, maxLength: 200 } }
+        - { name: status, in: query, schema: { type: string, enum: [draft, active, archived] } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ProductListItem' } }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [catalog]
-      summary: Ürün oluştur (US-030)
+      summary: Ürün oluştur (US-030 AC1, AC2, AC5)
+      description: >-
+        İzin `catalog.manage` (yetenek `seller`). Ürün her zaman `draft` açılır. Kategori görünür
+        (kendisi ve üstleri aktif) olmalı; marka aktif veya toptancının kendi bekleyen talebi (V5);
+        birimler aktif. Ambalaj kuralları (F3.3a K4): varyantta seviye tek; seviye sırasıyla
+        (`unit` < `inner` < `case` < `pallet`) `baseQty` kesin artar; `unit` seviyesinde
+        `baseQty = 1` ve `unitCode = baseUnitCode`; ondalığa izin vermeyen birimde tam sayı; en az
+        bir satış birimi; `minOrderQty` `orderMultiple`'ın katı. Ürün ve varyant SKU'su satıcı
+        içinde tek (422 `sku: [taken]` / `variants.sku: [taken]`). `hasExpiry` ise
+        `shelfLifeMonths` zorunlu (US-030 AC5). Görünürlük F3.3a'da yalnız bölge.
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
+        required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/ProductInput' }
@@ -1451,11 +1481,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Product' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
   /api/v1/products/{id}:
     get:
       tags: [catalog]
       summary: Ürün detayı (seller)
+      description: İzin `catalog.view`. Arşivli varyantlar durumuyla döner. Başka kiracının ürünü 404.
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       responses:
         '200':
@@ -1463,16 +1496,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Product' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
     patch:
       tags: [catalog]
-      summary: Ürün güncelle / yayınla / arşivle
+      summary: Ürün güncelle / yayınla / arşivle / geri al (US-030 AC6)
+      description: >-
+        İzin `catalog.manage`. Kısmi. `variants` verilirse tam listedir: `id`'li varyant güncellenir
+        (arşivliyse yeniden etkinleşir), `id`'siz eklenir, listede olmayan arşivlenir (silinmez;
+        arşivli SKU yeniden kullanılamaz). Ambalaj seviyeye göre eşlenir: var olan seviye kimliğini
+        korur. `visibility` verilirse tam liste. `status` geçişleri state-machines §14: `draft →
+        active` (marka boş veya onaylı, aksi 422 `brandId: [not_approved]`), `draft|active →
+        archived`, `archived → draft`; başka geçiş 409 `INVALID_STATE_TRANSITION`. Arşivdeki ürün
+        düzenlenmez (409). Daha önce kaydedilmiş, sonradan pasifleşen kategori, marka veya birim
+        üründe kalabilir; yeni seçilen kayıt aktif olmalı (422 `inactive`).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       requestBody:
+        required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ProductInput' }
+            schema: { $ref: '#/components/schemas/ProductUpdate' }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/browse/products:
     get:
       tags: [catalog]
@@ -4071,7 +4124,7 @@ components:
         salesRepMembershipId: { type: [string, 'null'], format: uuid, description: Önceki temsilci hâlâ aktif üyeyse. }
     ConnectionSellerSummary:
       type: object
-      required: [id, name, logoUrl, description]
+      required: [id, name, logoUrl, description, categories]
       description: Perakendecinin gördüğü toptancı özeti (US-023 AC1); ürün, fiyat, başka bağlantı yok.
       properties:
         id: { type: string, format: uuid }
@@ -4081,6 +4134,17 @@ components:
           oneOf:
             - $ref: '#/components/schemas/LocalizedText'
             - type: 'null'
+        categories:
+          type: array
+          description: >-
+            Toptancının kategorileri (US-023 AC1; F3.3a, S3 = A): `active` ürünlerinin aktif kök
+            kategorileri, sıra numarasıyla. Ürünü olmayan toptancıda boş.
+          items:
+            type: object
+            required: [id, name]
+            properties:
+              id: { type: string, format: uuid }
+              name: { $ref: '#/components/schemas/CatalogName' }
     BlockedSeller:
       type: object
       required: [sellerId, sellerName, logoUrl, createdAt]
@@ -4126,55 +4190,164 @@ components:
             id: { type: string }
         readAt: { type: [string, 'null'], format: date-time }
         createdAt: { type: string, format: date-time }
-    Packaging:
+    Quantity:
+      type: string
+      description: Miktar (`numeric(14,3)`), pozitif, en çok 3 ondalık
+      pattern: '^\d{1,11}(\.\d{1,3})?$'
+      examples: ['24']
+    Gtin:
+      type: string
+      description: GTIN-8/12/13/14, GS1 kontrol hanesi doğrulanır
+      pattern: '^(\d{8}|\d{12,14})$'
+    PackagingInput:
       type: object
+      additionalProperties: false
       required: [level, unitCode, baseQty]
       properties:
-        id: { type: string, format: uuid }
         level: { type: string, enum: [unit, inner, case, pallet] }
-        unitCode: { type: string, examples: [XCT] }
-        baseQty: { $ref: '#/components/schemas/Decimal' }
-        gtin: { type: [string, 'null'] }
-        isSalesUnit: { type: boolean }
-        minOrderQty: { $ref: '#/components/schemas/Decimal' }
-        orderMultiple: { $ref: '#/components/schemas/Decimal' }
-        weightG: { type: [integer, 'null'] }
+        unitCode: { type: string, pattern: '^[A-Z0-9]{2,3}$', examples: [XCT] }
+        baseQty: { $ref: '#/components/schemas/Quantity' }
+        gtin: { oneOf: [ { $ref: '#/components/schemas/Gtin' }, { type: 'null' } ] }
+        weightG: { type: [integer, 'null'], minimum: 1 }
+        dimensionsMm:
+          type: [object, 'null']
+          additionalProperties: false
+          required: [l, w, h]
+          properties:
+            l: { type: integer, minimum: 1, maximum: 100000 }
+            w: { type: integer, minimum: 1, maximum: 100000 }
+            h: { type: integer, minimum: 1, maximum: 100000 }
+        isSalesUnit: { type: boolean, default: false }
+        minOrderQty: { $ref: '#/components/schemas/Quantity' }
+        orderMultiple: { $ref: '#/components/schemas/Quantity' }
+    Packaging:
+      allOf:
+        - $ref: '#/components/schemas/PackagingInput'
+        - type: object
+          required: [id, isSalesUnit, minOrderQty, orderMultiple]
+          properties:
+            id: { type: string, format: uuid }
+    VariantInput:
+      type: object
+      additionalProperties: false
+      required: [sku, packaging]
+      properties:
+        id: { type: string, format: uuid, description: Yalnız PATCH'te var olan varyant }
+        sku: { type: string, minLength: 1, maxLength: 64 }
+        attributes:
+          type: object
+          maxProperties: 20
+          additionalProperties: { type: [string, number, boolean] }
+          examples: [ { volume_ml: 400 } ]
+        gtin: { oneOf: [ { $ref: '#/components/schemas/Gtin' }, { type: 'null' } ] }
+        packaging: { type: array, minItems: 1, maxItems: 4, items: { $ref: '#/components/schemas/PackagingInput' } }
     Variant:
       type: object
+      required: [id, sku, attributes, gtin, isAvailable, status, packaging]
       properties:
         id: { type: string, format: uuid }
         sku: { type: string }
         attributes: { type: object, additionalProperties: {} }
         gtin: { type: [string, 'null'] }
-        isAvailable: { type: boolean }
+        isAvailable: { type: boolean, description: Stok modu `availability` (uç F3.10) }
+        status: { type: string, enum: [active, archived] }
         packaging: { type: array, items: { $ref: '#/components/schemas/Packaging' } }
+    ProductName:
+      type: object
+      additionalProperties: false
+      description: En az bir dilde dolu (US-030 AC1); boş diller atılır
+      properties:
+        az: { type: string, maxLength: 200 }
+        ru: { type: string, maxLength: 200 }
+        tr: { type: string, maxLength: 200 }
+        en: { type: string, maxLength: 200 }
+    ProductVisibilityInput:
+      type: object
+      additionalProperties: false
+      description: >-
+        Bölge kuralı (F3.3a K5): boş liste = bütün bağlı perakendecilere görünür; dolu liste =
+        perakendecinin bölgesi (`businesses.region_id`, V8) listedeyse. Fiyat listesi kuralı F3.6a.
+      properties:
+        regionIds: { type: array, maxItems: 50, uniqueItems: true, items: { type: string, format: uuid } }
     ProductInput:
       type: object
+      additionalProperties: false
       required: [sku, name, categoryId, baseUnitCode, variants]
       properties:
-        sku: { type: string }
-        name: { $ref: '#/components/schemas/LocalizedText' }
-        description: { $ref: '#/components/schemas/LocalizedText' }
+        sku: { type: string, minLength: 1, maxLength: 64 }
+        name: { $ref: '#/components/schemas/ProductName' }
+        description: { oneOf: [ { $ref: '#/components/schemas/LocalizedText' }, { type: 'null' } ] }
         categoryId: { type: string, format: uuid }
         brandId: { type: [string, 'null'], format: uuid }
+        baseUnitCode: { type: string, pattern: '^[A-Z0-9]{2,3}$' }
+        hasExpiry: { type: boolean, default: false }
+        shelfLifeMonths: { type: [integer, 'null'], minimum: 1, maximum: 120 }
+        variants: { type: array, minItems: 1, maxItems: 50, items: { $ref: '#/components/schemas/VariantInput' } }
+        visibility: { $ref: '#/components/schemas/ProductVisibilityInput' }
+    ProductUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 64 }
+        name: { $ref: '#/components/schemas/ProductName' }
+        description: { oneOf: [ { $ref: '#/components/schemas/LocalizedText' }, { type: 'null' } ] }
+        categoryId: { type: string, format: uuid }
+        brandId: { type: [string, 'null'], format: uuid }
+        baseUnitCode: { type: string, pattern: '^[A-Z0-9]{2,3}$' }
+        hasExpiry: { type: boolean }
+        shelfLifeMonths: { type: [integer, 'null'], minimum: 1, maximum: 120 }
+        status: { type: string, enum: [draft, active, archived] }
+        variants: { type: array, minItems: 1, maxItems: 50, items: { $ref: '#/components/schemas/VariantInput' } }
+        visibility: { $ref: '#/components/schemas/ProductVisibilityInput' }
+    Product:
+      type: object
+      description: Toptancı bakışı. Görseller F3.4.
+      required: [id, sku, name, description, categoryId, brandId, brand, baseUnitCode, hasExpiry, shelfLifeMonths, status, publishedAt, createdAt, updatedAt, variants, visibility]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        description: { oneOf: [ { $ref: '#/components/schemas/LocalizedText' }, { type: 'null' } ] }
+        categoryId: { type: string, format: uuid }
+        brandId: { type: [string, 'null'], format: uuid }
+        brand:
+          type: [object, 'null']
+          required: [id, name, status]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            status: { type: string, enum: [requested, active] }
         baseUnitCode: { type: string }
         hasExpiry: { type: boolean }
         shelfLifeMonths: { type: [integer, 'null'] }
         status: { type: string, enum: [draft, active, archived] }
-        imageFileIds: { type: array, maxItems: 8, items: { type: string, format: uuid } }
-        variants: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Variant' } }
+        publishedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        variants: { type: array, items: { $ref: '#/components/schemas/Variant' } }
         visibility:
           type: object
+          required: [regionIds]
           properties:
-            priceListIds: { type: array, items: { type: string, format: uuid } }
             regionIds: { type: array, items: { type: string, format: uuid } }
-    Product:
-      allOf:
-        - $ref: '#/components/schemas/ProductInput'
-        - type: object
+    ProductListItem:
+      type: object
+      required: [id, sku, name, status, categoryId, brand, activeVariantCount, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        name: { $ref: '#/components/schemas/LocalizedText' }
+        status: { type: string, enum: [draft, active, archived] }
+        categoryId: { type: string, format: uuid }
+        brand:
+          type: [object, 'null']
+          required: [id, name]
           properties:
             id: { type: string, format: uuid }
-            images: { type: array, items: { type: object, properties: { thumb: { type: string }, medium: { type: string }, large: { type: string } } } }
+            name: { type: string }
+        activeVariantCount: { type: integer }
+        updatedAt: { type: string, format: date-time }
     BrowseProduct:
       type: object
       properties:

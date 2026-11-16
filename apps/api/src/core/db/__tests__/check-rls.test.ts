@@ -201,6 +201,10 @@ describe('evaluateRlsTable — platformun yazamadığı tablolar (F2.18, US-016 
         'payments',
         'price_list_items',
         'price_lists',
+        'products',
+        'product_variants',
+        'product_packaging',
+        'product_visibility',
       ].sort(),
     );
   });
