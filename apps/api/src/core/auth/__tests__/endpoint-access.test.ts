@@ -23,6 +23,8 @@ const EXPECTED_OPEN: Record<string, 'public' | 'authenticated'> = {
   'GET /api/app-config': 'public',
   'GET /api/v1/i18n/:lang': 'public',
   'GET /api/v1/catalog/regions': 'public',
+  // F3.1: birim kataloğu, giriş yeterli (ürün formu; kart K4).
+  'GET /api/v1/catalog/units': 'authenticated',
   'GET /api/v1/dev/sms-outbox': 'public',
   // Yerel dosya deposu (ADR-0023): erişim token'daki HMAC imzası ve süreyle.
   'PUT /api/v1/dev/storage': 'public',
@@ -72,6 +74,12 @@ const EXPECTED_PLATFORM: Record<string, readonly string[]> = {
   'POST /api/v1/admin/catalog/job-titles': ['super_admin', 'content'],
   'PATCH /api/v1/admin/catalog/job-titles/:id': ['super_admin', 'content'],
   'DELETE /api/v1/admin/catalog/job-titles/:id': ['super_admin', 'content'],
+  // F3.1: birim kataloğu (US-028), F2.9 V1 ile aynı roller; birim silme ucu yok (AC3).
+  'GET /api/v1/admin/catalog/units': ['super_admin', 'content'],
+  'POST /api/v1/admin/catalog/units': ['super_admin', 'content'],
+  'PATCH /api/v1/admin/catalog/units/:code': ['super_admin', 'content'],
+  'PUT /api/v1/admin/catalog/unit-conversions': ['super_admin', 'content'],
+  'DELETE /api/v1/admin/catalog/unit-conversions/:fromCode/:toCode': ['super_admin', 'content'],
   // F2.18 (productreport "Platform rolleri"): operasyon yönetir, destek yalnız görür.
   'GET /api/v1/admin/buyers': ['super_admin', 'operations', 'support'],
   'GET /api/v1/admin/buyers/:id': ['super_admin', 'operations', 'support'],

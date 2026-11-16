@@ -17,6 +17,7 @@ import { UuidV7IdGenerator } from './core/id-generator';
 import { seedAccess } from './modules/access';
 import { seedBilling } from './modules/billing';
 import { seedBusinesses } from './modules/businesses';
+import { seedCatalog } from './modules/catalog';
 import { seedI18n } from './modules/i18n';
 import { seedSuperAdmin } from './modules/identity';
 import { seedNotifications } from './modules/notifications';
@@ -56,6 +57,7 @@ async function dbSeed(): Promise<void> {
   try {
     const i18n = await seedI18n(client);
     const businesses = await seedBusinesses(client);
+    const catalog = await seedCatalog(client);
     const ids = new UuidV7IdGenerator(new SystemClock());
     const billing = await seedBilling(client, () => ids.next());
     const access = await seedAccess(client, () => ids.next());
@@ -67,7 +69,7 @@ async function dbSeed(): Promise<void> {
         ? 'süper admin atlandı (SUPER_ADMIN_PHONE yok)'
         : `süper admin hazır (yeni kullanıcı: ${admin.userCreated ? 'evet' : 'hayır'})`;
     process.stdout.write(
-      `db:seed tamamlandı: i18n ${String(i18n.inserted)}, businesses ${String(businesses.inserted)}, billing ${String(billing.inserted)}, access ${String(access.inserted)}, notifications ${String(notifications.inserted)} yeni satır; ${adminNote}.
+      `db:seed tamamlandı: i18n ${String(i18n.inserted)}, businesses ${String(businesses.inserted)}, catalog ${String(catalog.inserted)}, billing ${String(billing.inserted)}, access ${String(access.inserted)}, notifications ${String(notifications.inserted)} yeni satır; ${adminNote}.
 `,
     );
   } finally {

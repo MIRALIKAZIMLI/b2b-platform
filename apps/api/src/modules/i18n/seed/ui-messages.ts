@@ -4,7 +4,7 @@
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
 // daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
 // F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım;
-// F2.5b: şubeler ve onay kuralı).
+// F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -4621,5 +4621,311 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'İstifadəçi üzrə dəqiqəlik axtarış limiti',
     ru: 'Лимит поиска на пользователя в минуту',
     tr: 'Kullanıcı başına dakikalık arama sınırı',
+  },
+  // F3.1: admin birim kataloğu (US-028).
+  'shell.menu.units': {
+    az: 'Ölçü vahidləri',
+    ru: 'Единицы измерения',
+    tr: 'Birimler',
+  },
+  'adminUnits.title': {
+    az: 'Ölçü vahidləri',
+    ru: 'Единицы измерения',
+    tr: 'Birimler',
+  },
+  'adminUnits.description': {
+    az: 'Topdançılar məhsul formunda yalnız aktiv vahidləri seçə bilir. Kodlar UN/ECE Rec 20 standartına uyğundur.',
+    ru: 'Оптовики выбирают в форме товара только активные единицы. Коды соответствуют стандарту UN/ECE Rec 20.',
+    tr: 'Toptancılar ürün formunda yalnızca aktif birimleri seçebilir. Kodlar UN/ECE Rec 20 standardına uygundur.',
+  },
+  'adminUnits.create_open': {
+    az: 'Yeni vahid',
+    ru: 'Новая единица',
+    tr: 'Yeni birim',
+  },
+  'adminUnits.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'adminUnits.list_title': {
+    az: 'Vahidlər',
+    ru: 'Единицы',
+    tr: 'Birimler',
+  },
+  'adminUnits.empty': {
+    az: 'Hələ vahid yoxdur.',
+    ru: 'Единиц пока нет.',
+    tr: 'Henüz birim yok.',
+  },
+  'adminUnits.kind.count': {
+    az: 'Ədəd',
+    ru: 'Штучные',
+    tr: 'Adet',
+  },
+  'adminUnits.kind.weight': {
+    az: 'Çəki',
+    ru: 'Вес',
+    tr: 'Ağırlık',
+  },
+  'adminUnits.kind.volume': {
+    az: 'Həcm',
+    ru: 'Объём',
+    tr: 'Hacim',
+  },
+  'adminUnits.kind.length': {
+    az: 'Uzunluq',
+    ru: 'Длина',
+    tr: 'Uzunluk',
+  },
+  'adminUnits.kind.area': {
+    az: 'Sahə',
+    ru: 'Площадь',
+    tr: 'Alan',
+  },
+  'adminUnits.kind.package': {
+    az: 'Qablaşdırma',
+    ru: 'Упаковка',
+    tr: 'Ambalaj',
+  },
+  'adminUnits.active': {
+    az: 'Aktiv',
+    ru: 'Активна',
+    tr: 'Aktif',
+  },
+  'adminUnits.inactive': {
+    az: 'Passiv',
+    ru: 'Неактивна',
+    tr: 'Pasif',
+  },
+  'adminUnits.decimal': {
+    az: 'Onluq miqdar',
+    ru: 'Дробное количество',
+    tr: 'Ondalıklı miktar',
+  },
+  'adminUnits.edit': {
+    az: 'Redaktə et',
+    ru: 'Изменить',
+    tr: 'Düzenle',
+  },
+  'adminUnits.activate': {
+    az: 'Aktivləşdir',
+    ru: 'Активировать',
+    tr: 'Aktifleştir',
+  },
+  'adminUnits.deactivate': {
+    az: 'Deaktiv et',
+    ru: 'Деактивировать',
+    tr: 'Pasifleştir',
+  },
+  'adminUnits.activated': {
+    az: 'Vahid aktivləşdirildi.',
+    ru: 'Единица активирована.',
+    tr: 'Birim aktifleştirildi.',
+  },
+  'adminUnits.deactivated': {
+    az: 'Vahid deaktiv edildi; yeni məhsullarda seçilə bilməz.',
+    ru: 'Единица деактивирована; в новых товарах её выбрать нельзя.',
+    tr: 'Birim pasifleştirildi; yeni ürünlerde seçilemez.',
+  },
+  'adminUnits.no_delete_hint': {
+    az: 'Vahidlər silinmir: istifadədə ola bilərlər. Lazım olmayan vahidi deaktiv edin.',
+    ru: 'Единицы не удаляются: они могут использоваться. Ненужную единицу деактивируйте.',
+    tr: 'Birimler silinmez: kullanımda olabilirler. Gerekmeyen birimi pasifleştirin.',
+  },
+  'adminUnits.create_title': {
+    az: 'Yeni vahid',
+    ru: 'Новая единица',
+    tr: 'Yeni birim',
+  },
+  'adminUnits.edit_title': {
+    az: 'Vahidi redaktə et',
+    ru: 'Изменить единицу',
+    tr: 'Birimi düzenle',
+  },
+  'adminUnits.editor_hint': {
+    az: 'Aktiv vahid topdançıların məhsul formunda dərhal görünür.',
+    ru: 'Активная единица сразу появляется в форме товара у оптовиков.',
+    tr: 'Aktif birim toptancıların ürün formunda hemen görünür.',
+  },
+  'adminUnits.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'adminUnits.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'adminUnits.created': {
+    az: 'Vahid yaradıldı.',
+    ru: 'Единица создана.',
+    tr: 'Birim oluşturuldu.',
+  },
+  'adminUnits.updated': {
+    az: 'Vahid yeniləndi.',
+    ru: 'Единица обновлена.',
+    tr: 'Birim güncellendi.',
+  },
+  'adminUnits.field.code': {
+    az: 'UN/ECE kodu',
+    ru: 'Код UN/ECE',
+    tr: 'UN/ECE kodu',
+  },
+  'adminUnits.field.kind': {
+    az: 'Növ',
+    ru: 'Тип',
+    tr: 'Tür',
+  },
+  'adminUnits.field.decimal': {
+    az: 'Miqdar',
+    ru: 'Количество',
+    tr: 'Miktar',
+  },
+  'adminUnits.field.name': {
+    az: 'Ad',
+    ru: 'Название',
+    tr: 'Ad',
+  },
+  'adminUnits.field.abbreviation': {
+    az: 'Qısaltma',
+    ru: 'Сокращение',
+    tr: 'Kısaltma',
+  },
+  'adminUnits.code_hint': {
+    az: '2–3 böyük hərf və ya rəqəm, məsələn KGM. Sonradan dəyişmir.',
+    ru: '2–3 заглавные буквы или цифры, например KGM. Позже не меняется.',
+    tr: '2–3 büyük harf veya rakam, örneğin KGM. Sonradan değişmez.',
+  },
+  'adminUnits.code_locked': {
+    az: 'Kod və növ dəyişdirilə bilməz.',
+    ru: 'Код и тип изменить нельзя.',
+    tr: 'Kod ve tür değiştirilemez.',
+  },
+  'adminUnits.decimal_label': {
+    az: 'Onluq miqdara icazə ver (1,5 kq)',
+    ru: 'Разрешить дробное количество (1,5 кг)',
+    tr: 'Ondalıklı miktara izin ver (1,5 kg)',
+  },
+  'adminUnits.error.required': {
+    az: 'Bu sahə mütləqdir.',
+    ru: 'Обязательное поле.',
+    tr: 'Bu alan zorunludur.',
+  },
+  'adminUnits.error.too_long': {
+    az: 'Mətn çox uzundur.',
+    ru: 'Слишком длинный текст.',
+    tr: 'Metin çok uzun.',
+  },
+  'adminUnits.error.invalid': {
+    az: 'Seçim yanlışdır.',
+    ru: 'Неверный выбор.',
+    tr: 'Seçim geçersiz.',
+  },
+  'adminUnits.error.code_required': {
+    az: 'Kodu daxil edin.',
+    ru: 'Введите код.',
+    tr: 'Kodu girin.',
+  },
+  'adminUnits.error.code_invalid': {
+    az: 'Kod 2–3 böyük hərf və ya rəqəmdən ibarət olmalıdır.',
+    ru: 'Код должен состоять из 2–3 заглавных букв или цифр.',
+    tr: 'Kod 2–3 büyük harf veya rakamdan oluşmalı.',
+  },
+  'adminUnits.error.factor_required': {
+    az: 'Nisbəti daxil edin.',
+    ru: 'Введите коэффициент.',
+    tr: 'Oranı girin.',
+  },
+  'adminUnits.error.factor_invalid': {
+    az: 'Nisbət 0-dan böyük, ən çox 6 onluq rəqəmli olmalıdır.',
+    ru: 'Коэффициент должен быть больше 0, не более 6 знаков после запятой.',
+    tr: "Oran 0'dan büyük, en çok 6 ondalık haneli olmalı.",
+  },
+  'adminUnits.failure.code_taken': {
+    az: 'Bu kod artıq istifadə olunur.',
+    ru: 'Этот код уже используется.',
+    tr: 'Bu kod zaten kullanılıyor.',
+  },
+  'adminUnits.failure.kind_mismatch': {
+    az: 'Yalnız eyni növ vahidlər arasında nisbət yazıla bilər.',
+    ru: 'Коэффициент можно задать только между единицами одного типа.',
+    tr: 'Oran yalnızca aynı türdeki birimler arasında girilebilir.',
+  },
+  'adminUnits.failure.same_unit': {
+    az: 'Vahid özünə çevrilə bilməz.',
+    ru: 'Единицу нельзя пересчитать в саму себя.',
+    tr: 'Birim kendisine dönüştürülemez.',
+  },
+  'adminUnits.failure.reverse_exists': {
+    az: 'Bu cüt üçün əks istiqamətdə nisbət artıq var.',
+    ru: 'Для этой пары уже задан обратный коэффициент.',
+    tr: 'Bu çift için ters yönde oran zaten var.',
+  },
+  'adminUnits.failure.not_found': {
+    az: 'Vahid tapılmadı.',
+    ru: 'Единица не найдена.',
+    tr: 'Birim bulunamadı.',
+  },
+  'adminUnits.failure.invalid': {
+    az: 'Məlumatlardan biri yanlışdır.',
+    ru: 'Одно из значений неверно.',
+    tr: 'Bilgilerden biri geçersiz.',
+  },
+  'adminUnits.choose': {
+    az: 'Seçin',
+    ru: 'Выберите',
+    tr: 'Seçin',
+  },
+  'adminUnits.conversion.title': {
+    az: 'Çevirmə nisbətləri',
+    ru: 'Коэффициенты пересчёта',
+    tr: 'Dönüşüm oranları',
+  },
+  'adminUnits.conversion.description': {
+    az: 'Eyni növ vahidlər arasında: 1 kq = 1000 q.',
+    ru: 'Между единицами одного типа: 1 кг = 1000 г.',
+    tr: 'Aynı türdeki birimler arasında: 1 kg = 1000 g.',
+  },
+  'adminUnits.conversion.empty': {
+    az: 'Hələ nisbət yoxdur.',
+    ru: 'Коэффициентов пока нет.',
+    tr: 'Henüz oran yok.',
+  },
+  'adminUnits.conversion.from': {
+    az: '1 vahid',
+    ru: '1 единица',
+    tr: '1 birim',
+  },
+  'adminUnits.conversion.to': {
+    az: 'Bərabərdir',
+    ru: 'Равно',
+    tr: 'Eşittir',
+  },
+  'adminUnits.conversion.factor': {
+    az: 'Nisbət',
+    ru: 'Коэффициент',
+    tr: 'Oran',
+  },
+  'adminUnits.conversion.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'adminUnits.conversion.saved': {
+    az: 'Nisbət yadda saxlandı.',
+    ru: 'Коэффициент сохранён.',
+    tr: 'Oran kaydedildi.',
+  },
+  'adminUnits.conversion.deleted': {
+    az: 'Nisbət silindi.',
+    ru: 'Коэффициент удалён.',
+    tr: 'Oran silindi.',
+  },
+  'adminUnits.conversion.delete': {
+    az: 'Sil',
+    ru: 'Удалить',
+    tr: 'Sil',
   },
 };

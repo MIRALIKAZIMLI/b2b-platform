@@ -4,6 +4,7 @@ import { OutboxModule } from '../../core/outbox';
 import { AccessModule, WEB_BASE_URL } from '../access';
 import { BillingModule } from '../billing';
 import { BusinessesModule } from '../businesses';
+import { CatalogModule } from '../catalog';
 import { ConnectionsModule } from '../connections';
 import { I18nModule } from '../i18n';
 import { SettingsModule } from '../settings';
@@ -18,6 +19,8 @@ import { SellersController } from './sellers.controller';
 import { SellersService } from './sellers.service';
 import { SettingsAdminController } from './settings-admin.controller';
 import { SettingsAdminService } from './settings-admin.service';
+import { UnitsAdminController } from './units-admin.controller';
+import { UnitsAdminService } from './units-admin.service';
 
 export interface PlatformAdminOptions {
   /** SMS'teki aktivasyon bağlantısının web adresi (`WEB_BASE_URL`). */
@@ -26,7 +29,7 @@ export interface PlatformAdminOptions {
 
 /**
  * Platform admin uçları (F2.1a: toptancı açma, aktivasyon daveti, plan listesi; F2.2: başvurular; F2.9: unvan ve rol
- * şablonu kataloğu; F2.18: perakendeci moderasyonu, askıya alma, "sil"; F2.19: ayarlar). Platform bağlamı
+ * şablonu kataloğu; F2.18: perakendeci moderasyonu, askıya alma, "sil"; F2.19: ayarlar; F3.1: birim kataloğu). Platform bağlamı
  * (`withPlatformTx`) yalnızca bu modülde açılır (c4 §3.7); uçlar `@RequirePlatformRole`.
  */
 @Module({})
@@ -39,6 +42,7 @@ export class PlatformAdminModule {
         AccessModule,
         BillingModule,
         BusinessesModule,
+        CatalogModule,
         ConnectionsModule,
         OutboxModule,
         I18nModule,
@@ -48,6 +52,7 @@ export class PlatformAdminModule {
         SellersController,
         SellerApplicationsAdminController,
         RoleCatalogController,
+        UnitsAdminController,
         BuyersAdminController,
         SettingsAdminController,
       ],
@@ -55,6 +60,7 @@ export class PlatformAdminModule {
         SellersService,
         SellerApplicationsAdminService,
         RoleCatalogAdminService,
+        UnitsAdminService,
         BuyersAdminService,
         BuyerArchiveService,
         SettingsAdminService,
