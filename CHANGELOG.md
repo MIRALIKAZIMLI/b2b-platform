@@ -61,3 +61,4 @@
 - F2.18b: web admin "Perakendeciler" ekranı (filtre, kayıt penceresi, VÖEN doğrula/reddet, askıya al/kaldır/sil iki adımlı onay; destek yalnız görür)
 - F2.17: bağlantısız hesap politikası (gece işi, giriş sayacı, 180. gün silme/arşiv)
 - F2.19: admin ayarlar ekranı (kapsam seçici)
+- F3.1: birim kataloğu (units, unit_conversions; admin Birimler ekranı; 19 başlangıç birimi)

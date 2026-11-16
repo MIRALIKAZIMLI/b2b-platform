@@ -677,6 +677,8 @@ Benzersiz: `(seller_id, buyer_id) WHERE status = 'active'`. İndeks: `(buyer_id)
 
 #### `unit_conversions` (G) — `from_code`, `to_code`, `factor numeric(18,6)`; PK `(from_code, to_code)`
 
+**Birim kataloğu (F3.1, `0032_units.sql`; US-028):** `units.code` UN/ECE Rec 20 biçimi (`^[A-Z0-9]{2,3}$`, CHECK); `kind` CHECK ile altı değerden biri; `name` ve `abbreviation` az/ru/tr zorunlu jsonb; `created_at`, `updated_at`. `code` ve `kind` sonradan değişmez. `units` silinmez (US-028 AC3, R38): `app_user`'a yalnız `SELECT, INSERT, UPDATE` verilir, silme politikası yoktur; ürün tabloları (F3.3a) `units.code`'a FK ile bağlanır. `unit_conversions`: iki uç `units.code` FK, `from_code <> to_code` ve `factor > 0` CHECK; `1 from = factor to`; aynı türde olma ve ters yönün kayıtlı olmaması servis kuralı (422). Başlangıç verisi `pnpm db:seed` (19 birim, 5 dönüşüm; liste `docs/tasks/F3.1.md`).
+
 #### `categories` (G) — `parent_id`, `name jsonb`, `depth smallint CHECK (depth BETWEEN 1 AND 3)`, `sort_order`, `is_active`
 
 #### `brands` (G) — `name text unique`, `status (active/requested/rejected)`, `requested_by_business_id uuid null`

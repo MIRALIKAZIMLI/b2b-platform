@@ -80,6 +80,14 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
       path: 'job-titles',
       platformRoles: CATALOG_ADMIN_ROLES,
     },
+    // F3.1: birim kataloğu (US-028), F2.9 V1 ile aynı roller.
+    {
+      key: 'units',
+      anyOf: [],
+      ready: true,
+      path: 'units',
+      platformRoles: CATALOG_ADMIN_ROLES,
+    },
     // F2.19: sistem ayarları (US-017), yalnız süper admin (T1).
     {
       key: 'settings',

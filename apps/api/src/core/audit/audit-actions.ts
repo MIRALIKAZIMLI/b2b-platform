@@ -52,6 +52,11 @@ export const AUDIT_ACTIONS = [
   'business.dormant_archived',
   'business.dormant_purged',
   'business.reactivated',
+  // F3.1 (US-028): birim kataloğu (G); işletmesiz kayıt.
+  'unit.created',
+  'unit.updated',
+  'unit_conversion.saved',
+  'unit_conversion.deleted',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -69,6 +74,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // ve izinler).
 // role_template / job_title: hedef kimliği platform rol şablonu / unvan (G tabloları; F2.9 admin
 // kataloğu, işletmesiz kayıt `business_id = null`; before/after ad, izinler, sürüm, aktiflik).
+// unit / unit_conversion: hedef kimliği birim kodu (`KGM`) / `<from>:<to>` (`KGM:GRM`); F3.1 admin
+// kataloğu, `business_id = null`; before/after ad, kısaltma, ondalık izni, aktiflik, oran.
 // connection: hedef kimliği bağlantı (connections.id; F2.13a kabul, after: istek kimliği, veri
 // paylaşım onayı, vade). block: hedef kimliği engellenen satıcı (sellerId; işletme = alıcı).
 export const AUDIT_TARGET_TYPES = [
@@ -86,6 +93,8 @@ export const AUDIT_TARGET_TYPES = [
   'job_title',
   'connection',
   'block',
+  'unit',
+  'unit_conversion',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

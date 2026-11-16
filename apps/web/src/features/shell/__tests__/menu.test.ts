@@ -102,6 +102,7 @@ describe('İzinden menü', () => {
       'buyers',
       'role_templates',
       'job_titles',
+      'units',
       'settings',
     ]);
     expect(visibleMenu('admin', [], 'operations').map((item) => item.key)).toEqual([
@@ -114,6 +115,7 @@ describe('İzinden menü', () => {
       'dashboard',
       'role_templates',
       'job_titles',
+      'units',
     ]);
     // F2.18b: destek yalnız perakendecileri görür (yazma düğmeleri ekranda gizli).
     expect(visibleMenu('admin', [], 'support').map((item) => item.key)).toEqual([

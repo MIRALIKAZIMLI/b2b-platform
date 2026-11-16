@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-15 (F2.19: admin ayarlar ekranı).
+Son güncelleme: 2026-11-16 (F3.1: birim kataloğu).
 
 ## 1. Mimari özeti
 
@@ -21,7 +21,7 @@ apps/api/src/core/                audit, bootstrap, config, db, errors, health, 
                                   logging, outbox, clock.ts, id-generator.ts, money.ts
 apps/api/src/core/ports/          sms-sender, push-sender, file-storage (dış servis portları)
 apps/api/src/infrastructure/      push (expo, mock), queue, redis, sms (mock → dev_sms_outbox), storage (r2, local)
-apps/api/src/modules/             access, app-config, billing, businesses, dev (yalnız local/test/staging), files, i18n, identity, notifications, platform-admin, settings
+apps/api/src/modules/             access, app-config, billing, businesses, catalog, dev (yalnız local/test/staging), files, i18n, identity, notifications, platform-admin, settings
 packages/api-client/              openapi.yaml → src/schema.d.ts (üretilir, elle düzenlenmez), createApiClient
 packages/shared/src/              env, errors, entitlements, menu, permissions, settings, uuidv7, version, voen, format…
 apps/web/src/                     lib/{api,session,i18n}.ts, i18n/{routing,request}.ts, proxy.ts,
@@ -134,6 +134,7 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F2.18b | Web `/admin/buyers` (`features/admin-buyers`): dört sekme, kayıt penceresi (e-taxes bağlantısı `E_TAXES_VOEN_LOOKUP_URL`), doğrula/reddet (gerekçe kodu + yalnız audit notu), askıya al/kaldır/sil ikinci adımda gerekçe (3–500) + onay kutusu. Eylemler `buyerActions` (saf; `BUYER_ADMIN_WRITE_ROLES`), destek yalnız görür. Menü `buyers` = `BUYER_ADMIN_READ_ROLES`. |
 | F2.17 | Bağlantısız hesap (US-027): worker `directory` kuyruğunda gece işi `directory.dormant_accounts` (`dormant.job_hour_utc`, `ScheduledJobRunner`; saf kural `directory/jobs/dormant-policy.ts`: kaçırılan gecede en yüksek hatırlatma, pasif/arşiv önceki aşamadan aradaki gün kadar sonra). `0030`: `buyer_profiles.dormant_since` (sayaç), bekçi aşama/sayaç kolonlarını kiracıya kapatır, `businesses_guard_platform_columns` migrator yolu (`active↔dormant`, `dormant→archived`); bağlamsız DEFINER `dormant_scan/_advance/_archive/_recipients`, kullanıcı bağlamlı `buyer_dormant_touch`. Giriş/yenileme → identity `LoginActivityHook` (businesses `LoginActivityHookModule`, global; hata yutulur). 180. gün S1 = B (kullanıcı): geçmişsiz `business_purge_rows` ile kalıcı silme, geçmişli arşiv + `person_data` silme; `business_purge` aynı listeyi kullanır. Bildirimler `dormant_profile_reminder`, `new_buyer_in_region`, `dormant_warning` |
 | F2.19 | Admin ayarlar (US-017): `GET/PUT /admin/settings` yalnız `super_admin` (T1). `0031` DEFINER `settings_admin_list` (yalnız platform bağlamı). Kayıtta anahtar başına `scopes` (`layered`); plan/işletme yalnız kodun işletmeyle okuduğu anahtarlarda, aksi `SETTING_SCOPE_NOT_ALLOWED` (US-017 "Kapsam"; kısıt admin ucunda, `SettingsService.set` genel). Yeni anahtar işletmeyle okunmaya başlarsa `layered(...)` + US-017 paragrafı aynı PR'da. Web `features/admin-settings` |
+| F3.1 | Birim kataloğu (US-028): yeni `catalog` modülü; `0032` `units` (PK UN/ECE `code`, silinmez: app_user'a DELETE yok) + `unit_conversions` (G). `GET /catalog/units` `@Authenticated` (yalnız aktif); admin `GET|POST /admin/catalog/units`, `PATCH .../units/{code}`, `PUT|DELETE .../unit-conversions` (`super_admin` + `content`). Aynı tür ve tek yön servis kuralı (422). Seed `seedCatalog` (19 birim, 5 dönüşüm). Web `features/admin-units` |
 
 **Sıradaki:** F2 tamam → F3 (faz spesifikasyonu); not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 

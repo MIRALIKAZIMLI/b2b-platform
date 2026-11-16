@@ -2410,7 +2410,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Birim kataloğu */
+        /**
+         * Birim kataloğu (F3.1, US-028 AC1)
+         * @description Giriş yapmış her kullanıcı (`@Authenticated`, işletme bağlamı gerekmez). Yalnız aktif birimler (kod sırasıyla) ve iki ucu da aktif olan dönüşümler. Ürün formu (F3.3) bu listeden seçer.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -2425,8 +2428,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["UnitCatalog"];
+                    };
                 };
+                401: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -6105,15 +6111,15 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Genel katalog kaydı oluştur (units, categories, brands, activity-types, regions)
-         * @description Unvan ve rol şablonu (`job-titles`, `role-templates`) kendi yollarında tanımlıdır (F2.9).
+         * Genel katalog kaydı oluştur (categories, brands, activity-types, regions)
+         * @description Unvan ve rol şablonu (`job-titles`, `role-templates`, F2.9) ve birimler (`units`, `unit-conversions`, F3.1) kendi yollarında tanımlıdır.
          */
         post: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    kind: "units" | "categories" | "brands" | "activity-types" | "regions";
+                    kind: "categories" | "brands" | "activity-types" | "regions";
                 };
                 cookie?: never;
             };
@@ -6177,6 +6183,222 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Birimler (pasifler dahil) ve dönüşümler (F3.1, US-028)
+         * @description Platform rolü `super_admin` veya `content` (F2.9 V1 ile aynı).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UnitCatalog"];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        /**
+         * Birim oluştur (US-028 AC1)
+         * @description Aktif açılır ve ürün formunda hemen seçilebilir. `code` benzersiz (aksi 422 `code: [taken]`); `code` ve `kind` sonradan değişmez. Toptancı kullanıcısının birim açma yolu yoktur (AC4).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: components["schemas"]["UnitCode"];
+                        kind: components["schemas"]["UnitKind"];
+                        name: components["schemas"]["CatalogName"];
+                        abbreviation: components["schemas"]["UnitAbbreviation"];
+                        allowsDecimal: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Oluşturuldu */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Unit"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/units/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Birimi güncelle / pasifleştir (US-028 AC3)
+         * @description Silme ucu yoktur: birim yalnız pasifleştirilir (AC3, R38). Pasif birim `GET /catalog/units`'te görünmez; onu kullanan kayıtlar etkilenmez.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: components["schemas"]["UnitCode"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: components["schemas"]["CatalogName"];
+                        abbreviation?: components["schemas"]["UnitAbbreviation"];
+                        allowsDecimal?: boolean;
+                        isActive?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Güncellendi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Unit"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/unit-conversions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Dönüşüm oranı kaydet (US-028 AC2)
+         * @description `1 fromCode = factor toCode` (ör. 1 KGM = 1000 GRM). Varsa oran güncellenir. İki birim var olmalı (aksi 422 `fromCode|toCode: [not_found]`), aynı türde olmalı (`toCode: [kind_mismatch]`), farklı olmalı (`toCode: [same_unit]`); ters yön kayıtlıysa `toCode: [reverse_exists]`.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        fromCode: components["schemas"]["UnitCode"];
+                        toCode: components["schemas"]["UnitCode"];
+                        factor: components["schemas"]["UnitFactor"];
+                    };
+                };
+            };
+            responses: {
+                /** @description Kaydedildi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UnitConversion"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/unit-conversions/{fromCode}/{toCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Dönüşüm oranını sil */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    fromCode: components["schemas"]["UnitCode"];
+                    toCode: components["schemas"]["UnitCode"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Silindi */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/catalog/role-templates": {
@@ -6944,6 +7166,39 @@ export interface components {
             ru: string;
             tr: string;
             en?: string;
+        };
+        /** @description UN/ECE Rec 20 kodu (ör. `KGM`, `XCT`); sonradan değişmez (F3.1 K1). */
+        UnitCode: string;
+        /** @enum {string} */
+        UnitKind: "count" | "weight" | "volume" | "length" | "area" | "package";
+        /** @description Kısaltma; az, ru, tr zorunlu, en isteğe bağlı; her biri 1–16 karakter. */
+        UnitAbbreviation: {
+            az: string;
+            ru: string;
+            tr: string;
+            en?: string;
+        };
+        /**
+         * @description Dönüşüm oranı; `> 0`, en çok 12 tam ve 6 ondalık hane (`numeric(18,6)`).
+         * @example 1000
+         */
+        UnitFactor: string;
+        Unit: {
+            code: components["schemas"]["UnitCode"];
+            kind: components["schemas"]["UnitKind"];
+            name: components["schemas"]["LocalizedText"];
+            abbreviation: components["schemas"]["LocalizedText"];
+            allowsDecimal: boolean;
+            isActive: boolean;
+        };
+        UnitConversion: {
+            fromCode: components["schemas"]["UnitCode"];
+            toCode: components["schemas"]["UnitCode"];
+            factor: components["schemas"]["UnitFactor"];
+        };
+        UnitCatalog: {
+            items: components["schemas"]["Unit"][];
+            conversions: components["schemas"]["UnitConversion"][];
         };
         AdminRoleTemplate: {
             /** Format: uuid */

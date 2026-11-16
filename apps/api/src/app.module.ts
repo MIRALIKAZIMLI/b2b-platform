@@ -22,6 +22,7 @@ import { AccessModule, BranchUsageGateModule } from './modules/access';
 import { AppConfigModule } from './modules/app-config';
 import { BillingModule, WarehouseLimitGateModule } from './modules/billing';
 import { BusinessesModule, LoginActivityHookModule } from './modules/businesses';
+import { CatalogModule } from './modules/catalog';
 import { DevModule, isDevModuleEnabled } from './modules/dev';
 import { ConnectionsModule } from './modules/connections';
 import { DirectoryApiModule } from './modules/directory';
@@ -62,6 +63,7 @@ export class AppModule implements NestModule {
         AppConfigModule,
         I18nModule,
         BusinessesModule,
+        CatalogModule,
         // F2.17: identity'nin giriş kancası (bağlantısız hesap sayacı).
         LoginActivityHookModule,
         BillingModule,
