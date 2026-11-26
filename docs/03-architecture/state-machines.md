@@ -293,3 +293,23 @@ stateDiagram-v2
 | archived → draft | Aynı | — | Audit `product.restored` |
 
 Başka geçiş `409 INVALID_STATE_TRANSITION`. `active → draft` yoktur (gizlemek için arşiv). Arşivdeki ürün düzenlenmez, yalnız geri alınır (409). Yayındaki ürün düzenlenebilir; markası onay bekleyen markaya çevrilemez (422 `brandId: [not_approved]`). Ürün silinmez. Varyant durumu (`active` / `archived`) yalnız ürün düzenlemesiyle değişir: listede olmayan varyant arşivlenir, listede `id`'si olan arşivli varyant yeniden `active` olur (K3). Marka reddedilince ürünün markası boşalır (§13, V5).
+
+## 15. Fiyat listesi (`price_lists.status`)
+
+F3.6a (US-034; kart K2 = A, K3). Kod: `PriceListStateMachine` (`apps/api/src/modules/pricing/price-list.state-machine.ts`).
+
+```mermaid
+stateDiagram-v2
+    [*] --> active: toptancı listeyi açar
+    active --> archived: arşivle
+    archived --> active: geri al
+```
+
+| Geçiş | Kim | Koşul (guard) | Yan etki |
+| --- | --- | --- | --- |
+| → active | `pricing.manage` izinli toptancı kullanıcısı (`POST /price-lists`) | Para birimi satıcınınki (aksi `422 CURRENCY_MISMATCH`) | İlk liste varsayılan olur; audit `price_list.created` |
+| active → archived | Aynı (`PATCH /price-lists/{id}`, `status: archived`) | Varsayılan değil (aksi `409 PRICE_LIST_DEFAULT_PROTECTED`); aktif bir bağlantıya atanmamış (aksi `409 PRICE_LIST_IN_USE`) | Audit `price_list.archived`; listeye fiyat yazılamaz |
+| archived → active | Aynı (`status: active`) | — | Audit `price_list.restored` |
+
+Başka geçiş `409 INVALID_STATE_TRANSITION`. Arşivli liste varsayılan yapılamaz, fiyat yazılamaz (409) ve bağlantıya atanamaz (422). Liste silinmez.
+

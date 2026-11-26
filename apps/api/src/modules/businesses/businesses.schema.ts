@@ -4,7 +4,7 @@
 // `regions` gibi veritabanında üretilir (G tablosu, satırları admin/SQL girer).
 //
 // Henüz var olmayan tablolara giden FK'lar eklenmez (F1 faz spesifikasyonu §6.10):
-// `default_price_list_id` → price_lists (F3). `logo_file_id` → files bileşik FK'sı F1.10
+// `default_price_list_id` → price_lists bileşik FK'sı F3.6a (0036). `logo_file_id` → files bileşik FK'sı F1.10
 // migration'ında elle eklendi (drizzle/0012_files.sql; businesses → files bağımlılığı yok).
 // `verified_by` / `approved_by` → users FK'sı F1.5a migration'ında elle eklendi (drizzle/0007_identity.sql;
 // şemadan identity modülünü içe aktarmak modüller arası döngü yaratır).

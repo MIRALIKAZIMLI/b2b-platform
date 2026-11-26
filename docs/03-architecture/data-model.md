@@ -749,7 +749,7 @@ Benzersiz: `(variant_id, level)`.
 
 Ürün başına en çok `catalog.product_images_max` (8) satır (servis, ürün satırı `FOR UPDATE`). Boyutlar ayrı satır değildir: anahtar `<işletme>/product_image/<fileId>-<200|800|1600>.webp` (public bucket); orijinalin adresi API'de dönmez. RLS: `product_images_tenant` (FOR ALL), `product_images_platform_select`; `app_user` SELECT, INSERT, DELETE, UPDATE (`sort_order`, `status`, `updated_at`). Satır silinince depo nesneleri kalır (temizlik F2.16b önerisi).
 
-#### `product_visibility` (T) — `product_id`, `seller_id`, `price_list_id uuid null`, `region_id uuid null`. Kayıt yoksa ürün tüm bağlı perakendecilere görünür. (F3.3a: yalnız `region_id`, not null; `price_list_id` F3.6a'da eklenir. Kurallar VEYA ile değerlendirilir, F3.12a.)
+#### `product_visibility` (T) — `product_id`, `seller_id`, `price_list_id uuid null`, `region_id uuid null`. Kayıt yoksa ürün tüm bağlı perakendecilere görünür. (F3.3a: yalnız `region_id`, not null. `price_list_id` kuralın değerlendirildiği F3.12a'da eklenir: F3.6a'da ürün düzenlemesi görünürlüğü sil-yaz yaptığından kolon tek başına eklenmedi. Kurallar VEYA ile değerlendirilir, F3.12a.)
 
 #### `import_jobs` (T) — sahibi `imports` modülü
 
@@ -769,25 +769,31 @@ Benzersiz: `(variant_id, level)`.
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| seller_id | uuid | | |
-| name | text | | |
-| currency_code | char(3) | | |
+| id | uuid | PK; `unique (id, seller_id)` | Bileşik FK hedefi (`price_list_items`, `connections`, `seller_profiles`) |
+| seller_id | uuid | FK businesses | |
+| name | text | 1–120 karakter | |
+| currency_code | char(3) | FK currencies | F3.6a K6: satıcının para birimi (`businesses.currency_code`, boşsa ülkenin varsayılanı) olmalı |
 | vat_included | boolean | | |
-| vat_rate | numeric(5,2) | | 📌 VARSAYIM: Liste düzeyinde tek ƏDV oranı; ürün bazında farklı oran gerekirse `products.vat_rate` eklenir |
-| is_default | boolean | | Satıcı başına tek |
-| status | text | `active` / `archived` | |
+| vat_rate | numeric(5,2) | 0–100 | Liste düzeyinde tek ƏDV oranı (F3 kararı S2 = A, 2026-11-16); ürün bazında farklı oran gerekirse `products.vat_rate` sonradan eklenir |
+| is_default | boolean | Satıcı başına tek (kısmi benzersiz dizin `WHERE is_default`); varsayılan liste `active` olmalı (CHECK) | Satıcının ilk listesi varsayılan olur; `seller_profiles.default_price_list_id` aynı işlemde yazılır (K1) |
+| status | text | `active` / `archived` | state-machines §15. Varsayılan liste ve aktif bağlantıya atanmış liste arşivlenemez (K2 = A, K3) |
+| created_at, updated_at | timestamptz | | |
+
+RLS: `price_lists_tenant` (FOR ALL), `price_lists_platform_select`; perakendeci erişemez. `app_user` SELECT, INSERT, UPDATE (`name`, `vat_included`, `vat_rate`, `is_default`, `status`, `updated_at`); silme yok. Platform yazamaz (`check-rls` yasak listesi, R39).
 
 #### `price_list_items` (T)
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| price_list_id | uuid | | |
+| price_list_id | uuid | FK `(price_list_id, seller_id) → price_lists(id, seller_id)` | |
 | seller_id | uuid | | |
-| packaging_id | uuid | FK | Fiyat satış birimi başınadır |
+| packaging_id | uuid | FK `(packaging_id, seller_id) → product_packaging(id, seller_id)` ON DELETE CASCADE | Fiyat satış birimi başınadır; ambalaj seviyesi silinince fiyatları da silinir (sipariş fiyatı kopyadır) |
 | unit_price | numeric(14,4) | ≥ 0 | |
-| valid_from | timestamptz | not null | Geleceğe tarihli değişiklik |
+| valid_from | timestamptz | not null | Geleceğe tarihli değişiklik: gün, toptancının `businesses.timezone`'unda 00:00 (US-034 AC6) |
+| created_at | timestamptz | | |
+| created_by | uuid | null | Yazan kullanıcı |
 
-PK: `(price_list_id, packaging_id, valid_from)`. Geçerli fiyat: `valid_from ≤ now()` olan en büyük `valid_from`.
+PK: `(price_list_id, packaging_id, valid_from)`. Geçerli fiyat: `valid_from ≤ now()` olan en büyük `valid_from`. Geçerli olmuş satır değişmez (K5); henüz geçerli olmayan satırın yalnız `unit_price`'ı güncellenir. RLS: `price_list_items_tenant` (FOR ALL), `price_list_items_platform_select`; `app_user` SELECT, INSERT, UPDATE (`unit_price`); silme yok. `connections.price_list_id` ve `seller_profiles.default_price_list_id` F3.6a'da bileşik FK aldı.
 
 #### `customer_prices` (T: `seller_id`)
 

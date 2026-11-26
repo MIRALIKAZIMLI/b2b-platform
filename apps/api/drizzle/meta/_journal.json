@@ -253,6 +253,13 @@
       "when": 1795689305703,
       "tag": "0035_product_images",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1795701476115,
+      "tag": "0036_price_lists",
+      "breakpoints": true
     }
   ]
 }

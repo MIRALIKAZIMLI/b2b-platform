@@ -2171,9 +2171,10 @@ export interface paths {
         /**
          * Bağlantı koşulları (US-024 AC2) — yalnızca seller
          * @description İzin `connections.terms.manage` (yalnız `seller`, kapsam `all`; temsilci yalnız görür). Kısmi güncelleme,
-         *     en az bir alan. Alıcı bu koşulları hiçbir yoldan değiştiremez (veritabanı bekçisi de reddeder). Fiyat
-         *     listesi ve şube fiyatı F3.6'ya kadar kapalı: `priceListId` yalnız `null`, `branchPricingEnabled` yalnız
-         *     `false`. Temsilci satıcının aktif üyesi olmalı (`422`). Başka işletmenin bağlantısı `404`; iptal edilmiş
+         *     en az bir alan. Alıcı bu koşulları hiçbir yoldan değiştiremez (veritabanı bekçisi de reddeder). F3.6a:
+         *     `priceListId` satıcının aktif fiyat listesi veya `null` (varsayılan liste); başka satıcının veya arşivli
+         *     liste `422` (`priceListId: [invalid_price_list]`). Şube fiyatı F3.8'e kadar kapalı: `branchPricingEnabled`
+         *     yalnız `false`. Temsilci satıcının aktif üyesi olmalı (`422`). Başka işletmenin bağlantısı `404`; iptal edilmiş
          *     bağlantı `409 INVALID_STATE_TRANSITION`. Audit `connection.terms_updated`. Idempotency-Key gerekmez (PATCH).
          */
         patch: {
@@ -3119,7 +3120,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Fiyat listeleri */
+        /**
+         * Fiyat listeleri (US-034)
+         * @description F3.6a. İzin `pricing.view` (yetenek `seller`). Aktif ve arşivli listeler; önce varsayılan, sonra ada göre.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -3136,22 +3140,32 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["PriceList"][];
+                        };
+                    };
                 };
             };
         };
         put?: never;
-        /** Fiyat listesi oluştur (US-034) */
+        /**
+         * Fiyat listesi oluştur (US-034 AC1)
+         * @description F3.6a. İzin `pricing.manage`. Satıcının ilk listesi `isDefault` verilmese de varsayılan olur; `isDefault: true`
+         *     önceki varsayılanı düşürür (satıcı başına tek varsayılan, K1). Para birimi satıcının para birimi olmalı,
+         *     değilse `422 CURRENCY_MISMATCH` (K6). Audit `price_list.created`.
+         */
         post: {
             parameters: {
                 query?: never;
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
+                    "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 };
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["PriceListInput"];
                 };
@@ -3162,14 +3176,70 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["PriceList"];
+                    };
                 };
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/price-lists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Fiyat listesini düzenle, varsayılan yap, arşivle veya geri al
+         * @description F3.6a. İzin `pricing.manage`. Kısmi, en az bir alan. Para birimi değişmez. Varsayılanlık yalnız başka liste
+         *     `isDefault: true` yapılarak devredilir; varsayılan liste arşivlenemez: `409 PRICE_LIST_DEFAULT_PROTECTED` (K3).
+         *     Aktif bir bağlantıya atanmış liste arşivlenemez: `409 PRICE_LIST_IN_USE` (K2 = A, kullanıcı kararı).
+         *     Durum geçişleri state-machines §15; arşivli liste varsayılan yapılamaz (`409 INVALID_STATE_TRANSITION`).
+         *     Başka satıcının listesi `404`. Audit `price_list.updated`, `price_list.archived`, `price_list.restored`.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PriceListUpdate"];
+                };
+            };
+            responses: {
+                /** @description Güncellendi */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PriceList"];
+                    };
+                };
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+            };
+        };
         trace?: never;
     };
     "/api/v1/price-lists/{id}/items": {
@@ -3179,8 +3249,51 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Liste fiyatlarını toplu ayarla (geçerlilik tarihiyle) */
+        /**
+         * Listedeki fiyatlar (geçerli ve ileri tarihli)
+         * @description F3.6a. İzin `pricing.view`. Fiyatı olan her ambalaj seviyesi için şu an geçerli fiyat ve henüz geçerli
+         *     olmayan fiyatlar. Sayfalama ambalaj kimliğine göre (`cursor` = son `packagingId`).
+         */
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: components["parameters"]["Cursor"];
+                    limit?: components["parameters"]["Limit"];
+                };
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["PriceListItem"][];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+                404: components["responses"]["Error"];
+            };
+        };
+        /**
+         * Liste fiyatlarını toplu ayarla (geçerlilik tarihiyle; US-034 AC6)
+         * @description F3.6a. İzin `pricing.manage`. Fiyat satış birimi (ambalaj seviyesi) başınadır. `validFrom` verilmezse fiyat
+         *     hemen geçerli olur; verilirse yarın veya sonraki bir gündür ve o gün toptancının saat diliminde
+         *     (`businesses.timezone`) 00:00'da geçerli olur (K4); bugün veya geçmiş gün `422`. Henüz geçerli olmayan bir
+         *     fiyat aynı günle yeniden gönderilirse güncellenir; geçerli olmuş fiyat değişmez, yeni satır eklenir (K5).
+         *     Ambalaj seviyesi aynı satıcının olmalı (`422`, `items.<i>.packagingId: [not_found]`). Arşivli listeye
+         *     yazılamaz (`409 INVALID_STATE_TRANSITION`). Tek işlem; audit `price_list.items_set` (satır sayısı, gün).
+         */
         put: {
             parameters: {
                 query?: never;
@@ -3192,15 +3305,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
-                        /** Format: date-time */
+                        /**
+                         * Format: date
+                         * @description Toptancının takvim günü (YYYY-MM-DD)
+                         */
                         validFrom?: string;
                         items: {
                             /** Format: uuid */
                             packagingId: string;
-                            unitPrice: components["schemas"]["Decimal"];
+                            unitPrice: string;
                         }[];
                     };
                 };
@@ -3211,8 +3327,17 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            count: number;
+                            /** Format: date-time */
+                            validFrom: string;
+                        };
+                    };
                 };
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         post?: never;
@@ -3413,7 +3538,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Bir alıcı için fiyatın kaynağını göster (US-034 AC5) */
+        /**
+         * Bir alıcı için fiyatın kaynağını göster (US-034 AC5)
+         * @description F3.6a. İzin `pricing.view`; `assigned` kapsamlı üye (temsilci) yalnız kendisine atanmış müşteriyi görür.
+         *     Alıcıyla aktif bağlantı yoksa `404`. Sıra ADR-0019; F3.6a'da kaynaklar atanmış liste ve varsayılan liste
+         *     (müşteri fiyatı F3.7, şube fiyatı ve indirimi F3.8, kademe F3.9). `branchId` F3.8'e kadar yok sayılır.
+         */
         get: {
             parameters: {
                 query: {
@@ -3429,15 +3559,16 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Çözümleme adımları */
+                /** @description Çözümlenen fiyat ve kaynağı */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ResolvedPrice"];
+                        "application/json": components["schemas"]["PriceExplanation"];
                     };
                 };
+                404: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -7568,7 +7699,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "SETTING_SCOPE_NOT_ALLOWED" | "JOB_TITLE_IN_USE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "SETTING_SCOPE_NOT_ALLOWED" | "JOB_TITLE_IN_USE" | "PRICE_LIST_IN_USE" | "PRICE_LIST_DEFAULT_PROTECTED" | "INTERNAL_ERROR";
         /** @example +994501234567 */
         PhoneE164: string;
         Voen: string;
@@ -8155,10 +8286,13 @@ export interface components {
             salesRepMembershipId?: string | null;
         };
         ConnectionTermsUpdate: {
-            /** @description F3.6'ya kadar yalnız null */
-            priceListId?: null;
             /**
-             * @description F3.6'ya kadar yalnız false
+             * Format: uuid
+             * @description F3.6a: satıcının aktif listesi; null = varsayılan liste
+             */
+            priceListId?: string | null;
+            /**
+             * @description F3.8'e kadar yalnız false
              * @constant
              */
             branchPricingEnabled?: false;
@@ -8381,22 +8515,71 @@ export interface components {
             };
             isFavorite?: boolean;
         };
+        /** @description `PriceResolver` sonucu (ADR-0019). `source: none` iken fiyat alanları `null` (US-034 AC4). */
         ResolvedPrice: {
-            unitPrice?: components["schemas"]["Money"];
+            unitPrice: components["schemas"]["Money"] | null;
             /** @enum {string} */
-            source?: "branch_price" | "customer_price" | "price_list" | "default_list" | "none";
-            tierDiscountPercent?: components["schemas"]["Decimal"];
-            branchDiscountPercent?: components["schemas"]["Decimal"];
-            finalUnitPrice?: components["schemas"]["Money"];
-            vatIncluded?: boolean;
-            vatRate?: components["schemas"]["Decimal"];
+            source: "branch_price" | "customer_price" | "price_list" | "default_list" | "none";
+            tierDiscountPercent: components["schemas"]["Decimal"] | null;
+            branchDiscountPercent: components["schemas"]["Decimal"] | null;
+            finalUnitPrice: components["schemas"]["Money"] | null;
+            vatIncluded: boolean | null;
+            vatRate: components["schemas"]["Decimal"] | null;
+        };
+        /** @description Yalnız satıcı bakışı; alıcıya giden `BrowseProduct.price` liste adını taşımaz. */
+        PriceExplanation: components["schemas"]["ResolvedPrice"] & {
+            priceList: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            } | null;
+            /** Format: date-time */
+            validFrom: string | null;
         };
         PriceListInput: {
             name: string;
             currency: components["schemas"]["CurrencyCode"];
             vatIncluded: boolean;
-            vatRate: components["schemas"]["Decimal"];
+            /** @description 0–100 */
+            vatRate: string;
             isDefault?: boolean;
+        };
+        PriceListUpdate: {
+            name?: string;
+            vatIncluded?: boolean;
+            vatRate?: string;
+            /** @constant */
+            isDefault?: true;
+            /** @enum {string} */
+            status?: "active" | "archived";
+        };
+        PriceList: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            currency: components["schemas"]["CurrencyCode"];
+            vatIncluded: boolean;
+            vatRate: components["schemas"]["Decimal"];
+            isDefault: boolean;
+            /** @enum {string} */
+            status: "active" | "archived";
+            /** @description Fiyatı girilmiş ambalaj seviyesi sayısı */
+            itemCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PricePoint: {
+            unitPrice: components["schemas"]["Decimal"];
+            /** Format: date-time */
+            validFrom: string;
+        };
+        PriceListItem: {
+            /** Format: uuid */
+            packagingId: string;
+            current: components["schemas"]["PricePoint"] | null;
+            scheduled: components["schemas"]["PricePoint"][];
         };
         BranchDiscountInput: {
             /** Format: uuid */

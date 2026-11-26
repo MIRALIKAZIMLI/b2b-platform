@@ -1,7 +1,7 @@
 // Bağlantı tabloları (data-model §4.7, F2.12a). RLS politikaları, GRANT'lar, `users` FK'ları ve
 // SECURITY DEFINER fonksiyonları migration'da elle yazılır (drizzle/0022_connections.sql).
 // `connection_requests` ve `connections` P sınıfı (satıcı veya alıcı), `blocks` T sınıfı (alıcı).
-// `price_list_id` → price_lists FK'sı F3.6'da. F2.14a: `sales_rep_membership_id` → memberships FK'sı,
+// `price_list_id` → price_lists bileşik FK'sı F3.6a'da (0036). F2.14a: `sales_rep_membership_id` → memberships FK'sı,
 // koşulların son atanma anı `terms_set_at` (null = "koşul atanmadı", US-024 AC1).
 import { sql } from 'drizzle-orm';
 import {

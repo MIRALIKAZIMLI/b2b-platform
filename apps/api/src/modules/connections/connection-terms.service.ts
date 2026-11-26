@@ -18,6 +18,10 @@ import { fromDecimalString, LINE_TOTAL_SCALE, toDecimalString } from '../../core
 import type { TenantContext } from '../../core/tenant-context';
 import { TeamService } from '../access';
 import { isAssignableSalesRep } from './connection-policy';
+import {
+  PRICE_LIST_ASSIGNMENT_PORT,
+  type PriceListAssignmentPort,
+} from './price-list-assignment.port';
 import { type ConnectionSide, toConnectionView } from './connection-view';
 import {
   BUYER_TARGETS_MAX,
@@ -27,6 +31,7 @@ import {
 
 function termsSnapshot(row: ConnectionRow) {
   return {
+    priceListId: row.priceListId,
     creditLimit: row.creditLimit,
     paymentTermDays: row.paymentTermDays,
     salesRepMembershipId: row.salesRepMembershipId,
@@ -40,6 +45,7 @@ export class ConnectionTermsService {
     @Inject(AuditService) private readonly audit: AuditRecorder,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(TeamService) private readonly team: TeamService,
+    @Inject(PRICE_LIST_ASSIGNMENT_PORT) private readonly priceLists: PriceListAssignmentPort,
   ) {}
 
   /**
@@ -106,7 +112,8 @@ export class ConnectionTermsService {
   /**
    * `PATCH /api/v1/connections/{id}/terms` (US-024 AC2): kısmi güncelleme, satır kilidiyle.
    * Başkasının bağlantısı `404`; iptal edilmiş bağlantı `409 INVALID_STATE_TRANSITION`; temsilci
-   * satıcının satış temsilcisi rolündeki aktif üyesi değilse `422` (var olan atama değişmedikçe denetlenmez). Audit `connection.terms_updated` (önce/sonra).
+   * satıcının satış temsilcisi rolündeki aktif üyesi değilse `422` (var olan atama değişmedikçe denetlenmez).
+   * F3.6a: `priceListId` satıcının aktif listesi değilse `422`. Audit `connection.terms_updated` (önce/sonra).
    */
   async updateTerms(
     tenant: TenantContext,
@@ -129,9 +136,18 @@ export class ConnectionTermsService {
       ) {
         throw new DomainError('VALIDATION_FAILED', { salesRepMembershipId: ['invalid_sales_rep'] });
       }
+      // F3.6a: yalnız satıcının aktif listesi; liste satırı FOR SHARE (arşivleme ile yarış, K2 = A).
+      if (
+        input.priceListId !== undefined &&
+        input.priceListId !== null &&
+        !(await this.priceLists.lockAssignableTx(tx, tenant.businessId, input.priceListId))
+      ) {
+        throw new DomainError('VALIDATION_FAILED', { priceListId: ['invalid_price_list'] });
+      }
 
       const now = this.clock.now();
       const updated = await this.repository.updateTermsTx(tx, row.id, {
+        ...(input.priceListId === undefined ? {} : { priceListId: input.priceListId }),
         ...(input.creditLimit === undefined
           ? {}
           : {

@@ -497,6 +497,7 @@ export class ConnectionsRepository {
     tx: Tx,
     id: string,
     change: {
+      readonly priceListId?: string | null;
       readonly creditLimit?: string | null;
       readonly paymentTermDays?: number;
       readonly salesRepMembershipId?: string | null;

@@ -59,6 +59,8 @@ export const ERROR_HTTP_STATUS = {
   SETTING_SCOPE_NOT_ALLOWED: 422,
   // F2.9 (US-012 AC3): kullanımdaki unvan silinemez, yalnız pasifleştirilir.
   JOB_TITLE_IN_USE: 409,
+  PRICE_LIST_IN_USE: 409,
+  PRICE_LIST_DEFAULT_PROTECTED: 409,
   INTERNAL_ERROR: 500,
 } as const satisfies Record<ErrorCode, HttpErrorStatus>;
 

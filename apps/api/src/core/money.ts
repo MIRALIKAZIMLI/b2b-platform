@@ -83,3 +83,25 @@ export function roundLineTotal(value: Money): Money {
   assertMoney(value);
   return brand(value.toDecimalPlaces(LINE_TOTAL_SCALE, Decimal.ROUND_HALF_UP));
 }
+
+const HUNDRED = new MoneyDecimal(100);
+
+/**
+ * Yüzde indirim (F3.6a, ADR-0019 §2: kademe ve şube indirimi): `değer × (100 − yüzde) / 100`,
+ * birim fiyat hanesine (4) yarım yukarı. Yüzde 0–100 dışında `RangeError`.
+ */
+export function applyDiscountPercent(value: Money, percent: Money): Money {
+  assertMoney(value);
+  assertMoney(percent);
+  if (percent.isNegative() || percent.greaterThan(HUNDRED)) {
+    throw new RangeError('İndirim yüzdesi 0–100 arasında olmalı');
+  }
+  return roundUnitPrice(brand(value.times(HUNDRED.minus(percent)).dividedBy(HUNDRED)));
+}
+
+/** Karşılaştırma: a < b → −1, eşit → 0, a > b → 1. */
+export function compare(a: Money, b: Money): -1 | 0 | 1 {
+  assertMoney(a);
+  assertMoney(b);
+  return a.comparedTo(b) as -1 | 0 | 1;
+}

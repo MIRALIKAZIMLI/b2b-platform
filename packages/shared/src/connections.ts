@@ -204,12 +204,12 @@ export interface ConnectionPage {
 export const CREDIT_LIMIT_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
 
 /**
- * `PATCH /connections/{id}/terms` gövdesi (kısmi). Fiyat listesi ve şube fiyatı F3.6'ya kadar
- * kapalıdır (F2.14a K3): `priceListId` yalnız null, `branchPricingEnabled` yalnız false.
+ * `PATCH /connections/{id}/terms` gövdesi (kısmi). F3.6a: `priceListId` satıcının aktif fiyat
+ * listesi veya null (= varsayılan liste). Şube fiyatı F3.8'e kadar kapalı: yalnız false.
  */
 export const connectionTermsUpdateSchema = z
   .object({
-    priceListId: z.null().optional(),
+    priceListId: z.uuid().nullable().optional(),
     branchPricingEnabled: z.literal(false).optional(),
     creditLimit: z.string().regex(CREDIT_LIMIT_PATTERN).nullable().optional(),
     paymentTermDays: z.number().int().min(0).max(CONNECTION_REQUEST_TERM_MAX_DAYS).optional(),
