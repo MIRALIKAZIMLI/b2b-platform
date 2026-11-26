@@ -101,6 +101,42 @@ describe('F2.14 bağlantı koşulları ekran yardımcıları', () => {
     }
   });
 
+  it('F3.6b-AC2 fiyat listesi: boş = standart (null), seçim kimlik; yüklenmediyse alan gönderilmez', () => {
+    const LIST = '01936f3e-0000-7000-8000-0000000000aa';
+    const chosen = termsUpdateBody({
+      creditLimit: '',
+      paymentTermDays: '0',
+      salesRepMembershipId: undefined,
+      priceListId: LIST,
+    });
+    expect(chosen).toEqual({
+      ok: true,
+      body: { creditLimit: null, paymentTermDays: 0, priceListId: LIST },
+    });
+    if (chosen.ok) expect(connectionTermsUpdateSchema.parse(chosen.body)).toEqual(chosen.body);
+    expect(
+      termsUpdateBody({
+        creditLimit: '',
+        paymentTermDays: '0',
+        salesRepMembershipId: undefined,
+        priceListId: '',
+      }),
+    ).toEqual({ ok: true, body: { creditLimit: null, paymentTermDays: 0, priceListId: null } });
+    const skipped = termsUpdateBody({
+      creditLimit: '',
+      paymentTermDays: '0',
+      salesRepMembershipId: undefined,
+      priceListId: undefined,
+    });
+    expect(skipped.ok && 'priceListId' in skipped.body).toBe(false);
+    expect(
+      termsFailureKey({
+        code: 'VALIDATION_FAILED',
+        details: { priceListId: ['invalid_price_list'] },
+      }),
+    ).toBe('customers.error.invalid_price_list');
+  });
+
   it('US-024-AC3 pencere değerleri: atanmış koşul > önceki dönem önerisi > istek vadesi > boş', () => {
     expect(
       termsFormValues(

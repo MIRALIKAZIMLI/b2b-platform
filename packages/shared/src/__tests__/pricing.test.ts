@@ -1,6 +1,11 @@
 // F3.6a fiyat şemaları (openapi `PriceListInput`, `PriceListUpdate`, `PUT /price-lists/{id}/items`).
 import { describe, expect, it } from 'vitest';
-import { priceListCreateSchema, priceListItemsSetSchema, priceListUpdateSchema } from '../pricing';
+import {
+  priceListCreateSchema,
+  priceListItemsQuerySchema,
+  priceListItemsSetSchema,
+  priceListUpdateSchema,
+} from '../pricing';
 
 const PACKAGING = '01936f3e-0000-7000-8000-000000000001';
 
@@ -57,5 +62,19 @@ describe('F3.6a fiyat şemaları', () => {
     }
     expect(priceListItemsSetSchema.safeParse({ items: [item, item] }).success).toBe(false);
     expect(priceListItemsSetSchema.safeParse({ items: [] }).success).toBe(false);
+  });
+
+  it('F3.6b-K1 ambalaj süzgeci: tek değer diziye çevrilir; geçersiz kimlik ve 100 üstü reddedilir', () => {
+    expect(priceListItemsQuerySchema.parse({ packagingId: PACKAGING })).toEqual({
+      limit: 20,
+      packagingId: [PACKAGING],
+    });
+    expect(priceListItemsQuerySchema.parse({}).packagingId).toBeUndefined();
+    expect(priceListItemsQuerySchema.safeParse({ packagingId: 'x' }).success).toBe(false);
+    expect(
+      priceListItemsQuerySchema.safeParse({
+        packagingId: Array.from({ length: 101 }, () => PACKAGING),
+      }).success,
+    ).toBe(false);
   });
 });

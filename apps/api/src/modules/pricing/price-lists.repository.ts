@@ -218,6 +218,7 @@ export class PriceListsRepository {
     listId: string,
     cursor: string | undefined,
     limit: number,
+    packagingIds?: readonly string[],
   ): Promise<readonly string[]> {
     const rows = await tx
       .selectDistinct({ packagingId: priceListItems.packagingId })
@@ -226,6 +227,9 @@ export class PriceListsRepository {
         and(
           eq(priceListItems.priceListId, listId),
           cursor === undefined ? undefined : gt(priceListItems.packagingId, cursor),
+          packagingIds === undefined
+            ? undefined
+            : inArray(priceListItems.packagingId, [...packagingIds]),
         ),
       )
       .orderBy(asc(priceListItems.packagingId))

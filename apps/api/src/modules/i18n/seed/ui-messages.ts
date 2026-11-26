@@ -5,7 +5,7 @@
 // daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
 // F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım;
 // F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu; F3.2b: kategori, marka, faaliyet alanı;
-// F3.3b: toptancı ürün listesi ve formu).
+// F3.3b: toptancı ürün listesi ve formu; F3.6b: fiyat ekranları).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -2944,6 +2944,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'отменена: {date}',
     tr: 'iptal: {date}',
   },
+  'customers.row.price_list': {
+    az: 'Qiymət siyahısı: {name}',
+    ru: 'Прайс-лист: {name}',
+    tr: 'Fiyat listesi: {name}',
+  },
   'customers.row.default_price_list': {
     az: 'Standart qiymət siyahınız tətbiq olunur.',
     ru: 'Действует ваш стандартный прайс-лист.',
@@ -3069,10 +3074,30 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Не назначен',
     tr: 'Atanmadı',
   },
-  'customers.terms.price_list_note': {
-    az: 'Qiymət siyahısı təyin etmək kataloq hazır olanda açılacaq; indi standart siyahınız tətbiq olunur.',
-    ru: 'Назначение прайс-листа появится вместе с каталогом; сейчас действует стандартный.',
-    tr: 'Fiyat listesi atama katalogla birlikte açılacak; şimdilik varsayılan listeniz geçerli.',
+  'customers.terms.price_list': {
+    az: 'Qiymət siyahısı',
+    ru: 'Прайс-лист',
+    tr: 'Fiyat listesi',
+  },
+  'customers.terms.price_list_hint': {
+    az: 'Standart seçilsə, standart siyahı dəyişəndə müştəri də ona keçir.',
+    ru: 'Если выбран основной, клиент переходит на новый основной при его смене.',
+    tr: 'Varsayılan seçilirse, varsayılan liste değişince müşteri de ona geçer.',
+  },
+  'customers.terms.price_list_unavailable': {
+    az: 'Qiymət siyahıları yüklənmədi; mövcud seçim saxlanılır.',
+    ru: 'Прайс-листы не загрузились; текущий выбор сохранится.',
+    tr: 'Fiyat listeleri yüklenemedi; mevcut seçim korunur.',
+  },
+  'customers.terms.price_list_default': {
+    az: 'Standart siyahı',
+    ru: 'Основной прайс-лист',
+    tr: 'Varsayılan liste',
+  },
+  'customers.terms.price_list_default_named': {
+    az: 'Standart siyahı ({name})',
+    ru: 'Основной прайс-лист ({name})',
+    tr: 'Varsayılan liste ({name})',
   },
   'customers.terms.cancel': {
     az: 'Bağla',
@@ -3103,6 +3128,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Seçilən təmsilçi artıq komandanızda deyil.',
     ru: 'Выбранный представитель больше не в вашей команде.',
     tr: 'Seçilen temsilci artık ekibinizde değil.',
+  },
+  'customers.error.invalid_price_list': {
+    az: 'Seçilən qiymət siyahısı artıq aktiv deyil. Başqa siyahı seçin.',
+    ru: 'Выбранный прайс-лист больше не активен. Выберите другой.',
+    tr: 'Seçilen fiyat listesi artık aktif değil. Başka bir liste seçin.',
   },
   // F2.15b: bağlantı iptali penceresi, perakendeci toptancılarım ekranı.
   'customers.row.cancel': {
@@ -6181,5 +6211,411 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Ən azı bir bölgə seçin.',
     ru: 'Выберите хотя бы один регион.',
     tr: 'En az bir bölge seçin.',
+  },
+  // F3.6b: fiyat listeleri sayfası, ürün formundaki fiyat kartı, fiyat kaynağı (taslak, onay bekliyor).
+  'prices.eyebrow': {
+    az: 'Qiymətlər',
+    ru: 'Цены',
+    tr: 'Fiyatlar',
+  },
+  'prices.title': {
+    az: 'Qiymət siyahıları',
+    ru: 'Прайс-листы',
+    tr: 'Fiyat listeleri',
+  },
+  'prices.description': {
+    az: 'Müştərilərinizə tətbiq olunan qiymət siyahıları. İlk siyahı standart olur; standart siyahı təyin olunmamış bütün müştərilərə tətbiq edilir.',
+    ru: 'Прайс-листы для ваших клиентов. Первый список становится основным; основной действует для всех клиентов без назначенного списка.',
+    tr: 'Müşterilerinize uygulanan fiyat listeleri. İlk liste varsayılan olur; varsayılan liste, liste atanmamış tüm müşterilere uygulanır.',
+  },
+  'prices.create_open': {
+    az: 'Yeni siyahı',
+    ru: 'Новый прайс-лист',
+    tr: 'Yeni liste',
+  },
+  'prices.items_hint': {
+    az: 'Qiymətlər hər məhsulun səhifəsində, qablaşdırma səviyyəsinə görə daxil edilir.',
+    ru: 'Цены вводятся на странице каждого товара, по уровню упаковки.',
+    tr: 'Fiyatlar her ürünün sayfasında, ambalaj seviyesine göre girilir.',
+  },
+  'prices.items_hint_link': {
+    az: 'Məhsullara keç',
+    ru: 'Перейти к товарам',
+    tr: 'Ürünlere git',
+  },
+  'prices.empty': {
+    az: 'Hələ qiymət siyahısı yoxdur.',
+    ru: 'Прайс-листов пока нет.',
+    tr: 'Henüz fiyat listesi yok.',
+  },
+  'prices.empty_hint': {
+    az: 'Yaratdığınız ilk siyahı standart siyahı olacaq.',
+    ru: 'Первый созданный прайс-лист станет основным.',
+    tr: 'Oluşturduğunuz ilk liste varsayılan liste olur.',
+  },
+  'prices.done.default': {
+    az: '«{name}» indi standart siyahıdır.',
+    ru: '«{name}» теперь основной прайс-лист.',
+    tr: '«{name}» artık varsayılan liste.',
+  },
+  'prices.done.archived': {
+    az: '«{name}» arxivləndi.',
+    ru: '«{name}» перемещён в архив.',
+    tr: '«{name}» arşivlendi.',
+  },
+  'prices.done.restored': {
+    az: '«{name}» bərpa edildi.',
+    ru: '«{name}» восстановлен.',
+    tr: '«{name}» geri alındı.',
+  },
+  'prices.done.saved': {
+    az: '«{name}» yadda saxlanıldı.',
+    ru: '«{name}» сохранён.',
+    tr: '«{name}» kaydedildi.',
+  },
+  'prices.badge.default': {
+    az: 'Standart',
+    ru: 'Основной',
+    tr: 'Varsayılan',
+  },
+  'prices.badge.archived': {
+    az: 'Arxiv',
+    ru: 'Архив',
+    tr: 'Arşiv',
+  },
+  'prices.vat_included': {
+    az: 'ƏDV daxil',
+    ru: 'С НДС',
+    tr: 'KDV dahil',
+  },
+  'prices.vat_excluded': {
+    az: 'ƏDV xaric',
+    ru: 'Без НДС',
+    tr: 'KDV hariç',
+  },
+  'prices.vat_included_rate': {
+    az: 'ƏDV daxil, {rate}%',
+    ru: 'С НДС, {rate}%',
+    tr: 'KDV dahil, %{rate}',
+  },
+  'prices.vat_excluded_rate': {
+    az: 'ƏDV xaric, {rate}%',
+    ru: 'Без НДС, {rate}%',
+    tr: 'KDV hariç, %{rate}',
+  },
+  'prices.item_count': {
+    az: '{count} qiymət',
+    ru: '{count, plural, one {# цена} few {# цены} many {# цен} other {# цены}}',
+    tr: '{count} fiyat',
+  },
+  'prices.action.edit': {
+    az: 'Düzəliş et',
+    ru: 'Изменить',
+    tr: 'Düzenle',
+  },
+  'prices.action.make_default': {
+    az: 'Standart et',
+    ru: 'Сделать основным',
+    tr: 'Varsayılan yap',
+  },
+  'prices.action.archive': {
+    az: 'Arxivlə',
+    ru: 'В архив',
+    tr: 'Arşivle',
+  },
+  'prices.action.restore': {
+    az: 'Bərpa et',
+    ru: 'Восстановить',
+    tr: 'Geri al',
+  },
+  'prices.dialog.create_title': {
+    az: 'Yeni qiymət siyahısı',
+    ru: 'Новый прайс-лист',
+    tr: 'Yeni fiyat listesi',
+  },
+  'prices.dialog.edit_title': {
+    az: 'Qiymət siyahısını düzəlt',
+    ru: 'Изменить прайс-лист',
+    tr: 'Fiyat listesini düzenle',
+  },
+  'prices.dialog.first_default': {
+    az: 'Bu ilk siyahınızdır, standart siyahı olacaq.',
+    ru: 'Это ваш первый прайс-лист, он станет основным.',
+    tr: 'Bu ilk listeniz, varsayılan liste olacak.',
+  },
+  'prices.dialog.make_default': {
+    az: 'Standart siyahı et',
+    ru: 'Сделать основным',
+    tr: 'Varsayılan liste yap',
+  },
+  'prices.dialog.cancel': {
+    az: 'Bağla',
+    ru: 'Закрыть',
+    tr: 'Kapat',
+  },
+  'prices.dialog.saving': {
+    az: 'Saxlanılır…',
+    ru: 'Сохранение…',
+    tr: 'Kaydediliyor…',
+  },
+  'prices.dialog.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'prices.field.name': {
+    az: 'Ad',
+    ru: 'Название',
+    tr: 'Ad',
+  },
+  'prices.field.name_placeholder': {
+    az: 'Məs. Əsas, Topdan, VIP',
+    ru: 'Напр. Основной, Оптовый, VIP',
+    tr: 'Örn. Temel, Toptan, VIP',
+  },
+  'prices.field.currency': {
+    az: 'Valyuta',
+    ru: 'Валюта',
+    tr: 'Para birimi',
+  },
+  'prices.field.currency_hint': {
+    az: 'Hesabınızın valyutası.',
+    ru: 'Валюта вашего аккаунта.',
+    tr: 'Hesabınızın para birimi.',
+  },
+  'prices.field.currency_locked': {
+    az: 'Valyuta sonradan dəyişmir.',
+    ru: 'Валюту нельзя изменить.',
+    tr: 'Para birimi sonradan değişmez.',
+  },
+  'prices.field.vat_rate': {
+    az: 'ƏDV dərəcəsi, %',
+    ru: 'Ставка НДС, %',
+    tr: 'KDV oranı, %',
+  },
+  'prices.field.vat_rate_hint': {
+    az: '0–100, ən çox 2 onluq.',
+    ru: '0–100, не более 2 знаков после запятой.',
+    tr: '0–100, en çok 2 ondalık.',
+  },
+  'prices.field.vat_mode': {
+    az: 'Qiymətlər',
+    ru: 'Цены',
+    tr: 'Fiyatlar',
+  },
+  'prices.invalid.name': {
+    az: 'Ad 1–{max} simvol olmalıdır.',
+    ru: 'Название: от 1 до {max} символов.',
+    tr: 'Ad 1–{max} karakter olmalı.',
+  },
+  'prices.invalid.currency': {
+    az: 'Valyuta 3 hərfli kod olmalıdır (məs. AZN).',
+    ru: 'Валюта: трёхбуквенный код (напр. AZN).',
+    tr: 'Para birimi 3 harfli kod olmalı (örn. AZN).',
+  },
+  'prices.invalid.vatRate': {
+    az: '0 ilə 100 arasında, ən çox 2 onluqlu ədəd daxil edin.',
+    ru: 'Введите число от 0 до 100, не более 2 знаков после запятой.',
+    tr: '0 ile 100 arasında, en çok 2 ondalıklı bir sayı girin.',
+  },
+  'prices.error.currency_mismatch': {
+    az: 'Siyahının valyutası hesabınızın valyutası ilə eyni olmalıdır: {currency}.',
+    ru: 'Валюта прайс-листа должна совпадать с валютой аккаунта: {currency}.',
+    tr: 'Listenin para birimi hesabınızınkiyle aynı olmalı: {currency}.',
+  },
+  'prices.card.title': {
+    az: 'Qiymətlər',
+    ru: 'Цены',
+    tr: 'Fiyatlar',
+  },
+  'prices.card.description': {
+    az: 'Satış vahidi başına qiymət. Yeni qiyməti daxil edin; boş qalan sətir dəyişmir.',
+    ru: 'Цена за единицу продажи. Введите новую цену; пустые строки не меняются.',
+    tr: 'Satış birimi başına fiyat. Yeni fiyatı girin; boş bırakılan satır değişmez.',
+  },
+  'prices.card.list': {
+    az: 'Qiymət siyahısı',
+    ru: 'Прайс-лист',
+    tr: 'Fiyat listesi',
+  },
+  'prices.card.list_default': {
+    az: '{name} (standart)',
+    ru: '{name} (основной)',
+    tr: '{name} (varsayılan)',
+  },
+  'prices.card.no_lists': {
+    az: 'Qiymət daxil etmək üçün əvvəlcə qiymət siyahısı yaradın.',
+    ru: 'Чтобы ввести цены, сначала создайте прайс-лист.',
+    tr: 'Fiyat girmek için önce bir fiyat listesi oluşturun.',
+  },
+  'prices.card.no_lists_link': {
+    az: 'Qiymət siyahıları',
+    ru: 'Прайс-листы',
+    tr: 'Fiyat listeleri',
+  },
+  'prices.card.no_sales_units': {
+    az: 'Aktiv variantlarda satış vahidi olan qablaşdırma yoxdur. Variantlar bölməsində satış vahidini seçin.',
+    ru: 'У активных вариантов нет упаковки, отмеченной как единица продажи. Отметьте её в разделе вариантов.',
+    tr: 'Aktif varyantlarda satış birimi olan ambalaj yok. Varyantlar bölümünde satış birimini seçin.',
+  },
+  'prices.card.no_price': {
+    az: 'Qiymət yoxdur',
+    ru: 'Цены нет',
+    tr: 'Fiyat yok',
+  },
+  'prices.card.current': {
+    az: 'İndi: {price} {currency}',
+    ru: 'Сейчас: {price} {currency}',
+    tr: 'Şu an: {price} {currency}',
+  },
+  'prices.card.scheduled': {
+    az: '{date} tarixindən: {price} {currency}',
+    ru: 'С {date}: {price} {currency}',
+    tr: '{date} tarihinden: {price} {currency}',
+  },
+  'prices.card.new_price': {
+    az: 'Yeni qiymət',
+    ru: 'Новая цена',
+    tr: 'Yeni fiyat',
+  },
+  'prices.card.new_price_for': {
+    az: 'Yeni qiymət: {label}',
+    ru: 'Новая цена: {label}',
+    tr: 'Yeni fiyat: {label}',
+  },
+  'prices.card.invalid_price': {
+    az: 'Məs. 12.50 (ən çox 4 onluq).',
+    ru: 'Напр. 12.50 (не более 4 знаков).',
+    tr: 'Örn. 12.50 (en çok 4 ondalık).',
+  },
+  'prices.card.starts': {
+    az: 'Qüvvəyə minir',
+    ru: 'Действует',
+    tr: 'Geçerlilik',
+  },
+  'prices.card.mode_now': {
+    az: 'Dərhal',
+    ru: 'Сразу',
+    tr: 'Hemen',
+  },
+  'prices.card.mode_scheduled': {
+    az: 'Tarixdən',
+    ru: 'С даты',
+    tr: 'Tarihten',
+  },
+  'prices.card.day': {
+    az: 'Qüvvəyə minmə tarixi',
+    ru: 'Дата начала действия',
+    tr: 'Geçerlilik tarihi',
+  },
+  'prices.card.day_hint': {
+    az: 'Qiymət həmin gün saat 00:00-da (sizin saat qurşağınızda) qüvvəyə minir.',
+    ru: 'Цена начнёт действовать в 00:00 этого дня (в вашем часовом поясе).',
+    tr: "Fiyat o gün saat 00:00'da (sizin saat diliminizde) geçerli olur.",
+  },
+  'prices.card.invalid_day': {
+    az: 'Sabah və ya daha sonrakı bir gün seçin.',
+    ru: 'Выберите завтрашний или более поздний день.',
+    tr: 'Yarın veya daha sonraki bir gün seçin.',
+  },
+  'prices.card.saving': {
+    az: 'Saxlanılır…',
+    ru: 'Сохранение…',
+    tr: 'Kaydediliyor…',
+  },
+  'prices.card.save': {
+    az: 'Qiymətləri yadda saxla',
+    ru: 'Сохранить цены',
+    tr: 'Fiyatları kaydet',
+  },
+  'prices.card.nothing_to_save': {
+    az: 'Ən azı bir yeni qiymət daxil edin.',
+    ru: 'Введите хотя бы одну новую цену.',
+    tr: 'En az bir yeni fiyat girin.',
+  },
+  'prices.card.saved_now': {
+    az: '{count} qiymət yadda saxlanıldı və dərhal qüvvəyə mindi.',
+    ru: 'Сохранено цен: {count}, действуют сразу.',
+    tr: '{count} fiyat kaydedildi ve hemen geçerli oldu.',
+  },
+  'prices.card.saved_scheduled': {
+    az: '{count} qiymət yadda saxlanıldı; {date} tarixindən qüvvəyə minəcək.',
+    ru: 'Сохранено цен: {count}; начнут действовать с {date}.',
+    tr: '{count} fiyat kaydedildi; {date} tarihinden geçerli olacak.',
+  },
+  'prices.explain.title': {
+    az: 'Müştəri üçün yoxla',
+    ru: 'Проверить для клиента',
+    tr: 'Müşteri için kontrol et',
+  },
+  'prices.explain.description': {
+    az: 'Müştərini seçin: hər sətirdə onun görəcəyi qiymət və qiymətin mənbəyi göstərilir.',
+    ru: 'Выберите клиента: в каждой строке появится его цена и её источник.',
+    tr: 'Müşteriyi seçin: her satırda göreceği fiyat ve fiyatın kaynağı görünür.',
+  },
+  'prices.explain.customer': {
+    az: 'Müştəri',
+    ru: 'Клиент',
+    tr: 'Müşteri',
+  },
+  'prices.explain.choose': {
+    az: 'Müştəri seçin',
+    ru: 'Выберите клиента',
+    tr: 'Müşteri seçin',
+  },
+  'prices.explain.unnamed': {
+    az: 'Adı görünməyən müştəri',
+    ru: 'Клиент без названия',
+    tr: 'Adı görünmeyen müşteri',
+  },
+  'prices.explain.more': {
+    az: 'Daha çox müştəri',
+    ru: 'Больше клиентов',
+    tr: 'Daha fazla müşteri',
+  },
+  'prices.explain.no_customers': {
+    az: 'Aktiv müştəriniz yoxdur.',
+    ru: 'Нет активных клиентов.',
+    tr: 'Aktif müşteriniz yok.',
+  },
+  'prices.explain.none': {
+    az: 'Bu müştəri üçün qiymət yoxdur (səbətə əlavə edilə bilməz)',
+    ru: 'Для этого клиента цены нет (нельзя добавить в корзину)',
+    tr: 'Bu müşteri için fiyat yok (sepete eklenemez)',
+  },
+  'prices.explain.price': {
+    az: 'Müştəri üçün: {price} {currency}',
+    ru: 'Для клиента: {price} {currency}',
+    tr: 'Müşteri için: {price} {currency}',
+  },
+  'prices.explain.source_with_list': {
+    az: '{source}: {name}',
+    ru: '{source}: {name}',
+    tr: '{source}: {name}',
+  },
+  'prices.source.branch_price': {
+    az: 'Filial qiyməti',
+    ru: 'Цена филиала',
+    tr: 'Şube fiyatı',
+  },
+  'prices.source.customer_price': {
+    az: 'Müştəri qiyməti',
+    ru: 'Цена клиента',
+    tr: 'Müşteri fiyatı',
+  },
+  'prices.source.price_list': {
+    az: 'Təyin olunmuş siyahı',
+    ru: 'Назначенный прайс-лист',
+    tr: 'Atanmış liste',
+  },
+  'prices.source.default_list': {
+    az: 'Standart siyahı',
+    ru: 'Основной прайс-лист',
+    tr: 'Varsayılan liste',
+  },
+  'prices.source.none': {
+    az: 'Qiymət yoxdur',
+    ru: 'Цены нет',
+    tr: 'Fiyat yok',
   },
 };

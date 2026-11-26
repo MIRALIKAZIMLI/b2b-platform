@@ -3252,13 +3252,16 @@ export interface paths {
         /**
          * Listedeki fiyatlar (geçerli ve ileri tarihli)
          * @description F3.6a. İzin `pricing.view`. Fiyatı olan her ambalaj seviyesi için şu an geçerli fiyat ve henüz geçerli
-         *     olmayan fiyatlar. Sayfalama ambalaj kimliğine göre (`cursor` = son `packagingId`).
+         *     olmayan fiyatlar. Sayfalama ambalaj kimliğine göre (`cursor` = son `packagingId`). F3.6b: `packagingId`
+         *     (tekrarlı, en çok 100) verilirse yalnız o ambalaj seviyeleri döner (ürün formu); başka satıcının ambalajı
+         *     boş sonuç verir.
          */
         get: {
             parameters: {
                 query?: {
                     cursor?: components["parameters"]["Cursor"];
                     limit?: components["parameters"]["Limit"];
+                    packagingId?: string[];
                 };
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];

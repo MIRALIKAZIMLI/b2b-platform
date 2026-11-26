@@ -1710,8 +1710,19 @@ paths:
       summary: Listedeki fiyatlar (geçerli ve ileri tarihli)
       description: |
         F3.6a. İzin `pricing.view`. Fiyatı olan her ambalaj seviyesi için şu an geçerli fiyat ve henüz geçerli
-        olmayan fiyatlar. Sayfalama ambalaj kimliğine göre (`cursor` = son `packagingId`).
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+        olmayan fiyatlar. Sayfalama ambalaj kimliğine göre (`cursor` = son `packagingId`). F3.6b: `packagingId`
+        (tekrarlı, en çok 100) verilirse yalnız o ambalaj seviyeleri döner (ürün formu); başka satıcının ambalajı
+        boş sonuç verir.
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: packagingId
+          in: query
+          style: form
+          explode: true
+          schema: { type: array, minItems: 1, maxItems: 100, items: { type: string, format: uuid } }
       responses:
         '200':
           description: Liste

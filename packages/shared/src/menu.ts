@@ -131,7 +131,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     { key: 'requests', anyOf: ['connections.request.send'], ready: true, path: 'requests' },
     // F3.3b: ürün listesi ve formu (US-030); yalnız web.
     { key: 'products', anyOf: ['catalog.view'], ready: true, path: 'products' },
-    soon('prices', ['pricing.view']),
+    // F3.6b: fiyat listeleri (US-034); fiyat girişi ürün formunda. Yalnız web.
+    { key: 'prices', anyOf: ['pricing.view'], ready: true, path: 'prices' },
     soon('stock', ['inventory.view']),
     soon('orders', ['orders.view', 'orders.prepare']),
     soon('delivery', ['delivery.view']),
