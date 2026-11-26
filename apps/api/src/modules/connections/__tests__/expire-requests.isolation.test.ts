@@ -93,12 +93,21 @@ describe('F2.16 süre dolumu izolasyonu ve bekçi', () => {
 
   it('F2.16-T5 bağlamsız sistem işlemi: yalnız kimlik kolonları döner, kişisel veri yok', async () => {
     const { buyer, id } = await duePair();
-    const result = await withSystemTx(async (tx) => {
-      const res = await expire(tx);
-      return { rows: res.rows, fields: res.fields.map((field) => field.name) };
-    });
-    expect(result.fields).toEqual(['request_id', 'seller_id', 'buyer_id', 'recipient_user_id']);
-    expect(result.rows).toContainEqual({
+    // Paralel test dosyalarının süresi dolmuş istekleri de sıradadır (en eski önce, parti 10);
+    // kendi satırımız dönene ya da sıra boşalana kadar partileri işle.
+    const rows: Record<string, unknown>[] = [];
+    let fields: string[] = [];
+    for (let batch = 0; batch < 100; batch++) {
+      const result = await withSystemTx(async (tx) => {
+        const res = await expire(tx);
+        return { rows: res.rows, fields: res.fields.map((field) => field.name) };
+      });
+      fields = result.fields;
+      rows.push(...result.rows);
+      if (result.rows.length === 0 || rows.some((row) => row.request_id === id)) break;
+    }
+    expect(fields).toEqual(['request_id', 'seller_id', 'buyer_id', 'recipient_user_id']);
+    expect(rows).toContainEqual({
       request_id: id,
       seller_id: seller.businessId,
       buyer_id: buyer.businessId,
