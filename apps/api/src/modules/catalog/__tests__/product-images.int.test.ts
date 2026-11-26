@@ -11,6 +11,7 @@ import { SystemClock } from '../../../core/clock';
 import { FileStorage } from '../../../core/ports/file-storage';
 import { REDIS_CLIENT } from '../../../infrastructure/redis';
 import { SettingsService } from '../../settings';
+import type { ResizeRetryJob } from '../jobs/catalog-jobs';
 import { ResizeImageJob } from '../jobs/resize-image.job';
 import { renditionKey } from '../product-image-keys';
 import { ProductImagesRepository } from '../product-images.repository';
@@ -40,6 +41,13 @@ interface ProductJson {
 }
 
 const silentLog = { warn: () => undefined };
+const scheduled: ResizeRetryJob[] = [];
+const noRetry = {
+  addResizeRetry: (data: ResizeRetryJob) => {
+    scheduled.push(data);
+    return Promise.resolve();
+  },
+};
 
 describe('F3.4a ürün görselleri (entegrasyon)', () => {
   let app: NestFastifyApplication;
@@ -162,6 +170,7 @@ describe('F3.4a ürün görselleri (entegrasyon)', () => {
       storage,
       app.get(SettingsService),
       new SystemClock(),
+      noRetry,
     );
     png = await sharp({ create: { width: 2000, height: 1000, channels: 3, background: '#10b981' } })
       .png()
@@ -301,6 +310,7 @@ describe('F3.4a ürün görselleri (entegrasyon)', () => {
       storage,
       { get: () => Promise.resolve(1) } as unknown as SettingsService,
       new SystemClock(),
+      noRetry,
     );
     expect(await strict.run({ businessId: seller.businessId, imageId: big.id }, silentLog)).toBe(
       'failed',
@@ -317,6 +327,25 @@ describe('F3.4a ürün görselleri (entegrasyon)', () => {
       .set(await headers())
       .send({ name: { az: 'Yeni ad' } });
     expect(patch.status, JSON.stringify(patch.body)).toBe(200);
+  });
+
+  it('F3.4b-RETRY geçici depo hatası satırı processing bırakır; deneme bitince failed', async () => {
+    const product = await newProduct();
+    const image = await addOk(product.id);
+    const flaky = new ResizeImageJob(
+      new ProductImagesRepository(),
+      { readRange: () => Promise.reject(new Error('R2 503')), put: () => Promise.resolve() },
+      app.get(SettingsService),
+      new SystemClock(),
+      noRetry,
+    );
+    scheduled.length = 0;
+    const ctx = { businessId: seller.businessId, imageId: image.id };
+    expect(await flaky.run(ctx, silentLog)).toBe('retry');
+    expect(scheduled).toEqual([{ ...ctx, attempt: 1 }]);
+    expect((await getProduct(product.id)).images.map((i) => i.status)).toEqual(['processing']);
+    expect(await flaky.run({ ...ctx, attempt: 3 }, silentLog)).toBe('failed');
+    expect((await getProduct(product.id)).images.map((i) => i.status)).toEqual(['failed']);
   });
 
   it('F3.4a-ORD sıra tam listeyle değişir; eksik/fazla 422; silme 204; arşivdeki ürün 409', async () => {

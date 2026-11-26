@@ -245,6 +245,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | --- | --- | --- | --- | --- |
 | `catalog.brand_request_daily_limit` | 10 (toptancı başına kayan 24 saatte marka talebi, US-029 AC2, F3.2a K2) | tamsayı | 1 | 100 |
 | `catalog.product_images_max` | 8 (ürün başına görsel; işlenen ve başarısız dahil, US-030 VARSAYIM, F3.4a K4) | tamsayı | 1 | 20 |
+| `catalog.image_retry_delays_minutes` | 1, 5, 15 (görsel küçültmede geçici depo hatasında yeniden deneme beklemeleri; liste bitince `failed`, F3.4b) | tamsayı listesi (artan, 1–5 eleman) | 1 | 1440 |
 | `connection.request_ttl_days` | 14 | tamsayı | 1 | 90 |
 | `connection.cooldown_after_reject_days` | 30 | tamsayı | 7 | 365 |
 | `connection.cooldown_after_buyer_cancel_days` | 30 | tamsayı | 7 | 365 |

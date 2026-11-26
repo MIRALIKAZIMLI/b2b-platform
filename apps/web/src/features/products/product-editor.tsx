@@ -30,11 +30,12 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useId, useMemo, useState } from 'react';
 import { errorCodeOf } from '../../lib/error-code';
 import { ApiError, useRegionOptions } from '../admin-sellers/api';
 import { LoadFailed, StatusLine } from '../seller-settings/status';
 import { useShell } from '../shell/use-shell';
+import { Dialog } from '../ui/dialog';
 import {
   Button,
   Card,
@@ -55,6 +56,7 @@ import {
 } from './api';
 import { type BrandChoice, BrandPicker } from './brand-picker';
 import { useFieldError } from './error-text';
+import { ImagesCard } from './images-card';
 import { StatusBadge } from './products-page';
 import { unitLabel, VariantsEditor } from './variants-editor';
 
@@ -178,6 +180,11 @@ function ProductFormView({
   const [errors, setErrors] = useState<ProductFieldErrors>({});
   const [message, setMessage] = useState<string | undefined>();
   const [idempotencyKey] = useState(newKey);
+  // #78 notu: arşivleme formu sunucudaki hâle döndürür; kaydedilmemiş düzenleme varsa önce sorulur.
+  const [savedSnapshot] = useState(() => JSON.stringify(form));
+  const [brandSnapshot] = useState(() => brand?.id ?? null);
+  const dirty = JSON.stringify(form) !== savedSnapshot || (brand?.id ?? null) !== brandSnapshot;
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const fieldError = useFieldError(errors);
 
   const status = product?.status ?? null;
@@ -391,6 +398,13 @@ function ProductFormView({
             </div>
           </Card>
 
+          <ImagesCard
+            businessId={businessId}
+            productId={product?.id}
+            images={product?.images ?? []}
+            readOnly={!actions.editable}
+          />
+
           <Card className="space-y-6 p-6 sm:p-8">
             <h2 className="text-base font-semibold text-slate-900">
               {t('section.classification')}
@@ -532,6 +546,10 @@ function ProductFormView({
                     variant="quiet-danger"
                     disabled={busy}
                     onClick={() => {
+                      if (dirty) {
+                        setConfirmArchive(true);
+                        return;
+                      }
                       changeStatus('archived');
                     }}
                   >
@@ -573,7 +591,47 @@ function ProductFormView({
           </div>
         )}
       </form>
+      {confirmArchive && (
+        <DiscardDialog
+          onCancel={() => {
+            setConfirmArchive(false);
+          }}
+          onConfirm={() => {
+            setConfirmArchive(false);
+            changeStatus('archived');
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** Kaydedilmemiş düzenleme varken arşivleme onayı (Müfettiş #78 notu). */
+function DiscardDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  const t = useTranslations('products.discard');
+  const titleId = useId();
+  const bodyId = useId();
+  return (
+    <Dialog labelledBy={titleId} describedBy={bodyId} onClose={onCancel} tone="danger">
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+            {t('title')}
+          </h2>
+          <p id={bodyId} className="text-sm text-slate-600">
+            {t('body')}
+          </p>
+        </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" data-autofocus onClick={onCancel}>
+            {t('cancel')}
+          </Button>
+          <Button variant="danger" onClick={onConfirm}>
+            {t('confirm')}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
   );
 }
 
