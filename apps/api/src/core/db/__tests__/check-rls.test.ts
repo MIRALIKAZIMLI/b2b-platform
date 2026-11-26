@@ -205,6 +205,7 @@ describe('evaluateRlsTable — platformun yazamadığı tablolar (F2.18, US-016 
         'product_variants',
         'product_packaging',
         'product_visibility',
+        'product_images',
       ].sort(),
     );
   });

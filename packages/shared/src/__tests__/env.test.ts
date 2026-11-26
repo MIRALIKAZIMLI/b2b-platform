@@ -284,7 +284,17 @@ describe('env: TOTP ve seed (F1.6, Mimar kararı K1)', () => {
 });
 
 describe('env: worker push sağlayıcısı (F1.11)', () => {
-  const WORKER_ENV = { ...SERVER_ENV, PUSH_PROVIDER: 'mock' };
+  const WORKER_ENV = { ...SERVER_ENV, PUSH_PROVIDER: 'mock', STORAGE_PROVIDER: 'local' };
+  // F3.4a: production worker dosya deposu olarak r2 ister.
+  const R2_WORKER_ENV = {
+    STORAGE_PROVIDER: 'r2',
+    R2_ACCOUNT_ID: 'acc123',
+    R2_ACCESS_KEY_ID: 'r2-access-id',
+    R2_SECRET_ACCESS_KEY: 'r2-secret-value',
+    R2_BUCKET_PUBLIC: 'prod-public',
+    R2_BUCKET_PRIVATE: 'prod-private',
+    FILES_PUBLIC_BASE_URL: 'https://cdn.example.com',
+  };
 
   it('geçerli değerler okunur; EXPO_ACCESS_TOKEN isteğe bağlı', () => {
     expect(parseWorkerEnv(WORKER_ENV)).toMatchObject({ PUSH_PROVIDER: 'mock' });
@@ -305,19 +315,42 @@ describe('env: worker push sağlayıcısı (F1.11)', () => {
     // F2.11a: production worker Meilisearch adresi ve anahtarı da ister.
     const meili = { MEILI_URL: 'https://search.example', MEILI_MASTER_KEY: MEILI_KEY };
     const message = errorMessage(() =>
-      parseWorkerEnv({ ...WORKER_ENV, ...meili, APP_ENV: 'production', EXPO_ACCESS_TOKEN: token }),
+      parseWorkerEnv({
+        ...WORKER_ENV,
+        ...meili,
+        ...R2_WORKER_ENV,
+        APP_ENV: 'production',
+        EXPO_ACCESS_TOKEN: token,
+      }),
     );
     expect(message).toMatch(/PUSH_PROVIDER/);
     expect(message).not.toContain(token);
     expect(
-      parseWorkerEnv({ ...WORKER_ENV, ...meili, APP_ENV: 'production', PUSH_PROVIDER: 'expo' })
-        .APP_ENV,
+      parseWorkerEnv({
+        ...WORKER_ENV,
+        ...meili,
+        ...R2_WORKER_ENV,
+        APP_ENV: 'production',
+        PUSH_PROVIDER: 'expo',
+      }).APP_ENV,
     ).toBe('production');
+  });
+
+  it('F3.4a worker dosya deposu ister: yoksa reddedilir, production + local reddedilir, r2 eksikse reddedilir', () => {
+    const meili = { MEILI_URL: 'https://search.example', MEILI_MASTER_KEY: MEILI_KEY };
+    const production = { ...WORKER_ENV, ...meili, APP_ENV: 'production', PUSH_PROVIDER: 'expo' };
+    expect(() => parseWorkerEnv({ ...WORKER_ENV, STORAGE_PROVIDER: undefined })).toThrow(
+      /STORAGE_PROVIDER/,
+    );
+    expect(() => parseWorkerEnv(production)).toThrow(/STORAGE_PROVIDER/);
+    expect(() =>
+      parseWorkerEnv({ ...production, ...R2_WORKER_ENV, R2_BUCKET_PUBLIC: undefined }),
+    ).toThrow(/R2_BUCKET_PUBLIC/);
   });
 });
 
 describe('env: Meilisearch (F2.11a)', () => {
-  const WORKER_ENV = { ...SERVER_ENV, PUSH_PROVIDER: 'mock' };
+  const WORKER_ENV = { ...SERVER_ENV, PUSH_PROVIDER: 'mock', STORAGE_PROVIDER: 'local' };
 
   it('F2.11a K5: local/test ortamında adres ve anahtar isteğe bağlı', () => {
     const env = parseWorkerEnv(WORKER_ENV);

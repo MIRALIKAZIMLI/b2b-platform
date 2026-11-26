@@ -66,3 +66,4 @@
 - F3.2b: admin kategori, marka (talep onayı), faaliyet alanı ekranları
 - F3.3a: ürün, varyant, ambalaj API'si (migration 0034, RLS, toptancı kategorileri)
 - F3.3b: web ürün listesi ve formu (varyant, ambalaj, marka talebi, görünürlük)
+- F3.4a: ürün görselleri API, worker küçültme işi (sharp, 200/800/1600 px)

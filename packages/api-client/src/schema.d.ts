@@ -2846,6 +2846,156 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/products/{id}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ürüne görsel ekle (US-030 AC3, F3.4a)
+         * @description İzin `catalog.manage`. `fileId`, F1.10 akışıyla (`/files/upload-url` → yükleme → `/files/{id}/complete`) `ready` olmuş `product_image` dosyasıdır. Görsel `processing` döner; worker 200/800/1600 px WebP üretir, sonra `ready` (ürün yanıtında `urls`). İşlenemeyen görsel `failed` kalır, ürün etkilenmez. Ürün başına en çok `catalog.product_images_max` (8) görsel (işlenen ve başarısız dahil) → 422 `fileId: [limit]`. Başka amaçlı veya `ready` olmayan dosya 422 `fileId: [invalid]`; başka görsele bağlı dosya 422 `fileId: [in_use]`; başka işletmenin dosyası veya ürünü 404. Arşivdeki ürün 409 `INVALID_STATE_TRANSITION`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        fileId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Eklendi (`processing`) */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductImage"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{id}/images/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Görsel sırasını değiştir (F3.4a)
+         * @description İzin `catalog.manage`. `imageIds` ürünün bütün görselleridir, her biri bir kez; ilk görsel kapak. Eksik, fazla veya tekrarlı liste 422 `imageIds: [mismatch]`. Arşivdeki ürün 409.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: components["parameters"]["Id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        imageIds: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Sıra kaydedildi */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{id}/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Görseli üründen kaldır (F3.4a)
+         * @description İzin `catalog.manage`. Başka ürünün veya kiracının görseli 404. Arşivdeki ürün 409.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path: {
+                    id: components["parameters"]["Id"];
+                    imageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Kaldırıldı */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/browse/products": {
         parameters: {
             query?: never;
@@ -8137,7 +8287,7 @@ export interface components {
             variants?: components["schemas"]["VariantInput"][];
             visibility?: components["schemas"]["ProductVisibilityInput"];
         };
-        /** @description Toptancı bakışı. Görseller F3.4. */
+        /** @description Toptancı bakışı. Görseller sırayla, ilki kapak (F3.4a). */
         Product: {
             /** Format: uuid */
             id: string;
@@ -8170,6 +8320,20 @@ export interface components {
             visibility: {
                 regionIds: string[];
             };
+            images: components["schemas"]["ProductImage"][];
+        };
+        /** @description F3.4a. `urls` yalnız `ready` iken; uzun kenar 200 (thumb), 800 (medium), 1600 (large) px, WebP, küçük görsel büyütülmez. Orijinal dosyanın adresi dönmez. */
+        ProductImage: {
+            /** Format: uuid */
+            id: string;
+            sortOrder: number;
+            /** @enum {string} */
+            status: "processing" | "ready" | "failed";
+            urls: {
+                thumb: string;
+                medium: string;
+                large: string;
+            } | null;
         };
         ProductListItem: {
             /** Format: uuid */
@@ -8186,6 +8350,8 @@ export interface components {
                 name: string;
             } | null;
             activeVariantCount: number;
+            /** @description İlk `ready` görselin 200 px adresi (F3.4a) */
+            thumbUrl: string | null;
             /** Format: date-time */
             updatedAt: string;
         };

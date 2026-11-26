@@ -4319,6 +4319,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Лимит запросов бренда в сутки (24 часа)',
     tr: 'Günlük marka talebi sınırı (24 saat)',
   },
+  'adminSettings.key.catalog.product_images_max': {
+    az: 'Məhsul başına maksimum şəkil sayı',
+    ru: 'Макс. число изображений товара',
+    tr: 'Ürün başına en çok görsel',
+  },
   'adminSettings.key.connection.request_ttl_days': {
     az: 'Sorğunun etibarlılıq müddəti (gün)',
     ru: 'Срок действия запроса (дни)',
@@ -4598,6 +4603,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Şəkil üçün maksimum ölçü (MB)',
     ru: 'Макс. размер изображения (МБ)',
     tr: 'Görsel için en büyük boyut (MB)',
+  },
+  'adminSettings.key.files.image_max_megapixels': {
+    az: 'Şəkil üçün maksimum piksel (milyon)',
+    ru: 'Макс. число пикселей изображения (млн)',
+    tr: 'Görsel için en çok piksel (milyon)',
   },
   'adminSettings.key.files.xlsx_max_mb': {
     az: 'Excel faylı üçün maksimum ölçü (MB)',

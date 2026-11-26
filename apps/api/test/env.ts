@@ -24,4 +24,5 @@ export const TEST_WORKER_ENV: WorkerEnv = parseWorkerEnv({
   REDIS_URL: 'redis://127.0.0.1:1',
   LOG_LEVEL: 'silent',
   PUSH_PROVIDER: 'mock',
+  STORAGE_PROVIDER: 'local',
 });

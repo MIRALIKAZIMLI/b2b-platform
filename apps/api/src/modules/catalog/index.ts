@@ -1,4 +1,4 @@
-export { CatalogModule } from './catalog.module';
+export { CatalogModule, CatalogWorkerModule } from './catalog.module';
 export { type CatalogSeedResult, seedCatalog } from './catalog.seed';
 export { SEED_CATEGORIES, type SeedCategory } from './seed/categories';
 export { SEED_UNIT_CONVERSIONS, SEED_UNITS } from './seed/units';

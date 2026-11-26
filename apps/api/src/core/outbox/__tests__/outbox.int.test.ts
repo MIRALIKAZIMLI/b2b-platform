@@ -154,6 +154,7 @@ describe('Outbox (entegrasyon: PostgreSQL + Redis)', () => {
           notifications: queue,
           directory: queue,
           connections: queue,
+          catalog: queue,
         }),
         clock,
         fakeLog(),
@@ -186,6 +187,7 @@ describe('Outbox (entegrasyon: PostgreSQL + Redis)', () => {
         notifications: queue,
         directory: queue,
         connections: queue,
+        catalog: queue,
       });
       const job: OutboxJob = {
         queue: 'test',

@@ -95,6 +95,8 @@ function countryCodeListSetting(defaultValue: string[]): SettingDefinition<strin
 export const SETTING_DEFINITIONS = {
   // F3.2a: toptancı başına kayan 24 saatte marka talebi sınırı (R37, kart K2).
   'catalog.brand_request_daily_limit': layered(intSetting(10, 1, 100)),
+  // F3.4a: ürün başına en çok görsel (US-030 VARSAYIM, kart K4).
+  'catalog.product_images_max': layered(intSetting(8, 1, 20)),
   'connection.request_ttl_days': intSetting(14, 1, 90),
   'connection.cooldown_after_reject_days': layered(intSetting(30, 7, 365)),
   'connection.cooldown_after_buyer_cancel_days': layered(intSetting(30, 7, 365)),
@@ -159,6 +161,8 @@ export const SETTING_DEFINITIONS = {
   'files.download_url_ttl_minutes': layered(intSetting(5, 1, 60)),
   'files.image_max_mb': layered(intSetting(5, 1, 20)),
   'files.xlsx_max_mb': layered(intSetting(10, 1, 50)),
+  // F3.4a (R34, kart K5): görsel küçültmede kabul edilen en büyük piksel sayısı (milyon).
+  'files.image_max_megapixels': intSetting(40, 1, 100),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
   'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
   // F2.11a: perakendeci dizini gece tam yeniden indeksleme (ADR-0011 §1, §4).

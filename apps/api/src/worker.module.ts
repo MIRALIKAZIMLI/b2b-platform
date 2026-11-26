@@ -7,12 +7,15 @@ import { ConnectionsWorkerModule } from './modules/connections';
 import { PushModule } from './infrastructure/push';
 import { RedisModule } from './infrastructure/redis';
 import { SearchModule } from './infrastructure/search';
+import { StorageModule } from './infrastructure/storage';
+import { CatalogWorkerModule } from './modules/catalog';
 import { DirectoryWorkerModule } from './modules/directory';
 import { NotificationsWorkerModule } from './modules/notifications';
 
 // Worker giriş noktasının modülü: outbox dağıtıcısı (F1.2b). Kuyruk tüketicileri: access (F1.8b),
 // notifications (F1.11; push sağlayıcısı PUSH_PROVIDER ile), directory (F2.11a; Meilisearch),
-// connections (F2.16; istek süre dolumu zamanlanmış işi).
+// connections (F2.16; istek süre dolumu zamanlanmış işi), catalog (F3.4a; görsel küçültme, depo
+// STORAGE_PROVIDER ile).
 // Ayarların Redis istemcisi (RedisModule) ile BullMQ bağlantısı ayrıdır (Müfettiş notu b).
 @Module({})
 export class WorkerModule {
@@ -34,6 +37,8 @@ export class WorkerModule {
         SearchModule.forRoot({ url: env.MEILI_URL, apiKey: env.MEILI_MASTER_KEY }),
         DirectoryWorkerModule,
         ConnectionsWorkerModule,
+        StorageModule.forRoot(env),
+        CatalogWorkerModule,
       ],
     };
   }

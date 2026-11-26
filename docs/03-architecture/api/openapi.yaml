@@ -1526,6 +1526,77 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /api/v1/products/{id}/images:
+    post:
+      tags: [catalog]
+      summary: Ürüne görsel ekle (US-030 AC3, F3.4a)
+      description: >-
+        İzin `catalog.manage`. `fileId`, F1.10 akışıyla (`/files/upload-url` → yükleme →
+        `/files/{id}/complete`) `ready` olmuş `product_image` dosyasıdır. Görsel `processing` döner;
+        worker 200/800/1600 px WebP üretir, sonra `ready` (ürün yanıtında `urls`). İşlenemeyen görsel
+        `failed` kalır, ürün etkilenmez. Ürün başına en çok `catalog.product_images_max` (8) görsel
+        (işlenen ve başarısız dahil) → 422 `fileId: [limit]`. Başka amaçlı veya `ready` olmayan dosya
+        422 `fileId: [invalid]`; başka görsele bağlı dosya 422 `fileId: [in_use]`; başka işletmenin
+        dosyası veya ürünü 404. Arşivdeki ürün 409 `INVALID_STATE_TRANSITION`.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [fileId]
+              properties:
+                fileId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Eklendi (`processing`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductImage' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/products/{id}/images/order:
+    put:
+      tags: [catalog]
+      summary: Görsel sırasını değiştir (F3.4a)
+      description: >-
+        İzin `catalog.manage`. `imageIds` ürünün bütün görselleridir, her biri bir kez; ilk görsel
+        kapak. Eksik, fazla veya tekrarlı liste 422 `imageIds: [mismatch]`. Arşivdeki ürün 409.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [imageIds]
+              properties:
+                imageIds: { type: array, minItems: 1, maxItems: 20, items: { type: string, format: uuid } }
+      responses:
+        '204': { description: Sıra kaydedildi }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/products/{id}/images/{imageId}:
+    delete:
+      tags: [catalog]
+      summary: Görseli üründen kaldır (F3.4a)
+      description: İzin `catalog.manage`. Başka ürünün veya kiracının görseli 404. Arşivdeki ürün 409.
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { $ref: '#/components/parameters/Id' }
+        - { name: imageId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Kaldırıldı }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /api/v1/browse/products:
     get:
       tags: [catalog]
@@ -4302,8 +4373,8 @@ components:
         visibility: { $ref: '#/components/schemas/ProductVisibilityInput' }
     Product:
       type: object
-      description: Toptancı bakışı. Görseller F3.4.
-      required: [id, sku, name, description, categoryId, brandId, brand, baseUnitCode, hasExpiry, shelfLifeMonths, status, publishedAt, createdAt, updatedAt, variants, visibility]
+      description: Toptancı bakışı. Görseller sırayla, ilki kapak (F3.4a).
+      required: [id, sku, name, description, categoryId, brandId, brand, baseUnitCode, hasExpiry, shelfLifeMonths, status, publishedAt, createdAt, updatedAt, variants, visibility, images]
       properties:
         id: { type: string, format: uuid }
         sku: { type: string }
@@ -4331,9 +4402,27 @@ components:
           required: [regionIds]
           properties:
             regionIds: { type: array, items: { type: string, format: uuid } }
+        images: { type: array, items: { $ref: '#/components/schemas/ProductImage' } }
+    ProductImage:
+      type: object
+      description: >-
+        F3.4a. `urls` yalnız `ready` iken; uzun kenar 200 (thumb), 800 (medium), 1600 (large) px,
+        WebP, küçük görsel büyütülmez. Orijinal dosyanın adresi dönmez.
+      required: [id, sortOrder, status, urls]
+      properties:
+        id: { type: string, format: uuid }
+        sortOrder: { type: integer }
+        status: { type: string, enum: [processing, ready, failed] }
+        urls:
+          type: [object, 'null']
+          required: [thumb, medium, large]
+          properties:
+            thumb: { type: string }
+            medium: { type: string }
+            large: { type: string }
     ProductListItem:
       type: object
-      required: [id, sku, name, status, categoryId, brand, activeVariantCount, updatedAt]
+      required: [id, sku, name, status, categoryId, brand, activeVariantCount, thumbUrl, updatedAt]
       properties:
         id: { type: string, format: uuid }
         sku: { type: string }
@@ -4347,6 +4436,7 @@ components:
             id: { type: string, format: uuid }
             name: { type: string }
         activeVariantCount: { type: integer }
+        thumbUrl: { type: [string, 'null'], description: İlk `ready` görselin 200 px adresi (F3.4a) }
         updatedAt: { type: string, format: date-time }
     BrowseProduct:
       type: object

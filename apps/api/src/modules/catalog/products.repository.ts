@@ -197,6 +197,11 @@ export function isVariantSkuTaken(error: unknown): boolean {
   return pgErrorOf(error, '23505', 'product_variants_seller_sku_uq');
 }
 
+/** Bir dosya tek görsel (`product_images_file_uq`, F3.4a K9). */
+export function isProductImageFileTaken(error: unknown): boolean {
+  return pgErrorOf(error, '23505', 'product_images_file_uq');
+}
+
 /** `ilike` için `%`, `_` ve `\` kaçışlı desen. */
 function escapeLike(q: string): string {
   return q.replace(/[\\%_]/g, (char) => `\\${char}`);
