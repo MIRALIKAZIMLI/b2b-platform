@@ -162,4 +162,13 @@ describe('İzinden menü', () => {
       'team',
     ]);
   });
+  it('F3.3b-AC1 toptancı "Məhsullar" menüsü catalog.view ile hazır ve products yoluna gider', () => {
+    const item = visibleMenu('seller', ['catalog.view']).find((entry) => entry.key === 'products');
+    expect(item).toMatchObject({ ready: true, path: 'products' });
+    expect(visibleMenu('seller', ['team.manage']).map((entry) => entry.key)).not.toContain(
+      'products',
+    );
+    // Perakendecinin ürün ekranı F3.12'de: hâlâ hazır değil.
+    expect(MENUS.buyer.find((entry) => entry.key === 'products')?.ready).toBe(false);
+  });
 });
