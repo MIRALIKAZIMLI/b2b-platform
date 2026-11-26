@@ -1191,9 +1191,10 @@ paths:
       summary: Bağlantı koşulları (US-024 AC2) — yalnızca seller
       description: |
         İzin `connections.terms.manage` (yalnız `seller`, kapsam `all`; temsilci yalnız görür). Kısmi güncelleme,
-        en az bir alan. Alıcı bu koşulları hiçbir yoldan değiştiremez (veritabanı bekçisi de reddeder). Fiyat
-        listesi ve şube fiyatı F3.6'ya kadar kapalı: `priceListId` yalnız `null`, `branchPricingEnabled` yalnız
-        `false`. Temsilci satıcının aktif üyesi olmalı (`422`). Başka işletmenin bağlantısı `404`; iptal edilmiş
+        en az bir alan. Alıcı bu koşulları hiçbir yoldan değiştiremez (veritabanı bekçisi de reddeder). F3.6a:
+        `priceListId` satıcının aktif fiyat listesi veya `null` (varsayılan liste); başka satıcının veya arşivli
+        liste `422` (`priceListId: [invalid_price_list]`). Şube fiyatı F3.8'e kadar kapalı: `branchPricingEnabled`
+        yalnız `false`. Temsilci satıcının aktif üyesi olmalı (`422`). Başka işletmenin bağlantısı `404`; iptal edilmiş
         bağlantı `409 INVALID_STATE_TRANSITION`. Audit `connection.terms_updated`. Idempotency-Key gerekmez (PATCH).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       requestBody:
@@ -1645,44 +1646,130 @@ paths:
   /api/v1/price-lists:
     get:
       tags: [pricing]
-      summary: Fiyat listeleri
+      summary: Fiyat listeleri (US-034)
+      description: |
+        F3.6a. İzin `pricing.view` (yetenek `seller`). Aktif ve arşivli listeler; önce varsayılan, sonra ada göre.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/PriceList' } }
     post:
       tags: [pricing]
-      summary: Fiyat listesi oluştur (US-034)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      summary: Fiyat listesi oluştur (US-034 AC1)
+      description: |
+        F3.6a. İzin `pricing.manage`. Satıcının ilk listesi `isDefault` verilmese de varsayılan olur; `isDefault: true`
+        önceki varsayılanı düşürür (satıcı başına tek varsayılan, K1). Para birimi satıcının para birimi olmalı,
+        değilse `422 CURRENCY_MISMATCH` (K6). Audit `price_list.created`.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
+        required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/PriceListInput' }
       responses:
-        '201': { description: Oluşturuldu }
-  /api/v1/price-lists/{id}/items:
-    put:
+        '201':
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PriceList' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/price-lists/{id}:
+    patch:
       tags: [pricing]
-      summary: Liste fiyatlarını toplu ayarla (geçerlilik tarihiyle)
+      summary: Fiyat listesini düzenle, varsayılan yap, arşivle veya geri al
+      description: |
+        F3.6a. İzin `pricing.manage`. Kısmi, en az bir alan. Para birimi değişmez. Varsayılanlık yalnız başka liste
+        `isDefault: true` yapılarak devredilir; varsayılan liste arşivlenemez: `409 PRICE_LIST_DEFAULT_PROTECTED` (K3).
+        Aktif bir bağlantıya atanmış liste arşivlenemez: `409 PRICE_LIST_IN_USE` (K2 = A, kullanıcı kararı).
+        Durum geçişleri state-machines §15; arşivli liste varsayılan yapılamaz (`409 INVALID_STATE_TRANSITION`).
+        Başka satıcının listesi `404`. Audit `price_list.updated`, `price_list.archived`, `price_list.restored`.
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PriceListUpdate' }
+      responses:
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PriceList' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/price-lists/{id}/items:
+    get:
+      tags: [pricing]
+      summary: Listedeki fiyatlar (geçerli ve ileri tarihli)
+      description: |
+        F3.6a. İzin `pricing.view`. Fiyatı olan her ambalaj seviyesi için şu an geçerli fiyat ve henüz geçerli
+        olmayan fiyatlar. Sayfalama ambalaj kimliğine göre (`cursor` = son `packagingId`).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/PriceListItem' } }
+                  nextCursor: { type: [string, 'null'] }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      tags: [pricing]
+      summary: Liste fiyatlarını toplu ayarla (geçerlilik tarihiyle; US-034 AC6)
+      description: |
+        F3.6a. İzin `pricing.manage`. Fiyat satış birimi (ambalaj seviyesi) başınadır. `validFrom` verilmezse fiyat
+        hemen geçerli olur; verilirse yarın veya sonraki bir gündür ve o gün toptancının saat diliminde
+        (`businesses.timezone`) 00:00'da geçerli olur (K4); bugün veya geçmiş gün `422`. Henüz geçerli olmayan bir
+        fiyat aynı günle yeniden gönderilirse güncellenir; geçerli olmuş fiyat değişmez, yeni satır eklenir (K5).
+        Ambalaj seviyesi aynı satıcının olmalı (`422`, `items.<i>.packagingId: [not_found]`). Arşivli listeye
+        yazılamaz (`409 INVALID_STATE_TRANSITION`). Tek işlem; audit `price_list.items_set` (satır sayısı, gün).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [items]
               properties:
-                validFrom: { type: string, format: date-time }
+                validFrom: { type: string, format: date, description: 'Toptancının takvim günü (YYYY-MM-DD)' }
                 items:
                   type: array
+                  minItems: 1
                   maxItems: 1000
                   items:
                     type: object
+                    additionalProperties: false
                     required: [packagingId, unitPrice]
                     properties:
                       packagingId: { type: string, format: uuid }
-                      unitPrice: { $ref: '#/components/schemas/Decimal' }
+                      unitPrice: { type: string, pattern: '^\d{1,10}(\.\d{1,4})?$' }
       responses:
-        '200': { description: Kaydedildi }
+        '200':
+          description: Kaydedildi
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, validFrom]
+                properties:
+                  count: { type: integer }
+                  validFrom: { type: string, format: date-time }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/customer-prices:
     get:
       tags: [pricing]
@@ -1759,13 +1846,18 @@ paths:
     get:
       tags: [pricing]
       summary: Bir alıcı için fiyatın kaynağını göster (US-034 AC5)
+      description: |
+        F3.6a. İzin `pricing.view`; `assigned` kapsamlı üye (temsilci) yalnız kendisine atanmış müşteriyi görür.
+        Alıcıyla aktif bağlantı yoksa `404`. Sıra ADR-0019; F3.6a'da kaynaklar atanmış liste ve varsayılan liste
+        (müşteri fiyatı F3.7, şube fiyatı ve indirimi F3.8, kademe F3.9). `branchId` F3.8'e kadar yok sayılır.
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: buyerId, in: query, required: true, schema: { type: string, format: uuid } }, { name: branchId, in: query, schema: { type: string, format: uuid } }, { name: packagingId, in: query, required: true, schema: { type: string, format: uuid } } ]
       responses:
         '200':
-          description: Çözümleme adımları
+          description: Çözümlenen fiyat ve kaynağı
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ResolvedPrice' }
+              schema: { $ref: '#/components/schemas/PriceExplanation' }
+        '404': { $ref: '#/components/responses/Error' }
 
   # ---------------------------------------------------------------- inventory
   /api/v1/stock:
@@ -3618,6 +3710,8 @@ components:
         - SETTING_OUT_OF_RANGE
         - SETTING_SCOPE_NOT_ALLOWED
         - JOB_TITLE_IN_USE
+        - PRICE_LIST_IN_USE
+        - PRICE_LIST_DEFAULT_PROTECTED
         - INTERNAL_ERROR
     PhoneE164:
       type: string
@@ -4239,8 +4333,8 @@ components:
       additionalProperties: false
       minProperties: 1
       properties:
-        priceListId: { type: 'null', description: F3.6'ya kadar yalnız null }
-        branchPricingEnabled: { type: boolean, const: false, description: F3.6'ya kadar yalnız false }
+        priceListId: { type: [string, 'null'], format: uuid, description: 'F3.6a: satıcının aktif listesi; null = varsayılan liste' }
+        branchPricingEnabled: { type: boolean, const: false, description: F3.8'e kadar yalnız false }
         creditLimit: { type: [string, 'null'], pattern: '^\d{1,12}(\.\d{1,2})?$' }
         paymentTermDays: { type: integer, minimum: 0, maximum: 180 }
         salesRepMembershipId: { type: [string, 'null'], format: uuid }
@@ -4462,23 +4556,77 @@ components:
         isFavorite: { type: boolean }
     ResolvedPrice:
       type: object
+      description: '`PriceResolver` sonucu (ADR-0019). `source: none` iken fiyat alanları `null` (US-034 AC4).'
+      required: [unitPrice, source, tierDiscountPercent, branchDiscountPercent, finalUnitPrice, vatIncluded, vatRate]
       properties:
-        unitPrice: { $ref: '#/components/schemas/Money' }
+        unitPrice: { oneOf: [ { $ref: '#/components/schemas/Money' }, { type: 'null' } ] }
         source: { type: string, enum: [branch_price, customer_price, price_list, default_list, none] }
-        tierDiscountPercent: { $ref: '#/components/schemas/Decimal' }
-        branchDiscountPercent: { $ref: '#/components/schemas/Decimal' }
-        finalUnitPrice: { $ref: '#/components/schemas/Money' }
-        vatIncluded: { type: boolean }
-        vatRate: { $ref: '#/components/schemas/Decimal' }
+        tierDiscountPercent: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
+        branchDiscountPercent: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
+        finalUnitPrice: { oneOf: [ { $ref: '#/components/schemas/Money' }, { type: 'null' } ] }
+        vatIncluded: { type: [boolean, 'null'] }
+        vatRate: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
+    PriceExplanation:
+      description: Yalnız satıcı bakışı; alıcıya giden `BrowseProduct.price` liste adını taşımaz.
+      allOf:
+        - { $ref: '#/components/schemas/ResolvedPrice' }
+        - type: object
+          required: [priceList, validFrom]
+          properties:
+            priceList:
+              type: [object, 'null']
+              required: [id, name]
+              properties:
+                id: { type: string, format: uuid }
+                name: { type: string }
+            validFrom: { type: [string, 'null'], format: date-time }
     PriceListInput:
       type: object
+      additionalProperties: false
       required: [name, currency, vatIncluded, vatRate]
       properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        currency: { $ref: '#/components/schemas/CurrencyCode' }
+        vatIncluded: { type: boolean }
+        vatRate: { type: string, pattern: '^\d{1,3}(\.\d{1,2})?$', description: '0–100' }
+        isDefault: { type: boolean }
+    PriceListUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        vatIncluded: { type: boolean }
+        vatRate: { type: string, pattern: '^\d{1,3}(\.\d{1,2})?$' }
+        isDefault: { type: boolean, const: true }
+        status: { type: string, enum: [active, archived] }
+    PriceList:
+      type: object
+      required: [id, name, currency, vatIncluded, vatRate, isDefault, status, itemCount, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
         name: { type: string }
         currency: { $ref: '#/components/schemas/CurrencyCode' }
         vatIncluded: { type: boolean }
         vatRate: { $ref: '#/components/schemas/Decimal' }
         isDefault: { type: boolean }
+        status: { type: string, enum: [active, archived] }
+        itemCount: { type: integer, description: Fiyatı girilmiş ambalaj seviyesi sayısı }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PricePoint:
+      type: object
+      required: [unitPrice, validFrom]
+      properties:
+        unitPrice: { $ref: '#/components/schemas/Decimal' }
+        validFrom: { type: string, format: date-time }
+    PriceListItem:
+      type: object
+      required: [packagingId, current, scheduled]
+      properties:
+        packagingId: { type: string, format: uuid }
+        current: { oneOf: [ { $ref: '#/components/schemas/PricePoint' }, { type: 'null' } ] }
+        scheduled: { type: array, items: { $ref: '#/components/schemas/PricePoint' } }
     BranchDiscountInput:
       type: object
       required: [buyerId, branchId, target, percent]

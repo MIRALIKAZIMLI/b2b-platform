@@ -127,6 +127,8 @@ export const productPackaging = pgTable(
       foreignColumns: [productVariants.id, productVariants.sellerId],
     }),
     unique('product_packaging_variant_level_uq').on(table.variantId, table.level),
+    // F3.6a: `price_list_items` bileşik FK hedefi (başka satıcının ambalajına fiyat yazılamaz).
+    unique('product_packaging_id_seller_uq').on(table.id, table.sellerId),
     check('product_packaging_level_check', sql`${table.level} in (${inList(PACKAGING_LEVELS)})`),
     check('product_packaging_base_qty_check', sql`${table.baseQty} > 0`),
     check(

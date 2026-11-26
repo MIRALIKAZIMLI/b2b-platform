@@ -71,6 +71,12 @@ export const AUDIT_ACTIONS = [
   'product.published',
   'product.archived',
   'product.restored',
+  // F3.6a (US-034, kart K8): fiyat listesi; toplu fiyatta yalnız satır sayısı ve gün.
+  'price_list.created',
+  'price_list.updated',
+  'price_list.archived',
+  'price_list.restored',
+  'price_list.items_set',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -94,6 +100,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // `business_id = null`; marka talebi (`brand.requested`) talep eden toptancının işletmesiyle.
 // product: hedef kimliği ürün (products.id; F3.3a durum değişikliği, işletme = toptancı; before/
 // after yalnız durum).
+// price_list: hedef kimliği fiyat listesi (price_lists.id; F3.6a, işletme = toptancı). Toplu fiyatta
+// after yalnız satır sayısı ve geçerlilik anı; fiyat değerleri audit'e yazılmaz (tablo geçmişi tutar).
 // connection: hedef kimliği bağlantı (connections.id; F2.13a kabul, after: istek kimliği, veri
 // paylaşım onayı, vade). block: hedef kimliği engellenen satıcı (sellerId; işletme = alıcı).
 export const AUDIT_TARGET_TYPES = [
@@ -117,6 +125,7 @@ export const AUDIT_TARGET_TYPES = [
   'brand',
   'activity_type',
   'product',
+  'price_list',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

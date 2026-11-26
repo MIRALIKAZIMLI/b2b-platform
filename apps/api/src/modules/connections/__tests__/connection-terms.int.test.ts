@@ -167,9 +167,16 @@ describe('F2.14a bağlantı koşulları API', () => {
         order by id`,
       [seller.businessId, id],
     );
+    // F3.6a: audit önce/sonra fiyat listesini de taşır (atama koşul değişikliğidir).
     expect(audits[0]).toEqual({
-      before: { creditLimit: null, paymentTermDays: 0, salesRepMembershipId: null },
+      before: {
+        priceListId: null,
+        creditLimit: null,
+        paymentTermDays: 0,
+        salesRepMembershipId: null,
+      },
       after: {
+        priceListId: null,
         creditLimit: '1500.50',
         paymentTermDays: 14,
         salesRepMembershipId: rep.membershipId,
@@ -302,7 +309,7 @@ describe('F2.14a bağlantı koşulları API', () => {
     expect(second.nextCursor).toBeNull();
   });
 
-  it('F2.14a-T6 gövde doğrulaması: kredi limiti biçimi, fiyat listesi/şube fiyatı F3.6, boş gövde 422', async () => {
+  it('F2.14a-T6 gövde doğrulaması: kredi limiti biçimi, bilinmeyen fiyat listesi (F3.6a), şube fiyatı F3.8, boş gövde 422', async () => {
     const { seller, id } = await pair();
     const bodies: unknown[] = [
       { creditLimit: '-1' },
@@ -321,7 +328,7 @@ describe('F2.14a bağlantı koşulları API', () => {
       expect(res.status, JSON.stringify(body)).toBe(422);
       expect(code(res.body)).toBe('VALIDATION_FAILED');
     }
-    // Sınır değerleri kabul edilir; F3.6'ya kadar null/false açıkça gönderilebilir.
+    // Sınır değerleri kabul edilir; null liste (= varsayılan) ve false şube fiyatı gönderilebilir.
     const ok = await patch(seller.admin, seller.businessId, id, {
       creditLimit: '999999999999.99',
       paymentTermDays: 180,

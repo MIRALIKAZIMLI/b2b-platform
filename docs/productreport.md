@@ -306,7 +306,7 @@ Bulunan fiyatın üzerine sırasıyla şunlar uygulanır: **kademeli fiyat** (ö
 
 - Siparişe fiyat **o anki haliyle kopyalanır**. Sonradan fiyat değişse bile eski sipariş bozulmaz.
 - Her fiyat listesinin bir **para birimi** ve **geçerlilik tarihi** olur. Gelecek tarihli fiyat değişikliği planlanabilir.
-- KDV dahil veya hariç bilgisi fiyat listesi düzeyinde tutulur. ƏDV oranı ürün kategorisine göre ayarlanabilir; standart oran sabit kodlanmaz.
+- KDV dahil veya hariç bilgisi ve ƏDV oranı fiyat listesi düzeyinde tutulur (F3 kararı S2 = A, data-model `price_lists.vat_rate`); aynı listede farklı oranlı ürün gerekirse ürün düzeyinde oran sonradan eklenir. Standart oran sabit kodlanmaz.
 - Fiyat Excel ile toplu yüklenebilir. Her yükleme öncesinde önizleme ve fark raporu gösterilir.
 - Fiyat değişiklikleri loglanır: kim, ne zaman, eski ve yeni değer.
 

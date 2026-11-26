@@ -68,3 +68,4 @@
 - F3.3b: web ürün listesi ve formu (varyant, ambalaj, marka talebi, görünürlük)
 - F3.4a: ürün görselleri API, worker küçültme işi (sharp, 200/800/1600 px)
 - F3.4b: web ürün görseli yükleyici (kapak, sıra, silme), liste kapağı; görsel işi geçici depo hatasında yeniden dener, worker aynı anda tek görsel işler
+- F3.6a: fiyat listeleri ve PriceResolver (migration 0036; P1–P11; ileri tarihli fiyat toptancının saatinde 00:00; bağlantıya liste atama; fiyat açıklaması)

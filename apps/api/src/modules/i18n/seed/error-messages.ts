@@ -265,6 +265,17 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, ErrorMessageText>> = {
     ru: 'Эта должность используется: удалить нельзя, можно только деактивировать.',
     tr: 'Bu unvan kullanımda; silinemez, yalnızca pasifleştirilebilir.',
   },
+  // F3.6a: çeviriler taslak, kullanıcı onayı bekliyor.
+  PRICE_LIST_IN_USE: {
+    az: 'Bu qiymət siyahısı müştərilərə təyin olunub. Əvvəlcə həmin müştəriləri başqa siyahıya keçirin.',
+    ru: 'Этот прайс-лист назначен клиентам. Сначала переведите их на другой прайс-лист.',
+    tr: 'Bu fiyat listesi müşterilere atanmış. Önce o müşterileri başka bir listeye taşıyın.',
+  },
+  PRICE_LIST_DEFAULT_PROTECTED: {
+    az: 'Əsas qiymət siyahısı arxivləşdirilə bilməz. Əvvəlcə başqa siyahını əsas edin.',
+    ru: 'Основной прайс-лист нельзя архивировать. Сначала сделайте основным другой прайс-лист.',
+    tr: 'Varsayılan fiyat listesi arşivlenemez. Önce başka bir listeyi varsayılan yapın.',
+  },
   INTERNAL_ERROR: {
     az: 'Gözlənilməz xəta baş verdi. Bir az sonra yenidən cəhd edin.',
     ru: 'Произошла непредвиденная ошибка. Повторите попытку позже.',

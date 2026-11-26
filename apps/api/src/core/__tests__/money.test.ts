@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DomainError } from '../errors/domain-error';
 import {
   add,
+  applyDiscountPercent,
+  compare,
   fromDecimalString,
   multiply,
   roundLineTotal,
@@ -83,5 +85,34 @@ describe('money: dönüşüm (openapi Decimal şeması)', () => {
     expect(() => add(m('1'), 2)).toThrow(TypeError);
     // @ts-expect-error Money yerine number verilemez.
     expect(() => multiply(3, m('1'))).toThrow(TypeError);
+  });
+});
+
+describe('F3.6a yüzde indirim ve karşılaştırma', () => {
+  it('F3.6a-P8 indirim 4 haneye yarım yukarı; 0 ve 100 sınır', () => {
+    const value = fromDecimalString('3.3333');
+    expect(toDecimalString(applyDiscountPercent(value, fromDecimalString('3')), 4)).toBe('3.2333');
+    expect(
+      toDecimalString(
+        applyDiscountPercent(fromDecimalString('1.2345'), fromDecimalString('10')),
+        4,
+      ),
+    ).toBe('1.1111');
+    expect(toDecimalString(applyDiscountPercent(value, fromDecimalString('0')), 4)).toBe('3.3333');
+    expect(toDecimalString(applyDiscountPercent(value, fromDecimalString('100')), 4)).toBe(
+      '0.0000',
+    );
+  });
+
+  it('F3.6a yüzde 0–100 dışında RangeError', () => {
+    const value = fromDecimalString('1');
+    expect(() => applyDiscountPercent(value, fromDecimalString('-1'))).toThrow(RangeError);
+    expect(() => applyDiscountPercent(value, fromDecimalString('100.01'))).toThrow(RangeError);
+  });
+
+  it('F3.6a compare sıralar', () => {
+    expect(compare(fromDecimalString('9.999'), fromDecimalString('10'))).toBe(-1);
+    expect(compare(fromDecimalString('10.000'), fromDecimalString('10'))).toBe(0);
+    expect(compare(fromDecimalString('10.5'), fromDecimalString('10'))).toBe(1);
   });
 });

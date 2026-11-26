@@ -10,6 +10,10 @@ export {
 } from './connection-policy';
 export { blocks, connectionRequests, connections } from './connections.schema';
 export {
+  PRICE_LIST_ASSIGNMENT_PORT,
+  type PriceListAssignmentPort,
+} from './price-list-assignment.port';
+export {
   CONNECTION_CANCELLED_HANDLERS,
   type ConnectionCancelledEffect,
   type ConnectionCancelledEvent,
