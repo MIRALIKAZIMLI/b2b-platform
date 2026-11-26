@@ -686,12 +686,14 @@ export function termsFormValues(
   };
 }
 
-/** Pencerenin gönderdiği gövde (`ConnectionTermsUpdate`'in alt kümesi; fiyat listesi F3.6). */
+/** Pencerenin gönderdiği gövde (`ConnectionTermsUpdate`'in alt kümesi). */
 export interface TermsFormBody {
   readonly creditLimit: string | null;
   readonly paymentTermDays: number;
   /** Yoksa sunucu temsilciyi değiştirmez (PATCH kısmi). */
   readonly salesRepMembershipId?: string | null;
+  /** F3.6b: `null` = varsayılan liste; yoksa sunucu atamayı değiştirmez. */
+  readonly priceListId?: string | null;
 }
 
 /**
@@ -702,6 +704,8 @@ export function termsUpdateBody(values: {
   readonly creditLimit: string;
   readonly paymentTermDays: string;
   readonly salesRepMembershipId: string | undefined;
+  /** F3.6b: `''` = varsayılan liste; `undefined` = listeler yüklenmedi, alan gönderilmez. */
+  readonly priceListId?: string | undefined;
 }):
   | { readonly ok: true; readonly body: TermsFormBody }
   | { readonly ok: false; readonly creditLimit: boolean; readonly paymentTermDays: boolean } {
@@ -713,16 +717,15 @@ export function termsUpdateBody(values: {
     return { ok: false, creditLimit: badLimit, paymentTermDays: badDays };
   }
   const rep = values.salesRepMembershipId;
+  const list = values.priceListId;
   return {
     ok: true,
-    body:
-      rep === undefined
-        ? { creditLimit: creditLimit.value, paymentTermDays: days }
-        : {
-            creditLimit: creditLimit.value,
-            paymentTermDays: days,
-            salesRepMembershipId: rep === '' ? null : rep,
-          },
+    body: {
+      creditLimit: creditLimit.value,
+      paymentTermDays: days,
+      ...(rep === undefined ? {} : { salesRepMembershipId: rep === '' ? null : rep }),
+      ...(list === undefined ? {} : { priceListId: list === '' ? null : list }),
+    },
   };
 }
 
@@ -739,6 +742,10 @@ export function termsFailureKey(body: unknown): string {
       'details' in (body as object) ? (body as { details?: unknown }).details : undefined;
     if (typeof details === 'object' && details !== null && 'salesRepMembershipId' in details) {
       return 'customers.error.invalid_sales_rep';
+    }
+    // F3.6b: liste bu arada arşivlendi veya silindi.
+    if (typeof details === 'object' && details !== null && 'priceListId' in details) {
+      return 'customers.error.invalid_price_list';
     }
   }
   return `errors.${code}`;

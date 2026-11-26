@@ -4,18 +4,23 @@
 //   ödeme vadesi (0–180 gün, zorunlu), temsilci (seçim; "Təyin edilməyib"). Tek ana eylem "Yadda saxla".
 // - Koşul atanmamışsa alanlar öneriyle dolar ve üstte indigo bilgi şeridi kaynağı söyler (önceki
 //   dönem / sorğudakı vade); kullanıcı değiştirip kaydeder. Öneri kendiliğinden yazılmaz.
-// - Fiyat listesi alanı yok (F3.6); altta tek satırlık bilgi notu varsayılan listenin geçerli olduğunu söyler.
+// - F3.6b: fiyat listesi seçimi (US-034 AC2). Boş = "Standart siyahı" (`null`: standart değişirse
+//   müşteri de onu izler); altında aktif listeler. Listeler yüklenemezse (ör. `pricing.view` yok)
+//   alan kapalı ve gönderilmez; kayıtlı atama korunur.
 // - Hata pencerede `role="alert"`; alan hataları alanın altında. Başarıda pencere kapanır, liste yenilenir.
 import {
   CONNECTION_REQUEST_TERM_MAX_DAYS,
+  pricingAccess,
+  sortPriceLists,
   termsFailureKey,
   termsFormValues,
   termsUpdateBody,
 } from '@b2b/shared';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { type SyntheticEvent, useId, useState } from 'react';
 import { ApiError } from '../admin-sellers/api';
 import { useConnectionContext } from '../connection-requests/context';
+import { usePriceLists } from '../prices/api';
 import { Dialog } from '../ui/dialog';
 import { Button, Field, SelectInput, TextInput } from '../ui/primitives';
 import { type ConnectionItem, useSalesReps, useUpdateTerms } from './api';
@@ -32,6 +37,17 @@ export function TermsDialog({
   const { shell } = useConnectionContext();
   const reps = useSalesReps(shell.activeBusinessId);
   const update = useUpdateTerms(shell.activeBusinessId);
+  const locale = useLocale();
+  const canViewLists = pricingAccess(
+    (shell.me?.activeBusiness?.permissions ?? []).map((p) => p.code),
+  ).view;
+  const lists = usePriceLists(shell.activeBusinessId, canViewLists);
+  const listOptions = sortPriceLists(
+    (lists.data ?? []).filter((item) => item.status === 'active'),
+    locale,
+  );
+  const defaultList = listOptions.find((item) => item.isDefault);
+  const [priceList, setPriceList] = useState(connection.terms.priceListId ?? '');
   const titleId = useId();
   const initial = termsFormValues(connection);
   const [creditLimit, setCreditLimit] = useState(initial.creditLimit);
@@ -51,6 +67,7 @@ export function TermsDialog({
       paymentTermDays: days,
       // Liste gelmediyse (yükleniyor/hata) temsilci gönderilmez; kayıtlı temsilci korunur.
       salesRepMembershipId: reps.data === undefined ? undefined : repValue,
+      priceListId: lists.data === undefined ? undefined : priceList,
     });
     if (!result.ok) {
       setInvalid({ creditLimit: result.creditLimit, paymentTermDays: result.paymentTermDays });
@@ -159,7 +176,35 @@ export function TermsDialog({
             ))}
           </SelectInput>
         </Field>
-        <p className="text-xs text-slate-500">{t('terms.price_list_note')}</p>
+        <Field
+          id="terms-price-list"
+          label={t('terms.price_list')}
+          hint={
+            lists.data === undefined
+              ? t('terms.price_list_unavailable')
+              : t('terms.price_list_hint')
+          }
+        >
+          <SelectInput
+            id="terms-price-list"
+            value={priceList}
+            disabled={lists.data === undefined}
+            onChange={(event) => {
+              setPriceList(event.target.value);
+            }}
+          >
+            <option value="">
+              {defaultList === undefined
+                ? t('terms.price_list_default')
+                : t('terms.price_list_default_named', { name: defaultList.name })}
+            </option>
+            {listOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </SelectInput>
+        </Field>
         {failureKey !== undefined && (
           <p
             role="alert"

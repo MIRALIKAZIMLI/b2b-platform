@@ -56,6 +56,7 @@ import {
 } from './api';
 import { type BrandChoice, BrandPicker } from './brand-picker';
 import { useFieldError } from './error-text';
+import { ProductPricesCard } from '../prices/product-prices-card';
 import { ImagesCard } from './images-card';
 import { StatusBadge } from './products-page';
 import { unitLabel, VariantsEditor } from './variants-editor';
@@ -591,6 +592,11 @@ function ProductFormView({
           </div>
         )}
       </form>
+      {product !== undefined && (
+        <div className="mt-6">
+          <ProductPricesCard businessId={businessId} product={product} units={units} />
+        </div>
+      )}
       {confirmArchive && (
         <DiscardDialog
           onCancel={() => {

@@ -396,7 +396,7 @@ Onayımı bekle.
 - **Kabul:** US-034 AC1–AC6.
 - **Test:** Birim (P1–P11) + entegrasyon.
 
-> **Bölündü (Mimar, 2026-11-16):** F3.6a — tablolar (`0036`), `PriceResolver` çekirdeği + P1–P11, `/price-lists*`, `/prices/explain`, bağlantıya liste atama. F3.6b — web fiyat ekranları. F3.6a, F3.5a'dan önce (Excel şablonundaki fiyat varsayılan listeye yazılır). Kart: `docs/tasks/F3.6a.md`.
+> **Bölündü (Mimar, 2026-11-16):** F3.6a — tablolar (`0036`), `PriceResolver` çekirdeği + P1–P11, `/price-lists*`, `/prices/explain`, bağlantıya liste atama. F3.6b — web fiyat ekranları. F3.6a, F3.5a'dan önce (Excel şablonundaki fiyat varsayılan listeye yazılır). Kartlar: `docs/tasks/F3.6a.md`, `docs/tasks/F3.6b.md`.
 
 ### F3.7 — Müşteri fiyatı
 

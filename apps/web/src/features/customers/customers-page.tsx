@@ -4,7 +4,8 @@
 //   (`assigned`) aynı ekranı yalnız kendisine atanmış müşterilerle görür (sunucu süzer).
 // - Liste tek kart içinde satırlar: ünvan, bağlantı tarihi; sağda koşul özeti (limit `tabular-nums`,
 //   vade, temsilci) ve durum. Koşulu atanmamış aktif satırda amber "Şərtlər təyin edilməyib" rozeti
-//   (US-024 AC1); varsayılan fiyat listesi geçerli olduğu alt satırda yazar.
+//   (US-024 AC1); varsayılan fiyat listesi geçerli olduğu alt satırda yazar. F3.6b: atanmış liste
+//   varsa adı alt satırda (`pricing.view` ile).
 // - Ana eylem satır başına "Şərtləri təyin et / dəyiş" (yalnız `connections.terms.manage`); pencere
 //   öneriyle dolu açılır (US-024 AC3). İptal edilmiş satırda eylem yok.
 // - Boş: sekmeye göre iki metin + dizine bağlantı; yükleniyor = iskelet; hata = yeniden dene.
@@ -18,12 +19,14 @@ import {
   type ConnectionStatus,
   customersAccess,
   formatMoney,
+  pricingAccess,
 } from '@b2b/shared';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { ApiError } from '../admin-sellers/api';
 import { useConnectionContext } from '../connection-requests/context';
+import { usePriceLists } from '../prices/api';
 import { Badge, Button, Card, PageHeader } from '../ui/primitives';
 import { type ConnectionItem, useConnections, useSalesReps } from './api';
 import { CancelDialog } from './cancel-dialog';
@@ -37,6 +40,7 @@ function CustomerRow({
   item,
   side,
   repName,
+  priceListName,
   canManage,
   canCancel,
   onEdit,
@@ -45,6 +49,7 @@ function CustomerRow({
   item: ConnectionItem;
   side: Side;
   repName: string | undefined;
+  priceListName?: string | undefined;
   canManage: boolean;
   canCancel: boolean;
   onEdit: (item: ConnectionItem) => void;
@@ -86,6 +91,9 @@ function CustomerRow({
         )}
         {active && !item.termsAssigned && (
           <p className="text-xs text-slate-500">{t('row.default_price_list')}</p>
+        )}
+        {active && priceListName !== undefined && (
+          <p className="text-xs text-slate-500">{t('row.price_list', { name: priceListName })}</p>
         )}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:shrink-0">
@@ -177,6 +185,14 @@ export function CustomersPage({ side = 'seller' }: { side?: Side }) {
   const repNames = useMemo(
     () => new Map((reps.data?.items ?? []).map((item) => [item.membershipId, item.fullName])),
     [reps.data],
+  );
+  const lists = usePriceLists(
+    shell.activeBusinessId,
+    side === 'seller' && pricingAccess(codes).view,
+  );
+  const listNames = useMemo(
+    () => new Map((lists.data ?? []).map((item) => [item.id, item.name])),
+    [lists.data],
   );
   const directoryLink =
     side === 'seller' && codes.includes('directory.search') ? (
@@ -271,6 +287,11 @@ export function CustomersPage({ side = 'seller' }: { side?: Side }) {
                     item.terms.salesRepMembershipId === undefined
                       ? undefined
                       : repNames.get(item.terms.salesRepMembershipId)
+                  }
+                  priceListName={
+                    item.terms.priceListId === null || item.terms.priceListId === undefined
+                      ? undefined
+                      : listNames.get(item.terms.priceListId)
                   }
                   side={side}
                   canManage={manage}

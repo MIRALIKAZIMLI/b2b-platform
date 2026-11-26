@@ -85,10 +85,21 @@ export const priceListItemsSetSchema = z
   .strict();
 export type PriceListItemsSet = z.infer<typeof priceListItemsSetSchema>;
 
+/** `GET /price-lists/{id}/items` süzgecinde en çok bu kadar ambalaj kimliği (F3.6b K1). */
+export const PRICE_LIST_ITEMS_FILTER_MAX = 100;
+
 export const priceListItemsQuerySchema = z
   .object({
     cursor: z.uuid().optional(),
     limit: z.coerce.number().int().min(1).max(100).default(20),
+    // F3.6b K1: yalnız bu ambalaj seviyelerinin fiyatları (ürün formu). Tekrarlı sorgu parametresi;
+    // tek değer metin olarak gelir. Başka satıcının ambalajı RLS ve liste koşuluyla boş döner.
+    packagingId: z
+      .preprocess(
+        (value) => (typeof value === 'string' ? [value] : value),
+        z.array(z.uuid()).min(1).max(PRICE_LIST_ITEMS_FILTER_MAX),
+      )
+      .optional(),
   })
   .strict();
 export type PriceListItemsQuery = z.infer<typeof priceListItemsQuerySchema>;

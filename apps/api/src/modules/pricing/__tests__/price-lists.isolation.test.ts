@@ -129,6 +129,24 @@ describe('F3.6a fiyat listesi kiracı izolasyonu', () => {
     );
   });
 
+  it('F3.6b-K1-ISO ambalaj süzgeci: B kendi listesinde A ambalajını sorarsa boş; A kendi ambalajını görür', async () => {
+    const listB = await createList(sellerB, 'B süzgeç');
+    const asB = await h
+      .http()
+      .get(`/api/v1/price-lists/${listB}/items?packagingId=${packagingA}`)
+      .set(await headers(sellerB));
+    expect(asB.status).toBe(200);
+    expect(asB.body).toEqual({ items: [], nextCursor: null });
+    const asA = await h
+      .http()
+      .get(`/api/v1/price-lists/${listA}/items?packagingId=${packagingA}&packagingId=${packagingB}`)
+      .set(await headers(sellerA));
+    expect(asA.status).toBe(200);
+    expect(
+      (asA.body as { items: { packagingId: string }[] }).items.map((item) => item.packagingId),
+    ).toEqual([packagingA]);
+  });
+
   it('F3.6a-ISO B kendi listesine A ambalajının fiyatını yazamaz (422); A müşterisi için açıklama 404', async () => {
     const listB = await createList(sellerB, 'B ikinci');
     const res = await h

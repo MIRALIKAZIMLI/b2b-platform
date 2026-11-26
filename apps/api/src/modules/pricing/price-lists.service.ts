@@ -207,7 +207,13 @@ export class PriceListsService {
     return await withTenantTx(tenant, async (tx) => {
       const list = await this.repository.findTx(tx, tenant.businessId, id);
       if (list === undefined) throw new DomainError('NOT_FOUND');
-      const page = await this.repository.packagingPageTx(tx, id, query.cursor, query.limit + 1);
+      const page = await this.repository.packagingPageTx(
+        tx,
+        id,
+        query.cursor,
+        query.limit + 1,
+        query.packagingId,
+      );
       const packagingIds = page.slice(0, query.limit);
       const now = this.clock.now();
       const rows = await this.repository.pricesTx(tx, [id], packagingIds, now);
