@@ -9,9 +9,16 @@ import { readProductRows } from '../xlsx-reader';
 
 const t = (key: string) => `<${key}>`;
 
+/** exceljs `load` kendi `Buffer` (ArrayBuffer) tipini ister. */
+function arrayBufferOf(body: Uint8Array): ArrayBuffer {
+  const copy = new ArrayBuffer(body.byteLength);
+  new Uint8Array(copy).set(body);
+  return copy;
+}
+
 async function open(body: Buffer): Promise<ExcelJS.Workbook> {
   const book = new ExcelJS.Workbook();
-  await book.xlsx.load(body);
+  await book.xlsx.load(arrayBufferOf(body));
   return book;
 }
 

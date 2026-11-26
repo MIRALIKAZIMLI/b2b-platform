@@ -22,6 +22,7 @@ import { ImportsRepository } from '../imports.repository';
 import { ExpireImportsJob } from '../jobs/expire-imports.job';
 import { ValidateImportJob } from '../jobs/validate-import.job';
 import {
+  arrayBufferOf,
   addMember,
   newRegion,
   newSeller,
@@ -205,7 +206,7 @@ describe('F3.5a Excel içe aktarma (entegrasyon)', () => {
     const link = response.body as { url: string; expiresAt: string };
     expect(new Date(link.expiresAt).getTime()).toBeGreaterThan(Date.now());
     const book = new ExcelJS.Workbook();
-    await book.xlsx.load(await download(link.url));
+    await book.xlsx.load(arrayBufferOf(await download(link.url)));
     expect((book.worksheets[0]?.getRow(1).values as unknown[]).slice(1)).toEqual(HEADER);
     expect(book.worksheets.map((sheet) => sheet.name)).toEqual([
       'Товары',
@@ -266,7 +267,7 @@ describe('F3.5a Excel içe aktarma (entegrasyon)', () => {
     ]);
     expect(new Date(ready.expiresAt ?? '').getTime()).toBeGreaterThan(Date.now() + 23 * 3_600_000);
     const report = new ExcelJS.Workbook();
-    await report.xlsx.load(await download(ready.errorReportUrl ?? ''));
+    await report.xlsx.load(arrayBufferOf(await download(ready.errorReportUrl ?? '')));
     const rows = report.worksheets[0]
       ?.getSheetValues()
       .slice(2)

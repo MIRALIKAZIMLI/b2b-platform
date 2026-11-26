@@ -81,7 +81,9 @@ describe('F3.5a satır doğrulayıcı', () => {
       'category:required',
       'unit:required',
     ]);
-    expect(codes(one({ ...NEW, sku: undefined }))).toContain('sku:required');
+    expect(codes(one({ name_az: NEW.name_az, category: NEW.category, unit: NEW.unit }))).toContain(
+      'sku:required',
+    );
     expect(codes(one({ ...NEW, sku: 'boşluk var' }))).toContain('sku:invalid');
   });
 

@@ -307,3 +307,10 @@ export async function readyImportFile(
   await storage.put(objectKey, body, XLSX);
   return fileId;
 }
+
+/** exceljs `load` kendi `Buffer` (ArrayBuffer) tipini ister; Node Buffer'ın baytları kopyalanır. */
+export function arrayBufferOf(body: Uint8Array): ArrayBuffer {
+  const copy = new ArrayBuffer(body.byteLength);
+  new Uint8Array(copy).set(body);
+  return copy;
+}
