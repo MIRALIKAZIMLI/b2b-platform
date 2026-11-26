@@ -227,7 +227,7 @@ describe('F3.6a fiyat listesi kiracı izolasyonu', () => {
     expect(items.rows[0]?.n).toBe(0);
 
     const platform = <T>(fn: (tx: Tx) => Promise<T>) =>
-      withPlatformTx({ userId: randomUUID(), role: 'super_admin' }, fn);
+      withPlatformTx({ userId: randomUUID() }, fn);
     const seen = await platform((tx) =>
       tx.execute<{ n: number }>(
         sql`select count(*)::int as n from price_lists where id = ${listA}`,
