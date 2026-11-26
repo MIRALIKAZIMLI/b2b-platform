@@ -15,6 +15,7 @@ import {
   newBuyer,
   newRegion,
   newSeller,
+  platformRows,
   readyImportFile,
   runSeeds,
   type Seller,
@@ -165,5 +166,56 @@ describe('F3.5a içe aktarma kiracı izolasyonu', () => {
         )
       ).rows[0]?.n,
     ).toBe(1);
+  });
+
+  it('F3.5a-ISO bekçi: import_jobs ve files üzerindeki migrator politikaları sabit ve dar (Müfettiş 29 D1)', async () => {
+    const policies = await platformRows<{
+      tablename: string;
+      policyname: string;
+      cmd: string;
+      roles: string[];
+      qual: string | null;
+      with_check: string | null;
+    }>(
+      `select tablename, policyname, cmd, roles::text[] as roles, qual, with_check from pg_policies
+        where schemaname = 'public' and tablename in ('import_jobs', 'files')
+          and 'migrator' = any(roles)
+        order by tablename, policyname`,
+    );
+    expect(policies).toEqual([
+      {
+        tablename: 'files',
+        policyname: 'files_definer_import_delete',
+        cmd: 'DELETE',
+        roles: ['migrator'],
+        qual: "(purpose = 'import'::text)",
+        with_check: null,
+      },
+      // 0021 (dizin kartları): migrator dosya okuması; 0037 yeni okuma politikası eklemez.
+      {
+        tablename: 'files',
+        policyname: 'files_definer_select',
+        cmd: 'SELECT',
+        roles: ['migrator'],
+        qual: 'true',
+        with_check: null,
+      },
+      {
+        tablename: 'import_jobs',
+        policyname: 'import_jobs_definer_expire',
+        cmd: 'DELETE',
+        roles: ['migrator'],
+        qual: "(status = 'preview_ready'::text)",
+        with_check: null,
+      },
+      {
+        tablename: 'import_jobs',
+        policyname: 'import_jobs_definer_select',
+        cmd: 'SELECT',
+        roles: ['migrator'],
+        qual: "(status = 'preview_ready'::text)",
+        with_check: null,
+      },
+    ]);
   });
 });

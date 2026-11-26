@@ -66,13 +66,12 @@ GRANT SELECT ON TABLE "import_jobs" TO readonly;
 --> statement-breakpoint
 -- Süre dolumu sistem işidir (aşağıdaki DEFINER fonksiyonu, sahibi migrator). Tablolar FORCE RLS
 -- olduğundan fonksiyonun okuyup silebilmesi için yalnız migrator rolüne açık politikalar: iş
--- satırında yalnız `preview_ready`, dosyada yalnız `import` amaçlı satır silinir.
+-- satırında yalnız `preview_ready` okunur ve silinir, dosyada yalnız `import` amaçlı satır silinir.
+-- `files` okuması 0021'deki `files_definer_select` ile zaten açıktır; burada yeni okuma politikası yok.
 CREATE POLICY "import_jobs_definer_select" ON "import_jobs" FOR SELECT TO migrator
-  USING (true);
+  USING ("status" = 'preview_ready');
 CREATE POLICY "import_jobs_definer_expire" ON "import_jobs" FOR DELETE TO migrator
   USING ("status" = 'preview_ready');
-CREATE POLICY "files_definer_import_select" ON "files" FOR SELECT TO migrator
-  USING ("purpose" = 'import');
 CREATE POLICY "files_definer_import_delete" ON "files" FOR DELETE TO migrator
   USING ("purpose" = 'import');
 --> statement-breakpoint
