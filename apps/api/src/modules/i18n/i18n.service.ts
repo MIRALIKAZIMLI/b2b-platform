@@ -83,6 +83,19 @@ export class I18nService implements ErrorMessageResolver {
     }
   }
 
+  /**
+   * Accept-Language'deki ilk aktif dil, yoksa varsayılan dil (F3.5a: şablondaki kategori ve birim
+   * adlarının dili). Çeviriler yüklenemezse `az` (platformun varsayılan dili).
+   */
+  async language(acceptLanguage: string | undefined): Promise<string> {
+    try {
+      return (await this.snapshot()).pickLanguage(parseAcceptLanguage(acceptLanguage));
+    } catch (error: unknown) {
+      this.logger.warn(`i18n.load_failed: çeviriler yüklenemedi (kod: ${errorCode(error)})`);
+      return 'az';
+    }
+  }
+
   /** ErrorMessageResolver (core/errors) uygulaması. */
   resolve(code: ErrorCode, acceptLanguage: string | undefined): Promise<string> {
     return this.errorMessage(code, acceptLanguage);

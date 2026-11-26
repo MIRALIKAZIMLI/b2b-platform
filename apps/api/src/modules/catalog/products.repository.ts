@@ -187,14 +187,19 @@ function pgErrorOf(error: unknown, code: string, constraint?: string): boolean {
   return false;
 }
 
-/** Ürün SKU'su satıcı içinde tek (`products_seller_sku_uq`). */
+/** Ürün SKU'su satıcı içinde harf duyarsız tek (`products_seller_sku_lower_uq`, F3.5a). */
 export function isProductSkuTaken(error: unknown): boolean {
-  return pgErrorOf(error, '23505', 'products_seller_sku_uq');
+  return pgErrorOf(error, '23505', 'products_seller_sku_lower_uq');
 }
 
-/** Varyant SKU'su satıcı içinde tek (`product_variants_seller_sku_uq`; arşivliler dahil, K3). */
+/** Varyant SKU'su satıcı içinde harf duyarsız tek (arşivliler dahil, K3; F3.5a). */
 export function isVariantSkuTaken(error: unknown): boolean {
-  return pgErrorOf(error, '23505', 'product_variants_seller_sku_uq');
+  return pgErrorOf(error, '23505', 'product_variants_seller_sku_lower_uq');
+}
+
+/** Harf duyarsız SKU anahtarı (F3.5a kullanıcı kararı A); veritabanı `lower()` ile aynı. */
+export function skuKey(sku: string): string {
+  return sku.toLowerCase();
 }
 
 /** Bir dosya tek görsel (`product_images_file_uq`, F3.4a K9). */
@@ -474,6 +479,47 @@ export class ProductsRepository {
   }
 
   // --- Başvurulan katalog kayıtları (G; RLS: marka yalnız aktif + kendi talebi, V5) ---
+
+  /** Aynı SKU'yu (harf duyarsız) taşıyan başka ürün var mı (F3.5a, `sku: taken`). */
+  async productSkuTakenTx(
+    tx: Tx,
+    sellerId: string,
+    sku: string,
+    exceptProductId: string | undefined,
+  ): Promise<boolean> {
+    const rows = await tx
+      .select({ id: products.id })
+      .from(products)
+      .where(
+        and(
+          eq(products.sellerId, sellerId),
+          sql`lower(${products.sku}) = lower(${sku})`,
+          exceptProductId === undefined ? undefined : sql`${products.id} <> ${exceptProductId}`,
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  /** Harf duyarsız SKU'ları eşleşen varyantlar (arşivliler dahil): `lower(sku)` → varyant kimliği. */
+  async variantIdsBySkuTx(
+    tx: Tx,
+    sellerId: string,
+    skus: readonly string[],
+  ): Promise<Map<string, string>> {
+    if (skus.length === 0) return new Map();
+    const keys = [...new Set(skus.map(skuKey))];
+    const rows = await tx
+      .select({ id: productVariants.id, key: sql<string>`lower(${productVariants.sku})` })
+      .from(productVariants)
+      .where(
+        and(
+          eq(productVariants.sellerId, sellerId),
+          inArray(sql`lower(${productVariants.sku})`, keys),
+        ),
+      );
+    return new Map(rows.map((row) => [row.key, row.id]));
+  }
 
   async categoriesAll(tx: Tx): Promise<CategoryRefRow[]> {
     return await tx

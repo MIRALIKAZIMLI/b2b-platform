@@ -230,6 +230,73 @@ export class FilesService {
   }
 
   /**
+   * F3.5a: bu işletmenin `purpose` amaçlı `ready` dosyası. Başka işletmenin dosyası RLS ile
+   * görünmez → `NOT_FOUND`; amaç veya durum uymazsa `FILE_INVALID`.
+   */
+  async readyFile(ctx: TenantTxContext, fileId: string, purpose: FilePurpose): Promise<FileRow> {
+    const file = await this.repository.findById(ctx, fileId);
+    if (file === undefined) throw new DomainError('NOT_FOUND');
+    if (file.purpose !== purpose || file.status !== 'ready') {
+      throw new DomainError('FILE_INVALID', { reason: file.status === 'ready' ? 'purpose' : 'not_ready' });
+    }
+    return file;
+  }
+
+  /** F3.5a: `ready` dosyanın içeriği (en çok kayıtlı boyut kadar; boyut farkı `FILE_INVALID`). */
+  async readContent(file: Pick<FileRow, 'objectKey' | 'sizeBytes'>): Promise<Buffer> {
+    const body = await this.storage.readRange(file.objectKey, file.sizeBytes + 1);
+    if (body.length !== file.sizeBytes) throw new DomainError('FILE_INVALID', { reason: 'size' });
+    return body;
+  }
+
+  /**
+   * F3.5a: sunucunun ürettiği özel dosya (içe aktarma raporu). Önce nesne, sonra `ready` satır;
+   * satır yazılamazsa nesne depoda kalır (temizlik F2.16b). Dosya kimliği döner.
+   */
+  async storeGenerated(
+    ctx: TenantTxContext & { userId: string },
+    input: { readonly purpose: FilePurpose; readonly contentType: AllowedContentType; readonly body: Buffer },
+  ): Promise<string> {
+    const fileId = this.ids.next();
+    const key = `${ctx.businessId}/${input.purpose}/${fileId}.${CONTENT_TYPE_EXTENSION[input.contentType]}`;
+    await this.storage.put(key, input.body, input.contentType);
+    await this.repository.insertReady(ctx, {
+      id: fileId,
+      purpose: input.purpose,
+      bucket: FILE_PURPOSE_BUCKET[input.purpose],
+      objectKey: key,
+      contentType: input.contentType,
+      sizeBytes: input.body.length,
+      now: this.clock.now(),
+    });
+    return fileId;
+  }
+
+  /**
+   * F3.5a: satırı olmayan geçici özel nesne (içe aktarma şablonu); aynı ad üzerine yazılır.
+   * Süreli imzalı okuma adresi (`files.download_url_ttl_minutes`).
+   */
+  async publishTransient(
+    businessId: string,
+    input: {
+      readonly purpose: FilePurpose;
+      readonly name: string;
+      readonly contentType: AllowedContentType;
+      readonly body: Buffer;
+    },
+  ): Promise<{ url: string; expiresAt: string }> {
+    if (!/^[a-z0-9-]{1,64}$/.test(input.name)) throw new Error('geçersiz geçici dosya adı');
+    const key = `${businessId}/${input.purpose}/${input.name}.${CONTENT_TYPE_EXTENSION[input.contentType]}`;
+    await this.storage.put(key, input.body, input.contentType);
+    const ttlMinutes = await this.settings.get('files.download_url_ttl_minutes', businessId);
+    const url = await this.storage.createDownloadUrl({ key, ttlSeconds: ttlMinutes * 60 });
+    return {
+      url,
+      expiresAt: new Date(this.clock.now().getTime() + ttlMinutes * 60_000).toISOString(),
+    };
+  }
+
+  /**
    * Satırı okunmadan bilinen nesnenin okuma adresi (F2.11b): dizin kartındaki başka işletmenin
    * logosu. Nesne D fonksiyonundan gelir (yalnız `show_logo` açık ve dosya `ready`, 0021);
    * istemciden gelen değerle çağrılmaz. `businessId` yalnız ayar (imzalı URL ömrü) içindir.

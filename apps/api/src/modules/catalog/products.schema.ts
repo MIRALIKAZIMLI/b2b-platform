@@ -18,6 +18,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { brands, categories, units } from './catalog.schema';
@@ -54,7 +55,8 @@ export const products = pgTable(
     ...timestamps,
   },
   (table) => [
-    unique('products_seller_sku_uq').on(table.sellerId, table.sku),
+    // F3.5a (kullanıcı kararı A, #77 N4): SKU satıcı içinde büyük/küçük harf duyarsız tekil.
+    uniqueIndex('products_seller_sku_lower_uq').on(table.sellerId, sql`lower(${table.sku})`),
     // Çocuk tabloların bileşik FK hedefi.
     unique('products_id_seller_uq').on(table.id, table.sellerId),
     check('products_status_check', sql`${table.status} in (${inList(PRODUCT_STATUSES)})`),
@@ -91,7 +93,11 @@ export const productVariants = pgTable(
       columns: [table.productId, table.sellerId],
       foreignColumns: [products.id, products.sellerId],
     }),
-    unique('product_variants_seller_sku_uq').on(table.sellerId, table.sku),
+    // F3.5a (kullanıcı kararı A): arşivliler dahil, harf duyarsız tekil.
+    uniqueIndex('product_variants_seller_sku_lower_uq').on(
+      table.sellerId,
+      sql`lower(${table.sku})`,
+    ),
     unique('product_variants_id_seller_uq').on(table.id, table.sellerId),
     check('product_variants_status_check', sql`${table.status} in (${inList(VARIANT_STATUSES)})`),
     check('product_variants_attributes_check', sql`jsonb_typeof(${table.attributes}) = 'object'`),

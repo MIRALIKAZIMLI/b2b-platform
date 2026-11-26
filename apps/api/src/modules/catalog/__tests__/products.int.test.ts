@@ -356,7 +356,8 @@ describe('F3.3a ürün uçları (entegrasyon)', () => {
         ],
       }),
     );
-    expect(details(dupVariant)['variants.sku']).toEqual(['taken']);
+    // F3.5a (#78): çakışma ilgili varyantın alanına iner.
+    expect(details(dupVariant)['variants.0.sku']).toEqual(['taken']);
 
     const other = await newSeller(regionId);
     const elsewhere = await create(productBody(cats.child, { sku: product.sku }), other);
@@ -404,7 +405,7 @@ describe('F3.3a ürün uçları (entegrasyon)', () => {
     // Arşivli SKU yeniden kullanılamaz.
     expect(
       details(await patch(product.id, { variants: [firstInput, { ...second, sku: second.sku }] }))[
-        'variants.sku'
+        'variants.1.sku'
       ],
     ).toEqual(['taken']);
     const back = await patch(product.id, { variants: [firstInput, { ...second, id: secondId }] });

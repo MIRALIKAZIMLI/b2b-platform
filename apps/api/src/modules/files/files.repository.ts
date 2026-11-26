@@ -59,6 +59,28 @@ export class FilesRepository {
     });
   }
 
+  /**
+   * Sunucunun ürettiği dosya (F3.5a içe aktarma raporu): içerik depoya yazıldıktan sonra doğrudan
+   * `ready` satır. Sahip ve oluşturan bağlamdan.
+   */
+  async insertReady(ctx: TenantTxContext & { userId: string }, file: NewFile): Promise<void> {
+    await withTenantTx(ctx, async (tx) => {
+      await tx.insert(files).values({
+        id: file.id,
+        ownerBusinessId: ctx.businessId,
+        purpose: file.purpose,
+        bucket: file.bucket,
+        objectKey: file.objectKey,
+        contentType: file.contentType,
+        sizeBytes: file.sizeBytes,
+        status: 'ready',
+        createdBy: ctx.userId,
+        createdAt: file.now,
+        updatedAt: file.now,
+      });
+    });
+  }
+
   async findById(ctx: TenantTxContext, id: string): Promise<FileRow | undefined> {
     return await withTenantTx(ctx, async (tx) => {
       const [row] = await tx.select(columns).from(files).where(eq(files.id, id)).limit(1);

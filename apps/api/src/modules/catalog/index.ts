@@ -1,4 +1,13 @@
-export { CatalogModule, CatalogWorkerModule } from './catalog.module';
+export { CatalogImportModule, CatalogModule, CatalogWorkerModule } from './catalog.module';
+export {
+  type ImportBrandRef,
+  type ImportCategoryRef,
+  type ImportProductMatch,
+  type ImportSkuMatches,
+  type ImportUnitRef,
+  type ImportVariantMatch,
+  ProductImportLookup,
+} from './product-import-lookup';
 export { type CatalogSeedResult, seedCatalog } from './catalog.seed';
 export { SEED_CATEGORIES, type SeedCategory } from './seed/categories';
 export { SEED_UNIT_CONVERSIONS, SEED_UNITS } from './seed/units';

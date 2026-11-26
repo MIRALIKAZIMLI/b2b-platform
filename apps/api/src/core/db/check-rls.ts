@@ -184,6 +184,8 @@ export const PLATFORM_WRITE_FORBIDDEN_TABLES: readonly string[] = [
   'product_packaging',
   'product_visibility',
   'product_images',
+  // F3.5a: içe aktarma işleri; platform yalnız okur.
+  'import_jobs',
 ];
 
 const FORBIDDEN_SET: ReadonlySet<string> = new Set(
