@@ -4604,6 +4604,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Макс. размер изображения (МБ)',
     tr: 'Görsel için en büyük boyut (MB)',
   },
+  'adminSettings.key.catalog.image_retry_delays_minutes': {
+    az: 'Şəkil emalı üçün təkrar cəhd gözləmələri (dəq)',
+    ru: 'Задержки повторной обработки изображения (мин)',
+    tr: 'Görsel işleme yeniden deneme beklemeleri (dk)',
+  },
   'adminSettings.key.files.image_max_megapixels': {
     az: 'Şəkil üçün maksimum piksel (milyon)',
     ru: 'Макс. число пикселей изображения (млн)',

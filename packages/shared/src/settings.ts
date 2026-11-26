@@ -97,6 +97,8 @@ export const SETTING_DEFINITIONS = {
   'catalog.brand_request_daily_limit': layered(intSetting(10, 1, 100)),
   // F3.4a: ürün başına en çok görsel (US-030 VARSAYIM, kart K4).
   'catalog.product_images_max': layered(intSetting(8, 1, 20)),
+  // F3.4b (Müfettiş 27 #79): geçici depo hatasında görsel küçültme yeniden deneme beklemeleri.
+  'catalog.image_retry_delays_minutes': increasingIntListSetting([1, 5, 15], 1, 1440),
   'connection.request_ttl_days': intSetting(14, 1, 90),
   'connection.cooldown_after_reject_days': layered(intSetting(30, 7, 365)),
   'connection.cooldown_after_buyer_cancel_days': layered(intSetting(30, 7, 365)),

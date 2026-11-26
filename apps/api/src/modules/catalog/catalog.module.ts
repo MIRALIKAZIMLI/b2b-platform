@@ -9,6 +9,7 @@ import { BrandsService } from './brands.service';
 import { CategoriesRepository } from './categories.repository';
 import { CatalogProcessor } from './catalog.processor';
 import { CategoriesService } from './categories.service';
+import { BullCatalogJobs, CatalogJobs } from './jobs/catalog-jobs';
 import { ResizeImageJob } from './jobs/resize-image.job';
 import { ProductImagesController } from './product-images.controller';
 import { ProductImagesRepository } from './product-images.repository';
@@ -52,6 +53,11 @@ export class CatalogModule {}
  */
 @Module({
   imports: [SettingsModule],
-  providers: [ProductImagesRepository, ResizeImageJob, CatalogProcessor],
+  providers: [
+    ProductImagesRepository,
+    ResizeImageJob,
+    CatalogProcessor,
+    { provide: CatalogJobs, useClass: BullCatalogJobs },
+  ],
 })
 export class CatalogWorkerModule {}
