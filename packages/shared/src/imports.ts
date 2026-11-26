@@ -18,7 +18,11 @@ export const IMPORT_JOB_STATUSES = [
 export type ImportJobStatus = (typeof IMPORT_JOB_STATUSES)[number];
 
 /** `failed` işin nedeni (K11). `APPLY_FAILED` F3.5c. */
-export const IMPORT_FAILURE_CODES = ['FILE_INVALID', 'IMPORT_TOO_MANY_ROWS', 'APPLY_FAILED'] as const;
+export const IMPORT_FAILURE_CODES = [
+  'FILE_INVALID',
+  'IMPORT_TOO_MANY_ROWS',
+  'APPLY_FAILED',
+] as const;
 export type ImportFailureCode = (typeof IMPORT_FAILURE_CODES)[number];
 
 /**

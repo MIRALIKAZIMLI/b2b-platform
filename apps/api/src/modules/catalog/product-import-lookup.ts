@@ -123,7 +123,8 @@ export class ProductImportLookup {
         productId: products.id,
         status: sql<ProductStatus>`${products.status}`,
         baseUnitCode: products.baseUnitCode,
-        activeVariantCount: sql<number>`(select count(*)::int from ${productVariants} v where v.product_id = ${products.id} and v.seller_id = ${sellerId} and v.status = 'active')`,
+        // Alt sorgu dış satıra tam adla bağlanır (Drizzle tek tablolu seçimde sütunu nitelemez).
+        activeVariantCount: sql<number>`(select count(*)::int from product_variants v where v.product_id = "products"."id" and v.seller_id = ${sellerId} and v.status = 'active')`,
       })
       .from(products)
       .where(and(eq(products.sellerId, sellerId), inArray(sql`lower(${products.sku})`, keys)));

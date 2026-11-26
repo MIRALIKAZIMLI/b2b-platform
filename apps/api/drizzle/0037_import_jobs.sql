@@ -64,6 +64,18 @@ GRANT SELECT, INSERT ON TABLE "import_jobs" TO app_user;
 GRANT UPDATE ("status", "stats", "error_report_file_id", "failure_code", "applied_until_row", "can_write_prices", "updated_at") ON TABLE "import_jobs" TO app_user;
 GRANT SELECT ON TABLE "import_jobs" TO readonly;
 --> statement-breakpoint
+-- Süre dolumu sistem işidir (aşağıdaki DEFINER fonksiyonu, sahibi migrator). Tablolar FORCE RLS
+-- olduğundan fonksiyonun okuyup silebilmesi için yalnız migrator rolüne açık politikalar: iş
+-- satırında yalnız `preview_ready`, dosyada yalnız `import` amaçlı satır silinir.
+CREATE POLICY "import_jobs_definer_select" ON "import_jobs" FOR SELECT TO migrator
+  USING (true);
+CREATE POLICY "import_jobs_definer_expire" ON "import_jobs" FOR DELETE TO migrator
+  USING ("status" = 'preview_ready');
+CREATE POLICY "files_definer_import_select" ON "files" FOR SELECT TO migrator
+  USING ("purpose" = 'import');
+CREATE POLICY "files_definer_import_delete" ON "files" FOR DELETE TO migrator
+  USING ("purpose" = 'import');
+--> statement-breakpoint
 -- SF-08: `p_cutoff`'tan önce güncellenmiş `preview_ready` işleri (en çok `p_limit`) siler; iş
 -- satırı, yüklenen dosya ve hata raporu satırı aynı işlemde gider. Depo nesnelerinin anahtarları
 -- döner; worker işlem bittikten sonra nesneleri siler. Yalnız bağlamsız sistem işi çağırır.
@@ -86,6 +98,8 @@ BEGIN
   END IF;
 
   -- Tek deyim: iş satırları ve dosya satırları birlikte silinir; FK denetimi deyim sonunda.
+  -- Kilit DELETE'in kendisi: eşzamanlı ikinci çalışma bekler, satır gittiği için atlar (FOR UPDATE
+  -- yok: migrator'a UPDATE politikası açılmaz).
   RETURN QUERY
   WITH due AS (
     SELECT j.id
@@ -94,7 +108,6 @@ BEGIN
        AND j.updated_at < p_cutoff
      ORDER BY j.updated_at, j.id
      LIMIT p_limit
-       FOR UPDATE SKIP LOCKED
   ), removed AS (
     DELETE FROM public.import_jobs j
      USING due

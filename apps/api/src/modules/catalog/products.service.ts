@@ -474,7 +474,10 @@ export class ProductsService {
     variants: readonly Pick<VariantInput, 'id' | 'sku'>[] | undefined,
     productId: string | undefined,
   ): Promise<void> {
-    if (sku !== undefined && (await this.repository.productSkuTakenTx(tx, sellerId, sku, productId))) {
+    if (
+      sku !== undefined &&
+      (await this.repository.productSkuTakenTx(tx, sellerId, sku, productId))
+    ) {
       bag.add('sku', 'taken');
     }
     if (variants === undefined) return;

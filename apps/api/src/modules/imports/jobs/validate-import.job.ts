@@ -69,7 +69,10 @@ export class ValidateImportJob {
     @Inject(Clock) private readonly clock: Clock,
   ) {}
 
-  async run(input: { readonly businessId: string; readonly jobId: string }): Promise<ValidateOutcome> {
+  async run(input: {
+    readonly businessId: string;
+    readonly jobId: string;
+  }): Promise<ValidateOutcome> {
     const { businessId, jobId } = input;
     // 1. İşi al: `uploaded → validating` (yarıda kalan `validating` yeniden denenir).
     const job = await withTenantTx({ businessId, userId: null }, async (tx) => {
@@ -77,7 +80,13 @@ export class ValidateImportJob {
       if (row === undefined) return undefined;
       if (row.status === 'uploaded') {
         ImportJobStateMachine.assertTransition('uploaded', 'validating');
-        await this.repository.transitionTx(tx, row.id, 'uploaded', { status: 'validating' }, this.clock.now());
+        await this.repository.transitionTx(
+          tx,
+          row.id,
+          'uploaded',
+          { status: 'validating' },
+          this.clock.now(),
+        );
         return { ...row, status: 'validating' as const };
       }
       return row.status === 'validating' ? row : undefined;

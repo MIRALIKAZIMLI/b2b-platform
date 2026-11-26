@@ -1,9 +1,6 @@
 // Şablon ve rapor .xlsx üreticileri (F3.5a; US-031 AC1, AC2; kart K13, K20). Metinler çeviri
 // anahtarından gelir (`imports.*`, i18n/seed/import-messages.ts); kod içinde arayüz metni yok.
-import {
-  PRODUCT_IMPORT_COLUMNS,
-  type ProductImportColumn,
-} from '@b2b/shared';
+import { PRODUCT_IMPORT_COLUMNS, type ProductImportColumn } from '@b2b/shared';
 import ExcelJS from 'exceljs';
 import type { ImportCategoryRef, ImportUnitRef } from '../catalog';
 import type { RowOutcome } from './row-validator';
@@ -102,7 +99,8 @@ export async function buildProductTemplate(input: {
     { header: t('imports.template.category_path'), width: 64 },
   ];
   categorySheet.getRow(1).font = { bold: true };
-  for (const row of categoryRows(input.categories, lang)) categorySheet.addRow([row.name, row.path]);
+  for (const row of categoryRows(input.categories, lang))
+    categorySheet.addRow([row.name, row.path]);
 
   // 4. Birimler (yalnız aktif).
   const unitSheet = workbook.addWorksheet(sheetName(t('imports.sheet.units')));

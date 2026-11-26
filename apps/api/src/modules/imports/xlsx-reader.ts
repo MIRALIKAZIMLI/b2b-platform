@@ -148,7 +148,8 @@ export async function readProductRows(body: Buffer, limits: ReadLimits): Promise
         const values = Array.isArray(row.values) ? (row.values as unknown[]) : [];
         if (columns === undefined) {
           const header = headerMap(values);
-          if (typeof header === 'string') return { ok: false, failure: 'FILE_INVALID', reason: header };
+          if (typeof header === 'string')
+            return { ok: false, failure: 'FILE_INVALID', reason: header };
           columns = header;
           continue;
         }

@@ -21,11 +21,7 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   'imports.template.column': t('Sütun', 'Столбец', 'Sütun'),
   'imports.template.description': t('İzah', 'Описание', 'Açıklama'),
   'imports.template.required': t('Məcburi', 'Обязательно', 'Zorunlu'),
-  'imports.template.required_new': t(
-    'Yeni məhsul üçün',
-    'Для нового товара',
-    'Yeni ürün için',
-  ),
+  'imports.template.required_new': t('Yeni məhsul üçün', 'Для нового товара', 'Yeni ürün için'),
   'imports.template.required_always': t('Bəli', 'Да', 'Evet'),
   'imports.template.optional': t('Xeyr', 'Нет', 'Hayır'),
   'imports.template.category_name': t('Kateqoriya', 'Категория', 'Kategori'),
@@ -44,7 +40,11 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     'Штрихкод (EAN-8, UPC-12, EAN-13 или GTIN-14).',
     'Barkod (EAN-8, UPC-12, EAN-13 veya GTIN-14).',
   ),
-  'imports.column.name_az': t('Ad (azərbaycanca).', 'Название (на азербайджанском).', 'Ad (Azerbaycanca).'),
+  'imports.column.name_az': t(
+    'Ad (azərbaycanca).',
+    'Название (на азербайджанском).',
+    'Ad (Azerbaycanca).',
+  ),
   'imports.column.name_ru': t('Ad (rusca).', 'Название (на русском).', 'Ad (Rusça).'),
   'imports.column.name_tr': t('Ad (türkcə).', 'Название (на турецком).', 'Ad (Türkçe).'),
   'imports.column.category': t(
@@ -112,9 +112,21 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   ),
   'imports.row.inactive': t('Aktiv deyil.', 'Неактивно.', 'Aktif değil.'),
   'imports.row.invalid_gtin': t('Barkod yanlışdır.', 'Неверный штрихкод.', 'Barkod geçersiz.'),
-  'imports.row.not_positive': t('0-dan böyük olmalıdır.', 'Должно быть больше 0.', '0’dan büyük olmalı.'),
-  'imports.row.not_integer': t('Tam ədəd olmalıdır.', 'Должно быть целым числом.', 'Tam sayı olmalı.'),
-  'imports.row.must_exceed_one': t('1-dən böyük olmalıdır.', 'Должно быть больше 1.', '1’den büyük olmalı.'),
+  'imports.row.not_positive': t(
+    '0-dan böyük olmalıdır.',
+    'Должно быть больше 0.',
+    '0’dan büyük olmalı.',
+  ),
+  'imports.row.not_integer': t(
+    'Tam ədəd olmalıdır.',
+    'Должно быть целым числом.',
+    'Tam sayı olmalı.',
+  ),
+  'imports.row.must_exceed_one': t(
+    '1-dən böyük olmalıdır.',
+    'Должно быть больше 1.',
+    '1’den büyük olmalı.',
+  ),
   'imports.row.too_many_decimals': t(
     'Ən çox 4 onluq ola bilər.',
     'Не более 4 знаков после запятой.',

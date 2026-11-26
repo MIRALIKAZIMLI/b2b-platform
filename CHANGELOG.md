@@ -70,3 +70,4 @@
 - F3.4b: web ürün görseli yükleyici (kapak, sıra, silme), liste kapağı; görsel işi geçici depo hatasında yeniden dener, worker aynı anda tek görsel işler
 - F3.6a: fiyat listeleri ve PriceResolver (migration 0036; P1–P11; ileri tarihli fiyat toptancının saatinde 00:00; bağlantıya liste atama; fiyat açıklaması)
 - F3.6b: web fiyat listeleri, ürün formunda fiyat girişi, müşteriye liste atama, fiyat kaynağı
+- F3.5a: Excel ürün içe aktarma API ve worker (migration 0037; şablon, doğrulama ve önizleme, hata raporu, 24 saatte silme; SKU harf duyarsız)

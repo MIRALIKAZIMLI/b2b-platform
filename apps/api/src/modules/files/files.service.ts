@@ -237,7 +237,9 @@ export class FilesService {
     const file = await this.repository.findById(ctx, fileId);
     if (file === undefined) throw new DomainError('NOT_FOUND');
     if (file.purpose !== purpose || file.status !== 'ready') {
-      throw new DomainError('FILE_INVALID', { reason: file.status === 'ready' ? 'purpose' : 'not_ready' });
+      throw new DomainError('FILE_INVALID', {
+        reason: file.status === 'ready' ? 'purpose' : 'not_ready',
+      });
     }
     return file;
   }
@@ -255,7 +257,11 @@ export class FilesService {
    */
   async storeGenerated(
     ctx: TenantTxContext & { userId: string },
-    input: { readonly purpose: FilePurpose; readonly contentType: AllowedContentType; readonly body: Buffer },
+    input: {
+      readonly purpose: FilePurpose;
+      readonly contentType: AllowedContentType;
+      readonly body: Buffer;
+    },
   ): Promise<string> {
     const fileId = this.ids.next();
     const key = `${ctx.businessId}/${input.purpose}/${fileId}.${CONTENT_TYPE_EXTENSION[input.contentType]}`;

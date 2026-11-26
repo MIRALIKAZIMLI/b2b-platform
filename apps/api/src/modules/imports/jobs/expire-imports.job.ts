@@ -1,7 +1,7 @@
 // Önizleme süre dolumu (F3.5a; SF-08 "Önizleme 24 saat onaylanmaz → iş ve dosya silinir").
 // Worker'da `imports` kuyruğunda `imports.expire_interval_minutes` aralıkla. Aynı anda tek kopya
-// (Redis kilidi, `ScheduledJobRunner`); satırlar FOR UPDATE SKIP LOCKED ile alındığından kilit düşse
-// bile her iş bir kez silinir. Satırlar DEFINER fonksiyonuyla bağlamsız sistem işleminde silinir;
+// (Redis kilidi, `ScheduledJobRunner`); kilit düşse bile DELETE satırı kilitlediği ve yalnız
+// `preview_ready` satırı sildiği için her iş bir kez silinir. Satırlar DEFINER fonksiyonuyla bağlamsız sistem işleminde silinir;
 // depo nesneleri işlem bittikten sonra silinir (silinemeyen nesne yalnız artık bırakır, F2.16b).
 import { Inject, Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import type { Queue } from 'bullmq';

@@ -56,9 +56,18 @@ const QUANTITY_TEXT = /^\d{1,11}(\.\d{1,3})?$/;
 const PRICE_TEXT = /^\d{1,10}(\.\d+)?$/;
 const PRICE_SCALE = 4;
 
-/** Ad eşleştirme anahtarı: kırpılmış, Unicode NFC, küçük harf. */
+/**
+ * Ad eşleştirme anahtarı: kırpılmış, küçük harf, NFC. Azerbaycan/Türk alfabesinde "İ" küçülünce
+ * "i̇" (i + U+0307) olur ve "I" dile göre "ı" veya "i" yazılır; eşleşme için üçü de "i" sayılır.
+ */
 export function nameKey(value: string): string {
-  return value.normalize('NFC').trim().toLowerCase();
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/i̇/g, 'i')
+    .replace(/ı/g, 'i')
+    .normalize('NFC');
 }
 
 /** Excel'de ondalık virgülle yazılmış sayı ("12,50") noktaya çevrilir. */
@@ -209,7 +218,12 @@ function checkUnit(
   return unit;
 }
 
-function checkCategory(text: string | undefined, target: Target, indexes: Indexes, issues: Issues): void {
+function checkCategory(
+  text: string | undefined,
+  target: Target,
+  indexes: Indexes,
+  issues: Issues,
+): void {
   if (text === undefined) {
     if (target.kind === 'insert') issues.add('category', 'required');
     return;
@@ -307,7 +321,11 @@ function validateRow(
   }
   if (cells.price !== undefined && !issues.has('price')) checkPrice(cells.price, context, issues);
 
-  const action: RowAction = issues.hasErrors ? 'error' : target.kind === 'update' ? 'update' : 'insert';
+  const action: RowAction = issues.hasErrors
+    ? 'error'
+    : target.kind === 'update'
+      ? 'update'
+      : 'insert';
   return { row: raw.row, sku, action, issues: issues.list };
 }
 
