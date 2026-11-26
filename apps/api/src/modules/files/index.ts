@@ -1,5 +1,5 @@
 export { BusinessLogoPortModule } from './business-logo.adapter';
-export { FilesModule } from './files.module';
+export { FilesModule, FilesWorkerModule } from './files.module';
 export {
   type CompletedFile,
   FILE_PURPOSE_PERMISSIONS,

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { OutboxModule } from '../../core/outbox';
 import { OpsMetricsModule } from '../../core/ops-metrics';
 import { CatalogImportModule } from '../catalog';
-import { FilesModule } from '../files';
+import { FilesModule, FilesWorkerModule } from '../files';
 import { I18nModule } from '../i18n';
 import { PricingImportModule } from '../pricing';
 import { SettingsModule } from '../settings';
@@ -32,7 +32,7 @@ export class ImportsModule {}
   imports: [
     SettingsModule,
     OpsMetricsModule,
-    FilesModule,
+    FilesWorkerModule,
     I18nModule,
     CatalogImportModule,
     PricingImportModule,

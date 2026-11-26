@@ -195,6 +195,7 @@ describe('evaluateRlsTable — platformun yazamadığı tablolar (F2.18, US-016 
     expect([...PLATFORM_WRITE_FORBIDDEN_TABLES].sort()).toEqual(
       [
         'customer_prices',
+        'import_jobs',
         'ledger_entries',
         'order_items',
         'orders',
