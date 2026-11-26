@@ -37,7 +37,7 @@ Her istek işleminin başında uygulama `SET LOCAL app.business_id = '<uuid>'` �
 **Ek RLS kuralları:**
 
 - `withSystemTx` yalnızca bağlamsız sistem okumaları (ayar, worker) içindir; kiracı verisi göremez: `app.business_id`, `app.user_id` ve `app.is_platform` boştur, T/P/U tablolarında 0 satır döner. S tablolarına yalnızca `SECURITY DEFINER` fonksiyonlarla erişir (F1.4a).
-- Platform bağlamı (`app.is_platform = true`) `orders`, `order_items`, `ledger_entries`, `payments`, `price_lists`, `price_list_items`, `customer_prices` tablolarında **yazma** iznine sahip değildir (US-016 AC5). F3.3a (R39): `products`, `product_variants`, `product_packaging`, `product_visibility` da bu listededir (platform yalnız okur).
+- Platform bağlamı (`app.is_platform = true`) `orders`, `order_items`, `ledger_entries`, `payments`, `price_lists`, `price_list_items`, `customer_prices` tablolarında **yazma** iznine sahip değildir (US-016 AC5). F3.3a (R39): `products`, `product_variants`, `product_packaging`, `product_visibility` ve F3.4a'da `product_images` da bu listededir (platform yalnız okur).
 - T tablolarında kiracı politikasının yanında ayrı bir platform politikası bulunur: `current_setting('app.is_platform', true) = 'true'` iken USING ve WITH CHECK (c4-component §7; `withPlatformTx` `app.business_id`'yi boş bıraktığı için kiracı politikası platforma 0 satır gösterir). İlk uygulama F1.7 (`businesses` grubu). US-016 AC5 listesindeki tablolara bu politika **asla** eklenmez. F2.18: `pnpm check-rls` bu listeyi (`PLATFORM_WRITE_FORBIDDEN_TABLES`, `check-rls.ts`) denetler: listedeki tabloda `app.is_platform` geçen veya kiracı koşulu taşımayan yazma politikası (INSERT, UPDATE, DELETE, FOR ALL) CI'ı kırar; tablo henüz yoksa kural atlanır.
 - Alıcı, satıcının ürün ve fiyat tablolarını yalnızca **aktif bağlantı** varsa okuyabilir: bu sorgular `catalog` modülünün `buyer_visible_products(buyer_id)` fonksiyonu üzerinden yapılır ve fonksiyon aktif bağlantıyı kontrol eder.
 
@@ -736,7 +736,18 @@ Benzersiz: `(seller_id, sku)`. İndeks: `(seller_id, gtin)`.
 
 Benzersiz: `(variant_id, level)`.
 
-#### `product_images` (T) — `product_id`, `seller_id`, `file_id`, `sort_order`; ürün başına en fazla 8
+#### `product_images` (T) — F3.4a
+
+| Alan | Tip | Kısıt | Not |
+| --- | --- | --- | --- |
+| id | uuid | PK | |
+| product_id, seller_id | uuid | FK `(product_id, seller_id) → products(id, seller_id)` | |
+| file_id | uuid | unique; FK `(seller_id, file_id) → files(owner_business_id, id)` | Aynı işletmenin `product_image` amaçlı `ready` dosyası (servis denetler); bir dosya tek görsel |
+| sort_order | smallint | ≥ 0 | Küçükten büyüğe; ilk görsel kapak. Silmede boşluk kalabilir |
+| status | text | `processing` / `ready` / `failed` (CHECK) | Worker küçültünce `ready`; çözülemeyen veya piksel sınırını aşan görsel `failed` (R34) |
+| created_at, updated_at | timestamptz | | |
+
+Ürün başına en çok `catalog.product_images_max` (8) satır (servis, ürün satırı `FOR UPDATE`). Boyutlar ayrı satır değildir: anahtar `<işletme>/product_image/<fileId>-<200|800|1600>.webp` (public bucket); orijinalin adresi API'de dönmez. RLS: `product_images_tenant` (FOR ALL), `product_images_platform_select`; `app_user` SELECT, INSERT, DELETE, UPDATE (`sort_order`, `status`, `updated_at`). Satır silinince depo nesneleri kalır (temizlik F2.16b önerisi).
 
 #### `product_visibility` (T) — `product_id`, `seller_id`, `price_list_id uuid null`, `region_id uuid null`. Kayıt yoksa ürün tüm bağlı perakendecilere görünür. (F3.3a: yalnız `region_id`, not null; `price_list_id` F3.6a'da eklenir. Kurallar VEYA ile değerlendirilir, F3.12a.)
 

@@ -81,6 +81,53 @@ const R2_REQUIRED_KEYS = [
 
 const bucketName = z.string().regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/);
 
+/**
+ * Dosya deposu (F1.10, ADR-0023): api ve worker (F3.4a görsel küçültme) aynı değişkenleri okur.
+ * `STORAGE_LOCAL_BASE_URL` yalnız api'de (imzalı bağlantı yalnız api'de üretilir).
+ */
+const storageEnvShape = {
+  STORAGE_PROVIDER: z.enum(STORAGE_PROVIDERS),
+  R2_ACCOUNT_ID: z
+    .string()
+    .regex(/^[A-Za-z0-9]{1,64}$/)
+    .optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_BUCKET_PUBLIC: bucketName.optional(),
+  R2_BUCKET_PRIVATE: bucketName.optional(),
+  /** Public bucket'ın CDN adresi (sonunda `/` yok). */
+  FILES_PUBLIC_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
+  /** `local` depo klasörü (göreli ise süreç klasörüne göre). */
+  STORAGE_LOCAL_DIR: z.string().min(1).default('.local-storage'),
+};
+
+interface StorageEnvInput {
+  readonly APP_ENV: string;
+  readonly STORAGE_PROVIDER: string;
+  readonly [key: string]: unknown;
+}
+
+/** production'da `local` yasak; `r2` iken bucket ve anahtarlar zorunlu. */
+function refineStorageEnv(env: StorageEnvInput, ctx: z.RefinementCtx): void {
+  if (
+    env.APP_ENV === 'production' &&
+    STORAGE_PROVIDERS_FORBIDDEN_IN_PRODUCTION.has(env.STORAGE_PROVIDER)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['STORAGE_PROVIDER'],
+      message: 'production ortamında yerel dosya deposu kullanılamaz',
+    });
+  }
+  if (env.STORAGE_PROVIDER === 'r2') {
+    for (const key of R2_REQUIRED_KEYS) {
+      if (env[key] === undefined) {
+        ctx.addIssue({ code: 'custom', path: [key], message: 'r2 deposu için zorunlu' });
+      }
+    }
+  }
+}
+
 /** Ortam `local`/`test` iken `MEILI_URL` verilmezse kullanılan adres (docker compose, F2.11a K5). */
 export const MEILI_LOCAL_DEFAULT_URL = 'http://127.0.0.1:7700';
 
@@ -133,19 +180,7 @@ export const apiEnvSchema = serverEnvSchema
     /** TOTP sırrı şifreleme anahtarı (F1.6). */
     TOTP_ENCRYPTION_KEY: totpEncryptionKey,
     /** Dosya deposu (F1.10, ADR-0023): yerel/CI `local`, staging/production `r2`. */
-    STORAGE_PROVIDER: z.enum(STORAGE_PROVIDERS),
-    R2_ACCOUNT_ID: z
-      .string()
-      .regex(/^[A-Za-z0-9]{1,64}$/)
-      .optional(),
-    R2_ACCESS_KEY_ID: z.string().min(1).optional(),
-    R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
-    R2_BUCKET_PUBLIC: bucketName.optional(),
-    R2_BUCKET_PRIVATE: bucketName.optional(),
-    /** Public bucket'ın CDN adresi (sonunda `/` yok). */
-    FILES_PUBLIC_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
-    /** `local` depo klasörü (göreli ise süreç klasörüne göre). */
-    STORAGE_LOCAL_DIR: z.string().min(1).default('.local-storage'),
+    ...storageEnvShape,
     /** `local` deponun imzalı bağlantılarında kullanılan API adresi; yoksa `http://localhost:<PORT>`. */
     STORAGE_LOCAL_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
     /** Web uygulamasının adresi (sonunda `/` yok); SMS'teki davet bağlantısı (F2.1a). */
@@ -184,29 +219,13 @@ export const apiEnvSchema = serverEnvSchema
         message: 'production ortamında mock SMS sağlayıcısı kullanılamaz',
       });
     }
-    if (
-      env.APP_ENV === 'production' &&
-      STORAGE_PROVIDERS_FORBIDDEN_IN_PRODUCTION.has(env.STORAGE_PROVIDER)
-    ) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['STORAGE_PROVIDER'],
-        message: 'production ortamında yerel dosya deposu kullanılamaz',
-      });
-    }
+    refineStorageEnv(env, ctx);
     if (env.APP_ENV === 'production' && !env.WEB_BASE_URL.startsWith('https://')) {
       ctx.addIssue({
         code: 'custom',
         path: ['WEB_BASE_URL'],
         message: 'production ortamında https web adresi zorunlu',
       });
-    }
-    if (env.STORAGE_PROVIDER === 'r2') {
-      for (const key of R2_REQUIRED_KEYS) {
-        if (env[key] === undefined) {
-          ctx.addIssue({ code: 'custom', path: [key], message: 'r2 deposu için zorunlu' });
-        }
-      }
     }
   });
 
@@ -232,9 +251,12 @@ export const workerEnvSchema = serverEnvSchema
     /** İsteğe bağlı: Expo hesabında "enhanced push security" açıksa gerekir. */
     EXPO_ACCESS_TOKEN: z.string().min(1).optional(),
     ...searchEnvShape,
+    /** Görsel küçültme işi depoya yazar (F3.4a); kurallar api ile aynı. */
+    ...storageEnvShape,
   })
   .superRefine((env, ctx) => {
     refineSearchEnv(env, ctx);
+    refineStorageEnv(env, ctx);
     if (
       env.APP_ENV === 'production' &&
       PUSH_PROVIDERS_FORBIDDEN_IN_PRODUCTION.has(env.PUSH_PROVIDER)

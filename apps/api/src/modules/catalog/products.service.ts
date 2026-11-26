@@ -21,6 +21,8 @@ import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
 import type { TenantContext } from '../../core/tenant-context';
 import { type FieldErrors, packagingProblems, type UnitFacts } from './packaging-rules';
+import type { ProductImageRow } from './product-images.repository';
+import { type ProductImageView, ProductImagesService } from './product-images.service';
 import { ProductStateMachine } from './product.state-machine';
 import {
   type BrandRefRow,
@@ -77,7 +79,12 @@ export interface ProductView {
   readonly updatedAt: string;
   readonly variants: VariantView[];
   readonly visibility: { readonly regionIds: string[] };
+  /** F3.4a: sırayla; ilk görsel kapak (K6, K10). */
+  readonly images: ProductImageView[];
 }
+
+/** İşlem içinde kurulan görünüm; görsel adresleri işlemden sonra eklenir. */
+type ProductViewDraft = Omit<ProductView, 'images'> & { readonly imageRows: ProductImageRow[] };
 
 /** openapi `ProductListItem`. */
 export interface ProductListItemView {
@@ -88,6 +95,8 @@ export interface ProductListItemView {
   readonly categoryId: string;
   readonly brand: { readonly id: string; readonly name: string } | null;
   readonly activeVariantCount: number;
+  /** F3.4a: ilk `ready` görselin 200 px adresi (K10). */
+  readonly thumbUrl: string | null;
   readonly updatedAt: string;
 }
 
@@ -206,20 +215,25 @@ export class ProductsService {
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
+    @Inject(ProductImagesService)
+    private readonly images: Pick<ProductImagesService, 'rowsOf' | 'views' | 'thumbUrls'>,
   ) {}
 
   /** `GET /products`: kendi ürünleri, yeniden eskiye, imleçli. */
   async list(tenant: TenantContext, query: ProductsQuery): Promise<ProductListView> {
     const limit = query.limit ?? PRODUCT_LIST_LIMIT_DEFAULT;
     const cursor = query.cursor === undefined ? undefined : decodeCursor(query.cursor);
-    const rows = await withTenantTx(tenant, (tx) =>
-      this.repository.listProducts(tx, tenant.businessId, {
+    const { rows, imageRows } = await withTenantTx(tenant, async (tx) => {
+      const found = await this.repository.listProducts(tx, tenant.businessId, {
         q: query.q,
         status: query.status,
         cursor,
         limit: limit + 1,
-      }),
-    );
+      });
+      const ids = found.slice(0, limit).map((row) => row.id);
+      return { rows: found, imageRows: await this.images.rowsOf(tx, tenant.businessId, ids) };
+    });
+    const thumbs = await this.images.thumbUrls(imageRows, tenant.businessId);
     const page = rows.slice(0, limit);
     const last = page.at(-1);
     return {
@@ -234,6 +248,7 @@ export class ProductsService {
             ? null
             : { id: row.brandId, name: row.brandName },
         activeVariantCount: row.activeVariantCount,
+        thumbUrl: thumbs.get(row.id) ?? null,
         updatedAt: row.updatedAt.toISOString(),
       })),
       nextCursor:
@@ -245,18 +260,19 @@ export class ProductsService {
 
   /** `GET /products/{id}`: başka kiracının ürünü 404. */
   async get(tenant: TenantContext, id: string): Promise<ProductView> {
-    return await withTenantTx(tenant, async (tx) => {
+    const draft = await withTenantTx(tenant, async (tx) => {
       const product = await this.repository.findProduct(tx, tenant.businessId, id);
       if (product === undefined) throw new DomainError('NOT_FOUND');
       return await this.viewTx(tx, product);
     });
+    return await this.withImages(draft, tenant.businessId);
   }
 
   /** US-030 AC1: ürün her zaman `draft` açılır. */
   async create(tenant: TenantContext, input: ProductCreate): Promise<ProductView> {
     const now = this.clock.now();
     try {
-      return await withTenantTx(tenant, async (tx) => {
+      const draft = await withTenantTx(tenant, async (tx) => {
         const bag = new FieldErrorBag();
         await this.checkReferencesTx(tx, tenant.businessId, bag, {
           categoryId: input.categoryId,
@@ -289,6 +305,7 @@ export class ProductsService {
         if (product === undefined) throw new Error('ürün okunamadı');
         return await this.viewTx(tx, product);
       });
+      return await this.withImages(draft, tenant.businessId);
     } catch (error) {
       throw this.mapUniqueViolation(error);
     }
@@ -303,7 +320,7 @@ export class ProductsService {
   ): Promise<ProductView> {
     const now = this.clock.now();
     try {
-      return await withTenantTx(tenant, async (tx) => {
+      const draft = await withTenantTx(tenant, async (tx) => {
         const current = await this.repository.lockProduct(tx, tenant.businessId, id);
         if (current === undefined) throw new DomainError('NOT_FOUND');
 
@@ -428,6 +445,7 @@ export class ProductsService {
         if (product === undefined) throw new Error('ürün okunamadı');
         return await this.viewTx(tx, product);
       });
+      return await this.withImages(draft, tenant.businessId);
     } catch (error) {
       throw this.mapUniqueViolation(error);
     }
@@ -622,7 +640,17 @@ export class ProductsService {
     );
   }
 
-  private async viewTx(tx: Tx, product: ProductRow): Promise<ProductView> {
+  /**
+   * Görsel adresleri işlem dışında üretilir (F3.4a): adres üretimi ayar okur, ayrı bağlantı ister;
+   * işlem içinde çağrılsa küçük havuzda kilitlenirdi.
+   */
+  private async withImages(draft: ProductViewDraft, sellerId: string): Promise<ProductView> {
+    const { imageRows, ...view } = draft;
+    const images = await this.images.views(imageRows, sellerId);
+    return { ...view, images: images.get(view.id) ?? [] };
+  }
+
+  private async viewTx(tx: Tx, product: ProductRow): Promise<ProductViewDraft> {
     const variants = await this.repository.variantsOf(tx, product.sellerId, product.id);
     const packaging = await this.repository.packagingOf(
       tx,
@@ -632,6 +660,7 @@ export class ProductsService {
     const regionIds = await this.repository.regionIdsOf(tx, product.sellerId, product.id);
     const brand =
       product.brandId === null ? undefined : await this.repository.findBrand(tx, product.brandId);
+    const imageRows = await this.images.rowsOf(tx, product.sellerId, [product.id]);
     return {
       id: product.id,
       sku: product.sku,
@@ -657,6 +686,7 @@ export class ProductsService {
         packaging: packaging.filter((row) => row.variantId === variant.id).map(packagingView),
       })),
       visibility: { regionIds },
+      imageRows,
     };
   }
 }

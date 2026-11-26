@@ -183,6 +183,7 @@ export const PLATFORM_WRITE_FORBIDDEN_TABLES: readonly string[] = [
   'product_variants',
   'product_packaging',
   'product_visibility',
+  'product_images',
 ];
 
 const FORBIDDEN_SET: ReadonlySet<string> = new Set(

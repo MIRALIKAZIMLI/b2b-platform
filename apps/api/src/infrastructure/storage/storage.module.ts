@@ -1,7 +1,8 @@
-// Dosya deposu sağlayıcı seçimi (integrations §4, ADR-0023): `STORAGE_PROVIDER` (yalnızca api).
+// Dosya deposu sağlayıcı seçimi (integrations §4, ADR-0023): `STORAGE_PROVIDER` (api ve worker;
+// worker görsel küçültmede yalnız okur/yazar, imzalı bağlantı üretmez, F3.4a).
 // Production'da `local` ile api açılmaz (env şeması, F1.10-AC5).
 import { type DynamicModule, Global, Module } from '@nestjs/common';
-import type { ApiEnv } from '@b2b/shared';
+import type { WorkerEnv } from '@b2b/shared';
 import { Clock } from '../../core/clock';
 import { FileStorage } from '../../core/ports/file-storage';
 import { LocalFileStorage } from './local-file-storage';
@@ -11,7 +12,7 @@ import { S3FileStorage } from './s3-file-storage';
 export const FILES_PUBLIC_BASE_URL = Symbol('FILES_PUBLIC_BASE_URL');
 
 type StorageEnv = Pick<
-  ApiEnv,
+  WorkerEnv,
   | 'PORT'
   | 'STORAGE_PROVIDER'
   | 'R2_ACCOUNT_ID'
@@ -21,8 +22,7 @@ type StorageEnv = Pick<
   | 'R2_BUCKET_PRIVATE'
   | 'FILES_PUBLIC_BASE_URL'
   | 'STORAGE_LOCAL_DIR'
-  | 'STORAGE_LOCAL_BASE_URL'
->;
+> & { readonly STORAGE_LOCAL_BASE_URL?: string | undefined };
 
 function required(value: string | undefined, name: string): string {
   // env şeması r2 için bunları zaten zorunlu kılar; burası tip daraltması.

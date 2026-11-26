@@ -131,7 +131,10 @@ describe('loadWorkerEnv (worker açılışı, F1.11)', () => {
     const io = fakeIo();
     let exit: ExitCalled | undefined;
     try {
-      loadWorkerEnv({ ...VALID, APP_ENV: 'production', PUSH_PROVIDER: 'mock' }, io);
+      loadWorkerEnv(
+        { ...VALID, APP_ENV: 'production', PUSH_PROVIDER: 'mock', STORAGE_PROVIDER: 'local' },
+        io,
+      );
     } catch (error) {
       if (!(error instanceof ExitCalled)) throw error;
       exit = error;
@@ -142,7 +145,10 @@ describe('loadWorkerEnv (worker açılışı, F1.11)', () => {
 
   it('local + mock kabul edilir', () => {
     const io = fakeIo();
-    expect(loadWorkerEnv({ ...VALID, PUSH_PROVIDER: 'mock' }, io).PUSH_PROVIDER).toBe('mock');
+    expect(
+      loadWorkerEnv({ ...VALID, PUSH_PROVIDER: 'mock', STORAGE_PROVIDER: 'local' }, io)
+        .PUSH_PROVIDER,
+    ).toBe('mock');
     expect(io.output).toEqual([]);
   });
 });

@@ -380,6 +380,8 @@ Onayımı bekle.
 - **Kabul:** US-030 AC3; ürün başına ≤ 8 görsel.
 - **Test:** Entegrasyon.
 
+> **Bölündü (Usta, 2026-11-26):** F3.4a — API + migration `0035` + worker küçültme işi (`catalog` kuyruğu). F3.4b — web görsel yükleyici. Kart: `docs/tasks/F3.4a.md`.
+
 ### F3.5 — Excel içe aktarma
 
 - **Belgeler:** US-031, SF-08.

@@ -239,11 +239,12 @@ Bir platform admini olarak süreleri, kotaları ve politikaları kod değiştirm
 
 Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages/shared/src/settings.ts`). Sınır dışı veya yanlış tipte değer `SETTING_OUT_OF_RANGE` ile reddedilir.
 
-**Kapsam (F2.19):** Plan ve işletme kapsamında yalnızca kodun işletmeyle okuduğu anahtarlar yazılabilir: `connection.cooldown_after_reject_days`, `connection.cooldown_after_buyer_cancel_days`, `connection.daily_request_quota` ([productreport](../productreport.md) "Admin tarafından yönetilen ayarlar"), `security.require_admin_2fa`, `files.upload_url_ttl_minutes`, `files.download_url_ttl_minutes`, `files.image_max_mb`, `files.xlsx_max_mb`, `invitation.team_days`, `directory.search_max_per_minute`, `catalog.brand_request_daily_limit` (F3.2a). Diğer anahtarlar yalnızca platform kapsamındadır; plan veya işletme kapsamında yazma `SETTING_SCOPE_NOT_ALLOWED` ile reddedilir. Bir anahtar işletmeyle okunmaya başladığında kayıttaki `scopes` alanı aynı PR'da güncellenir.
+**Kapsam (F2.19):** Plan ve işletme kapsamında yalnızca kodun işletmeyle okuduğu anahtarlar yazılabilir: `connection.cooldown_after_reject_days`, `connection.cooldown_after_buyer_cancel_days`, `connection.daily_request_quota` ([productreport](../productreport.md) "Admin tarafından yönetilen ayarlar"), `security.require_admin_2fa`, `files.upload_url_ttl_minutes`, `files.download_url_ttl_minutes`, `files.image_max_mb`, `files.xlsx_max_mb`, `invitation.team_days`, `directory.search_max_per_minute`, `catalog.brand_request_daily_limit` (F3.2a), `catalog.product_images_max` (F3.4a). Diğer anahtarlar yalnızca platform kapsamındadır; plan veya işletme kapsamında yazma `SETTING_SCOPE_NOT_ALLOWED` ile reddedilir. Bir anahtar işletmeyle okunmaya başladığında kayıttaki `scopes` alanı aynı PR'da güncellenir.
 
 | Anahtar | Varsayılan | Tip | Alt sınır | Üst sınır |
 | --- | --- | --- | --- | --- |
 | `catalog.brand_request_daily_limit` | 10 (toptancı başına kayan 24 saatte marka talebi, US-029 AC2, F3.2a K2) | tamsayı | 1 | 100 |
+| `catalog.product_images_max` | 8 (ürün başına görsel; işlenen ve başarısız dahil, US-030 VARSAYIM, F3.4a K4) | tamsayı | 1 | 20 |
 | `connection.request_ttl_days` | 14 | tamsayı | 1 | 90 |
 | `connection.cooldown_after_reject_days` | 30 | tamsayı | 7 | 365 |
 | `connection.cooldown_after_buyer_cancel_days` | 30 | tamsayı | 7 | 365 |
@@ -298,6 +299,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `files.download_url_ttl_minutes` | 5 (`private` dosya için imzalı okuma URL'sinin ömrü, SF-09, F1.10) | tamsayı | 1 | 60 |
 | `files.image_max_mb` | 5 (JPEG/PNG/WebP üst sınırı, NFR-49, F1.10) | tamsayı | 1 | 20 |
 | `files.xlsx_max_mb` | 10 (.xlsx üst sınırı, NFR-49, F1.10) | tamsayı | 1 | 50 |
+| `files.image_max_megapixels` | 40 (görsel küçültmede kabul edilen en çok piksel, milyon; aşan görsel `failed`, R34, F3.4a K5) | tamsayı | 1 | 100 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
 | `i18n.cache_ttl_seconds` | 60 (çeviri ve dil önbelleğinin süreç içi ömrü, F1.3) | tamsayı | 1 | 300 |
 | `directory.reindex_hour_utc` | 1 (perakendeci dizininin gece tam yeniden indekslendiği saat, UTC; worker açılışında okunur, ADR-0011, F2.11a) | tamsayı | 0 | 23 |

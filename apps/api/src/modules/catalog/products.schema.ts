@@ -161,3 +161,33 @@ export const productVisibility = pgTable(
     unique('product_visibility_product_region_uq').on(table.productId, table.regionId),
   ],
 );
+
+/**
+ * Ürün görselleri (F3.4a, US-030 AC3; kart K1–K12). T sınıfı (`seller_id`); platform yalnız okur.
+ * `file_id` → `files(owner_business_id, id)` bileşik FK'sı modüller arası olduğundan migration'da
+ * elle (drizzle/0035_product_images.sql). Satır silinebilir (K7); depo nesneleri kalır (F2.16b).
+ */
+export const productImages = pgTable(
+  'product_images',
+  {
+    id: uuid('id').primaryKey(),
+    productId: uuid('product_id').notNull(),
+    sellerId: uuid('seller_id').notNull(),
+    fileId: uuid('file_id').notNull(),
+    sortOrder: smallint('sort_order').notNull(),
+    status: text('status').notNull().default('processing'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      name: 'product_images_product_fk',
+      columns: [table.productId, table.sellerId],
+      foreignColumns: [products.id, products.sellerId],
+    }),
+    unique('product_images_file_uq').on(table.fileId),
+    index('product_images_product_idx').on(table.productId, table.sortOrder),
+    check('product_images_status_check', sql`${table.status} in ('processing', 'ready', 'failed')`),
+    check('product_images_sort_order_check', sql`${table.sortOrder} >= 0`),
+  ],
+);

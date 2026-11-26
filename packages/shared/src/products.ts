@@ -196,3 +196,23 @@ export const productsQuerySchema = z.strictObject({
   limit: z.coerce.number().int().min(1).max(PRODUCT_LIST_LIMIT_MAX).optional(),
 });
 export type ProductsQuery = z.infer<typeof productsQuerySchema>;
+
+// ----- Ürün görselleri (F3.4a, US-030 AC3; kart K1–K12) -----
+
+/** İşleme durumu: worker küçültene kadar `processing`; kalıcı hata `failed` (R34). */
+export const PRODUCT_IMAGE_STATUSES = ['processing', 'ready', 'failed'] as const;
+export type ProductImageStatus = (typeof PRODUCT_IMAGE_STATUSES)[number];
+
+/** Üretilen boyutlar (uzun kenar, px; K2). Anahtar = openapi `ProductImage.urls` alanı. */
+export const PRODUCT_IMAGE_SIZES = { thumb: 200, medium: 800, large: 1600 } as const;
+export type ProductImageSize = keyof typeof PRODUCT_IMAGE_SIZES;
+
+/** `POST /products/{id}/images`: F1.10 akışıyla `ready` olmuş `product_image` dosyası. */
+export const productImageAddSchema = z.strictObject({ fileId: z.uuid() });
+export type ProductImageAdd = z.infer<typeof productImageAddSchema>;
+
+/** `PUT /products/{id}/images/order`: ürünün bütün görselleri, yeni sırayla (K6). */
+export const productImageOrderSchema = z.strictObject({
+  imageIds: z.array(z.uuid()).min(1).max(20),
+});
+export type ProductImageOrder = z.infer<typeof productImageOrderSchema>;
