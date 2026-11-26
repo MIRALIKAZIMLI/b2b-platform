@@ -180,6 +180,7 @@ describe('F2.13b yanıt, engel ve push yardımcıları', () => {
     name: 'Baku Food Distribution',
     logoUrl: null,
     description: { az: 'Ərzaq topdan satışı', ru: 'Оптовая продажа продуктов' },
+    categories: [],
   };
   const incoming = {
     id: '0190a3b4-0000-7000-8000-0000000000ee',

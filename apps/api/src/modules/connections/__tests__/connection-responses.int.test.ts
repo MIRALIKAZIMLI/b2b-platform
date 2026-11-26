@@ -152,6 +152,8 @@ describe('F2.13a bağlantı isteğine yanıt API', () => {
             name: `Toptan ${seller.businessId.slice(0, 8)}`,
             logoUrl: null,
             description: { az: 'Topdan ərzaq', tr: 'Toptan gıda' },
+            // F3.3a (S3 = A): ürünü olmayan toptancıda kategori yok.
+            categories: [],
           },
         },
       ],

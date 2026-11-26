@@ -2689,12 +2689,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Kendi ürünlerim (seller) */
+        /**
+         * Kendi ürünlerim (seller; F3.3a)
+         * @description İzin `catalog.view` (yetenek `seller`); perakendeci 403. Yeniden eskiye, imleçli. `q`: SKU öneki veya herhangi bir dildeki ad (içerir, büyük/küçük harf duyarsız). Ad bütün dilleriyle döner; gösterim dili istemcide (`pickLocalizedText`, US-030 AC4).
+         */
         get: {
             parameters: {
                 query?: {
                     q?: string;
-                    status?: string;
+                    status?: "draft" | "active" | "archived";
                     cursor?: components["parameters"]["Cursor"];
                     limit?: components["parameters"]["Limit"];
                 };
@@ -2711,12 +2714,22 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["ProductListItem"][];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
-        /** Ürün oluştur (US-030) */
+        /**
+         * Ürün oluştur (US-030 AC1, AC2, AC5)
+         * @description İzin `catalog.manage` (yetenek `seller`). Ürün her zaman `draft` açılır. Kategori görünür (kendisi ve üstleri aktif) olmalı; marka aktif veya toptancının kendi bekleyen talebi (V5); birimler aktif. Ambalaj kuralları (F3.3a K4): varyantta seviye tek; seviye sırasıyla (`unit` < `inner` < `case` < `pallet`) `baseQty` kesin artar; `unit` seviyesinde `baseQty = 1` ve `unitCode = baseUnitCode`; ondalığa izin vermeyen birimde tam sayı; en az bir satış birimi; `minOrderQty` `orderMultiple`'ın katı. Ürün ve varyant SKU'su satıcı içinde tek (422 `sku: [taken]` / `variants.sku: [taken]`). `hasExpiry` ise `shelfLifeMonths` zorunlu (US-030 AC5). Görünürlük F3.3a'da yalnız bölge.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2727,7 +2740,7 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["ProductInput"];
                 };
@@ -2742,6 +2755,8 @@ export interface paths {
                         "application/json": components["schemas"]["Product"];
                     };
                 };
+                403: components["responses"]["Error"];
+                409: components["responses"]["Error"];
                 422: components["responses"]["Error"];
             };
         };
@@ -2758,7 +2773,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ürün detayı (seller) */
+        /**
+         * Ürün detayı (seller)
+         * @description İzin `catalog.view`. Arşivli varyantlar durumuyla döner. Başka kiracının ürünü 404.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -2781,6 +2799,8 @@ export interface paths {
                         "application/json": components["schemas"]["Product"];
                     };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -2788,7 +2808,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Ürün güncelle / yayınla / arşivle */
+        /**
+         * Ürün güncelle / yayınla / arşivle / geri al (US-030 AC6)
+         * @description İzin `catalog.manage`. Kısmi. `variants` verilirse tam listedir: `id`'li varyant güncellenir (arşivliyse yeniden etkinleşir), `id`'siz eklenir, listede olmayan arşivlenir (silinmez; arşivli SKU yeniden kullanılamaz). Ambalaj seviyeye göre eşlenir: var olan seviye kimliğini korur. `visibility` verilirse tam liste. `status` geçişleri state-machines §14: `draft → active` (marka boş veya onaylı, aksi 422 `brandId: [not_approved]`), `draft|active → archived`, `archived → draft`; başka geçiş 409 `INVALID_STATE_TRANSITION`. Arşivdeki ürün düzenlenmez (409). Daha önce kaydedilmiş, sonradan pasifleşen kategori, marka veya birim üründe kalabilir; yeni seçilen kayıt aktif olmalı (422 `inactive`).
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -2800,9 +2823,9 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
-                    "application/json": components["schemas"]["ProductInput"];
+                    "application/json": components["schemas"]["ProductUpdate"];
                 };
             };
             responses: {
@@ -2811,8 +2834,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Product"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         trace?: never;
@@ -7946,6 +7975,12 @@ export interface components {
             name: string;
             logoUrl: string | null;
             description: components["schemas"]["LocalizedText"] | null;
+            /** @description Toptancının kategorileri (US-023 AC1; F3.3a, S3 = A): `active` ürünlerinin aktif kök kategorileri, sıra numarasıyla. Ürünü olmayan toptancıda boş. */
+            categories: {
+                /** Format: uuid */
+                id: string;
+                name: components["schemas"]["CatalogName"];
+            }[];
         };
         BlockedSeller: {
             /** Format: uuid */
@@ -7999,59 +8034,160 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
-        Packaging: {
-            /** Format: uuid */
-            id?: string;
+        /**
+         * @description Miktar (`numeric(14,3)`), pozitif, en çok 3 ondalık
+         * @example 24
+         */
+        Quantity: string;
+        /** @description GTIN-8/12/13/14, GS1 kontrol hanesi doğrulanır */
+        Gtin: string;
+        PackagingInput: {
             /** @enum {string} */
             level: "unit" | "inner" | "case" | "pallet";
             /** @example XCT */
             unitCode: string;
-            baseQty: components["schemas"]["Decimal"];
-            gtin?: string | null;
-            isSalesUnit?: boolean;
-            minOrderQty?: components["schemas"]["Decimal"];
-            orderMultiple?: components["schemas"]["Decimal"];
+            baseQty: components["schemas"]["Quantity"];
+            gtin?: components["schemas"]["Gtin"] | null;
             weightG?: number | null;
+            dimensionsMm?: {
+                l: number;
+                w: number;
+                h: number;
+            } | null;
+            /** @default false */
+            isSalesUnit: boolean;
+            minOrderQty?: components["schemas"]["Quantity"];
+            orderMultiple?: components["schemas"]["Quantity"];
+        };
+        Packaging: components["schemas"]["PackagingInput"] & {
+            /** Format: uuid */
+            id: string;
+        };
+        VariantInput: {
+            /**
+             * Format: uuid
+             * @description Yalnız PATCH'te var olan varyant
+             */
+            id?: string;
+            sku: string;
+            /**
+             * @example {
+             *       "volume_ml": 400
+             *     }
+             */
+            attributes?: {
+                [key: string]: string | number | boolean;
+            };
+            gtin?: components["schemas"]["Gtin"] | null;
+            packaging: components["schemas"]["PackagingInput"][];
         };
         Variant: {
             /** Format: uuid */
-            id?: string;
-            sku?: string;
-            attributes?: {
+            id: string;
+            sku: string;
+            attributes: {
                 [key: string]: unknown;
             };
-            gtin?: string | null;
-            isAvailable?: boolean;
-            packaging?: components["schemas"]["Packaging"][];
+            gtin: string | null;
+            /** @description Stok modu `availability` (uç F3.10) */
+            isAvailable: boolean;
+            /** @enum {string} */
+            status: "active" | "archived";
+            packaging: components["schemas"]["Packaging"][];
+        };
+        /** @description En az bir dilde dolu (US-030 AC1); boş diller atılır */
+        ProductName: {
+            az?: string;
+            ru?: string;
+            tr?: string;
+            en?: string;
+        };
+        /** @description Bölge kuralı (F3.3a K5): boş liste = bütün bağlı perakendecilere görünür; dolu liste = perakendecinin bölgesi (`businesses.region_id`, V8) listedeyse. Fiyat listesi kuralı F3.6a. */
+        ProductVisibilityInput: {
+            regionIds?: string[];
         };
         ProductInput: {
             sku: string;
-            name: components["schemas"]["LocalizedText"];
-            description?: components["schemas"]["LocalizedText"];
+            name: components["schemas"]["ProductName"];
+            description?: components["schemas"]["LocalizedText"] | null;
             /** Format: uuid */
             categoryId: string;
             /** Format: uuid */
             brandId?: string | null;
             baseUnitCode: string;
+            /** @default false */
+            hasExpiry: boolean;
+            shelfLifeMonths?: number | null;
+            variants: components["schemas"]["VariantInput"][];
+            visibility?: components["schemas"]["ProductVisibilityInput"];
+        };
+        ProductUpdate: {
+            sku?: string;
+            name?: components["schemas"]["ProductName"];
+            description?: components["schemas"]["LocalizedText"] | null;
+            /** Format: uuid */
+            categoryId?: string;
+            /** Format: uuid */
+            brandId?: string | null;
+            baseUnitCode?: string;
             hasExpiry?: boolean;
             shelfLifeMonths?: number | null;
             /** @enum {string} */
             status?: "draft" | "active" | "archived";
-            imageFileIds?: string[];
+            variants?: components["schemas"]["VariantInput"][];
+            visibility?: components["schemas"]["ProductVisibilityInput"];
+        };
+        /** @description Toptancı bakışı. Görseller F3.4. */
+        Product: {
+            /** Format: uuid */
+            id: string;
+            sku: string;
+            name: components["schemas"]["LocalizedText"];
+            description: components["schemas"]["LocalizedText"] | null;
+            /** Format: uuid */
+            categoryId: string;
+            /** Format: uuid */
+            brandId: string | null;
+            brand: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** @enum {string} */
+                status: "requested" | "active";
+            } | null;
+            baseUnitCode: string;
+            hasExpiry: boolean;
+            shelfLifeMonths: number | null;
+            /** @enum {string} */
+            status: "draft" | "active" | "archived";
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
             variants: components["schemas"]["Variant"][];
-            visibility?: {
-                priceListIds?: string[];
-                regionIds?: string[];
+            visibility: {
+                regionIds: string[];
             };
         };
-        Product: components["schemas"]["ProductInput"] & {
+        ProductListItem: {
             /** Format: uuid */
-            id?: string;
-            images?: {
-                thumb?: string;
-                medium?: string;
-                large?: string;
-            }[];
+            id: string;
+            sku: string;
+            name: components["schemas"]["LocalizedText"];
+            /** @enum {string} */
+            status: "draft" | "active" | "archived";
+            /** Format: uuid */
+            categoryId: string;
+            brand: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            } | null;
+            activeVariantCount: number;
+            /** Format: date-time */
+            updatedAt: string;
         };
         BrowseProduct: {
             /** Format: uuid */

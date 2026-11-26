@@ -268,6 +268,28 @@ stateDiagram-v2
 | → requested | `catalog.manage` izinli toptancı kullanıcısı (`POST /catalog/brands`) | Yalnız `brand_request_create` (SECURITY DEFINER); onaylı ve aktif toptancı; ad tekliği (K1, 422 `name: [taken]`); kayan 24 saatte `catalog.brand_request_daily_limit` (429 `RATE_LIMITED`) | Audit `brand.requested` (işletme = toptancı); yalnız talep eden görür (V5) |
 | → active (doğrudan) | Platform rolü `super_admin`, `content` (`POST /admin/catalog/brands`) | Ad tekliği | Audit `brand.created` |
 | requested → active | Platform rolü `super_admin`, `content` (`PATCH /admin/catalog/brands/{id}`) | — | `decided_at`, `decided_by_user_id`; audit `brand.approved`; talebi gönderen (aktif üyeyse) + toptancı adminlerine `brand_request_approved` |
-| requested → rejected | Aynı | — | `decided_at`, `decided_by_user_id`; audit `brand.rejected`; bildirim `brand_request_rejected`; ad serbest kalır. Ürünün markasının boşalması F3.3a (V5) |
+| requested → rejected | Aynı | — | `decided_at`, `decided_by_user_id`; audit `brand.rejected`; bildirim `brand_request_rejected`; ad serbest kalır; talep eden toptancının o markalı ürünlerinin markası boşalır (F3.3a tetikleyicisi, V5) |
 
 `active` ve `rejected` son durumlardır; başka geçiş `409 INVALID_STATE_TRANSITION`. Marka silinmez (R38); `active` marka `is_active = false` ile pasifleşir (yeni üründe seçilemez), aktiflik başka durumda değişmez (409).
+
+## 14. Ürün (`products.status`)
+
+F3.3a (US-030 AC6; kart K1, K2). Kod: `ProductStateMachine` (`apps/api/src/modules/catalog/product.state-machine.ts`).
+
+```mermaid
+stateDiagram-v2
+    [*] --> draft: toptancı ürünü açar
+    draft --> active: yayınla
+    draft --> archived: arşivle
+    active --> archived: arşivle (yayından kaldır)
+    archived --> draft: geri al
+```
+
+| Geçiş | Kim | Koşul (guard) | Yan etki |
+| --- | --- | --- | --- |
+| → draft | `catalog.manage` izinli toptancı kullanıcısı (`POST /products`) | Ad en az bir dilde, görünür kategori, seçilebilir marka (aktif veya kendi bekleyen talebi, V5), aktif birimler, ambalaj kuralları (K4) | — |
+| draft → active | Aynı (`PATCH /products/{id}`, `status: active`) | Marka boş veya `active` (aksi 422 `brandId: [not_approved]`); fiyat gerekmez (V7) | `published_at`; audit `product.published`; ürün bağlı perakendecilere görünür (liste F3.12a) |
+| draft → archived, active → archived | Aynı | — | Audit `product.archived`; perakendecide görünmez |
+| archived → draft | Aynı | — | Audit `product.restored` |
+
+Başka geçiş `409 INVALID_STATE_TRANSITION`. `active → draft` yoktur (gizlemek için arşiv). Arşivdeki ürün düzenlenmez, yalnız geri alınır (409). Yayındaki ürün düzenlenebilir; markası onay bekleyen markaya çevrilemez (422 `brandId: [not_approved]`). Ürün silinmez. Varyant durumu (`active` / `archived`) yalnız ürün düzenlemesiyle değişir: listede olmayan varyant arşivlenir, listede `id`'si olan arşivli varyant yeniden `active` olur (K3). Marka reddedilince ürünün markası boşalır (§13, V5).

@@ -67,6 +67,10 @@ export const AUDIT_ACTIONS = [
   'brand.rejected',
   'activity_type.created',
   'activity_type.updated',
+  // F3.3a (US-030 AC6, kart K10): yalnız ürün durum değişiklikleri; oluşturma/düzenleme yazılmaz.
+  'product.published',
+  'product.archived',
+  'product.restored',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -88,6 +92,8 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // kataloğu, `business_id = null`; before/after ad, kısaltma, ondalık izni, aktiflik, oran.
 // category / brand / activity_type: hedef kimliği kayıt kimliği (G; F3.2a). Admin işlemi
 // `business_id = null`; marka talebi (`brand.requested`) talep eden toptancının işletmesiyle.
+// product: hedef kimliği ürün (products.id; F3.3a durum değişikliği, işletme = toptancı; before/
+// after yalnız durum).
 // connection: hedef kimliği bağlantı (connections.id; F2.13a kabul, after: istek kimliği, veri
 // paylaşım onayı, vade). block: hedef kimliği engellenen satıcı (sellerId; işletme = alıcı).
 export const AUDIT_TARGET_TYPES = [
@@ -110,6 +116,7 @@ export const AUDIT_TARGET_TYPES = [
   'category',
   'brand',
   'activity_type',
+  'product',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

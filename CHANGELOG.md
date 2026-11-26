@@ -64,3 +64,4 @@
 - F3.1: birim kataloğu (units, unit_conversions; admin Birimler ekranı; 19 başlangıç birimi)
 - F3.2a: kategori, marka, faaliyet alanı API (categories, brands, marka talebi; 8 üst + 43 alt kategori)
 - F3.2b: admin kategori, marka (talep onayı), faaliyet alanı ekranları
+- F3.3a: ürün, varyant, ambalaj API'si (migration 0034, RLS, toptancı kategorileri)

@@ -343,6 +343,7 @@ export class ConnectionResponsesService {
           ? null
           : await this.files.objectReadUrl(summary.logo, tenant.businessId),
       description: summary.description,
+      categories: summary.categories,
     };
   }
 

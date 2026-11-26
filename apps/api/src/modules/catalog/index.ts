@@ -23,3 +23,5 @@ export {
 export { CategoriesService, type CategoryView, visibleCategories } from './categories.service';
 // Başka modüllerin FK'ları için tablo tanımları (F3.3a: ürün ve ambalaj birimi, kategori, marka).
 export { brands, categories, unitConversions, units } from './catalog.schema';
+export { ProductStateMachine } from './product.state-machine';
+export { checkOrderQuantity, toBaseQty } from './packaging-rules';

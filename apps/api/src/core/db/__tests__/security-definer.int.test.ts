@@ -50,6 +50,7 @@ const EXPECTED_FUNCTIONS = [
   'outbox_mark_failed',
   'outbox_mark_processed',
   'platform_staff_role',
+  'product_brand_rejected_clear',
   'push_token_register',
   'seller_application_submit',
   'settings_admin_list',
