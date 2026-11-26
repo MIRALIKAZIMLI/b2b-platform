@@ -407,3 +407,17 @@ export async function createBrandRequest(
     await client.query('commit');
   });
 }
+
+/** F3.3b: toptancının bekleyen marka talebini onaylar (admin ekranı F3.2b'de ayrıca denenir). */
+export async function approveBrandRequest(name: string): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    await client.query(
+      `update brands set status = 'active', decided_at = now()
+        where name = $1 and status = 'requested'`,
+      [name],
+    );
+    await client.query('commit');
+  });
+}

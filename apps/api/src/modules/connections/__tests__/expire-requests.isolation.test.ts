@@ -41,16 +41,16 @@ describe('F2.16 süre dolumu izolasyonu ve bekçi', () => {
   const as = <T>(businessId: string, fn: (tx: Tx) => Promise<T>) =>
     withTenantTx({ businessId, userId: null }, fn);
 
-  async function duePair(): Promise<{ buyer: Buyer; id: string }> {
+  async function duePair(expiresAt: Date = PAST): Promise<{ buyer: Buyer; id: string }> {
     const buyer = await newBuyer(region);
     const id = await insertRequest({
       sellerId: seller.businessId,
       buyerId: buyer.businessId,
       sentByUserId: seller.admin.userId,
       status: 'pending',
-      createdAt: new Date(PAST.getTime() - 14 * 86_400_000),
+      createdAt: new Date(expiresAt.getTime() - 14 * 86_400_000),
       sellerLocalDate: '2026-11-01',
-      expiresAt: PAST,
+      expiresAt,
     });
     return { buyer, id };
   }
@@ -92,27 +92,24 @@ describe('F2.16 süre dolumu izolasyonu ve bekçi', () => {
   });
 
   it('F2.16-T5 bağlamsız sistem işlemi: yalnız kimlik kolonları döner, kişisel veri yok', async () => {
-    const { buyer, id } = await duePair();
-    // Paralel test dosyalarının süresi dolmuş istekleri de sıradadır (en eski önce, parti 10);
-    // kendi satırımız dönene ya da sıra boşalana kadar partileri işle.
-    const rows: Record<string, unknown>[] = [];
-    let fields: string[] = [];
-    for (let batch = 0; batch < 100; batch++) {
-      const result = await withSystemTx(async (tx) => {
-        const res = await expire(tx);
-        return { rows: res.rows, fields: res.fields.map((field) => field.name) };
-      });
-      fields = result.fields;
-      rows.push(...result.rows);
-      if (result.rows.length === 0 || rows.some((row) => row.request_id === id)) break;
-    }
-    expect(fields).toEqual(['request_id', 'seller_id', 'buyer_id', 'recipient_user_id']);
-    expect(rows).toContainEqual({
-      request_id: id,
-      seller_id: seller.businessId,
-      buyer_id: buyer.businessId,
-      recipient_user_id: seller.admin.userId,
+    // Müfettiş 26 N1: satırımız sıradaki en eski istek olur (sıra `expires_at, id`); tek partide
+    // (1 satır) yalnız o alınır, paralel test dosyalarının bekleyen istekleri etkilenmez.
+    const { buyer, id } = await duePair(new Date(Date.UTC(2000, 0, 1)));
+    const { rows, fields } = await withSystemTx(async (tx) => {
+      const res = await tx.execute(
+        sql`select * from connection_requests_expire(${new Date().toISOString()}::timestamptz, 1)`,
+      );
+      return { rows: res.rows, fields: res.fields.map((field) => field.name) };
     });
+    expect(fields).toEqual(['request_id', 'seller_id', 'buyer_id', 'recipient_user_id']);
+    expect(rows).toEqual([
+      {
+        request_id: id,
+        seller_id: seller.businessId,
+        buyer_id: buyer.businessId,
+        recipient_user_id: seller.admin.userId,
+      },
+    ]);
     expect(await statusOf(id)).toBe('expired');
   });
 

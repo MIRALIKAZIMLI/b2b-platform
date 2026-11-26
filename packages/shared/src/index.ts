@@ -18,6 +18,7 @@ export * from './role-catalog';
 export * from './units';
 export * from './catalog-taxonomy';
 export * from './products';
+export * from './product-form';
 export * from './seller-setup';
 export * from './branches';
 export * from './settings';

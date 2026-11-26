@@ -129,7 +129,8 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     { key: 'customers', anyOf: ['connections.view'], ready: true, path: 'customers' },
     // F2.12b: gönderilen bağlantı istekleri (US-021); web + mobil.
     { key: 'requests', anyOf: ['connections.request.send'], ready: true, path: 'requests' },
-    soon('products', ['catalog.view']),
+    // F3.3b: ürün listesi ve formu (US-030); yalnız web.
+    { key: 'products', anyOf: ['catalog.view'], ready: true, path: 'products' },
     soon('prices', ['pricing.view']),
     soon('stock', ['inventory.view']),
     soon('orders', ['orders.view', 'orders.prepare']),

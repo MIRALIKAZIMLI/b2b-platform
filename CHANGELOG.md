@@ -65,3 +65,4 @@
 - F3.2a: kategori, marka, faaliyet alanı API (categories, brands, marka talebi; 8 üst + 43 alt kategori)
 - F3.2b: admin kategori, marka (talep onayı), faaliyet alanı ekranları
 - F3.3a: ürün, varyant, ambalaj API'si (migration 0034, RLS, toptancı kategorileri)
+- F3.3b: web ürün listesi ve formu (varyant, ambalaj, marka talebi, görünürlük)

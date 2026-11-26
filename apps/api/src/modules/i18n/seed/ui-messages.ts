@@ -4,7 +4,8 @@
 // F2.6: toptancı ayarları — satıcı profili, depolar, hizmet bölgeleri; F2.7b: ekip ekranı, ekip
 // daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
 // F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım;
-// F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu; F3.2b: kategori, marka, faaliyet alanı).
+// F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu; F3.2b: kategori, marka, faaliyet alanı;
+// F3.3b: toptancı ürün listesi ve formu).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -5359,5 +5360,681 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Brendlər silinmir. Deaktiv brend məhsul formunda seçilmir; mövcud məhsullar dəyişmir.',
     ru: 'Бренды не удаляются. Неактивный бренд нельзя выбрать в форме товара; существующие товары не меняются.',
     tr: 'Markalar silinmez. Pasif marka ürün formunda seçilemez; mevcut ürünler değişmez.',
+  },
+  // F3.3b: toptancı ürün listesi ve formu (US-030).
+  'products.eyebrow': {
+    az: 'Kataloq',
+    ru: 'Каталог',
+    tr: 'Katalog',
+  },
+  'products.title': {
+    az: 'Məhsullar',
+    ru: 'Товары',
+    tr: 'Ürünler',
+  },
+  'products.description': {
+    az: 'Məhsul kartları, variantlar və qablaşdırma səviyyələri. Dərc edilən məhsulu bağlı pərakəndəçilər görür.',
+    ru: 'Карточки товаров, варианты и уровни упаковки. Опубликованный товар видят подключённые розничные покупатели.',
+    tr: 'Ürün kartları, varyantlar ve ambalaj seviyeleri. Yayımlanan ürünü bağlı perakendeciler görür.',
+  },
+  'products.create_open': {
+    az: 'Yeni məhsul',
+    ru: 'Новый товар',
+    tr: 'Yeni ürün',
+  },
+  'products.tabs_label': {
+    az: 'Məhsul statusu',
+    ru: 'Статус товара',
+    tr: 'Ürün durumu',
+  },
+  'products.tab.all': {
+    az: 'Hamısı',
+    ru: 'Все',
+    tr: 'Tümü',
+  },
+  'products.tab.draft': {
+    az: 'Qaralama',
+    ru: 'Черновики',
+    tr: 'Taslak',
+  },
+  'products.tab.active': {
+    az: 'Satışda',
+    ru: 'В продаже',
+    tr: 'Satışta',
+  },
+  'products.tab.archived': {
+    az: 'Arxiv',
+    ru: 'Архив',
+    tr: 'Arşiv',
+  },
+  'products.status.draft': {
+    az: 'Qaralama',
+    ru: 'Черновик',
+    tr: 'Taslak',
+  },
+  'products.status.active': {
+    az: 'Satışda',
+    ru: 'В продаже',
+    tr: 'Satışta',
+  },
+  'products.status.archived': {
+    az: 'Arxivdə',
+    ru: 'В архиве',
+    tr: 'Arşivde',
+  },
+  'products.search_label': {
+    az: 'Məhsul axtar',
+    ru: 'Поиск товара',
+    tr: 'Ürün ara',
+  },
+  'products.search_placeholder': {
+    az: 'Ad və ya SKU',
+    ru: 'Название или SKU',
+    tr: 'Ad veya SKU',
+  },
+  'products.empty.all': {
+    az: 'Hələ məhsul yoxdur.',
+    ru: 'Товаров пока нет.',
+    tr: 'Henüz ürün yok.',
+  },
+  'products.empty.draft': {
+    az: 'Qaralama yoxdur.',
+    ru: 'Черновиков нет.',
+    tr: 'Taslak yok.',
+  },
+  'products.empty.active': {
+    az: 'Satışda olan məhsul yoxdur.',
+    ru: 'Товаров в продаже нет.',
+    tr: 'Satışta ürün yok.',
+  },
+  'products.empty.archived': {
+    az: 'Arxivdə məhsul yoxdur.',
+    ru: 'В архиве нет товаров.',
+    tr: 'Arşivde ürün yok.',
+  },
+  'products.empty_hint': {
+    az: 'İlk məhsulu "Yeni məhsul" ilə əlavə edin.',
+    ru: 'Добавьте первый товар кнопкой «Новый товар».',
+    tr: 'İlk ürünü "Yeni ürün" ile ekleyin.',
+  },
+  'products.no_match': {
+    az: 'Axtarışa uyğun məhsul tapılmadı.',
+    ru: 'По запросу товары не найдены.',
+    tr: 'Aramaya uygun ürün bulunamadı.',
+  },
+  'products.load_more': {
+    az: 'Daha çox',
+    ru: 'Показать ещё',
+    tr: 'Daha fazla',
+  },
+  'products.variant_count': {
+    az: '{count} variant',
+    ru: '{count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}}',
+    tr: '{count} varyant',
+  },
+  'products.updated_on': {
+    az: 'Yeniləndi: {date}',
+    ru: 'Обновлено: {date}',
+    tr: 'Güncellendi: {date}',
+  },
+  'products.back': {
+    az: 'Məhsullar',
+    ru: 'Товары',
+    tr: 'Ürünler',
+  },
+  'products.create_title': {
+    az: 'Yeni məhsul',
+    ru: 'Новый товар',
+    tr: 'Yeni ürün',
+  },
+  'products.create_description': {
+    az: 'Məhsul qaralama kimi yaradılır; yoxladıqdan sonra dərc edin.',
+    ru: 'Товар создаётся как черновик; опубликуйте после проверки.',
+    tr: 'Ürün taslak olarak oluşturulur; kontrol ettikten sonra yayımlayın.',
+  },
+  'products.edit_description': {
+    az: 'Dəyişikliklər "Yadda saxla" ilə qeyd olunur.',
+    ru: 'Изменения сохраняются кнопкой «Сохранить».',
+    tr: 'Değişiklikler "Kaydet" ile kaydedilir.',
+  },
+  'products.archived_notice': {
+    az: 'Məhsul arxivdədir və redaktə olunmur. Dəyişmək üçün qaralamaya qaytarın.',
+    ru: 'Товар в архиве и не редактируется. Чтобы изменить, верните его в черновики.',
+    tr: 'Ürün arşivde ve düzenlenemez. Değiştirmek için taslağa geri alın.',
+  },
+  'products.read_only_notice': {
+    az: 'Məhsulları yalnız görmək icazəniz var.',
+    ru: 'У вас есть право только на просмотр товаров.',
+    tr: 'Ürünleri yalnızca görme izniniz var.',
+  },
+  'products.fix_errors': {
+    az: 'Qeyd olunan sahələri düzəldin.',
+    ru: 'Исправьте отмеченные поля.',
+    tr: 'İşaretli alanları düzeltin.',
+  },
+  'products.error_state': {
+    az: 'Məhsulun statusu dəyişib. Səhifəni yeniləyin.',
+    ru: 'Статус товара изменился. Обновите страницу.',
+    tr: 'Ürünün durumu değişti. Sayfayı yenileyin.',
+  },
+  'products.created': {
+    az: 'Qaralama yaradıldı.',
+    ru: 'Черновик создан.',
+    tr: 'Taslak oluşturuldu.',
+  },
+  'products.saved': {
+    az: 'Yadda saxlanıldı.',
+    ru: 'Сохранено.',
+    tr: 'Kaydedildi.',
+  },
+  'products.published': {
+    az: 'Məhsul dərc edildi.',
+    ru: 'Товар опубликован.',
+    tr: 'Ürün yayımlandı.',
+  },
+  'products.archived': {
+    az: 'Məhsul arxivləndi.',
+    ru: 'Товар перенесён в архив.',
+    tr: 'Ürün arşivlendi.',
+  },
+  'products.restored': {
+    az: 'Məhsul qaralamaya qaytarıldı.',
+    ru: 'Товар возвращён в черновики.',
+    tr: 'Ürün taslağa geri alındı.',
+  },
+  'products.section.basic': {
+    az: 'Əsas məlumat',
+    ru: 'Основные данные',
+    tr: 'Temel bilgiler',
+  },
+  'products.section.classification': {
+    az: 'Təsnifat',
+    ru: 'Классификация',
+    tr: 'Sınıflandırma',
+  },
+  'products.section.variants': {
+    az: 'Variantlar',
+    ru: 'Варианты',
+    tr: 'Varyantlar',
+  },
+  'products.section.variants_hint': {
+    az: 'Hər variantın öz SKU-su və qablaşdırma səviyyələri var.',
+    ru: 'У каждого варианта свой SKU и уровни упаковки.',
+    tr: "Her varyantın kendi SKU'su ve ambalaj seviyeleri vardır.",
+  },
+  'products.section.visibility': {
+    az: 'Görünürlük',
+    ru: 'Видимость',
+    tr: 'Görünürlük',
+  },
+  'products.section.visibility_hint': {
+    az: 'Məhsulu hansı pərakəndəçilərin görəcəyi.',
+    ru: 'Какие розничные покупатели увидят товар.',
+    tr: 'Ürünü hangi perakendecilerin göreceği.',
+  },
+  'products.language_tabs': {
+    az: 'Dil',
+    ru: 'Язык',
+    tr: 'Dil',
+  },
+  'products.field.sku': {
+    az: 'Məhsul SKU',
+    ru: 'SKU товара',
+    tr: 'Ürün SKU',
+  },
+  'products.field.sku_hint': {
+    az: 'Hərf, rəqəm, . _ - /; boşluqsuz.',
+    ru: 'Буквы, цифры, . _ - /; без пробелов.',
+    tr: 'Harf, rakam, . _ - /; boşluksuz.',
+  },
+  'products.field.name': {
+    az: 'Ad ({lang})',
+    ru: 'Название ({lang})',
+    tr: 'Ad ({lang})',
+  },
+  'products.field.name_hint': {
+    az: 'Ən azı bir dildə doldurun; boş dildə başqa dildəki ad göstərilir.',
+    ru: 'Заполните хотя бы на одном языке; для пустого языка показывается название на другом.',
+    tr: 'En az bir dilde doldurun; boş dilde başka dildeki ad gösterilir.',
+  },
+  'products.field.description': {
+    az: 'Təsvir ({lang})',
+    ru: 'Описание ({lang})',
+    tr: 'Açıklama ({lang})',
+  },
+  'products.field.category': {
+    az: 'Kateqoriya',
+    ru: 'Категория',
+    tr: 'Kategori',
+  },
+  'products.field.category_placeholder': {
+    az: 'Kateqoriya seçin',
+    ru: 'Выберите категорию',
+    tr: 'Kategori seçin',
+  },
+  'products.category_unavailable_option': {
+    az: 'Hazırkı kateqoriya (deaktiv)',
+    ru: 'Текущая категория (неактивна)',
+    tr: 'Mevcut kategori (pasif)',
+  },
+  'products.category_unavailable': {
+    az: 'Bu kateqoriya artıq aktiv deyil. Pərakəndəçilər üçün aktiv kateqoriya seçin.',
+    ru: 'Эта категория больше не активна. Выберите активную категорию для покупателей.',
+    tr: 'Bu kategori artık aktif değil. Perakendeciler için aktif bir kategori seçin.',
+  },
+  'products.field.brand': {
+    az: 'Brend',
+    ru: 'Бренд',
+    tr: 'Marka',
+  },
+  'products.field.base_unit': {
+    az: 'Əsas ölçü vahidi',
+    ru: 'Базовая единица',
+    tr: 'Temel birim',
+  },
+  'products.field.base_unit_hint': {
+    az: 'Qalıq və miqdarlar bu vahidlə hesablanır.',
+    ru: 'Остатки и количества считаются в этой единице.',
+    tr: 'Stok ve miktarlar bu birimle hesaplanır.',
+  },
+  'products.field.has_expiry': {
+    az: 'Son istifadə tarixi var',
+    ru: 'Есть срок годности',
+    tr: 'Son kullanma tarihi var',
+  },
+  'products.field.shelf_life': {
+    az: 'Saxlama müddəti (ay)',
+    ru: 'Срок хранения (мес.)',
+    tr: 'Raf ömrü (ay)',
+  },
+  'products.field.variant_sku': {
+    az: 'Variant SKU',
+    ru: 'SKU варианта',
+    tr: 'Varyant SKU',
+  },
+  'products.field.gtin': {
+    az: 'Barkod (GTIN)',
+    ru: 'Штрихкод (GTIN)',
+    tr: 'Barkod (GTIN)',
+  },
+  'products.field.gtin_hint': {
+    az: '8, 12, 13 və ya 14 rəqəm; məcburi deyil.',
+    ru: '8, 12, 13 или 14 цифр; необязательно.',
+    tr: '8, 12, 13 veya 14 hane; zorunlu değil.',
+  },
+  'products.brand.none': {
+    az: 'Brendsiz',
+    ru: 'Без бренда',
+    tr: 'Markasız',
+  },
+  'products.brand.pending': {
+    az: 'Təsdiq gözləyir',
+    ru: 'Ожидает одобрения',
+    tr: 'Onay bekliyor',
+  },
+  'products.brand.choose': {
+    az: 'Brend seç',
+    ru: 'Выбрать бренд',
+    tr: 'Marka seç',
+  },
+  'products.brand.change': {
+    az: 'Dəyiş',
+    ru: 'Изменить',
+    tr: 'Değiştir',
+  },
+  'products.brand.clear': {
+    az: 'Brendi sil',
+    ru: 'Убрать бренд',
+    tr: 'Markayı kaldır',
+  },
+  'products.brand.search_label': {
+    az: 'Brend axtar',
+    ru: 'Поиск бренда',
+    tr: 'Marka ara',
+  },
+  'products.brand.search_placeholder': {
+    az: 'Brend adı',
+    ru: 'Название бренда',
+    tr: 'Marka adı',
+  },
+  'products.brand.results': {
+    az: 'Brendlər',
+    ru: 'Бренды',
+    tr: 'Markalar',
+  },
+  'products.brand.no_match': {
+    az: 'Uyğun brend yoxdur.',
+    ru: 'Подходящих брендов нет.',
+    tr: 'Uygun marka yok.',
+  },
+  'products.brand.request_hint': {
+    az: 'Siyahıda yoxdursa, platformaya sorğu göndərin. Təsdiqə qədər məhsul qaralama kimi saxlanılır.',
+    ru: 'Если бренда нет в списке, отправьте запрос платформе. До одобрения товар сохраняется как черновик.',
+    tr: 'Listede yoksa platforma talep gönderin. Onaya kadar ürün taslak olarak kaydedilir.',
+  },
+  'products.brand.request': {
+    az: '«{name}» üçün sorğu göndər',
+    ru: 'Запросить «{name}»',
+    tr: '«{name}» için talep gönder',
+  },
+  'products.brand.request_taken': {
+    az: 'Bu adda brend və ya sorğu artıq var; siyahıdan seçin.',
+    ru: 'Бренд или запрос с таким названием уже есть; выберите из списка.',
+    tr: 'Bu adda marka veya talep zaten var; listeden seçin.',
+  },
+  'products.brand.pending_hint': {
+    az: 'Brend təsdiqlənənə qədər məhsul dərc edilə bilməz.',
+    ru: 'Пока бренд не одобрен, товар нельзя опубликовать.',
+    tr: 'Marka onaylanana kadar ürün yayımlanamaz.',
+  },
+  'products.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'İptal',
+  },
+  'products.publish_blocked_brand': {
+    az: 'Dərc üçün brendin təsdiqi gözlənilir.',
+    ru: 'Для публикации нужно одобрение бренда.',
+    tr: 'Yayın için markanın onayı bekleniyor.',
+  },
+  'products.action.save_draft': {
+    az: 'Qaralama kimi saxla',
+    ru: 'Сохранить черновик',
+    tr: 'Taslak olarak kaydet',
+  },
+  'products.action.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'products.action.publish': {
+    az: 'Dərc et',
+    ru: 'Опубликовать',
+    tr: 'Yayımla',
+  },
+  'products.action.archive': {
+    az: 'Arxivlə',
+    ru: 'В архив',
+    tr: 'Arşivle',
+  },
+  'products.action.restore': {
+    az: 'Qaralamaya qaytar',
+    ru: 'Вернуть в черновики',
+    tr: 'Taslağa geri al',
+  },
+  'products.visibility.all': {
+    az: 'Bütün bağlı pərakəndəçilər',
+    ru: 'Все подключённые покупатели',
+    tr: 'Tüm bağlı perakendeciler',
+  },
+  'products.visibility.all_hint': {
+    az: 'Bölgə məhdudiyyəti yoxdur.',
+    ru: 'Без ограничения по региону.',
+    tr: 'Bölge kısıtı yok.',
+  },
+  'products.visibility.selected': {
+    az: 'Yalnız seçilən bölgələr',
+    ru: 'Только выбранные регионы',
+    tr: 'Yalnız seçilen bölgeler',
+  },
+  'products.visibility.selected_hint': {
+    az: 'Pərakəndəçinin bölgəsi siyahıda olmalıdır.',
+    ru: 'Регион покупателя должен быть в списке.',
+    tr: 'Perakendecinin bölgesi listede olmalı.',
+  },
+  'products.visibility.selected_list': {
+    az: 'Seçilən bölgələr',
+    ru: 'Выбранные регионы',
+    tr: 'Seçilen bölgeler',
+  },
+  'products.visibility.search_label': {
+    az: 'Bölgə axtar',
+    ru: 'Поиск региона',
+    tr: 'Bölge ara',
+  },
+  'products.visibility.search_placeholder': {
+    az: 'Şəhər və ya rayon',
+    ru: 'Город или район',
+    tr: 'Şehir veya ilçe',
+  },
+  'products.variant.add': {
+    az: 'Variant əlavə et',
+    ru: 'Добавить вариант',
+    tr: 'Varyant ekle',
+  },
+  'products.variant.title_new': {
+    az: 'Yeni variant',
+    ru: 'Новый вариант',
+    tr: 'Yeni varyant',
+  },
+  'products.variant.new': {
+    az: 'yeni',
+    ru: 'новый',
+    tr: 'yeni',
+  },
+  'products.variant.remove': {
+    az: 'Variantı çıxar',
+    ru: 'Убрать вариант',
+    tr: 'Varyantı kaldır',
+  },
+  'products.variant.archived': {
+    az: 'Arxivdəki variantlar ({count})',
+    ru: 'Варианты в архиве ({count})',
+    tr: 'Arşivdeki varyantlar ({count})',
+  },
+  'products.variant.archived_hint': {
+    az: 'Çıxarılan variant yadda saxlayanda arxivlənir; SKU-su yenidən istifadə olunmur.',
+    ru: 'Убранный вариант при сохранении уходит в архив; его SKU нельзя использовать снова.',
+    tr: "Kaldırılan varyant kaydedince arşivlenir; SKU'su yeniden kullanılamaz.",
+  },
+  'products.variant.restore': {
+    az: 'Bərpa et',
+    ru: 'Восстановить',
+    tr: 'Geri al',
+  },
+  'products.attribute.title': {
+    az: 'Xüsusiyyətlər',
+    ru: 'Характеристики',
+    tr: 'Özellikler',
+  },
+  'products.attribute.add': {
+    az: 'Xüsusiyyət əlavə et',
+    ru: 'Добавить характеристику',
+    tr: 'Özellik ekle',
+  },
+  'products.attribute.empty': {
+    az: 'Məsələn: həcm → 400 ml, rəng → qırmızı.',
+    ru: 'Например: объём → 400 мл, цвет → красный.',
+    tr: 'Örneğin: hacim → 400 ml, renk → kırmızı.',
+  },
+  'products.attribute.key': {
+    az: 'Xüsusiyyət adı',
+    ru: 'Название характеристики',
+    tr: 'Özellik adı',
+  },
+  'products.attribute.key_placeholder': {
+    az: 'həcm',
+    ru: 'объём',
+    tr: 'hacim',
+  },
+  'products.attribute.value': {
+    az: 'Dəyər',
+    ru: 'Значение',
+    tr: 'Değer',
+  },
+  'products.attribute.value_placeholder': {
+    az: '400 ml',
+    ru: '400 мл',
+    tr: '400 ml',
+  },
+  'products.attribute.remove': {
+    az: 'Xüsusiyyəti sil',
+    ru: 'Удалить характеристику',
+    tr: 'Özelliği sil',
+  },
+  'products.packaging.title': {
+    az: 'Qablaşdırma səviyyələri',
+    ru: 'Уровни упаковки',
+    tr: 'Ambalaj seviyeleri',
+  },
+  'products.packaging.hint': {
+    az: 'Ədəd → daxili paket → qutu → palet; pərakəndəçi yalnız satış vahidində sifariş verir.',
+    ru: 'Штука → внутренняя упаковка → коробка → паллета; покупатель заказывает только в единицах продажи.',
+    tr: 'Adet → iç paket → koli → palet; perakendeci yalnız satış biriminde sipariş verir.',
+  },
+  'products.packaging.add': {
+    az: '{level} əlavə et',
+    ru: 'Добавить: {level}',
+    tr: '{level} ekle',
+  },
+  'products.packaging.remove': {
+    az: 'Səviyyəni sil',
+    ru: 'Удалить уровень',
+    tr: 'Seviyeyi sil',
+  },
+  'products.packaging.unit': {
+    az: 'Vahid',
+    ru: 'Единица',
+    tr: 'Birim',
+  },
+  'products.packaging.baseQty': {
+    az: 'İçindəki əsas vahid',
+    ru: 'Базовых единиц внутри',
+    tr: 'İçindeki temel birim',
+  },
+  'products.packaging.isSalesUnit': {
+    az: 'Satış vahidi',
+    ru: 'Единица продажи',
+    tr: 'Satış birimi',
+  },
+  'products.packaging.sales_unit_badge': {
+    az: 'Satış vahidi',
+    ru: 'Единица продажи',
+    tr: 'Satış birimi',
+  },
+  'products.packaging.minOrderQty': {
+    az: 'Minimum sifariş',
+    ru: 'Минимальный заказ',
+    tr: 'En az sipariş',
+  },
+  'products.packaging.orderMultiple': {
+    az: 'Sifariş addımı',
+    ru: 'Кратность заказа',
+    tr: 'Sipariş katı',
+  },
+  'products.level.unit': {
+    az: 'Ədəd',
+    ru: 'Штука',
+    tr: 'Adet',
+  },
+  'products.level.inner': {
+    az: 'Daxili paket',
+    ru: 'Внутренняя упаковка',
+    tr: 'İç paket',
+  },
+  'products.level.case': {
+    az: 'Qutu',
+    ru: 'Коробка',
+    tr: 'Koli',
+  },
+  'products.level.pallet': {
+    az: 'Palet',
+    ru: 'Паллета',
+    tr: 'Palet',
+  },
+  'products.error.required': {
+    az: 'Bu sahə məcburidir.',
+    ru: 'Обязательное поле.',
+    tr: 'Bu alan zorunludur.',
+  },
+  'products.error.invalid': {
+    az: 'Dəyər yanlışdır.',
+    ru: 'Неверное значение.',
+    tr: 'Değer geçersiz.',
+  },
+  'products.error.too_long': {
+    az: 'Çox uzundur.',
+    ru: 'Слишком длинно.',
+    tr: 'Çok uzun.',
+  },
+  'products.error.taken': {
+    az: 'Bu SKU artıq istifadə olunur.',
+    ru: 'Этот SKU уже используется.',
+    tr: 'Bu SKU zaten kullanılıyor.',
+  },
+  'products.error.duplicate': {
+    az: 'Təkrarlanır.',
+    ru: 'Повторяется.',
+    tr: 'Tekrarlanıyor.',
+  },
+  'products.error.invalid_gtin': {
+    az: 'Barkod yanlışdır (nəzarət rəqəmi uyğun gəlmir).',
+    ru: 'Неверный штрихкод (не сходится контрольная цифра).',
+    tr: 'Barkod geçersiz (kontrol hanesi tutmuyor).',
+  },
+  'products.error.positive': {
+    az: 'Sıfırdan böyük olmalıdır.',
+    ru: 'Должно быть больше нуля.',
+    tr: 'Sıfırdan büyük olmalı.',
+  },
+  'products.error.inactive': {
+    az: 'Bu qeyd artıq aktiv deyil; başqasını seçin.',
+    ru: 'Эта запись больше не активна; выберите другую.',
+    tr: 'Bu kayıt artık aktif değil; başka birini seçin.',
+  },
+  'products.error.not_found': {
+    az: 'Tapılmadı.',
+    ru: 'Не найдено.',
+    tr: 'Bulunamadı.',
+  },
+  'products.error.not_approved': {
+    az: 'Brend hələ təsdiqlənməyib; məhsul dərc edilə bilməz.',
+    ru: 'Бренд ещё не одобрен; товар нельзя опубликовать.',
+    tr: 'Marka henüz onaylanmadı; ürün yayımlanamaz.',
+  },
+  'products.error.must_be_one': {
+    az: 'Ədəd səviyyəsində miqdar 1 olmalıdır.',
+    ru: 'Для уровня «штука» количество должно быть 1.',
+    tr: 'Adet seviyesinde miktar 1 olmalı.',
+  },
+  'products.error.must_match_base_unit': {
+    az: 'Ədəd səviyyəsinin vahidi əsas vahid olmalıdır.',
+    ru: 'Единица уровня «штука» должна совпадать с базовой.',
+    tr: 'Adet seviyesinin birimi temel birim olmalı.',
+  },
+  'products.error.integer_required': {
+    az: 'Bu vahiddə tam ədəd olmalıdır.',
+    ru: 'Для этой единицы нужно целое число.',
+    tr: 'Bu birimde tam sayı olmalı.',
+  },
+  'products.error.not_multiple_of_order_multiple': {
+    az: 'Minimum sifariş sifariş addımının qatı olmalıdır.',
+    ru: 'Минимальный заказ должен быть кратен шагу заказа.',
+    tr: 'En az sipariş, sipariş katının katı olmalı.',
+  },
+  'products.error.not_increasing': {
+    az: 'Böyük səviyyə əvvəlkindən çox əsas vahid saxlamalıdır.',
+    ru: 'Больший уровень должен содержать больше базовых единиц, чем предыдущий.',
+    tr: 'Büyük seviye öncekinden fazla temel birim içermeli.',
+  },
+  'products.error.sales_unit_required': {
+    az: 'Ən azı bir satış vahidi seçin.',
+    ru: 'Выберите хотя бы одну единицу продажи.',
+    tr: 'En az bir satış birimi seçin.',
+  },
+  'products.error.must_be_empty': {
+    az: 'Son istifadə tarixi olmayan məhsulda boş qalmalıdır.',
+    ru: 'Для товара без срока годности поле должно быть пустым.',
+    tr: 'Son kullanma tarihi olmayan üründe boş kalmalı.',
+  },
+  'products.error.too_many': {
+    az: 'Çox sayda dəyər.',
+    ru: 'Слишком много значений.',
+    tr: 'Çok fazla değer.',
+  },
+  'products.error.regions_required': {
+    az: 'Ən azı bir bölgə seçin.',
+    ru: 'Выберите хотя бы один регион.',
+    tr: 'En az bir bölge seçin.',
   },
 };
