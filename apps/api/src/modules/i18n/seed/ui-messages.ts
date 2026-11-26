@@ -6042,6 +6042,136 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Слишком много значений.',
     tr: 'Çok fazla değer.',
   },
+  'products.images.title': {
+    az: 'Şəkillər',
+    ru: 'Изображения',
+    tr: 'Görseller',
+  },
+  'products.images.description': {
+    az: 'JPEG, PNG və ya WebP. İlk şəkil örtük şəklidir; sıranı oxlarla dəyişin.',
+    ru: 'JPEG, PNG или WebP. Первое изображение — обложка; порядок меняется стрелками.',
+    tr: 'JPEG, PNG veya WebP. İlk görsel kapak görselidir; sırayı oklarla değiştirin.',
+  },
+  'products.images.save_first': {
+    az: 'Şəkil əlavə etmək üçün əvvəlcə məhsulu qaralama kimi saxlayın.',
+    ru: 'Чтобы добавить изображения, сначала сохраните товар как черновик.',
+    tr: 'Görsel eklemek için önce ürünü taslak olarak kaydedin.',
+  },
+  'products.images.add': {
+    az: 'Şəkil əlavə et',
+    ru: 'Добавить изображение',
+    tr: 'Görsel ekle',
+  },
+  'products.images.uploading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'products.images.processing': {
+    az: 'Hazırlanır…',
+    ru: 'Обрабатывается…',
+    tr: 'Hazırlanıyor…',
+  },
+  'products.images.failed': {
+    az: 'Şəkil emal olunmadı. Silib yenidən yükləyin.',
+    ru: 'Не удалось обработать. Удалите и загрузите снова.',
+    tr: 'Görsel işlenemedi. Silip yeniden yükleyin.',
+  },
+  'products.images.cover': {
+    az: 'Örtük',
+    ru: 'Обложка',
+    tr: 'Kapak',
+  },
+  'products.images.make_cover': {
+    az: 'Örtük et',
+    ru: 'Сделать обложкой',
+    tr: 'Kapak yap',
+  },
+  'products.images.move_left': {
+    az: 'Şəkil {position}: sola köçür',
+    ru: 'Переместить изображение {position} влево',
+    tr: 'Görsel {position}: sola taşı',
+  },
+  'products.images.move_right': {
+    az: 'Şəkil {position}: sağa köçür',
+    ru: 'Переместить изображение {position} вправо',
+    tr: 'Görsel {position}: sağa taşı',
+  },
+  'products.images.remove': {
+    az: 'Sil',
+    ru: 'Удалить',
+    tr: 'Sil',
+  },
+  'products.images.remove_label': {
+    az: 'Şəkil {position}: sil',
+    ru: 'Удалить изображение {position}',
+    tr: 'Görsel {position}: sil',
+  },
+  'products.images.alt': {
+    az: 'Məhsul şəkli {position}',
+    ru: 'Изображение товара {position}',
+    tr: 'Ürün görseli {position}',
+  },
+  'products.images.empty': {
+    az: 'Şəkil yoxdur.',
+    ru: 'Изображений нет.',
+    tr: 'Görsel yok.',
+  },
+  'products.images.notice.uploaded': {
+    az: 'Şəkil yükləndi.',
+    ru: 'Изображение загружено.',
+    tr: 'Görsel yüklendi.',
+  },
+  'products.images.notice.removed': {
+    az: 'Şəkil silindi.',
+    ru: 'Изображение удалено.',
+    tr: 'Görsel silindi.',
+  },
+  'products.images.notice.reordered': {
+    az: 'Sıra yadda saxlanıldı.',
+    ru: 'Порядок сохранён.',
+    tr: 'Sıra kaydedildi.',
+  },
+  'products.images.error.type': {
+    az: 'Yalnız JPEG, PNG və ya WebP faylı seçin.',
+    ru: 'Выберите файл JPEG, PNG или WebP.',
+    tr: 'Yalnız JPEG, PNG veya WebP dosyası seçin.',
+  },
+  'products.images.error.size': {
+    az: 'Fayl çox böyükdür.',
+    ru: 'Файл слишком большой.',
+    tr: 'Dosya çok büyük.',
+  },
+  'products.images.error.limit': {
+    az: 'Bu məhsul üçün şəkil limitinə çatdınız.',
+    ru: 'Достигнут лимит изображений для товара.',
+    tr: 'Bu ürün için görsel sınırına ulaştınız.',
+  },
+  'products.images.error.failed': {
+    az: 'Əməliyyat alınmadı. Yenidən cəhd edin.',
+    ru: 'Не удалось выполнить. Попробуйте снова.',
+    tr: 'İşlem yapılamadı. Tekrar deneyin.',
+  },
+  'products.discard.title': {
+    az: 'Saxlanmamış dəyişikliklər var',
+    ru: 'Есть несохранённые изменения',
+    tr: 'Kaydedilmemiş değişiklikler var',
+  },
+  'products.discard.body': {
+    az: 'Məhsulu arxivləsəniz, saxlanmamış dəyişikliklər itəcək.',
+    ru: 'Если архивировать товар, несохранённые изменения пропадут.',
+    tr: 'Ürünü arşivlerseniz kaydedilmemiş değişiklikler kaybolur.',
+  },
+  'products.discard.cancel': {
+    az: 'Geri qayıt',
+    ru: 'Вернуться',
+    tr: 'Geri dön',
+  },
+  'products.discard.confirm': {
+    az: 'Yenə də arxivlə',
+    ru: 'Всё равно архивировать',
+    tr: 'Yine de arşivle',
+  },
   'products.error.regions_required': {
     az: 'Ən azı bir bölgə seçin.',
     ru: 'Выберите хотя бы один регион.',

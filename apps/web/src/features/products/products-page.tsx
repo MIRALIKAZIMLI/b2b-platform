@@ -207,25 +207,33 @@ function ProductRow({
         href={href}
         className="group flex flex-col gap-3 px-6 py-5 transition-colors duration-200 hover:bg-slate-50/70 focus-visible:bg-slate-50 focus-visible:outline-none lg:flex-row lg:items-center lg:justify-between"
       >
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-base font-semibold break-words text-slate-900 group-hover:text-indigo-700">
-              {name}
-            </p>
-            <StatusBadge status={item.status} />
-          </div>
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500">
-            <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">
-              {item.sku}
-            </span>
-            {item.brand !== null && <span>{item.brand.name}</span>}
-            {category !== undefined && (
-              <>
-                <span className="text-slate-300">·</span>
-                <span className="break-words">{category}</span>
-              </>
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-slate-100 shadow-sm">
+            {item.thumbUrl !== null && (
+              // F3.4b: kapak görselinin 200 px kopyası (dış depo adresi).
+              <img src={item.thumbUrl} alt="" className="h-full w-full object-cover" />
             )}
-          </p>
+          </div>
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-base font-semibold break-words text-slate-900 group-hover:text-indigo-700">
+                {name}
+              </p>
+              <StatusBadge status={item.status} />
+            </div>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500">
+              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">
+                {item.sku}
+              </span>
+              {item.brand !== null && <span>{item.brand.name}</span>}
+              {category !== undefined && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="break-words">{category}</span>
+                </>
+              )}
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-4 text-sm text-slate-500 tabular-nums">
           <span>{t('variant_count', { count: item.activeVariantCount })}</span>
