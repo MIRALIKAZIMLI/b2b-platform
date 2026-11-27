@@ -6,6 +6,7 @@
 // - AC3: depo silinmez, yalnız pasifleştirilir (DELETE ucu yok). Varsayılan depo pasifleştirilemez,
 //   pasif depo varsayılan yapılamaz → `409 INVALID_STATE_TRANSITION`.
 import { Inject, Injectable } from '@nestjs/common';
+import type { SelectableStockMode, StockMode } from '@b2b/shared';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
 import { type Tx, withTenantTx } from '../../core/db';
@@ -38,6 +39,7 @@ export interface SellerProfileUpdate {
   readonly description?: Record<string, string> | null | undefined;
   readonly minOrderAmount?: string | null | undefined;
   readonly requireDeliveryPhoto?: boolean | undefined;
+  readonly stockMode?: SelectableStockMode | undefined;
 }
 
 /** Profil satırı yoksa (eski veri) varsayılanlar; F2.1a her toptancıya satır açar. */
@@ -46,6 +48,7 @@ export interface SellerProfileView {
   readonly minOrderAmount: string | null;
   readonly requireDeliveryPhoto: boolean;
   readonly defaultWarehouseId: string | null;
+  readonly stockMode: StockMode;
 }
 
 function toProfileView(row: SellerProfileRow | undefined): SellerProfileView {
@@ -54,6 +57,8 @@ function toProfileView(row: SellerProfileRow | undefined): SellerProfileView {
     minOrderAmount: row?.minOrderAmount ?? null,
     requireDeliveryPhoto: row?.requireDeliveryPhoto ?? false,
     defaultWarehouseId: row?.defaultWarehouseId ?? null,
+    // Kolon CHECK ile üç değerden biri (data-model §seller_profiles); satır yoksa varsayılan.
+    stockMode: (row?.stockMode as StockMode | undefined) ?? 'availability',
   };
 }
 
@@ -64,6 +69,7 @@ function profilePatch(input: SellerProfileUpdate): SellerProfilePatch {
     ...(input.requireDeliveryPhoto === undefined
       ? {}
       : { requireDeliveryPhoto: input.requireDeliveryPhoto }),
+    ...(input.stockMode === undefined ? {} : { stockMode: input.stockMode }),
   };
 }
 

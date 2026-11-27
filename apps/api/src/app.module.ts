@@ -33,6 +33,7 @@ import { IdentityModule } from './modules/identity';
 import { NotificationsModule } from './modules/notifications';
 import { OnboardingModule } from './modules/onboarding';
 import { PlatformAdminModule } from './modules/platform-admin';
+import { InventoryModule } from './modules/inventory';
 import { PriceListAssignmentPortModule, PricingModule } from './modules/pricing';
 import { SettingsModule } from './modules/settings';
 
@@ -77,6 +78,7 @@ export class AppModule implements NestModule {
         BusinessLogoPortModule,
         PricingModule,
         PriceListAssignmentPortModule,
+        InventoryModule,
         ImportsModule,
         SearchModule.forRoot({ url: env.MEILI_URL, apiKey: env.MEILI_MASTER_KEY }),
         DirectoryApiModule,

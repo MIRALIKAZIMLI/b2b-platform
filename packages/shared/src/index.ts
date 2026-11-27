@@ -26,6 +26,7 @@ export * from './product-form';
 export * from './seller-setup';
 export * from './branches';
 export * from './settings';
+export * from './stock';
 export * from './team';
 export * from './team-roles';
 export * from './uuidv7';

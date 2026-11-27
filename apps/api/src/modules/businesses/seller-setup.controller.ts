@@ -10,7 +10,11 @@ import {
   Put,
   Req,
 } from '@nestjs/common';
-import { MIN_ORDER_AMOUNT_PATTERN, SELLER_DESCRIPTION_MAX } from '@b2b/shared';
+import {
+  MIN_ORDER_AMOUNT_PATTERN,
+  SELECTABLE_STOCK_MODES,
+  SELLER_DESCRIPTION_MAX,
+} from '@b2b/shared';
 import { z } from 'zod';
 import { type AuditHttpRequest, requestAuditContext } from '../../core/audit';
 import { RequirePermission } from '../../core/auth/access-decorators';
@@ -60,6 +64,8 @@ const sellerProfileUpdateSchema = z
       .transform((value) => (value === null || Object.keys(value).length === 0 ? null : value)),
     minOrderAmount: z.string().regex(MIN_ORDER_AMOUNT_PATTERN, 'invalid_amount').nullable(),
     requireDeliveryPhoto: z.boolean(),
+    // F3.10 (US-038 AC1): `quantity` iki adımlı geçişle F3.11a'da (S5 = B); bugün 422.
+    stockMode: z.enum(SELECTABLE_STOCK_MODES),
   })
   .partial()
   .refine((body) => Object.keys(body).length > 0, { message: 'empty_body' });

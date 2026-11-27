@@ -1,6 +1,7 @@
 // Toptancı kurulumu (F2.6, US-011): depolar, satıcı profili, hizmet bölgeleri. Tüm yöntemler
 // çağıranın kiracı işleminde çalışır; RLS başka işletmenin satırını göstermez ve yazdırmaz.
 import { Injectable } from '@nestjs/common';
+import type { SelectableStockMode } from '@b2b/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Tx } from '../../core/db';
 import { regions } from '../i18n';
@@ -30,6 +31,7 @@ export interface SellerProfilePatch {
   readonly minOrderAmount?: string | null;
   readonly requireDeliveryPhoto?: boolean;
   readonly defaultWarehouseId?: string;
+  readonly stockMode?: SelectableStockMode;
 }
 
 @Injectable()

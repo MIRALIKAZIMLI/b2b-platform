@@ -61,6 +61,7 @@ export const ERROR_HTTP_STATUS = {
   JOB_TITLE_IN_USE: 409,
   PRICE_LIST_IN_USE: 409,
   PRICE_LIST_DEFAULT_PROTECTED: 409,
+  STOCK_MODE_MISMATCH: 409,
   INTERNAL_ERROR: 500,
 } as const satisfies Record<ErrorCode, HttpErrorStatus>;
 

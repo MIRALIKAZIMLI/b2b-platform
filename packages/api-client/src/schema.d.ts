@@ -918,7 +918,7 @@ export interface paths {
         head?: never;
         /**
          * Satıcı profilini güncelle (F2.6)
-         * @description Yalnız gönderilen alanlar yazılır. `minOrderAmount: null` alt sınırı kaldırır. Stok modu ve düşük stok eşiği stok adımında (F3), varsayılan fiyat listesi F3.6'da; varsayılan depo `PATCH /api/v1/warehouses/{id}` (`isDefault: true`) ile değişir.
+         * @description Yalnız gönderilen alanlar yazılır. `minOrderAmount: null` alt sınırı kaldırır. Stok modu (F3.10, US-038 AC1) `none` veya `availability` olarak yazılır; `quantity` iki adımlı geçişle F3.11a'da gelir (S5 = B), bugün `422`. Mod değişince varyantların var/yok işaretleri silinmez, `availability`'ye dönünce yeniden geçerli olur. Düşük stok eşiği F3.11a'da, varsayılan fiyat listesi F3.6'da; varsayılan depo `PATCH /api/v1/warehouses/{id}` (`isDefault: true`) ile değişir.
          */
         patch: {
             parameters: {
@@ -3798,6 +3798,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stock-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Toptancının stok modu (F3.10)
+         * @description `inventory.view` ile okunur (satıcı profili `business.manage` ister; depo ve satış ekranları modu buradan öğrenir). Mod `PATCH /api/v1/business/seller-profile` ile değişir.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Mod */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StockModeView"];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/variants/{id}/availability": {
         parameters: {
             query?: never;
@@ -3806,7 +3848,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Var / yok işaretle (US-038) */
+        /**
+         * Var / yok işaretle (US-038 AC2, F3.10)
+         * @description İzin `inventory.manage` (kapsam `all` veya `warehouse`: işaret depoya değil varyanta aittir). Yalnız stok modu `availability` iken: başka modda `409 STOCK_MODE_MISMATCH`. Arşivli varyant veya arşivli ürün `409 INVALID_STATE_TRANSITION`; başka satıcının veya olmayan varyant `404`. Aynı değer tekrar gönderilirse sonuç aynıdır, audit yazılmaz; değişince audit `variant.availability_set`. `isAvailable: false` varyant perakendecide "Stokta yok" görünür ve sepete eklenemez (liste F3.12a, sepet F4.1; kural `@b2b/shared` `variantBlockedByStock`).
+         */
         put: {
             parameters: {
                 query?: never;
@@ -3831,8 +3876,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["VariantAvailability"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         post?: never;
@@ -7880,7 +7931,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "SETTING_SCOPE_NOT_ALLOWED" | "JOB_TITLE_IN_USE" | "PRICE_LIST_IN_USE" | "PRICE_LIST_DEFAULT_PROTECTED" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "SETTING_SCOPE_NOT_ALLOWED" | "JOB_TITLE_IN_USE" | "PRICE_LIST_IN_USE" | "PRICE_LIST_DEFAULT_PROTECTED" | "STOCK_MODE_MISMATCH" | "INTERNAL_ERROR";
         /** @example +994501234567 */
         PhoneE164: string;
         Voen: string;
@@ -8325,6 +8376,20 @@ export interface components {
             requireDeliveryPhoto: boolean;
             /** Format: uuid */
             defaultWarehouseId: string | null;
+            stockMode: components["schemas"]["StockMode"];
+        };
+        /**
+         * @description ADR-0018. `none` her aktif varyant sipariş edilebilir; `availability` var/yok işareti; `quantity` miktarlı stok (F3.11a).
+         * @enum {string}
+         */
+        StockMode: "none" | "availability" | "quantity";
+        StockModeView: {
+            stockMode: components["schemas"]["StockMode"];
+        };
+        VariantAvailability: {
+            /** Format: uuid */
+            variantId: string;
+            isAvailable: boolean;
         };
         SellerProfileUpdate: {
             /** @description Dil başına en çok 2000 karakter; `null` metni siler. */
@@ -8332,6 +8397,11 @@ export interface components {
             /** @description 0 veya pozitif, en çok 2 ondalık (`numeric(14,2)`); `null` kaldırır. */
             minOrderAmount?: string | null;
             requireDeliveryPhoto?: boolean;
+            /**
+             * @description F3.10. `quantity` F3.11a'da iki adımlı geçişle; bugün `422`.
+             * @enum {string}
+             */
+            stockMode?: "none" | "availability";
         };
         ServiceAreas: {
             regionIds: string[];

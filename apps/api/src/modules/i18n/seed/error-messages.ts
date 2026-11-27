@@ -276,6 +276,12 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, ErrorMessageText>> = {
     ru: 'Основной прайс-лист нельзя архивировать. Сначала сделайте основным другой прайс-лист.',
     tr: 'Varsayılan fiyat listesi arşivlenemez. Önce başka bir listeyi varsayılan yapın.',
   },
+  // F3.10: çeviriler taslak, kullanıcı onayı bekliyor.
+  STOCK_MODE_MISMATCH: {
+    az: 'Bu əməliyyat cari stok rejimində mümkün deyil. Ayarlarda stok rejimini yoxlayın.',
+    ru: 'Это действие недоступно в текущем режиме учёта остатков. Проверьте режим в настройках.',
+    tr: 'Bu işlem mevcut stok modunda yapılamaz. Ayarlardan stok modunu kontrol edin.',
+  },
   INTERNAL_ERROR: {
     az: 'Gözlənilməz xəta baş verdi. Bir az sonra yenidən cəhd edin.',
     ru: 'Произошла непредвиденная ошибка. Повторите попытку позже.',
