@@ -1,9 +1,12 @@
 // Excel içe aktarma için fiyat kapıları (c4 §2 imports → pricing). F3.5a: önizlemede fiyat sütunu
 // varsayılan listeye yazılabilir mi (kart K9). F3.5c: uygulamada `unit` ambalajının fiyatı
-// varsayılan listeye hemen geçerli yazılır (K4, Mimar S2–S3).
+// varsayılan listeye hemen geçerli yazılır (K4, Mimar S2–S3). F3.7a: müşteri fiyatı türü
+// (`CustomerPriceImport`; bağlantı, bugünkü fiyat, yazım).
 import { Inject, Injectable, Module } from '@nestjs/common';
 import type { Tx } from '../../core/db';
 import { fromDecimalString, toDecimalString, UNIT_PRICE_SCALE } from '../../core/money';
+import { BuyerPriceLoader } from './buyer-price.loader';
+import { CustomerPricesRepository } from './customer-prices.repository';
 import { PriceListsRepository } from './price-lists.repository';
 
 @Injectable()
@@ -66,8 +69,113 @@ export class ImportPriceWriter {
   }
 }
 
+/** Bir ambalajın bu perakendecideki bugünkü fiyatı (fark raporu ve şablon için). */
+export interface ImportCurrentPrice {
+  /** Şu an geçerli müşteri fiyatı; yoksa null. */
+  readonly customerPrice: string | null;
+  /** Perakendecinin bugün ödediği birim fiyat (ADR-0019 sırası); hiçbir kaynakta yoksa null. */
+  readonly effectivePrice: string | null;
+}
+
+@Injectable()
+export class CustomerPriceImport {
+  constructor(
+    @Inject(CustomerPricesRepository) private readonly repository: CustomerPricesRepository,
+    @Inject(BuyerPriceLoader) private readonly loader: BuyerPriceLoader,
+  ) {}
+
+  /**
+   * Alıcıyla aktif bağlantı (R30); yoksa null. `share`: uygulama partisi bağlantı satırını kilitler,
+   * iptal parti bitene kadar bekler.
+   */
+  async connectionTx(
+    tx: Tx,
+    sellerId: string,
+    buyerId: string,
+    lock?: 'share',
+  ): Promise<{ readonly priceListId: string | null } | null> {
+    const connection = await this.repository.activeConnectionTx(tx, sellerId, buyerId, lock);
+    return connection === undefined ? null : { priceListId: connection.priceListId };
+  }
+
+  async currentTx(
+    tx: Tx,
+    input: {
+      readonly sellerId: string;
+      readonly buyerId: string;
+      readonly priceListId: string | null;
+      readonly packagingIds: readonly string[];
+      readonly now: Date;
+    },
+  ): Promise<Map<string, ImportCurrentPrice>> {
+    const loaded = await this.loader.loadTx(tx, input);
+    const result = new Map<string, ImportCurrentPrice>();
+    for (const [packagingId, price] of loaded) {
+      result.set(packagingId, {
+        customerPrice: price.customerPrice?.unitPrice ?? null,
+        effectivePrice: price.resolved.source === 'none' ? null : price.resolved.finalUnitPrice,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Müşteri fiyatını `validFrom = now` ile yazar. Şu an geçerli müşteri fiyatıyla aynıysa yazmaz.
+   * Aynı an için satır zaten varsa geçerli olmuş fiyat değişmez: 0 satır, `'conflict'` (F3.5c D2
+   * ile aynı). Ambalajın bu satıcıya ait olduğu bileşik FK ve RLS ile güvencede; aktif bağlantıyı
+   * çağıran aynı işlemde `connectionTx(..., 'share')` ile denetler.
+   */
+  async setTx(
+    tx: Tx,
+    input: {
+      readonly sellerId: string;
+      readonly buyerId: string;
+      readonly packagingId: string;
+      readonly unitPrice: string;
+      readonly userId: string;
+      readonly now: Date;
+    },
+  ): Promise<'written' | 'unchanged' | 'conflict'> {
+    const price = fromDecimalString(decimalText(input.unitPrice));
+    const current = await this.repository.effectiveTx(
+      tx,
+      input.sellerId,
+      input.buyerId,
+      [input.packagingId],
+      input.now,
+    );
+    const existing = current.get(input.packagingId);
+    if (existing !== undefined && fromDecimalString(existing.unitPrice).eq(price)) {
+      return 'unchanged';
+    }
+    const written = await this.repository.upsertTx(
+      tx,
+      [
+        {
+          sellerId: input.sellerId,
+          buyerId: input.buyerId,
+          packagingId: input.packagingId,
+          unitPrice: toDecimalString(price, UNIT_PRICE_SCALE),
+          validFrom: input.now,
+          createdAt: input.now,
+          createdBy: input.userId,
+        },
+      ],
+      input.now,
+    );
+    return written === 1 ? 'written' : 'conflict';
+  }
+}
+
 @Module({
-  providers: [PriceListsRepository, DefaultPriceListLookup, ImportPriceWriter],
-  exports: [DefaultPriceListLookup, ImportPriceWriter],
+  providers: [
+    PriceListsRepository,
+    CustomerPricesRepository,
+    BuyerPriceLoader,
+    DefaultPriceListLookup,
+    ImportPriceWriter,
+    CustomerPriceImport,
+  ],
+  exports: [DefaultPriceListLookup, ImportPriceWriter, CustomerPriceImport],
 })
 export class PricingImportModule {}

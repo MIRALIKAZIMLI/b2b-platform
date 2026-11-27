@@ -23,6 +23,8 @@ export interface ImportJobRow {
   readonly id: string;
   readonly sellerId: string;
   readonly type: ImportType;
+  /** F3.7a: `customer_prices` işinin perakendecisi. */
+  readonly buyerId: string | null;
   readonly fileId: string;
   readonly status: ImportJobStatus;
   readonly stats: StoredImportStats;
@@ -41,6 +43,7 @@ export interface NewImportJob {
   readonly id: string;
   readonly sellerId: string;
   readonly type: ImportType;
+  readonly buyerId: string | null;
   readonly fileId: string;
   readonly canWritePrices: boolean;
   readonly locale: string;
@@ -100,6 +103,7 @@ export class ImportsRepository {
         id: job.id,
         sellerId: job.sellerId,
         type: job.type,
+        buyerId: job.buyerId,
         fileId: job.fileId,
         status: 'uploaded',
         stats: EMPTY_STATS,

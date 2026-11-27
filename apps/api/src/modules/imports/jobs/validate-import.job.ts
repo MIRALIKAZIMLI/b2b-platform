@@ -8,6 +8,8 @@ import {
   IMPORT_ROW_WARNING_CODES,
   IMPORT_NOTES,
   type ImportFailureCode,
+  type ImportJobStats,
+  type ImportNote,
   type ImportRowProblem,
 } from '@b2b/shared';
 import { Clock } from '../../../core/clock';
@@ -16,14 +18,31 @@ import { DomainError } from '../../../core/errors/domain-error';
 import { ProductImportLookup } from '../../catalog';
 import { FilesService, XLSX_CONTENT_TYPE } from '../../files';
 import { I18nService } from '../../i18n';
-import { DefaultPriceListLookup } from '../../pricing';
+import { CustomerPriceImport, DefaultPriceListLookup } from '../../pricing';
 import { SettingsService } from '../../settings';
 import { ImportJobStateMachine } from '../import-job.state-machine';
-import { EMPTY_STATS, ImportsRepository, type StoredImportStats } from '../imports.repository';
+import {
+  EMPTY_STATS,
+  type ImportJobRow,
+  ImportsRepository,
+  type StoredImportStats,
+} from '../imports.repository';
 import { translator } from '../imports.service';
 import { type RowOutcome, type ValidationResult, validateRows } from '../row-validator';
-import { buildProblemReport } from '../workbooks';
-import { type RawImportRow, type ReadResult, readProductRows } from '../xlsx-reader';
+import { buildCustomerPriceReport, buildProblemReport } from '../workbooks';
+import {
+  type ColumnSpec,
+  CUSTOMER_PRICE_COLUMN_SPEC,
+  PRODUCT_COLUMN_SPEC,
+  type RawImportRow,
+  type ReadResult,
+  readProductRows,
+} from '../xlsx-reader';
+import {
+  CUSTOMER_PRICE_REPORT_KEYS,
+  rawPrices,
+  validateCustomerPricesTx,
+} from './customer-price-import';
 
 /** Outbox olay adı = BullMQ iş adı. */
 export const VALIDATE_IMPORT_EVENT = 'import.uploaded';
@@ -47,8 +66,18 @@ export const REPORT_KEYS: readonly string[] = [
   ...IMPORT_NOTES.map((note) => `imports.note.${note}`),
 ];
 
+interface Preview {
+  readonly stats: ImportJobStats;
+  readonly notes: ImportNote[];
+  readonly problems: ImportRowProblem[];
+  readonly report: Buffer | null;
+}
+
 /** Önizleme yanıtına giden ilk `max` sorunlu satır (`imports.preview_problems_max`). */
-export function problemsOf(outcomes: readonly RowOutcome[], max: number): ImportRowProblem[] {
+export function problemsOf(
+  outcomes: readonly Pick<RowOutcome, 'row' | 'sku' | 'issues'>[],
+  max: number,
+): ImportRowProblem[] {
   return outcomes
     .filter((outcome) => outcome.issues.length > 0)
     .slice(0, max)
@@ -60,12 +89,17 @@ export async function readImportFile(
   settings: Pick<SettingsService, 'get'>,
   businessId: string,
   body: Buffer,
+  spec: ColumnSpec = PRODUCT_COLUMN_SPEC,
 ): Promise<ReadResult> {
-  return await readProductRows(body, {
-    maxRows: await settings.get('imports.max_rows', businessId),
-    maxUncompressedBytes: (await settings.get('imports.max_uncompressed_mb')) * BYTES_PER_MB,
-    cellMax: await settings.get('imports.cell_max_chars'),
-  });
+  return await readProductRows(
+    body,
+    {
+      maxRows: await settings.get('imports.max_rows', businessId),
+      maxUncompressedBytes: (await settings.get('imports.max_uncompressed_mb')) * BYTES_PER_MB,
+      cellMax: await settings.get('imports.cell_max_chars'),
+    },
+    spec,
+  );
 }
 
 /** Satırları taze katalog ve fiyat verisiyle doğrular (çağıranın kiracı işleminde, salt okuma). */
@@ -103,6 +137,8 @@ export class ValidateImportJob {
     @Inject(I18nService) private readonly i18n: Pick<I18nService, 'text'>,
     @Inject(SettingsService) private readonly settings: Pick<SettingsService, 'get'>,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(CustomerPriceImport)
+    private readonly customerPrices: Pick<CustomerPriceImport, 'connectionTx' | 'currentTx'>,
   ) {}
 
   async run(input: {
@@ -139,29 +175,33 @@ export class ValidateImportJob {
       if (error instanceof DomainError) return await this.fail(ctx, job.id, 'FILE_INVALID');
       throw error;
     }
-    const read = await readImportFile(this.settings, businessId, body);
+    const customer = job.type === 'customer_prices';
+    const read = await readImportFile(
+      this.settings,
+      businessId,
+      body,
+      customer ? CUSTOMER_PRICE_COLUMN_SPEC : PRODUCT_COLUMN_SPEC,
+    );
     if (!read.ok) return await this.fail(ctx, job.id, read.failure);
 
-    // 3. Doğrula (salt okuma; aynı işlemde tutarlı görüntü).
-    const result = await withTenantTx(ctx, (tx) =>
-      validateWithLookups(tx, this.catalog, this.prices, businessId, read.rows, job.canWritePrices),
-    );
-
-    // 4. Hata raporu (sorunlu satır veya not varsa) ve önizleme.
-    const problems = problemsOf(
-      result.outcomes,
-      await this.settings.get('imports.preview_problems_max'),
-    );
-    let reportId: string | null = null;
-    if (problems.length > 0 || result.notes.length > 0) {
-      const t = await translator(this.i18n, REPORT_KEYS, job.locale);
-      reportId = await this.files.storeGenerated(ctx, {
-        purpose: 'import',
-        contentType: XLSX_CONTENT_TYPE,
-        body: await buildProblemReport({ t, outcomes: result.outcomes, notes: result.notes }),
-      });
-    }
-    const stats: StoredImportStats = { ...result.stats, notes: result.notes, problems };
+    // 3. Doğrula (salt okuma; aynı işlemde tutarlı görüntü) ve 4. önizleme raporu.
+    const preview = customer
+      ? await this.customerPricePreview(ctx, job, read.rows)
+      : await this.productPreview(ctx, job, read.rows);
+    if (preview === null) return await this.fail(ctx, job.id, 'CONNECTION_INACTIVE');
+    const reportId =
+      preview.report === null
+        ? null
+        : await this.files.storeGenerated(ctx, {
+            purpose: 'import',
+            contentType: XLSX_CONTENT_TYPE,
+            body: preview.report,
+          });
+    const stats: StoredImportStats = {
+      ...preview.stats,
+      notes: preview.notes,
+      problems: preview.problems,
+    };
     ImportJobStateMachine.assertTransition('validating', 'preview_ready');
     const moved = await withTenantTx(ctx, (tx) =>
       this.repository.transitionTx(
@@ -173,6 +213,59 @@ export class ValidateImportJob {
       ),
     );
     return moved ? 'preview_ready' : 'skipped';
+  }
+
+  /** Ürün türü (F3.5a): hata raporu yalnız sorunlu satır veya not varsa. */
+  private async productPreview(
+    ctx: { businessId: string; userId: string },
+    job: ImportJobRow,
+    rows: readonly RawImportRow[],
+  ): Promise<Preview> {
+    const result = await withTenantTx(ctx, (tx) =>
+      validateWithLookups(tx, this.catalog, this.prices, ctx.businessId, rows, job.canWritePrices),
+    );
+    const problems = problemsOf(
+      result.outcomes,
+      await this.settings.get('imports.preview_problems_max'),
+    );
+    let report: Buffer | null = null;
+    if (problems.length > 0 || result.notes.length > 0) {
+      const t = await translator(this.i18n, REPORT_KEYS, job.locale);
+      report = await buildProblemReport({ t, outcomes: result.outcomes, notes: result.notes });
+    }
+    return { stats: result.stats, notes: result.notes, problems, report };
+  }
+
+  /**
+   * Müşteri fiyatı türü (F3.7a, US-035 AC2): fark raporu her zaman (fiyatı dolu her satır; şu anki
+   * fiyat → yeni fiyat). Bağlantı bittiyse `null`.
+   */
+  private async customerPricePreview(
+    ctx: { businessId: string; userId: string },
+    job: ImportJobRow,
+    rows: readonly RawImportRow[],
+  ): Promise<Preview | null> {
+    if (job.buyerId === null) return null;
+    const buyerId = job.buyerId;
+    const result = await withTenantTx(ctx, (tx) =>
+      validateCustomerPricesTx(
+        tx,
+        { catalog: this.catalog, prices: this.customerPrices },
+        { sellerId: ctx.businessId, buyerId, rows, now: this.clock.now() },
+      ),
+    );
+    if (result === null) return null;
+    const problems = problemsOf(
+      result.outcomes,
+      await this.settings.get('imports.preview_problems_max'),
+    );
+    const t = await translator(this.i18n, CUSTOMER_PRICE_REPORT_KEYS, job.locale);
+    const report = await buildCustomerPriceReport({
+      t,
+      outcomes: result.outcomes,
+      rawPrices: rawPrices(rows),
+    });
+    return { stats: result.stats, notes: [], problems, report };
   }
 
   private async fail(

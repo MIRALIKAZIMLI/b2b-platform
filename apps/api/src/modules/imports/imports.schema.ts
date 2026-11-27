@@ -27,6 +27,8 @@ export const importJobs = pgTable(
     id: uuid('id').primaryKey(),
     sellerId: uuid('seller_id').notNull(),
     type: text('type').notNull(),
+    /** F3.7a (S2 = A): `customer_prices` işinin perakendecisi; FK `businesses` migration'da. */
+    buyerId: uuid('buyer_id'),
     fileId: uuid('file_id').notNull(),
     status: text('status').notNull().default('uploaded'),
     /** `{insert, update, error, warning, notes[], problems[]}` (K13). */
@@ -49,6 +51,10 @@ export const importJobs = pgTable(
     // Bir dosya tek işe bağlanır (`fileId: in_use`).
     unique('import_jobs_file_uq').on(table.fileId),
     check('import_jobs_type_check', sql`${table.type} in (${inList(IMPORT_TYPES)})`),
+    check(
+      'import_jobs_buyer_check',
+      sql`(${table.type} = 'customer_prices') = (${table.buyerId} is not null)`,
+    ),
     check('import_jobs_status_check', sql`${table.status} in (${inList(IMPORT_JOB_STATUSES)})`),
     check(
       'import_jobs_failure_code_check',

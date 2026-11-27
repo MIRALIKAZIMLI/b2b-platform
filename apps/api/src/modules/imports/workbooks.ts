@@ -1,8 +1,14 @@
 // Şablon ve rapor .xlsx üreticileri (F3.5a; US-031 AC1, AC2; kart K13, K20). Metinler çeviri
 // anahtarından gelir (`imports.*`, i18n/seed/import-messages.ts); kod içinde arayüz metni yok.
-import { type ImportRowIssue, PRODUCT_IMPORT_COLUMNS, type ProductImportColumn } from '@b2b/shared';
+import {
+  CUSTOMER_PRICE_TEMPLATE_COLUMNS,
+  type ImportRowIssue,
+  PRODUCT_IMPORT_COLUMNS,
+  type ProductImportColumn,
+} from '@b2b/shared';
 import ExcelJS from 'exceljs';
 import type { ImportCategoryRef, ImportUnitRef } from '../catalog';
+import type { CustomerPriceOutcome } from './customer-price-rows';
 import type { RowOutcome } from './row-validator';
 
 /** Çeviri: anahtar → metin (yoksa anahtarın kendisi). */
@@ -160,7 +166,8 @@ export async function buildProblemReport(input: {
 export interface RowResult {
   readonly row: number;
   readonly sku: string | null;
-  readonly result: 'insert' | 'update' | 'error';
+  /** F3.7a: `unchanged` = müşteri fiyatı aynıydı, yazılmadı. */
+  readonly result: 'insert' | 'update' | 'unchanged' | 'error';
   readonly issues: readonly ImportRowIssue[];
 }
 
@@ -192,6 +199,108 @@ export async function buildResultReport(input: {
       safeText(result.sku ?? ''),
       t(`imports.result.${result.result}`),
       result.issues.map((issue) => `${issue.column}: ${t(`imports.row.${issue.code}`)}`).join('; '),
+    ]);
+  }
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+/** Müşteri fiyatı şablonunun bir satırı (F3.7a K9). */
+export interface CustomerPriceTemplateRow {
+  readonly sku: string;
+  readonly productName: Record<string, string>;
+  /** Perakendecinin bugünkü fiyatı (noktalı ondalık metin); yoksa null. */
+  readonly currentPrice: string | null;
+}
+
+/**
+ * Müşteri fiyatı şablonu (F3.7a, S2 = A): bir müşteri için; satıcının varyantları SKU, ad ve bugünkü
+ * fiyatla dolu, `price` boş. Okuyucu yalnız `sku` ve `price`'ı okur. Fiyatlar metin hücresi (Excel'in
+ * kayan nokta yuvarlaması olmasın; okuyucu ondalık virgülü de kabul eder).
+ */
+export async function buildCustomerPriceTemplate(input: {
+  readonly lang: string;
+  readonly t: Translate;
+  readonly rows: readonly CustomerPriceTemplateRow[];
+}): Promise<Buffer> {
+  const { t, lang } = input;
+  const workbook = new ExcelJS.Workbook();
+  const data = workbook.addWorksheet(sheetName(t('imports.sheet.customer_prices')), {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  data.columns = CUSTOMER_PRICE_TEMPLATE_COLUMNS.map((key) => ({
+    header: key,
+    key,
+    width: key === 'name' ? 40 : 16,
+    ...(key === 'sku' || key === 'current_price' || key === 'price'
+      ? { style: { numFmt: '@' } }
+      : {}),
+  }));
+  data.getRow(1).font = { bold: true };
+  const notes: Record<(typeof CUSTOMER_PRICE_TEMPLATE_COLUMNS)[number], string> = {
+    sku: 'imports.column.sku',
+    name: 'imports.column.name',
+    current_price: 'imports.column.current_price',
+    price: 'imports.column.customer_price',
+  };
+  CUSTOMER_PRICE_TEMPLATE_COLUMNS.forEach((key, index) => {
+    data.getCell(1, index + 1).note = t(notes[key]);
+  });
+  for (const row of input.rows) {
+    data.addRow({
+      sku: safeText(row.sku),
+      name: safeText(localized(row.productName, lang)),
+      current_price: row.currentPrice ?? '',
+      price: '',
+    });
+  }
+
+  const help = workbook.addWorksheet(sheetName(t('imports.sheet.instructions')));
+  help.columns = [{ width: 16 }, { width: 80 }];
+  help.addRow([t('imports.template.customer_prices_intro')]);
+  help.mergeCells(1, 1, 1, 2);
+  help.getRow(1).alignment = { wrapText: true };
+  help.getRow(1).height = 48;
+  help.addRow([]);
+  const head = help.addRow([t('imports.template.column'), t('imports.template.description')]);
+  head.font = { bold: true };
+  for (const key of CUSTOMER_PRICE_TEMPLATE_COLUMNS) help.addRow([key, t(notes[key])]);
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+/**
+ * Müşteri fiyatı önizleme (fark) raporu (F3.7a, US-035 AC2): fiyatı dolu her satır; şu anki fiyat,
+ * yeni fiyat, eylem ve sorunlar. Yalnız bu dosyanın satırları ve bu satıcının kendi fiyatları girer.
+ */
+export async function buildCustomerPriceReport(input: {
+  readonly t: Translate;
+  readonly outcomes: readonly CustomerPriceOutcome[];
+  /** Dosyadaki ham fiyat metni (hatalı satırda da gösterilir), satır no → metin. */
+  readonly rawPrices: ReadonlyMap<number, string>;
+}): Promise<Buffer> {
+  const { t } = input;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName(t('imports.sheet.report')), {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  sheet.columns = [
+    { header: t('imports.report.row'), width: 8 },
+    { header: t('imports.report.sku'), width: 20, style: { numFmt: '@' } },
+    { header: t('imports.report.current_price'), width: 16, style: { numFmt: '@' } },
+    { header: t('imports.report.new_price'), width: 16, style: { numFmt: '@' } },
+    { header: t('imports.report.action'), width: 18 },
+    { header: t('imports.report.problem'), width: 64 },
+  ];
+  sheet.getRow(1).font = { bold: true };
+  for (const outcome of input.outcomes) {
+    sheet.addRow([
+      outcome.row,
+      safeText(outcome.sku ?? ''),
+      outcome.currentPrice ?? '',
+      safeText(outcome.price ?? input.rawPrices.get(outcome.row) ?? ''),
+      t(`imports.action.${outcome.action}`),
+      outcome.issues
+        .map((issue) => `${issue.column}: ${t(`imports.row.${issue.code}`)}`)
+        .join('; '),
     ]);
   }
   return Buffer.from(await workbook.xlsx.writeBuffer());

@@ -1,8 +1,8 @@
-// Fiyat tabloları (F3.6a, US-034; data-model §4.9). İkisi de T sınıfı (`seller_id`): kiracı politikası +
+// Fiyat tabloları (F3.6a, US-034; F3.7a müşteri fiyatı, US-035; data-model §4.9). Hepsi T sınıfı (`seller_id`): kiracı politikası +
 // platform yalnız okur (R39, `check-rls` PLATFORM_WRITE_FORBIDDEN_TABLES). Perakendeci bu tablolara
 // hiçbir politikayla erişemez: alıcı fiyatı yalnız `PriceResolver` üzerinden görür (F3.12a).
 // Modüller arası FK'lar (işletme, para birimi, ambalaj, bağlantı, satıcı profili), RLS, GRANT ve
-// `rls:T` yorumları migration'da elle (drizzle/0036_price_lists.sql).
+// `rls:T` yorumları migration'da elle (drizzle/0036_price_lists.sql, 0039_customer_prices.sql).
 import { PRICE_LIST_STATUSES } from '@b2b/shared';
 import { sql } from 'drizzle-orm';
 import {
@@ -80,5 +80,33 @@ export const priceListItems = pgTable(
       foreignColumns: [priceLists.id, priceLists.sellerId],
     }),
     check('price_list_items_unit_price_check', sql`${table.unitPrice} >= 0`),
+  ],
+);
+
+/**
+ * Perakendeciye özel fiyat (F3.7a, US-035 AC1; ADR-0019 sırasında listeden önce). Satıcının tablosu
+ * ama `buyer_id` taşır (R30): perakendeci hiçbir politikayla okuyamaz. Yalnız aktif bağlantıya yazılır
+ * (servis, bağlantı satırı `FOR SHARE`). Geçerli olmuş satırın fiyatı değişmez; kaldırma bir
+ * ambalajın bütün satırlarını siler (S1 = A). `branch_id` F3.8'de eklenir. FK'lar (işletmeler,
+ * ambalaj ON DELETE CASCADE), RLS, arşiv tetikleyicisi migration'da elle.
+ */
+export const customerPrices = pgTable(
+  'customer_prices',
+  {
+    sellerId: uuid('seller_id').notNull(),
+    buyerId: uuid('buyer_id').notNull(),
+    packagingId: uuid('packaging_id').notNull(),
+    unitPrice: numeric('unit_price', { precision: 14, scale: 4 }).notNull(),
+    validFrom: timestamp('valid_from', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by'),
+  },
+  (table) => [
+    primaryKey({
+      name: 'customer_prices_pk',
+      columns: [table.sellerId, table.buyerId, table.packagingId, table.validFrom],
+    }),
+    check('customer_prices_unit_price_check', sql`${table.unitPrice} >= 0`),
+    check('customer_prices_parties_check', sql`${table.sellerId} <> ${table.buyerId}`),
   ],
 );

@@ -1,11 +1,13 @@
 export { PricingModule } from './pricing.module';
 export {
+  CustomerPriceImport,
   DefaultPriceListLookup,
+  type ImportCurrentPrice,
   ImportPriceWriter,
   PricingImportModule,
 } from './default-price-list-lookup';
 export { PriceListAssignmentPortModule } from './price-list-assignment.adapter';
-export { priceListItems, priceLists } from './pricing.schema';
+export { customerPrices, priceListItems, priceLists } from './pricing.schema';
 export {
   effectivePrice,
   lineTotal,

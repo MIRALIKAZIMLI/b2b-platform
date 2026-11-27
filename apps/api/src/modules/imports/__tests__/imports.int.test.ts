@@ -16,7 +16,7 @@ import { REDIS_CLIENT } from '../../../infrastructure/redis';
 import { ProductImportLookup } from '../../catalog';
 import { FilesService } from '../../files';
 import { I18nService } from '../../i18n';
-import { DefaultPriceListLookup, PricingImportModule } from '../../pricing';
+import { CustomerPriceImport, DefaultPriceListLookup, PricingImportModule } from '../../pricing';
 import { SettingsService } from '../../settings';
 import { ImportsRepository } from '../imports.repository';
 import { ExpireImportsJob } from '../jobs/expire-imports.job';
@@ -177,16 +177,16 @@ describe('F3.5a Excel içe aktarma (entegrasyon)', () => {
     storage = app.get(FileStorage);
     const clock = new SystemClock();
     const settings = app.get(SettingsService);
+    const pricing = await Test.createTestingModule({ imports: [PricingImportModule] }).compile();
     validate = new ValidateImportJob(
       new ImportsRepository(),
       app.get(FilesService),
       app.get(ProductImportLookup),
-      (await Test.createTestingModule({ imports: [PricingImportModule] }).compile()).get(
-        DefaultPriceListLookup,
-      ),
+      pricing.get(DefaultPriceListLookup),
       app.get(I18nService),
       settings,
       clock,
+      pricing.get(CustomerPriceImport),
     );
     expire = new ExpireImportsJob(new ImportsRepository(), storage, settings, clock, directRunner);
   });

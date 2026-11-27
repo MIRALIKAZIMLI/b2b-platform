@@ -104,6 +104,38 @@ export const priceListItemsQuerySchema = z
   .strict();
 export type PriceListItemsQuery = z.infer<typeof priceListItemsQuerySchema>;
 
+/**
+ * `PUT /customer-prices` (F3.7a, US-035 AC1). `validFrom` ve satır kuralları `PUT /price-lists/{id}/items`
+ * ile aynı. Şube fiyatı (`branchId`) F3.8'de; o zamana kadar alan kabul edilmez.
+ */
+export const customerPricesSetSchema = z
+  .object({
+    buyerId: z.uuid(),
+    validFrom: z.iso.date().optional(),
+    items: priceListItemsSetSchema.shape.items,
+  })
+  .strict();
+export type CustomerPricesSet = z.infer<typeof customerPricesSetSchema>;
+
+/** `GET /customer-prices` (F3.7a). */
+export const customerPricesQuerySchema = z
+  .object({
+    buyerId: z.uuid(),
+    cursor: z.uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
+export type CustomerPricesQuery = z.infer<typeof customerPricesQuerySchema>;
+
+/** `DELETE /customer-prices` (F3.7a, kullanıcı kararı S1 = A): bir ambalajın bütün müşteri fiyatları. */
+export const customerPriceRemoveQuerySchema = z
+  .object({
+    buyerId: z.uuid(),
+    packagingId: z.uuid(),
+  })
+  .strict();
+export type CustomerPriceRemoveQuery = z.infer<typeof customerPriceRemoveQuerySchema>;
+
 /** `GET /prices/explain` (US-034 AC5). `branchId` F3.8'e kadar yok sayılır. */
 export const priceExplainQuerySchema = z
   .object({
@@ -152,6 +184,22 @@ export interface PriceListItemView {
 
 export interface PriceListItemPage {
   readonly items: readonly PriceListItemView[];
+  readonly nextCursor: string | null;
+}
+
+/** openapi `CustomerPriceItem` (F3.7a). */
+export interface CustomerPriceItemView {
+  readonly packagingId: string;
+  readonly variantId: string;
+  readonly sku: string;
+  readonly productName: Record<string, string>;
+  readonly packagingLevel: string;
+  readonly current: PricePoint | null;
+  readonly scheduled: readonly PricePoint[];
+}
+
+export interface CustomerPricePage {
+  readonly items: readonly CustomerPriceItemView[];
   readonly nextCursor: string | null;
 }
 

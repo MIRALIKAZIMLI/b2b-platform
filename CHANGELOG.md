@@ -73,3 +73,4 @@
 - F3.5a: Excel ürün içe aktarma API ve worker (migration 0037; şablon, doğrulama ve önizleme, hata raporu, 24 saatte silme; SKU harf duyarsız)
 - F3.5c: Excel içe aktarmayı uygulama (migration 0038; onay ucu, 500'lük partilerle ürün ve fiyat yazımı, sonuç raporu, takılı iş zaman aşımı, biten işleri 30 günde silme)
 - F3.5b: web Excel içe aktarma sihirbazı (yükleme, önizleme, onay, ilerleme, sonuç raporu)
+- F3.7a: müşteriye özel fiyat API (migration 0039; aktif bağlantıya yazım, kaldırma, arşivde silme) ve Excel müşteri fiyatı içe aktarma (dolu şablon, fark raporu)

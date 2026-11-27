@@ -26,8 +26,8 @@ import {
   UNIT_PRICE_SCALE,
 } from '../../core/money';
 import type { TenantContext } from '../../core/tenant-context';
+import { BuyerPriceLoader } from './buyer-price.loader';
 import { PriceListStateMachine } from './price-list.state-machine';
-import { type PriceListSource, resolvePrice } from './price-resolver';
 import {
   type PriceListRow,
   PriceListsRepository,
@@ -73,6 +73,7 @@ export class PriceListsService {
     @Inject(AuditService) private readonly audit: AuditRecorder,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
+    @Inject(BuyerPriceLoader) private readonly prices: BuyerPriceLoader,
   ) {}
 
   /** `GET /price-lists`: önce varsayılan, sonra aktifler, ada göre. */
@@ -310,8 +311,8 @@ export class PriceListsService {
 
   /**
    * `GET /prices/explain` (US-034 AC5): bir alıcı için fiyat ve kaynağı. Aktif bağlantı yoksa 404;
-   * `assigned` kapsamlı üye yalnız kendisine atanmış müşteriyi görür (404). F3.6a kaynakları:
-   * atanmış liste (aktifse) ve varsayılan liste.
+   * `assigned` kapsamlı üye yalnız kendisine atanmış müşteriyi görür (404). Kaynaklar: müşteri
+   * fiyatı (F3.7a), atanmış liste (aktifse) ve varsayılan liste (`BuyerPriceLoader`).
    */
   async explain(tenant: TenantContext, query: PriceExplainQuery): Promise<PriceExplanationView> {
     return await withTenantTx(tenant, async (tx) => {
@@ -327,49 +328,14 @@ export class PriceListsService {
       const owned = await this.repository.ownedPackagingIdsTx(tx, sellerId, [query.packagingId]);
       if (!owned.has(query.packagingId)) throw new DomainError('NOT_FOUND');
 
-      const seller = await this.sellerTx(tx, sellerId);
-      const now = this.clock.now();
-      const assigned =
-        connection.priceListId === null
-          ? undefined
-          : await this.repository.findTx(tx, sellerId, connection.priceListId);
-      const assignedList = assigned?.status === 'active' ? assigned : undefined;
-      const defaultList = await this.repository.defaultTx(tx, sellerId);
-      const lists = [assignedList, defaultList].filter(
-        (list): list is PriceListRow => list !== undefined,
-      );
-      const candidates = await this.repository.effectiveCandidatesTx(
-        tx,
-        [...new Set(lists.map((list) => list.id))],
-        query.packagingId,
-        now,
-      );
-      const source = (list: PriceListRow | undefined): PriceListSource | null =>
-        list === undefined
-          ? null
-          : {
-              listId: list.id,
-              name: list.name,
-              currency: list.currencyCode,
-              vatIncluded: list.vatIncluded,
-              vatRate: list.vatRate,
-              prices: candidates
-                .filter((row) => row.priceListId === list.id)
-                .map((row) => ({ unitPrice: row.unitPrice, validFrom: row.validFrom })),
-            };
-      const resolved = resolvePrice({
-        now,
-        currency: seller.currencyCode,
-        qty: '1',
-        branchPricingEnabled: false,
-        branchPrices: [],
-        customerPrices: [],
-        // Varsayılan liste bağlantıya açıkça atanmışsa kaynak `price_list` (ADR-0019 sırası).
-        assignedList: source(assignedList),
-        defaultList: source(defaultList),
-        tiers: [],
-        branchDiscountPercent: null,
+      const prices = await this.prices.loadTx(tx, {
+        sellerId,
+        buyerId: query.buyerId,
+        priceListId: connection.priceListId,
+        packagingIds: [query.packagingId],
+        now: this.clock.now(),
       });
+      const resolved = prices.get(query.packagingId)?.resolved ?? { source: 'none' as const };
       if (resolved.source === 'none') {
         return {
           unitPrice: null,

@@ -15,13 +15,16 @@ import { DomainError } from '../../../core/errors/domain-error';
 import { isImportSkuTaken, ProductImportLookup, ProductImportWriter } from '../../catalog';
 import { FilesService, XLSX_CONTENT_TYPE } from '../../files';
 import { I18nService } from '../../i18n';
-import { DefaultPriceListLookup, ImportPriceWriter } from '../../pricing';
+import { CustomerPriceImport, DefaultPriceListLookup, ImportPriceWriter } from '../../pricing';
 import { SettingsService } from '../../settings';
 import { ImportJobStateMachine } from '../import-job.state-machine';
 import { EMPTY_STATS, type ImportJobRow, ImportsRepository } from '../imports.repository';
 import { translator } from '../imports.service';
+import type { CustomerPriceOutcome } from '../customer-price-rows';
 import type { RowOutcome } from '../row-validator';
 import { buildResultReport, type RowResult } from '../workbooks';
+import { CUSTOMER_PRICE_COLUMN_SPEC } from '../xlsx-reader';
+import { validateCustomerPricesTx } from './customer-price-import';
 import { readImportFile, REPORT_KEYS, validateWithLookups } from './validate-import.job';
 
 /** Outbox olay adı = BullMQ iş adı. */
@@ -41,6 +44,7 @@ export interface ApplyImportLog {
 
 const RESULT_KEYS: readonly string[] = [
   ...REPORT_KEYS,
+  'imports.result.unchanged',
   'imports.sheet.result',
   'imports.report.result',
   'imports.result.insert',
@@ -57,6 +61,19 @@ class RowRejected extends Error {
 
 /** İş partinin ortasında `applying` olmaktan çıktı (ör. zaman aşımı süpürücüsü). */
 class JobMovedOn extends Error {}
+
+/** F3.7a: müşteri fiyatı işinin perakendecisiyle bağlantı uygulama sırasında bitti (R30). */
+class ConnectionLost extends Error {}
+
+/** Postgres FK ihlali (23503): ambalaj doğrulamadan sonra silindi. */
+function isForeignKeyViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; current !== undefined && current !== null && depth < 5; depth++) {
+    if (typeof current === 'object' && 'code' in current && current.code === '23503') return true;
+    current = typeof current === 'object' && 'cause' in current ? current.cause : undefined;
+  }
+  return false;
+}
 
 interface JobContext {
   readonly businessId: string;
@@ -79,6 +96,11 @@ export class ApplyImportJob {
     @Inject(SettingsService) private readonly settings: Pick<SettingsService, 'get'>,
     @Inject(AuditService) private readonly audit: Pick<AuditService, 'record'>,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(CustomerPriceImport)
+    private readonly customerPrices: Pick<
+      CustomerPriceImport,
+      'connectionTx' | 'currentTx' | 'setTx'
+    >,
   ) {}
 
   async run(
@@ -92,6 +114,9 @@ export class ApplyImportJob {
       return await this.apply(ctx, job);
     } catch (error) {
       if (error instanceof JobMovedOn) return 'skipped';
+      if (error instanceof ConnectionLost) {
+        return await this.fail(ctx, job.id, 'CONNECTION_INACTIVE');
+      }
       // Ayrıntı dosyadan gelebilir: yalnız iş kimliği ve hata adı loglanır.
       log.warn(
         {
@@ -124,6 +149,7 @@ export class ApplyImportJob {
       if (error instanceof DomainError) return await this.fail(ctx, job.id, 'APPLY_FAILED');
       throw error;
     }
+    if (job.type === 'customer_prices') return await this.applyCustomerPrices(ctx, job, body);
     const read = await readImportFile(this.settings, ctx.businessId, body);
     if (!read.ok) return await this.fail(ctx, job.id, 'APPLY_FAILED');
     const validation = await withTenantTx(ctx, (tx) =>
@@ -217,6 +243,118 @@ export class ApplyImportJob {
     }
   }
 
+  /**
+   * F3.7a (US-035 AC2): müşteri fiyatı satırları. Dosya yeniden okunur ve taze veriyle doğrulanır;
+   * her parti bağlantıyı `FOR SHARE` ile yeniden denetler (bitti → `CONNECTION_INACTIVE`, önceki
+   * partiler kalır). Fiyat `unit` ambalajına, `validFrom = now`.
+   */
+  private async applyCustomerPrices(
+    ctx: JobContext,
+    job: ImportJobRow,
+    body: Buffer,
+  ): Promise<ApplyOutcome> {
+    const buyerId = job.buyerId;
+    if (buyerId === null) return await this.fail(ctx, job.id, 'APPLY_FAILED');
+    const read = await readImportFile(
+      this.settings,
+      ctx.businessId,
+      body,
+      CUSTOMER_PRICE_COLUMN_SPEC,
+    );
+    if (!read.ok) return await this.fail(ctx, job.id, 'APPLY_FAILED');
+    const validation = await withTenantTx(ctx, (tx) =>
+      validateCustomerPricesTx(
+        tx,
+        { catalog: this.catalog, prices: this.customerPrices },
+        { sellerId: ctx.businessId, buyerId, rows: read.rows, now: this.clock.now() },
+      ),
+    );
+    if (validation === null) return await this.fail(ctx, job.id, 'CONNECTION_INACTIVE');
+
+    const results: RowResult[] = [];
+    const outcomes = validation.outcomes;
+    for (let start = 0; start < outcomes.length; start += APPLY_BATCH_SIZE) {
+      const batch = outcomes.slice(start, start + APPLY_BATCH_SIZE);
+      results.push(...(await this.applyCustomerPriceBatch(ctx, job, buyerId, batch)));
+    }
+    return await this.finish(ctx, job, results, []);
+  }
+
+  private async applyCustomerPriceBatch(
+    ctx: JobContext,
+    job: ImportJobRow,
+    buyerId: string,
+    batch: readonly CustomerPriceOutcome[],
+  ): Promise<RowResult[]> {
+    return await withTenantTx(ctx, async (tx) => {
+      const now = this.clock.now();
+      const connection = await this.customerPrices.connectionTx(
+        tx,
+        ctx.businessId,
+        buyerId,
+        'share',
+      );
+      if (connection === null) throw new ConnectionLost();
+      const results: RowResult[] = [];
+      for (const outcome of batch) {
+        results.push(await this.applyCustomerPriceRow(tx, ctx, buyerId, outcome, now));
+      }
+      const last = batch.at(-1)?.row ?? CLAIMED;
+      if (!(await this.repository.progressTx(tx, job.id, last, now))) throw new JobMovedOn();
+      return results;
+    });
+  }
+
+  private async applyCustomerPriceRow(
+    tx: Tx,
+    ctx: JobContext,
+    buyerId: string,
+    outcome: CustomerPriceOutcome,
+    now: Date,
+  ): Promise<RowResult> {
+    const { row, sku, packagingId, price } = outcome;
+    if (outcome.action === 'error' || packagingId === undefined || price === undefined) {
+      return { row, sku, result: 'error', issues: outcome.issues };
+    }
+    if (outcome.action === 'unchanged') {
+      return { row, sku, result: 'unchanged', issues: outcome.issues };
+    }
+    try {
+      // Savepoint: ambalaj doğrulamadan sonra silindiyse (FK) yalnız bu satır düşer.
+      return await tx.transaction(async (sp) => {
+        const written = await this.customerPrices.setTx(sp, {
+          sellerId: ctx.businessId,
+          buyerId,
+          packagingId,
+          unitPrice: price,
+          userId: ctx.userId,
+          now,
+        });
+        if (written === 'conflict') {
+          throw new RowRejected({ column: 'price', code: 'duplicate_in_file' });
+        }
+        if (written === 'unchanged') {
+          return {
+            row,
+            sku,
+            result: 'unchanged' as const,
+            issues: [{ column: 'price' as const, code: 'price_unchanged' as const }],
+          };
+        }
+        return { row, sku, result: outcome.action, issues: outcome.issues };
+      });
+    } catch (error) {
+      const issue: ImportRowIssue | undefined =
+        error instanceof RowRejected
+          ? error.issue
+          : isForeignKeyViolation(error)
+            ? { column: 'sku', code: 'not_found' }
+            : undefined;
+      if (issue === undefined) throw error;
+      return { row, sku, result: 'error', issues: [...outcome.issues, issue] };
+    }
+  }
+
   private async finish(
     ctx: JobContext,
     job: ImportJobRow,
@@ -230,7 +368,8 @@ export class ApplyImportJob {
     for (const result of results) {
       if (result.result === 'insert') insert++;
       else if (result.result === 'update') update++;
-      else error++;
+      else if (result.result === 'error') error++;
+      // F3.7a: değişmeyen müşteri fiyatı yalnız uyarı sayısına girer.
       if (result.result !== 'error' && result.issues.length > 0) warning++;
     }
     const problemsMax = await this.settings.get('imports.preview_problems_max');
@@ -267,7 +406,12 @@ export class ApplyImportJob {
           targetType: 'import_job',
           targetId: job.id,
           before: null,
-          after: { insert, update, error },
+          after: {
+            insert,
+            update,
+            error,
+            ...(job.buyerId === null ? {} : { buyerId: job.buyerId, warning }),
+          },
         });
       }
       return ok;

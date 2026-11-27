@@ -1,10 +1,10 @@
 // Excel içe aktarma (US-031, SF-08; F3.5a). İstemci ve sunucunun paylaştığı türler ve şemalar.
 import { z } from 'zod';
 
-/** `import_jobs.type`. F3.5a yalnız `products`; `customer_prices` F3.7, `stock` F3.11a. */
+/** `import_jobs.type`. F3.5a `products`; F3.7a `customer_prices`; `stock` F3.11a. */
 export const IMPORT_TYPES = ['products', 'customer_prices', 'stock'] as const;
 export type ImportType = (typeof IMPORT_TYPES)[number];
-export const IMPORT_SUPPORTED_TYPES: readonly ImportType[] = ['products'];
+export const IMPORT_SUPPORTED_TYPES: readonly ImportType[] = ['products', 'customer_prices'];
 
 /** state-machines §11. */
 export const IMPORT_JOB_STATUSES = [
@@ -26,6 +26,8 @@ export const IMPORT_FAILURE_CODES = [
   'IMPORT_TOO_MANY_ROWS',
   'APPLY_FAILED',
   'TIMED_OUT',
+  // F3.7a: `customer_prices` işinin perakendecisiyle bağlantı uygulama sırasında bitti.
+  'CONNECTION_INACTIVE',
 ] as const;
 export type ImportFailureCode = (typeof IMPORT_FAILURE_CODES)[number];
 
@@ -58,6 +60,16 @@ export const PRODUCT_IMPORT_REQUIRED_COLUMNS: readonly ProductImportColumn[] = [
   'unit',
 ];
 
+/**
+ * Müşteri fiyatı şablonunun sütunları (F3.7a, S2 = A). Yalnız `sku` ve `price` okunur; `name` ve
+ * `current_price` şablonda bilgi içindir (okuyucu tanımadığı başlığı yok sayar).
+ */
+export const CUSTOMER_PRICE_IMPORT_COLUMNS = [
+  'sku',
+  'price',
+] as const satisfies readonly ProductImportColumn[];
+export const CUSTOMER_PRICE_TEMPLATE_COLUMNS = ['sku', 'name', 'current_price', 'price'] as const;
+
 /** Satır hatası kodları (çeviri anahtarı `imports.row.<kod>`). */
 export const IMPORT_ROW_ERROR_CODES = [
   'required',
@@ -86,7 +98,11 @@ export const IMPORT_ROW_ERROR_CODES = [
 export type ImportRowErrorCode = (typeof IMPORT_ROW_ERROR_CODES)[number];
 
 /** Satır uyarısı: satır uygulanır, ilgili hücre yok sayılır (Mimar S2). */
-export const IMPORT_ROW_WARNING_CODES = ['price_ignored_no_permission'] as const;
+export const IMPORT_ROW_WARNING_CODES = [
+  'price_ignored_no_permission',
+  // F3.7a: müşteri fiyatı bugünkü müşteri fiyatıyla aynı; satır yazılmaz.
+  'price_unchanged',
+] as const;
 export type ImportRowWarningCode = (typeof IMPORT_ROW_WARNING_CODES)[number];
 
 /** Önizleme notları (iş düzeyinde; V3). */
@@ -116,6 +132,8 @@ export interface ImportJobStats {
 export interface ImportJobView {
   readonly id: string;
   readonly type: ImportType;
+  /** F3.7a: `customer_prices` işinin perakendecisi. */
+  readonly buyerId: string | null;
   readonly status: ImportJobStatus;
   readonly stats: ImportJobStats;
   readonly notes: ImportNote[];
@@ -129,6 +147,8 @@ export interface ImportJobView {
   readonly resultReportUrl: string | null;
   /** `preview_ready` iş bu andan sonra silinir (SF-08). */
   readonly expiresAt: string | null;
+  /** F3.7a (#85 notu): iş `preview_ready` ve isteyen kullanıcı onaylayabilir. */
+  readonly canApply: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -141,10 +161,13 @@ export interface ImportTemplateLink {
 export const importCreateSchema = z.strictObject({
   type: z.enum(IMPORT_TYPES),
   fileId: z.uuid(),
+  /** F3.7a: yalnız `customer_prices` (servis denetler: zorunlu / izinsiz). */
+  buyerId: z.uuid().optional(),
 });
 export type ImportCreate = z.infer<typeof importCreateSchema>;
 
 export const importTemplateQuerySchema = z.strictObject({
   type: z.enum(IMPORT_TYPES),
+  buyerId: z.uuid().optional(),
 });
 export type ImportTemplateQuery = z.infer<typeof importTemplateQuerySchema>;

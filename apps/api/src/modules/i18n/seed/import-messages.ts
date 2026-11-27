@@ -91,6 +91,36 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   'imports.result.insert': t('Əlavə edildi', 'Добавлен', 'Eklendi'),
   'imports.result.update': t('Yeniləndi', 'Обновлён', 'Güncellendi'),
   'imports.result.error': t('Tətbiq edilmədi', 'Не применён', 'Uygulanmadı'),
+  // F3.7a müşteri fiyatı (US-035 AC2): şablon, fark raporu, sonuç.
+  'imports.result.unchanged': t('Dəyişməyib', 'Без изменений', 'Değişmedi'),
+  'imports.sheet.customer_prices': t('Müştəri qiymətləri', 'Цены клиента', 'Müşteri fiyatları'),
+  'imports.template.customer_prices_intro': t(
+    'Bu fayl yalnız seçilmiş müştəri üçündür. "price" sütununa yeni qiyməti yazın; qiyməti boş olan sətirlər dəyişmir. "name" və "current_price" yalnız məlumat üçündür.',
+    'Файл только для выбранного клиента. Впишите новую цену в столбец «price»; строки без цены не меняются. «name» и «current_price» — только для справки.',
+    'Bu dosya yalnız seçilen müşteri içindir. "price" sütununa yeni fiyatı yazın; fiyatı boş satırlar değişmez. "name" ve "current_price" yalnız bilgi içindir.',
+  ),
+  'imports.column.name': t(
+    'Məhsulun adı (dəyişdirilmir).',
+    'Название товара (не изменяется).',
+    'Ürün adı (değiştirilmez).',
+  ),
+  'imports.column.current_price': t(
+    'Bu müştərinin bu günkü qiyməti (dəyişdirilmir).',
+    'Сегодняшняя цена для этого клиента (не изменяется).',
+    'Bu müşterinin bugünkü fiyatı (değiştirilmez).',
+  ),
+  'imports.column.customer_price': t(
+    'Müştəriyə xüsusi yeni qiymət (vahid üçün); dərhal qüvvəyə minir.',
+    'Новая индивидуальная цена клиента (за штуку); действует сразу.',
+    'Müşteriye özel yeni fiyat (adet başına); hemen geçerli olur.',
+  ),
+  'imports.report.action': t('Əməliyyat', 'Действие', 'İşlem'),
+  'imports.report.current_price': t('İndiki qiymət', 'Текущая цена', 'Şu anki fiyat'),
+  'imports.report.new_price': t('Yeni qiymət', 'Новая цена', 'Yeni fiyat'),
+  'imports.action.insert': t('Yeni qiymət', 'Новая цена', 'Yeni fiyat'),
+  'imports.action.update': t('Qiymət dəyişir', 'Цена меняется', 'Fiyat değişiyor'),
+  'imports.action.unchanged': t('Dəyişmir', 'Без изменений', 'Değişmiyor'),
+  'imports.action.error': t('Xəta', 'Ошибка', 'Hata'),
   // Satır hataları ve uyarıları.
   'imports.row.required': t('Doldurulmalıdır.', 'Обязательное поле.', 'Doldurulmalı.'),
   'imports.row.invalid': t('Dəyər yanlışdır.', 'Неверное значение.', 'Değer geçersiz.'),
@@ -169,6 +199,11 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     'Qiymət yazmaq icazəniz yoxdur; qiymət nəzərə alınmayacaq.',
     'У вас нет права менять цены; цена будет пропущена.',
     'Fiyat yazma yetkiniz yok; fiyat yok sayılacak.',
+  ),
+  'imports.row.price_unchanged': t(
+    'Qiymət indiki müştəri qiyməti ilə eynidir; dəyişiklik yoxdur.',
+    'Цена совпадает с текущей ценой клиента; изменений нет.',
+    'Fiyat şu anki müşteri fiyatıyla aynı; değişiklik yok.',
   ),
   // İş notları (V3).
   'imports.note.stock_column_ignored': t(

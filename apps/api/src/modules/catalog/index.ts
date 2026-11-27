@@ -2,6 +2,7 @@ export { CatalogImportModule, CatalogModule, CatalogWorkerModule } from './catal
 export {
   type ImportBrandRef,
   type ImportCategoryRef,
+  type ImportPriceTemplateRow,
   type ImportProductMatch,
   type ImportSkuMatches,
   type ImportUnitRef,

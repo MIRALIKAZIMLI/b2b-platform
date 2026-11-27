@@ -220,7 +220,7 @@ function buildIndexes(context: ValidationContext): Indexes {
 }
 
 /** Dosyada birden çok geçen SKU anahtarları (harf duyarsız, kullanıcı kararı A). */
-function duplicateSkus(rows: readonly RawImportRow[]): Set<string> {
+export function duplicateSkus(rows: readonly RawImportRow[]): Set<string> {
   const seen = new Set<string>();
   const duplicates = new Set<string>();
   for (const row of rows) {
@@ -233,7 +233,7 @@ function duplicateSkus(rows: readonly RawImportRow[]): Set<string> {
   return duplicates;
 }
 
-type Target =
+export type Target =
   | { readonly kind: 'insert' }
   | {
       readonly kind: 'update';
@@ -248,7 +248,7 @@ type Target =
  * Kart K2: önce varyant SKU'su, sonra tek aktif varyantlı ürünün SKU'su; yoksa yeni ürün.
  * Eşleşme haritası ham SKU ile anahtarlı (harf duyarsızlık SQL `lower()` ile, F3.5c K7).
  */
-function resolveTarget(sku: string, matches: ImportSkuMatches): Target {
+export function resolveTarget(sku: string, matches: ImportSkuMatches): Target {
   const variant = matches.variants.get(sku);
   if (variant !== undefined) {
     if (variant.variantStatus === 'archived' || variant.productStatus === 'archived') {
@@ -360,6 +360,25 @@ function checkCaseQty(
   return value;
 }
 
+/**
+ * Fiyat hücresinin biçim denetimi (F3.5a; F3.7a müşteri fiyatı da kullanır): noktalı ondalık metin
+ * veya hata kodu. Ondalık virgül kabul edilir; para `number`'a çevrilmez.
+ */
+export function parsePriceText(
+  text: string,
+):
+  | { readonly ok: true; readonly value: string }
+  | { readonly ok: false; readonly code: ImportRowErrorCode } {
+  const value = decimalText(text);
+  if (value.startsWith('-')) return { ok: false, code: 'negative' };
+  if (!PRICE_TEXT.test(value)) return { ok: false, code: 'invalid' };
+  const fraction = value.split('.')[1] ?? '';
+  if (fraction.replace(/0+$/, '').length > PRICE_SCALE) {
+    return { ok: false, code: 'too_many_decimals' };
+  }
+  return { ok: true, value };
+}
+
 /** Yazılacak fiyat metni; yok sayılan (izinsiz) veya hatalı fiyatta `undefined`. */
 function checkPrice(
   text: string,
@@ -367,20 +386,12 @@ function checkPrice(
   context: ValidationContext,
   issues: Issues,
 ): string | undefined {
-  const value = decimalText(text);
-  if (value.startsWith('-')) {
-    issues.add('price', 'negative');
+  const parsed = parsePriceText(text);
+  if (!parsed.ok) {
+    issues.add('price', parsed.code);
     return undefined;
   }
-  if (!PRICE_TEXT.test(value)) {
-    issues.add('price', 'invalid');
-    return undefined;
-  }
-  const fraction = value.split('.')[1] ?? '';
-  if (fraction.replace(/0+$/, '').length > PRICE_SCALE) {
-    issues.add('price', 'too_many_decimals');
-    return undefined;
-  }
+  const value = parsed.value;
   // Mimar S2: fiyat yazma yetkisi yoksa fiyat yok sayılır, satır uygulanır.
   if (!context.canWritePrices) {
     issues.add('price', 'price_ignored_no_permission');
