@@ -77,6 +77,15 @@ export interface ImportCurrentPrice {
   readonly effectivePrice: string | null;
 }
 
+/** Müşteri fiyatı yazımının sonucu; `previous`/`unitPrice` audit için (Müfettiş 30 not 2). */
+export interface CustomerPriceWrite {
+  readonly outcome: 'written' | 'unchanged' | 'conflict';
+  /** Yazımdan önce geçerli müşteri fiyatı; yoksa null. */
+  readonly previous: string | null;
+  /** Yazılan (ölçeklenmiş) fiyat. */
+  readonly unitPrice: string;
+}
+
 @Injectable()
 export class CustomerPriceImport {
   constructor(
@@ -121,7 +130,7 @@ export class CustomerPriceImport {
 
   /**
    * Müşteri fiyatını `validFrom = now` ile yazar. Şu an geçerli müşteri fiyatıyla aynıysa yazmaz.
-   * Aynı an için satır zaten varsa geçerli olmuş fiyat değişmez: 0 satır, `'conflict'` (F3.5c D2
+   * Aynı an için satır zaten varsa geçerli olmuş fiyat değişmez: 0 satır, `conflict` (F3.5c D2
    * ile aynı). Ambalajın bu satıcıya ait olduğu bileşik FK ve RLS ile güvencede; aktif bağlantıyı
    * çağıran aynı işlemde `connectionTx(..., 'share')` ile denetler.
    */
@@ -135,7 +144,7 @@ export class CustomerPriceImport {
       readonly userId: string;
       readonly now: Date;
     },
-  ): Promise<'written' | 'unchanged' | 'conflict'> {
+  ): Promise<CustomerPriceWrite> {
     const price = fromDecimalString(decimalText(input.unitPrice));
     const current = await this.repository.effectiveTx(
       tx,
@@ -145,8 +154,10 @@ export class CustomerPriceImport {
       input.now,
     );
     const existing = current.get(input.packagingId);
+    const previous = existing?.unitPrice ?? null;
+    const unitPrice = toDecimalString(price, UNIT_PRICE_SCALE);
     if (existing !== undefined && fromDecimalString(existing.unitPrice).eq(price)) {
-      return 'unchanged';
+      return { outcome: 'unchanged', previous, unitPrice };
     }
     const written = await this.repository.upsertTx(
       tx,
@@ -155,7 +166,7 @@ export class CustomerPriceImport {
           sellerId: input.sellerId,
           buyerId: input.buyerId,
           packagingId: input.packagingId,
-          unitPrice: toDecimalString(price, UNIT_PRICE_SCALE),
+          unitPrice,
           validFrom: input.now,
           createdAt: input.now,
           createdBy: input.userId,
@@ -163,7 +174,7 @@ export class CustomerPriceImport {
       ],
       input.now,
     );
-    return written === 1 ? 'written' : 'conflict';
+    return { outcome: written === 1 ? 'written' : 'conflict', previous, unitPrice };
   }
 }
 

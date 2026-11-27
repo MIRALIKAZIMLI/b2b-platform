@@ -6949,4 +6949,274 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Начать заново',
     tr: 'Baştan başla',
   },
+  'customers.row.prices': {
+    az: 'Xüsusi qiymətlər',
+    ru: 'Особые цены',
+    tr: 'Özel fiyatlar',
+  },
+  'customerPrices.title': {
+    az: 'Xüsusi qiymətlər',
+    ru: 'Особые цены',
+    tr: 'Özel fiyatlar',
+  },
+  'customerPrices.description': {
+    az: 'Bu müştəri üçün qiymət siyahısının əvəzinə tətbiq olunan qiymətlər. Qiymət sifarişə köçürülür; dəyişiklik köhnə sifarişlərə təsir etmir.',
+    ru: 'Цены, которые для этого клиента применяются вместо прайс-листа. Цена копируется в заказ; изменение не влияет на старые заказы.',
+    tr: 'Bu müşteri için fiyat listesi yerine uygulanan fiyatlar. Fiyat siparişe kopyalanır; değişiklik eski siparişleri etkilemez.',
+  },
+  'customerPrices.back': {
+    az: 'Müştərilər',
+    ru: 'Клиенты',
+    tr: 'Müşteriler',
+  },
+  'customerPrices.import': {
+    az: 'Excel ilə yüklə',
+    ru: 'Загрузить из Excel',
+    tr: 'Excel ile yükle',
+  },
+  'customerPrices.no_access': {
+    az: 'Qiymətlərə baxmaq icazəniz yoxdur.',
+    ru: 'У вас нет доступа к ценам.',
+    tr: 'Fiyatları görme izniniz yok.',
+  },
+  'customerPrices.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Yeniden dene',
+  },
+  'customerPrices.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'customerPrices.more': {
+    az: 'Daha çox',
+    ru: 'Показать ещё',
+    tr: 'Daha fazla',
+  },
+  'customerPrices.empty_title': {
+    az: 'Xüsusi qiymət yoxdur',
+    ru: 'Особых цен нет',
+    tr: 'Özel fiyat yok',
+  },
+  'customerPrices.empty_body': {
+    az: 'Bu müştəri hələ qiymət siyahısının qiymətlərini görür. Tək qiyməti məhsulun "Qiymətlər" kartında müştərini seçərək, çox qiyməti Excel ilə yazın.',
+    ru: 'Этот клиент пока видит цены из прайс-листа. Одну цену задайте в карточке «Цены» товара, выбрав клиента, много цен — через Excel.',
+    tr: 'Bu müşteri henüz fiyat listesi fiyatlarını görüyor. Tek fiyatı ürünün "Fiyatlar" kartında müşteriyi seçerek, çok fiyatı Excel ile girin.',
+  },
+  'customerPrices.no_current': {
+    az: 'Hələ qüvvədə deyil',
+    ru: 'Ещё не действует',
+    tr: 'Henüz geçerli değil',
+  },
+  'customerPrices.current': {
+    az: 'İndiki qiymət: {price} · {date} tarixindən',
+    ru: 'Текущая цена: {price} · с {date}',
+    tr: 'Şu anki fiyat: {price} · {date} tarihinden',
+  },
+  'customerPrices.scheduled': {
+    az: '{date} tarixindən: {price}',
+    ru: 'С {date}: {price}',
+    tr: '{date} tarihinden: {price}',
+  },
+  'customerPrices.edit': {
+    az: 'Dəyiş',
+    ru: 'Изменить',
+    tr: 'Değiştir',
+  },
+  'customerPrices.remove': {
+    az: 'Sil',
+    ru: 'Удалить',
+    tr: 'Kaldır',
+  },
+  'customerPrices.remove_confirm': {
+    az: 'Müştəri yenidən siyahı qiymətini görəcək.',
+    ru: 'Клиент снова увидит цену из прайс-листа.',
+    tr: 'Müşteri yeniden liste fiyatını görecek.',
+  },
+  'customerPrices.remove_yes': {
+    az: 'Bəli, sil',
+    ru: 'Да, удалить',
+    tr: 'Evet, kaldır',
+  },
+  'customerPrices.removing': {
+    az: 'Silinir…',
+    ru: 'Удаление…',
+    tr: 'Kaldırılıyor…',
+  },
+  'customerPrices.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'customerPrices.new_price': {
+    az: 'Yeni qiymət',
+    ru: 'Новая цена',
+    tr: 'Yeni fiyat',
+  },
+  'customerPrices.invalid_price': {
+    az: 'Düzgün qiymət yazın (məs. 12,50).',
+    ru: 'Введите корректную цену (напр. 12,50).',
+    tr: 'Geçerli bir fiyat yazın (ör. 12,50).',
+  },
+  'customerPrices.starts': {
+    az: 'Qüvvəyə minir',
+    ru: 'Вступает в силу',
+    tr: 'Geçerlilik',
+  },
+  'customerPrices.mode_now': {
+    az: 'Dərhal',
+    ru: 'Сразу',
+    tr: 'Hemen',
+  },
+  'customerPrices.mode_scheduled': {
+    az: 'Tarixdən',
+    ru: 'С даты',
+    tr: 'Tarihten',
+  },
+  'customerPrices.day': {
+    az: 'Başlama günü',
+    ru: 'День начала',
+    tr: 'Başlangıç günü',
+  },
+  'customerPrices.invalid_day': {
+    az: 'Ən tezi sabahkı günü seçin.',
+    ru: 'Выберите день не раньше завтрашнего.',
+    tr: 'En erken yarını seçin.',
+  },
+  'customerPrices.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'customerPrices.saving': {
+    az: 'Saxlanılır…',
+    ru: 'Сохранение…',
+    tr: 'Kaydediliyor…',
+  },
+  'customerPrices.not_connected': {
+    az: 'Bu müştəri ilə aktiv əlaqə yoxdur; qiymət yazmaq olmur.',
+    ru: 'С этим клиентом нет активной связи; задать цену нельзя.',
+    tr: 'Bu müşteriyle aktif bağlantı yok; fiyat yazılamaz.',
+  },
+  'prices.customer.saved': {
+    az: 'Müştəri qiyməti saxlanıldı',
+    ru: 'Цена клиента сохранена',
+    tr: 'Müşteri fiyatı kaydedildi',
+  },
+  'prices.customer.price_for': {
+    az: '{label} üçün müştəri qiyməti',
+    ru: 'Цена клиента для {label}',
+    tr: '{label} için müşteri fiyatı',
+  },
+  'prices.customer.placeholder': {
+    az: 'Müştəri qiyməti',
+    ru: 'Цена клиента',
+    tr: 'Müşteri fiyatı',
+  },
+  'prices.customer.save': {
+    az: 'Müştəriyə saxla',
+    ru: 'Сохранить для клиента',
+    tr: 'Müşteriye kaydet',
+  },
+  'imports.wizard.load_failed_title': {
+    az: 'İdxal yüklənmədi',
+    ru: 'Не удалось загрузить импорт',
+    tr: 'İçe aktarma yüklenemedi',
+  },
+  'imports.wizard.load_failed_body': {
+    az: 'Bağlantı və ya server xətası. Bir az sonra yenidən cəhd edin; önizləmə itməyib.',
+    ru: 'Ошибка сети или сервера. Повторите чуть позже; предпросмотр не потерян.',
+    tr: 'Ağ veya sunucu hatası. Biraz sonra yeniden deneyin; önizleme kaybolmadı.',
+  },
+  'imports.wizard.retry': {
+    az: 'Yenidən cəhd et',
+    ru: 'Повторить',
+    tr: 'Yeniden dene',
+  },
+  'imports.wizard.template_hint_customer': {
+    az: 'Şablon seçilmiş müştəri üçün SKU, ad və indiki qiymətlə dolu gəlir; yalnız "Müştəri qiyməti" sütununu doldurun.',
+    ru: 'Шаблон приходит заполненным для выбранного клиента: SKU, название и текущая цена; заполните только столбец «Цена клиента».',
+    tr: 'Şablon seçilen müşteri için SKU, ad ve şu anki fiyatla dolu gelir; yalnız "Müşteri fiyatı" sütununu doldurun.',
+  },
+  'imports.wizard.kind_label': {
+    az: 'İdxal növü',
+    ru: 'Тип импорта',
+    tr: 'İçe aktarma türü',
+  },
+  'imports.wizard.kind.products': {
+    az: 'Məhsullar',
+    ru: 'Товары',
+    tr: 'Ürünler',
+  },
+  'imports.wizard.kind.customer_prices': {
+    az: 'Müştəri qiymətləri',
+    ru: 'Цены клиента',
+    tr: 'Müşteri fiyatları',
+  },
+  'imports.wizard.buyer_label': {
+    az: 'Müştəri',
+    ru: 'Клиент',
+    tr: 'Müşteri',
+  },
+  'imports.wizard.buyer_choose': {
+    az: 'Müştərini seçin',
+    ru: 'Выберите клиента',
+    tr: 'Müşteriyi seçin',
+  },
+  'imports.wizard.buyer_selected': {
+    az: 'Seçilmiş müştəri',
+    ru: 'Выбранный клиент',
+    tr: 'Seçili müşteri',
+  },
+  'imports.wizard.buyer_unnamed': {
+    az: 'Adsız müştəri',
+    ru: 'Клиент без названия',
+    tr: 'Adsız müşteri',
+  },
+  'imports.wizard.buyer_more': {
+    az: 'Daha çox müştəri',
+    ru: 'Ещё клиенты',
+    tr: 'Daha fazla müşteri',
+  },
+  'imports.wizard.buyer_none': {
+    az: 'Aktiv müştəri yoxdur.',
+    ru: 'Нет активных клиентов.',
+    tr: 'Aktif müşteri yok.',
+  },
+  'imports.wizard.buyer_hint': {
+    az: 'Bir fayl bir müştəri üçündür.',
+    ru: 'Один файл — один клиент.',
+    tr: 'Bir dosya bir müşteri içindir.',
+  },
+  'imports.wizard.stat_customer.insert': {
+    az: 'Yeni qiymət',
+    ru: 'Новая цена',
+    tr: 'Yeni fiyat',
+  },
+  'imports.wizard.stat_customer.update': {
+    az: 'Dəyişəcək',
+    ru: 'Изменится',
+    tr: 'Değişecek',
+  },
+  'imports.wizard.stat_customer.error': {
+    az: 'Xətalı',
+    ru: 'С ошибками',
+    tr: 'Hatalı',
+  },
+  'imports.wizard.stat_customer.warning': {
+    az: 'Dəyişməyən',
+    ru: 'Без изменений',
+    tr: 'Değişmeyen',
+  },
+  'imports.wizard.customer_price_hint': {
+    az: 'Qiymətlər təsdiqdən dərhal sonra qüvvəyə minir; boş qiymət xanası olan sətirlərə toxunulmur.',
+    ru: 'Цены вступают в силу сразу после подтверждения; строки с пустой ценой не меняются.',
+    tr: 'Fiyatlar onaydan hemen sonra geçerli olur; fiyat hücresi boş satırlara dokunulmaz.',
+  },
+  'imports.wizard.to_customer_prices': {
+    az: 'Müştərinin qiymətlərinə keç',
+    ru: 'К ценам клиента',
+    tr: 'Müşterinin fiyatlarına git',
+  },
 };

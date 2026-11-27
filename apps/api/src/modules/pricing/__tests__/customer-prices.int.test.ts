@@ -4,7 +4,7 @@
 // customer-prices.isolation dosyasında.
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { connectAsMigrator } from '../../../../test/db-clients';
+import { connectAsAppUser, connectAsMigrator } from '../../../../test/db-clients';
 import { createTestApp } from '../../../../test/http-app';
 import { pgErrorCode } from '../../../../test/isolation';
 import { createTestRedis, type TestRedis } from '../../../../test/redis';
@@ -488,5 +488,78 @@ describe('F3.7a müşteri fiyatı API (entegrasyon)', () => {
       [seller.businessId],
     );
     expect(rows.map((row) => row.buyer_id)).toEqual([other.businessId]);
+  });
+  /** Satıcı bağlamında, işlenmemiş bir işlemde müşteri fiyatı satırı yazan app_user bağlantısı. */
+  async function openWriter(seller: Seller) {
+    const client = await connectAsAppUser();
+    await client.query('begin');
+    await client.query("select set_config('app.business_id', $1, true)", [seller.businessId]);
+    return client;
+  }
+
+  const insertPrice = `insert into customer_prices (seller_id, buyer_id, packaging_id, unit_price,
+                                                     valid_from, created_at)
+                       values ($1, $2, $3, 9, now(), now())`;
+
+  it('F3.7b-R40-CONC arşiv, işlenmemiş fiyat yazımını bekler ve satırı siler (Müfettiş 30 not 1)', async () => {
+    clock.set(BAKU_2359);
+    const { seller, caseId } = await sellerWithProduct('20');
+    const buyer = await newBuyer(region);
+    await activeConnection(seller, buyer, BAKU_2359);
+    const writer = await openWriter(seller);
+    try {
+      await writer.query(insertPrice, [seller.businessId, buyer.businessId, caseId]);
+      let archived = false;
+      const archive = platformRows(`update businesses set status = 'archived' where id = $1`, [
+        buyer.businessId,
+      ]).then(() => {
+        archived = true;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Arşiv tetikleyicisi tablo kilidini bekliyor.
+      expect(archived).toBe(false);
+      await writer.query('commit');
+      await archive;
+    } finally {
+      await writer.end();
+    }
+    const rows = await platformRows(`select 1 from customer_prices where buyer_id = $1`, [
+      buyer.businessId,
+    ]);
+    expect(rows).toEqual([]);
+  });
+
+  it('F3.7b-R40-CONC arşivden sonra başlayan yazım bekler ve 55000 ile reddedilir; uç 404 döner', async () => {
+    clock.set(BAKU_2359);
+    const { seller, caseId } = await sellerWithProduct('20');
+    const buyer = await newBuyer(region);
+    await activeConnection(seller, buyer, BAKU_2359);
+    const archiver = await connectAsMigrator();
+    const writer = await openWriter(seller);
+    try {
+      await archiver.query('begin');
+      await archiver.query("select set_config('app.is_platform', 'true', true)");
+      await archiver.query(`update businesses set status = 'archived' where id = $1`, [
+        buyer.businessId,
+      ]);
+      const write = writer.query(insertPrice, [seller.businessId, buyer.businessId, caseId]).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await archiver.query('commit');
+      expect(pgErrorCode(await write)).toBe('55000');
+      await writer.query('rollback');
+    } finally {
+      await writer.end();
+      await archiver.end();
+    }
+    // Bağlantı hâlâ aktif olsa da (bu yol bağlantıyı kapatmıyor) uç arşivli perakendeciye 404.
+    const res = await setCustomerPrice(seller, buyer, [{ packagingId: caseId, unitPrice: '5' }]);
+    expect(res.status, JSON.stringify(res.body)).toBe(404);
+    const rows = await platformRows(`select 1 from customer_prices where buyer_id = $1`, [
+      buyer.businessId,
+    ]);
+    expect(rows).toEqual([]);
   });
 });

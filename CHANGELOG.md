@@ -74,3 +74,4 @@
 - F3.5c: Excel içe aktarmayı uygulama (migration 0038; onay ucu, 500'lük partilerle ürün ve fiyat yazımı, sonuç raporu, takılı iş zaman aşımı, biten işleri 30 günde silme)
 - F3.5b: web Excel içe aktarma sihirbazı (yükleme, önizleme, onay, ilerleme, sonuç raporu)
 - F3.7a: müşteriye özel fiyat API (migration 0039; aktif bağlantıya yazım, kaldırma, arşivde silme) ve Excel müşteri fiyatı içe aktarma (dolu şablon, fark raporu)
+- F3.7b: müşteri fiyatı web ekranları (müşterinin özel fiyatları, ürün kartında müşteri fiyatı, sihirbazda müşteri fiyatı türü) ve migration 0040 (arşiv yarışı bekçisi)

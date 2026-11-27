@@ -37,6 +37,8 @@ export type ReadResult =
 export interface ColumnSpec {
   readonly columns: readonly ProductImportColumn[];
   readonly required: readonly ProductImportColumn[];
+  /** Bu başlıklardan biri varsa dosya başka türün şablonudur (`wrong_template`, FILE_INVALID). */
+  readonly foreign?: readonly string[];
 }
 
 export const PRODUCT_COLUMN_SPEC: ColumnSpec = {
@@ -48,6 +50,10 @@ export const PRODUCT_COLUMN_SPEC: ColumnSpec = {
 export const CUSTOMER_PRICE_COLUMN_SPEC: ColumnSpec = {
   columns: CUSTOMER_PRICE_IMPORT_COLUMNS,
   required: CUSTOMER_PRICE_IMPORT_COLUMNS,
+  // Müfettiş 30 not 3: ürün şablonu da `sku` + `price` taşır; ürün sütunu varsa reddedilir.
+  foreign: PRODUCT_IMPORT_COLUMNS.filter(
+    (column) => !(CUSTOMER_PRICE_IMPORT_COLUMNS as readonly string[]).includes(column),
+  ),
 };
 
 export interface ReadLimits {
@@ -136,8 +142,10 @@ function headerMap(
   const known = new Set<string>(spec.columns);
   const map = new Map<number, ProductImportColumn>();
   const seen = new Set<ProductImportColumn>();
-  values.forEach((value, index) => {
-    const key = cellText(value).trim().toLowerCase();
+  const foreign = new Set<string>(spec.foreign ?? []);
+  const keys = values.map((value) => cellText(value).trim().toLowerCase());
+  if (keys.some((key) => foreign.has(key))) return 'wrong_template';
+  keys.forEach((key, index) => {
     if (!known.has(key)) return;
     const column = key as ProductImportColumn;
     if (seen.has(column)) return;

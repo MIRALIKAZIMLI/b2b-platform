@@ -26,6 +26,21 @@ export interface CustomerPricePackaging {
   readonly packagingLevel: string;
 }
 
+/**
+ * F3.7b (Müfettiş 30 not 1): perakendeci arşivli; `customer_prices_buyer_guard` yazımı `55000` ile
+ * reddetti (0040). Çağıran bağlantı yokmuş gibi davranır (uç 404, içe aktarma `CONNECTION_INACTIVE`).
+ */
+export class CustomerPriceBuyerArchived extends Error {}
+
+function hasPgCode(error: unknown, code: string): boolean {
+  let current: unknown = error;
+  for (let depth = 0; current !== undefined && current !== null && depth < 5; depth++) {
+    if (typeof current === 'object' && 'code' in current && current.code === code) return true;
+    current = typeof current === 'object' && 'cause' in current ? current.cause : undefined;
+  }
+  return false;
+}
+
 @Injectable()
 export class CustomerPricesRepository {
   /**
@@ -169,21 +184,26 @@ export class CustomerPricesRepository {
     now: Date,
   ): Promise<number> {
     if (rows.length === 0) return 0;
-    const written = await tx
-      .insert(customerPrices)
-      .values([...rows])
-      .onConflictDoUpdate({
-        target: [
-          customerPrices.sellerId,
-          customerPrices.buyerId,
-          customerPrices.packagingId,
-          customerPrices.validFrom,
-        ],
-        set: { unitPrice: sql`excluded.unit_price` },
-        setWhere: sql`${customerPrices.validFrom} > ${now}`,
-      })
-      .returning({ packagingId: customerPrices.packagingId });
-    return written.length;
+    try {
+      const written = await tx
+        .insert(customerPrices)
+        .values([...rows])
+        .onConflictDoUpdate({
+          target: [
+            customerPrices.sellerId,
+            customerPrices.buyerId,
+            customerPrices.packagingId,
+            customerPrices.validFrom,
+          ],
+          set: { unitPrice: sql`excluded.unit_price` },
+          setWhere: sql`${customerPrices.validFrom} > ${now}`,
+        })
+        .returning({ packagingId: customerPrices.packagingId });
+      return written.length;
+    } catch (error) {
+      if (hasPgCode(error, '55000')) throw new CustomerPriceBuyerArchived();
+      throw error;
+    }
   }
 
   /** S1 = A: bir ambalajın bu alıcıdaki bütün müşteri fiyatı satırlarını siler; silinenler döner. */

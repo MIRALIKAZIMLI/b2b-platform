@@ -1,5 +1,5 @@
 'use client';
-// Excel ürün içe aktarma (F3.5b, US-031; SF-08): openapi `/api/v1/imports*` ve F1.10 dosya
+// Excel ürün ve müşteri fiyatı içe aktarma (F3.5b, F3.7b; US-031, US-035 AC2; SF-08): openapi `/api/v1/imports*` ve F1.10 dosya
 // yükleme (`purpose: import`). Yalnız `packages/api-client` (coding-guidelines §9.1).
 import type { components } from '@b2b/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +8,17 @@ import { ApiError } from '../admin-sellers/api';
 import { isWorking, sameOriginUrl, XLSX_CONTENT_TYPE } from './wizard-state';
 
 export type ImportJob = components['schemas']['ImportJob'];
+/** F3.7b: ürün veya müşteri fiyatı (S2 = A: bir dosya bir müşteri, `buyerId` zorunlu). */
+export type ImportKind = 'products' | 'customer_prices';
+export interface ImportTarget {
+  readonly type: ImportKind;
+  readonly buyerId?: string | undefined;
+}
+
+const targetQuery = (target: ImportTarget) =>
+  target.type === 'customer_prices' && target.buyerId !== undefined
+    ? { type: target.type, buyerId: target.buyerId }
+    : { type: target.type };
 
 export const IMPORTS_KEY = ['imports'] as const;
 
@@ -42,9 +53,9 @@ export function useImportMutations(businessId: string | undefined) {
 
   /** US-031 AC1: şablonun süreli bağlantısı (kullanıcının dilinde). */
   const template = useMutation({
-    mutationFn: async (): Promise<string> => {
+    mutationFn: async (target: ImportTarget): Promise<string> => {
       const { data, error, response } = await webApi.client.GET('/api/v1/imports/template', {
-        params: { header: header(businessId), query: { type: 'products' } },
+        params: { header: header(businessId), query: targetQuery(target) },
       });
       if (data === undefined) throw new ApiError(error, response.status);
       return data.url;
@@ -53,7 +64,13 @@ export function useImportMutations(businessId: string | undefined) {
 
   /** US-031 AC2: yükleme adresi → PUT → `complete` → `POST /imports` (doğrulama arka planda). */
   const start = useMutation({
-    mutationFn: async (file: File): Promise<ImportJob> => {
+    mutationFn: async ({
+      file,
+      target,
+    }: {
+      file: File;
+      target: ImportTarget;
+    }): Promise<ImportJob> => {
       const ticket = await webApi.client.POST('/api/v1/files/upload-url', {
         params: { header: header(businessId) },
         body: { purpose: 'import', contentType: XLSX_CONTENT_TYPE, sizeBytes: file.size },
@@ -71,7 +88,7 @@ export function useImportMutations(businessId: string | undefined) {
       if (done.data === undefined) throw new ApiError(done.error, done.response.status);
       const created = await webApi.client.POST('/api/v1/imports', {
         params: { header: header(businessId) },
-        body: { type: 'products', fileId: ticket.data.fileId },
+        body: { ...targetQuery(target), fileId: ticket.data.fileId },
       });
       if (created.data === undefined) throw new ApiError(created.error, created.response.status);
       return created.data;

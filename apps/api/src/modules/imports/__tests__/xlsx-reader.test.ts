@@ -1,7 +1,12 @@
 // F3.5a (R32, kart K12): .xlsx okuyucu sınırları ve hücre dönüşümü.
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
-import { cellText, readProductRows, zipUncompressedTotal } from '../xlsx-reader';
+import {
+  CUSTOMER_PRICE_COLUMN_SPEC,
+  cellText,
+  readProductRows,
+  zipUncompressedTotal,
+} from '../xlsx-reader';
 
 const IMPORT_CELL_MAX = 1000;
 
@@ -48,6 +53,23 @@ describe('F3.5a xlsx okuyucu', () => {
       ok: false,
       failure: 'FILE_INVALID',
     });
+  });
+
+  it('F3.7b müşteri fiyatı türüne ürün şablonu yüklenirse FILE_INVALID (wrong_template); kendi şablonu okunur', async () => {
+    const product = await workbook([['A-1', 'Ad', '', '', 'Kat', 'H87', '5']]);
+    expect(await readProductRows(product, LIMITS, CUSTOMER_PRICE_COLUMN_SPEC)).toEqual({
+      ok: false,
+      failure: 'FILE_INVALID',
+      reason: 'wrong_template',
+    });
+    const own = await workbook(
+      [['A-1', 'Şampun', '4.0000', '3,5']],
+      ['sku', 'name', 'current_price', 'price'],
+    );
+    const result = await readProductRows(own, LIMITS, CUSTOMER_PRICE_COLUMN_SPEC);
+    expect(result.ok && result.rows.map((row) => row.cells)).toEqual([
+      { sku: 'A-1', price: '3,5' },
+    ]);
   });
 
   it('F3.5a-R32 satır sınırı aşılırsa IMPORT_TOO_MANY_ROWS; sınırdaki dosya okunur', async () => {

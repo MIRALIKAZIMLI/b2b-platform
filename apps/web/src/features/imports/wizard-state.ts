@@ -93,3 +93,23 @@ export function sameOriginUrl(url: string, origin: string): string {
     return url;
   }
 }
+
+/**
+ * #85 notu (F3.7b): iş yüklenemedi. Yalnız 404 "süresi doldu / yok" demektir; ağ veya sunucu
+ * hatası geçicidir ve yeniden denenir (ilk yüklemede "süresi doldu" görünmesin).
+ */
+export function jobLoadErrorKey(error: unknown): 'missing' | 'retry' {
+  return error instanceof ApiError && error.code === 'NOT_FOUND' ? 'missing' : 'retry';
+}
+
+/**
+ * #85 notu: "Təsdiqlə" baştan doğru görünür. Sunucunun `canApply`'ı (işi açan = ben, fiyat izni
+ * yerinde, süre dolmadı) ve uygulanacak satır gerekir; onay sırasında 403/404 gelirse ayrıca kalkar.
+ */
+export function confirmState(job: {
+  readonly canApply: boolean;
+  readonly stats: { readonly insert: number; readonly update: number };
+}): 'show' | 'nothing' | 'not_allowed' {
+  if (job.stats.insert + job.stats.update === 0) return 'nothing';
+  return job.canApply ? 'show' : 'not_allowed';
+}

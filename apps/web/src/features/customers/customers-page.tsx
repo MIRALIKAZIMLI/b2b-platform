@@ -5,7 +5,8 @@
 // - Liste tek kart içinde satırlar: ünvan, bağlantı tarihi; sağda koşul özeti (limit `tabular-nums`,
 //   vade, temsilci) ve durum. Koşulu atanmamış aktif satırda amber "Şərtlər təyin edilməyib" rozeti
 //   (US-024 AC1); varsayılan fiyat listesi geçerli olduğu alt satırda yazar. F3.6b: atanmış liste
-//   varsa adı alt satırda (`pricing.view` ile).
+//   varsa adı alt satırda (`pricing.view` ile). F3.7b: `pricing.view` ile satırda "Xüsusi qiymətlər"
+//   bağlantısı (iptal edilmiş müşteride de: S3 = A fiyatlar kalır, okunur).
 // - Ana eylem satır başına "Şərtləri təyin et / dəyiş" (yalnız `connections.terms.manage`); pencere
 //   öneriyle dolu açılır (US-024 AC3). İptal edilmiş satırda eylem yok.
 // - Boş: sekmeye göre iki metin + dizine bağlantı; yükleniyor = iskelet; hata = yeniden dene.
@@ -43,6 +44,7 @@ function CustomerRow({
   priceListName,
   canManage,
   canCancel,
+  pricesHref,
   onEdit,
   onCancel,
 }: {
@@ -50,6 +52,8 @@ function CustomerRow({
   side: Side;
   repName: string | undefined;
   priceListName?: string | undefined;
+  /** F3.7b: müşterinin özel fiyatları sayfası (`pricing.view`, yalnız toptancı tarafı). */
+  pricesHref?: string | undefined;
   canManage: boolean;
   canCancel: boolean;
   onEdit: (item: ConnectionItem) => void;
@@ -124,6 +128,15 @@ function CustomerRow({
             </div>
           )}
         </dl>
+        {pricesHref !== undefined && (
+          <Link
+            href={pricesHref}
+            data-testid="customer-prices-link"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
+          >
+            {t('row.prices')}
+          </Link>
+        )}
         {active && canManage && (
           <Button
             variant={item.termsAssigned ? 'secondary' : 'primary'}
@@ -294,6 +307,11 @@ export function CustomersPage({ side = 'seller' }: { side?: Side }) {
                       : listNames.get(item.terms.priceListId)
                   }
                   side={side}
+                  pricesHref={
+                    side === 'seller' && pricingAccess(codes).view
+                      ? `/${locale}/seller/customers/${item.buyerId}/prices`
+                      : undefined
+                  }
                   canManage={manage}
                   canCancel={access.cancel}
                   onEdit={setEditing}

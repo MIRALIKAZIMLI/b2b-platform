@@ -10,11 +10,15 @@ import type {
 } from '@b2b/shared';
 import { type AuditRecorder, type AuditRequestContext, AuditService } from '../../core/audit';
 import { Clock } from '../../core/clock';
-import { withTenantTx } from '../../core/db';
+import { type Tx, withTenantTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { fromDecimalString, toDecimalString, UNIT_PRICE_SCALE } from '../../core/money';
 import type { TenantContext } from '../../core/tenant-context';
-import { type CustomerPriceRow, CustomerPricesRepository } from './customer-prices.repository';
+import {
+  CustomerPriceBuyerArchived,
+  type CustomerPriceRow,
+  CustomerPricesRepository,
+} from './customer-prices.repository';
 import { PriceListsRepository } from './price-lists.repository';
 import { isFutureDay, localMidnight } from './valid-from';
 
@@ -89,6 +93,20 @@ export class CustomerPricesService {
    * `PUT /customer-prices` (US-035 AC1, K3–K4): yalnız aktif bağlantıya (404). Gün kuralı ve
    * "geçerli olmuş fiyat değişmez" fiyat listeleriyle aynı (F3.6a K4–K5).
    */
+  /** Arşivlenen perakendeci (0040 bekçisi) bağlantı yokmuş gibi 404 (Müfettiş 30 not 1). */
+  private async upsertOrNotFound(
+    tx: Tx,
+    rows: Parameters<CustomerPricesRepository['upsertTx']>[1],
+    now: Date,
+  ): Promise<number> {
+    try {
+      return await this.repository.upsertTx(tx, rows, now);
+    } catch (error) {
+      if (error instanceof CustomerPriceBuyerArchived) throw new DomainError('NOT_FOUND');
+      throw error;
+    }
+  }
+
   async set(
     tenant: TenantContext,
     input: CustomerPricesSet,
@@ -134,7 +152,7 @@ export class CustomerPricesService {
         packagingId: item.packagingId,
         unitPrice: toDecimalString(fromDecimalString(item.unitPrice), UNIT_PRICE_SCALE),
       }));
-      const count = await this.repository.upsertTx(
+      const count = await this.upsertOrNotFound(
         tx,
         items.map((item) => ({
           sellerId,

@@ -15,7 +15,12 @@ import { DomainError } from '../../../core/errors/domain-error';
 import { isImportSkuTaken, ProductImportLookup, ProductImportWriter } from '../../catalog';
 import { FilesService, XLSX_CONTENT_TYPE } from '../../files';
 import { I18nService } from '../../i18n';
-import { CustomerPriceImport, DefaultPriceListLookup, ImportPriceWriter } from '../../pricing';
+import {
+  CustomerPriceBuyerArchived,
+  CustomerPriceImport,
+  DefaultPriceListLookup,
+  ImportPriceWriter,
+} from '../../pricing';
 import { SettingsService } from '../../settings';
 import { ImportJobStateMachine } from '../import-job.state-machine';
 import { EMPTY_STATS, type ImportJobRow, ImportsRepository } from '../imports.repository';
@@ -64,6 +69,13 @@ class JobMovedOn extends Error {}
 
 /** F3.7a: müşteri fiyatı işinin perakendecisiyle bağlantı uygulama sırasında bitti (R30). */
 class ConnectionLost extends Error {}
+
+/** Partide yazılan müşteri fiyatı (audit `customer_price.set`). */
+interface PriceChange {
+  readonly packagingId: string;
+  readonly previous: string | null;
+  readonly unitPrice: string;
+}
 
 /** Postgres FK ihlali (23503): ambalaj doğrulamadan sonra silindi. */
 function isForeignKeyViolation(error: unknown): boolean {
@@ -296,8 +308,34 @@ export class ApplyImportJob {
       );
       if (connection === null) throw new ConnectionLost();
       const results: RowResult[] = [];
+      const changes: PriceChange[] = [];
       for (const outcome of batch) {
-        results.push(await this.applyCustomerPriceRow(tx, ctx, buyerId, outcome, now));
+        results.push(await this.applyCustomerPriceRow(tx, ctx, buyerId, outcome, now, changes));
+      }
+      // Müfettiş 30 not 2: elle yazımla aynı audit, parti başına (yarıda düşen iş de iz bırakır).
+      if (changes.length > 0) {
+        await this.audit.record(tx, {
+          actor: { type: 'user', userId: ctx.userId },
+          businessId: ctx.businessId,
+          action: 'customer_price.set',
+          targetType: 'customer_price',
+          targetId: buyerId,
+          before: {
+            prices: changes.map((change) => ({
+              packagingId: change.packagingId,
+              unitPrice: change.previous,
+            })),
+          },
+          after: {
+            validFrom: now.toISOString(),
+            count: changes.length,
+            prices: changes.map((change) => ({
+              packagingId: change.packagingId,
+              unitPrice: change.unitPrice,
+            })),
+            importJobId: job.id,
+          },
+        });
       }
       const last = batch.at(-1)?.row ?? CLAIMED;
       if (!(await this.repository.progressTx(tx, job.id, last, now))) throw new JobMovedOn();
@@ -311,6 +349,7 @@ export class ApplyImportJob {
     buyerId: string,
     outcome: CustomerPriceOutcome,
     now: Date,
+    changes: PriceChange[],
   ): Promise<RowResult> {
     const { row, sku, packagingId, price } = outcome;
     if (outcome.action === 'error' || packagingId === undefined || price === undefined) {
@@ -330,10 +369,10 @@ export class ApplyImportJob {
           userId: ctx.userId,
           now,
         });
-        if (written === 'conflict') {
+        if (written.outcome === 'conflict') {
           throw new RowRejected({ column: 'price', code: 'duplicate_in_file' });
         }
-        if (written === 'unchanged') {
+        if (written.outcome === 'unchanged') {
           return {
             row,
             sku,
@@ -341,9 +380,12 @@ export class ApplyImportJob {
             issues: [{ column: 'price' as const, code: 'price_unchanged' as const }],
           };
         }
+        changes.push({ packagingId, previous: written.previous, unitPrice: written.unitPrice });
         return { row, sku, result: outcome.action, issues: outcome.issues };
       });
     } catch (error) {
+      // 0040 bekçisi: perakendeci bu arada arşivlendi; parti geri alınır, iş CONNECTION_INACTIVE.
+      if (error instanceof CustomerPriceBuyerArchived) throw new ConnectionLost();
       const issue: ImportRowIssue | undefined =
         error instanceof RowRejected
           ? error.issue
