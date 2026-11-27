@@ -384,6 +384,33 @@ describe('F3.5c Excel içe aktarmayı uygulama (entegrasyon)', () => {
     expect((await approve(stale.id)).status).toBe(404);
   });
 
+  it('F3.5c-STATE fiyat izni onay anında da aranır: izin kalkınca onay 403, iş preview_ready kalır (Müfettiş 29 D1)', async () => {
+    const member = await addMember(seller.businessId, 'seller_sales_manager');
+    await platformRows(
+      `insert into role_permissions (role_id, permission_code, scope)
+       select role_id, code, 'all' from memberships, unnest(array['imports.run', 'pricing.manage']) code
+        where id = $1
+       on conflict do nothing`,
+      [member.membershipId],
+    );
+    const who = { businessId: seller.businessId, admin: member };
+    const ready = await preview(
+      [[sku('M'), '', 'Ad', '', '', categoryName, '', 'H87', '', '3', '']],
+      who,
+    );
+    expect(ready.stats).toMatchObject({ insert: 1, warning: 0 });
+    await platformRows(
+      `with r as (select role_id from memberships where id = $1),
+            d as (delete from role_permissions where role_id = (select role_id from r)
+                   and permission_code = 'pricing.manage')
+       update roles set permissions_version = permissions_version + 1
+        where id = (select role_id from r)`,
+      [member.membershipId],
+    );
+    expect((await approve(ready.id, who)).status).toBe(403);
+    expect((await getJob(ready.id, who)).status).toBe('preview_ready');
+  });
+
   it('F3.5c-REVAL önizlemeden sonra arşivlenen ürün uygulamada hata; yeni eklenen SKU güncelleme olur', async () => {
     const existing = await createProduct(productBody(cats.child));
     const lateSku = sku('L');
@@ -480,19 +507,39 @@ describe('F3.5c Excel içe aktarmayı uygulama (entegrasyon)', () => {
         ),
       );
     }
-    expect(sameInstant).toEqual(['written', 'written']);
+    // Müfettiş 29 D2: ikinci yazım 0 satır; "yazıldı" denmez.
+    expect(sameInstant).toEqual(['written', 'conflict']);
     expect((await unitPrices(variantSku)).at(-1)).toBe('7.0000');
+
+    // Uygulamada `conflict` satırı hatalı sayar; savepoint satırın yazdıklarını geri alır.
+    const conflicting: Pick<ImportPriceWriter, 'setUnitPriceTx'> = {
+      setUnitPriceTx: () => Promise.resolve('conflict' as const),
+    };
+    const fresh = sku('Q');
+    const rejected = await run(
+      [[fresh, '', 'Ad', '', '', categoryName, '', 'H87', '', '2', '']],
+      applyJob({ priceWriter: conflicting }),
+    );
+    expect(rejected.stats).toMatchObject({ insert: 0, error: 1 });
+    expect(rejected.problems[0]?.issues).toEqual([{ column: 'price', code: 'duplicate_in_file' }]);
+    expect(await packagingOf(fresh)).toEqual([]);
   });
 
   it('F3.5c-PACK koli eklenir/güncellenir, satış birimi ve en az sipariş korunur; palet aşılırsa packaging_conflict', async () => {
     const product = await createProduct(productBody(cats.child));
     const variantSku = product.variants[0]?.sku ?? '';
-    const done = await run([
-      [variantSku, '', '', '', '', '', '', '', 30, '', ''],
-      [product.sku, '', '', '', '', '', '', '', '', '', ''],
+    // Müfettiş 29 D2: farklı SKU metniyle aynı varyant iki kez → ikisi de duplicate_in_file.
+    const twice = await run([
+      [variantSku, '', '', '', '', '', '', '', 30, '5', ''],
+      [product.sku, '', '', '', '', '', '', '', '', '6', ''],
     ]);
-    // İkinci satır aynı varyant (ürün SKU'su) ama dosyada farklı SKU metni: ikisi de uygulanır.
-    expect(done.stats).toMatchObject({ update: 2, error: 0 });
+    expect(twice.stats).toMatchObject({ update: 0, error: 2 });
+    expect(twice.problems.map((p) => p.issues)).toEqual([
+      [{ column: 'sku', code: 'duplicate_in_file' }],
+      [{ column: 'sku', code: 'duplicate_in_file' }],
+    ]);
+    const done = await run([[variantSku, '', '', '', '', '', '', '', 30, '', '']]);
+    expect(done.stats).toMatchObject({ update: 1, error: 0 });
     expect(
       (await packagingOf(variantSku)).map((k) => [
         k.level,

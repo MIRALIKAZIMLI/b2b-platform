@@ -28,7 +28,8 @@ export class ImportPriceWriter {
 
   /**
    * `unit` ambalajının fiyatını listeye `validFrom = now` ile yazar. Şu an geçerli fiyatla aynıysa
-   * yazmaz (gereksiz geçmiş satırı yok). Liste ve ambalajın bu satıcıya ait olduğu bileşik FK ve
+   * yazmaz (gereksiz geçmiş satırı yok). Aynı an için satır zaten varsa geçerli olmuş fiyat
+   * değişmez (`upsertItemsTx` `>`): 0 satır yazılır ve `'conflict'` döner (Müfettiş 29 D2). Liste ve ambalajın bu satıcıya ait olduğu bileşik FK ve
    * RLS ile güvencede; liste kimliği çağıranın aynı işlemde okuduğu varsayılan listedir.
    */
   async setUnitPriceTx(
@@ -41,12 +42,12 @@ export class ImportPriceWriter {
       readonly userId: string;
       readonly now: Date;
     },
-  ): Promise<'written' | 'unchanged'> {
+  ): Promise<'written' | 'unchanged' | 'conflict'> {
     const price = fromDecimalString(decimalText(input.unitPrice));
     const rows = await this.repository.pricesTx(tx, [input.listId], [input.packagingId], input.now);
     const current = rows.filter((row) => row.validFrom.getTime() <= input.now.getTime()).at(-1);
     if (current !== undefined && fromDecimalString(current.unitPrice).eq(price)) return 'unchanged';
-    await this.repository.upsertItemsTx(
+    const written = await this.repository.upsertItemsTx(
       tx,
       [
         {
@@ -61,7 +62,7 @@ export class ImportPriceWriter {
       ],
       input.now,
     );
-    return 'written';
+    return written === 1 ? 'written' : 'conflict';
   }
 }
 

@@ -484,6 +484,31 @@ function validateRow(
   };
 }
 
+/**
+ * Müfettiş 29 D2: farklı SKU metinleri (varyant SKU'su ve tek varyantlı ürünün SKU'su) aynı
+ * varyantı gösterebilir; böyle satırların hepsi `sku: duplicate_in_file` olur (aynı SKU'nun iki
+ * kez geçmesiyle aynı kural; hangi satırın kazanacağı belirsiz kalmaz).
+ */
+function sameTargetAsErrors(outcomes: readonly RowOutcome[]): RowOutcome[] {
+  const counts = new Map<string, number>();
+  for (const outcome of outcomes) {
+    const target = outcome.write?.target;
+    if (target?.kind === 'update') {
+      counts.set(target.variantId, (counts.get(target.variantId) ?? 0) + 1);
+    }
+  }
+  return outcomes.map((outcome) => {
+    const target = outcome.write?.target;
+    if (target?.kind !== 'update' || (counts.get(target.variantId) ?? 0) < 2) return outcome;
+    return {
+      row: outcome.row,
+      sku: outcome.sku,
+      action: 'error',
+      issues: [...outcome.issues, { column: 'sku', code: 'duplicate_in_file' }],
+    };
+  });
+}
+
 /** Bütün satırlar; sayılar ve iş notları (V3: stok sütunu henüz uygulanmıyor). */
 export function validateRows(
   rows: readonly RawImportRow[],
@@ -491,7 +516,9 @@ export function validateRows(
 ): ValidationResult {
   const indexes = buildIndexes(context);
   const duplicates = duplicateSkus(rows);
-  const outcomes = rows.map((row) => validateRow(row, context, indexes, duplicates));
+  const outcomes = sameTargetAsErrors(
+    rows.map((row) => validateRow(row, context, indexes, duplicates)),
+  );
   let insert = 0;
   let update = 0;
   let error = 0;

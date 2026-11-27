@@ -138,6 +138,11 @@ export class ImportsService {
         throw new DomainError('NOT_FOUND');
       }
       if (job.createdBy !== tenant.userId) throw new DomainError('PERMISSION_DENIED');
+      // Müfettiş 29 D1: fiyat yazan iş, onay anında da fiyat iznini ister (önizlemeden sonra
+      // rolü değişen kullanıcı fiyat yazamaz; iş `preview_ready` kalır).
+      if (job.canWritePrices && !tenant.permissions.has('pricing.manage')) {
+        throw new DomainError('PERMISSION_DENIED');
+      }
       ImportJobStateMachine.assertTransition(job.status, 'applying');
       const moved = await this.repository.transitionTx(
         tx,

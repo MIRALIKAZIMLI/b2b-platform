@@ -264,4 +264,41 @@ describe('F3.5a satır doğrulayıcı', () => {
     ]);
     expect(one({ sku: 'V-1' }, context({ matches })).action).toBe('update');
   });
+
+  it('F3.5c-PRICE farklı SKU metniyle aynı varyant iki kez → ikisi de duplicate_in_file (Müfettiş 29 D2)', () => {
+    const variant: ImportVariantMatch = {
+      variantId: 'v1',
+      productId: 'p1',
+      variantStatus: 'active',
+      productStatus: 'active',
+      baseUnitCode: 'H87',
+      unitPackagingId: 'k1',
+    };
+    const matches: ImportSkuMatches = {
+      variants: new Map([['V-1', variant]]),
+      products: new Map([
+        [
+          'P-1',
+          {
+            productId: 'p1',
+            status: 'active',
+            baseUnitCode: 'H87',
+            activeVariantCount: 1,
+            activeVariantId: 'v1',
+            unitPackagingId: 'k1',
+          },
+        ],
+      ]),
+    };
+    const result = validateRows(
+      [raw({ sku: 'V-1', price: '1' }), raw({ sku: 'P-1', price: '2' })],
+      context({ matches }),
+    );
+    expect(result.outcomes.map(codes)).toEqual([
+      ['sku:duplicate_in_file'],
+      ['sku:duplicate_in_file'],
+    ]);
+    expect(result.outcomes.every((outcome) => outcome.write === undefined)).toBe(true);
+    expect(result.stats).toMatchObject({ update: 0, error: 2 });
+  });
 });

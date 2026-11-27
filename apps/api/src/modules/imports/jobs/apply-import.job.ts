@@ -190,7 +190,7 @@ export class ApplyImportJob {
           if (written.unitPackagingId === null) {
             throw new RowRejected({ column: 'price', code: 'no_unit_packaging' });
           }
-          await this.priceWriter.setUnitPriceTx(sp, {
+          const price = await this.priceWriter.setUnitPriceTx(sp, {
             sellerId: ctx.businessId,
             listId,
             packagingId: written.unitPackagingId,
@@ -198,6 +198,10 @@ export class ApplyImportJob {
             userId: ctx.userId,
             now,
           });
+          // D2: aynı ambalaja aynı anda ikinci fiyat yazılamaz; satır sessizce "güncellendi" olmaz.
+          if (price === 'conflict') {
+            throw new RowRejected({ column: 'price', code: 'duplicate_in_file' });
+          }
         }
         return { row, sku, result: written.action, issues: outcome.issues };
       });
