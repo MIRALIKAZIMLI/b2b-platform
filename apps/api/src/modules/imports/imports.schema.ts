@@ -32,6 +32,8 @@ export const importJobs = pgTable(
     /** `{insert, update, error, warning, notes[], problems[]}` (K13). */
     stats: jsonb('stats').notNull().default({}),
     errorReportFileId: uuid('error_report_file_id'),
+    /** F3.5c (US-031 AC3): `done` işin sonuç raporu; bileşik FK `files` (migration'da elle). */
+    resultReportFileId: uuid('result_report_file_id'),
     failureCode: text('failure_code'),
     /** F3.5c: uygulama yarıda kalırsa son uygulanan satır. */
     appliedUntilRow: integer('applied_until_row'),

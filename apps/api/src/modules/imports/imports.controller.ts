@@ -24,8 +24,8 @@ const idSchema = z.uuid();
 
 /**
  * Excel içe aktarma (openapi `imports`; F3.5a, US-031, SF-08). Bütün uçlar `imports.run`
- * (yetenek `seller`, kapsam `all`); perakendeci 403, başka satıcının işi 404. Uygulama
- * (`POST /imports/{id}/apply`) F3.5c'de.
+ * (yetenek `seller`, kapsam `all`); perakendeci 403, başka satıcının işi 404. F3.5c:
+ * `POST /imports/{id}/apply` (yalnız işi açan; 202, uygulama worker'da).
  */
 @Controller('api/v1/imports')
 export class ImportsController {
@@ -65,5 +65,16 @@ export class ImportsController {
     @Param('id') id: string,
   ): Promise<ImportJobView> {
     return await this.imports.get(tenant, idSchema.parse(id));
+  }
+
+  /** US-031 AC3 (F3.5c): önizlemeyi onaylar; hatasız satırlar arka planda uygulanır. */
+  @Post(':id/apply')
+  @HttpCode(202)
+  @RequirePermission('imports.run')
+  async apply(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<ImportJobView> {
+    return await this.imports.apply(tenant, idSchema.parse(id));
   }
 }

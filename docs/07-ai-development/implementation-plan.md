@@ -389,7 +389,7 @@ Onayımı bekle.
 - **Kabul:** US-031 AC1–AC5; F0.2'deki gerçek örnek dosya (anonimleştirilmiş) şablona dönüştürülüp içe aktarılabiliyor.
 - **Test:** Entegrasyon (5.000 satırlık sentetik dosya, süre ölçümü).
 
-> **Bölündü (Mimar, 2026-11-26, S5 = B):** F3.5a — şablon, yükleme, doğrulama/önizleme, hata raporu, 24 saat silme, SKU harf duyarsızlığı (`0037`). F3.5c — uygulama, fiyat yazımı, sonuç raporu, AC5. F3.5b — web sihirbazı (F3.5c'den sonra). Kart: `docs/tasks/F3.5a.md`.
+> **Bölündü (Mimar, 2026-11-26, S5 = B):** F3.5a — şablon, yükleme, doğrulama/önizleme, hata raporu, 24 saat silme, SKU harf duyarsızlığı (`0037`). F3.5c — uygulama, fiyat yazımı, sonuç raporu, AC5. F3.5b — web sihirbazı (F3.5c'den sonra). Kartlar: `docs/tasks/F3.5a.md`, `docs/tasks/F3.5c.md` (`0038`).
 
 ### F3.6 — Fiyat listeleri ve PriceResolver
 

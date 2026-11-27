@@ -27,6 +27,7 @@ export interface ImportJobRow {
   readonly status: ImportJobStatus;
   readonly stats: StoredImportStats;
   readonly errorReportFileId: string | null;
+  readonly resultReportFileId: string | null;
   readonly failureCode: ImportFailureCode | null;
   readonly appliedUntilRow: number | null;
   readonly canWritePrices: boolean;
@@ -136,7 +137,9 @@ export class ImportsRepository {
       readonly status: ImportJobStatus;
       readonly stats?: StoredImportStats;
       readonly errorReportFileId?: string | null;
+      readonly resultReportFileId?: string | null;
       readonly failureCode?: ImportFailureCode | null;
+      readonly appliedUntilRow?: number | null;
     },
     now: Date,
   ): Promise<boolean> {
@@ -148,19 +151,48 @@ export class ImportsRepository {
     return updated.length === 1;
   }
 
-  /** SF-08 (bağlamsız sistem işlemi): süresi dolan önizlemeler silinir; depo anahtarları döner. */
-  async expireTx(tx: Tx, cutoff: Date, limit: number): Promise<ExpiredImport[]> {
+  /**
+   * F3.5c: uygulama partisi bitti; aynı işlemde son uygulanan satır ve `updated_at` (takılı iş
+   * süpürücüsü ilerleyen işi düşürmez). İş artık `applying` değilse `false`.
+   */
+  async progressTx(tx: Tx, id: string, appliedUntilRow: number, now: Date): Promise<boolean> {
+    const updated = await tx
+      .update(importJobs)
+      .set({ appliedUntilRow, updatedAt: now })
+      .where(and(eq(importJobs.id, id), eq(importJobs.status, 'applying')))
+      .returning({ id: importJobs.id });
+    return updated.length === 1;
+  }
+
+  /**
+   * SF-08 + F3.5c S2 = A (bağlamsız sistem işlemi): süresi dolan önizlemeler ve saklama süresi
+   * geçen biten işler silinir; depo anahtarları döner.
+   */
+  async expireTx(
+    tx: Tx,
+    previewCutoff: Date,
+    resultCutoff: Date,
+    limit: number,
+  ): Promise<ExpiredImport[]> {
     const result = await tx.execute<{
       job_id: string;
       seller_id: string;
       object_key: string | null;
     }>(
-      sql`select job_id, seller_id, object_key from import_jobs_expire(${cutoff.toISOString()}::timestamptz, ${limit}::int)`,
+      sql`select job_id, seller_id, object_key from import_jobs_expire(${previewCutoff.toISOString()}::timestamptz, ${resultCutoff.toISOString()}::timestamptz, ${limit}::int)`,
     );
     return result.rows.map((row) => ({
       jobId: row.job_id,
       sellerId: row.seller_id,
       objectKey: row.object_key,
     }));
+  }
+
+  /** F3.5c K10 (bağlamsız sistem işlemi): ilerlemeyen işler `failed` + `TIMED_OUT`; kimlikleri. */
+  async timeOutTx(tx: Tx, cutoff: Date, limit: number): Promise<string[]> {
+    const result = await tx.execute<{ job_id: string }>(
+      sql`select job_id from import_jobs_time_out(${cutoff.toISOString()}::timestamptz, ${limit}::int)`,
+    );
+    return result.rows.map((row) => row.job_id);
   }
 }

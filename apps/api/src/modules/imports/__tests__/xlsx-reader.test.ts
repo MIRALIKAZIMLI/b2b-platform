@@ -1,9 +1,11 @@
 // F3.5a (R32, kart K12): .xlsx okuyucu sınırları ve hücre dönüşümü.
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
-import { cellText, IMPORT_CELL_MAX, readProductRows, zipUncompressedTotal } from '../xlsx-reader';
+import { cellText, readProductRows, zipUncompressedTotal } from '../xlsx-reader';
 
-const LIMITS = { maxRows: 5000, maxUncompressedBytes: 100 * 1024 * 1024 };
+const IMPORT_CELL_MAX = 1000;
+
+const LIMITS = { maxRows: 5000, maxUncompressedBytes: 100 * 1024 * 1024, cellMax: IMPORT_CELL_MAX };
 const HEADER = ['sku', 'name_az', 'name_ru', 'name_tr', 'category', 'unit', 'price', 'barcode'];
 
 async function workbook(rows: unknown[][], header: unknown[] = HEADER): Promise<Buffer> {

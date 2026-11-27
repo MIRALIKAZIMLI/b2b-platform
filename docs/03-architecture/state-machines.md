@@ -220,6 +220,7 @@ stateDiagram-v2
 stateDiagram-v2
     [*] --> uploaded
     uploaded --> validating: worker işi alır
+    uploaded --> failed: zaman aşımı (TIMED_OUT)
     validating --> preview_ready: doğrulama bitti
     validating --> failed: dosya okunamadı
     preview_ready --> applying: kullanıcı onaylar
@@ -230,7 +231,7 @@ stateDiagram-v2
     failed --> [*]
 ```
 
-F3.5a (US-031; kart `docs/tasks/F3.5a.md`). Kod: `ImportJobStateMachine` (`apps/api/src/modules/imports/import-job.state-machine.ts`). `applying`, `done` ve `applying → failed` geçişleri F3.5c'de kullanılır.
+F3.5a (US-031; kart `docs/tasks/F3.5a.md`), F3.5c (uygulama; kart `docs/tasks/F3.5c.md`). Kod: `ImportJobStateMachine` (`apps/api/src/modules/imports/import-job.state-machine.ts`).
 
 | Geçiş | Kim | Koşul (guard) | Yan etki |
 | --- | --- | --- | --- |
@@ -238,11 +239,14 @@ F3.5a (US-031; kart `docs/tasks/F3.5a.md`). Kod: `ImportJobStateMachine` (`apps/
 | uploaded → validating | Worker (`ValidateImportJob`) | Durum hâlâ `uploaded` (koşullu güncelleme; değilse iş atlanır) | — |
 | validating → preview_ready | Worker | Dosya okundu (satır hataları işi düşürmez) | `stats` (sayılar, ilk 100 sorun, notlar), hata raporu dosyası (`error_report_file_id`) |
 | validating → failed | Worker | Dosya okunamadı, boyut/satır sınırı aşıldı, zorunlu sütun yok | `failure_code` |
-| preview_ready → applying | Kullanıcı onayı (F3.5c) | — | — |
+| preview_ready → applying | İşi açan kullanıcı, `POST /imports/{id}/apply` (F3.5c, S1 = A; başkası 403) | Önizleme süresi dolmamış (aksi 404); koşullu güncelleme (ikinci onay 409) | Outbox `import.apply_requested` → `imports` kuyruğu |
 | preview_ready → (silinir) | Sistem işi `imports.expire_previews` (`import_jobs_expire`) | `updated_at` `imports.preview_ttl_hours` saatten eski | İş satırı, yüklenen dosya ve hata raporu silinir |
-| applying → done / failed | Worker (F3.5c) | — | — |
+| applying → done | Worker (`ApplyImportJob`, F3.5c) | Dosya yeniden okundu ve yeniden doğrulandı; partiler bitti | `stats` gerçek sayılar, sonuç raporu (`result_report_file_id`), audit `import.applied` |
+| applying → failed | Worker | Dosya okunamadı veya parti beklenmedik hatayla durdu | `APPLY_FAILED`; önceki partiler kalır, `applied_until_row` son parti |
+| uploaded / validating / applying → failed | Sistem işi `imports.expire_previews` (`import_jobs_time_out`, F3.5c K10) | `updated_at` `imports.stuck_after_minutes` dakikadan eski | `TIMED_OUT` |
+| done / failed → (silinir) | Sistem işi (`import_jobs_expire`, F3.5c S2 = A) | `updated_at` `imports.result_ttl_days` günden eski | İş satırı, yüklenen dosya, hata ve sonuç raporu silinir |
 
-Başka geçiş `409 INVALID_STATE_TRANSITION`. Süre dolumu yalnız `preview_ready` işleri siler; `uploaded`, `done`, `failed` işler kalır.
+Başka geçiş `409 INVALID_STATE_TRANSITION`. Uygulama yarıda kalırsa devam ettirilmez: worker işi `applied_until_row = 0` ile alır; yinelenen teslim almaz; çöken iş zaman aşımıyla `failed` olur, kullanıcı dosyayı yeniden yükler (SKU ile güncelleme idempotent, SF-08).
 
 ## 12. Toptancı başvurusu (`seller_applications.status`)
 

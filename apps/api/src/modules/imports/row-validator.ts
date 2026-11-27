@@ -1,7 +1,8 @@
 // Ürün satırı doğrulayıcı (F3.5a; US-031 AC2, AC4; kart K2–K10). Saf fonksiyon: veritabanı
 // okumaları (kategori, marka, birim, SKU eşleşmeleri, varsayılan fiyat listesi) çağırandan gelir.
 // Para `number`'a çevrilmez: fiyat metin olarak biçim denetiminden geçer (uygulama F3.5c'de
-// `decimal.js` ile yazar).
+// `decimal.js` ile yazar). F3.5c: hatasız satır, uygulamanın yazacağı çözülmüş değerleri
+// (`write`) taşır; uygulama satırı yeniden yorumlamaz.
 import {
   type ImportJobStats,
   type ImportNote,
@@ -23,12 +24,35 @@ import type { RawImportRow } from './xlsx-reader';
 
 export type RowAction = 'insert' | 'update' | 'error';
 
+/** Uygulamanın hedefi (F3.5c): yeni ürün veya eşleşen varyant. */
+export type RowTarget =
+  | { readonly kind: 'insert' }
+  | { readonly kind: 'update'; readonly productId: string; readonly variantId: string };
+
+/** Hatasız satırın yazılacak değerleri (boş hücre = değiştirme, K3). */
+export interface RowWrite {
+  readonly target: RowTarget;
+  readonly sku: string;
+  readonly names: Partial<Record<'az' | 'ru' | 'tr', string>>;
+  readonly categoryId?: string;
+  readonly brandId?: string;
+  /** Yalnız yeni üründe (temel birim içe aktarmayla değişmez). */
+  readonly baseUnitCode?: string;
+  readonly gtin?: string;
+  /** Noktalı ondalık metin (`numeric(14,3)`). */
+  readonly caseQty?: string;
+  /** Noktalı ondalık metin; yalnız fiyat yazılabilecekse (izin + varsayılan liste). */
+  readonly price?: string;
+}
+
 export interface RowOutcome {
   readonly row: number;
   readonly sku: string | null;
   readonly action: RowAction;
   /** Hatalar ve uyarılar; `action: 'error'` ise en az bir hata vardır. */
   readonly issues: ImportRowIssue[];
+  /** `action !== 'error'` ise dolu. */
+  readonly write?: RowWrite;
 }
 
 export interface ValidationContext {
@@ -94,8 +118,15 @@ class Issues {
   }
 }
 
+interface CategoryMatch {
+  readonly visible: Set<string>;
+  readonly hidden: Set<string>;
+}
+
 interface Indexes {
-  readonly categoriesByName: Map<string, { visible: Set<string>; hidden: Set<string> }>;
+  readonly categoriesByName: Map<string, CategoryMatch>;
+  /** "Üst / Alt" tam yolu (şablondaki "Kateqoriyalar" sayfası; Müfettiş 29 not 8). */
+  readonly categoriesByPath: Map<string, CategoryMatch>;
   readonly brandsByName: Map<string, string>;
   readonly unitsByCode: Map<string, ImportUnitRef>;
   readonly unitsByName: Map<string, Set<string>>;
@@ -119,16 +150,58 @@ function visibleCategoryIds(rows: readonly ImportCategoryRef[]): Set<string> {
   return visible;
 }
 
+/** Yol anahtarı: "/" ile ayrılmış parçalar ayrı ayrı `nameKey`. */
+export function pathKey(value: string): string {
+  return value
+    .split('/')
+    .map((part) => nameKey(part))
+    .join('/');
+}
+
+function addCategory(
+  map: Map<string, CategoryMatch>,
+  key: string,
+  id: string,
+  isVisible: boolean,
+): void {
+  const entry = map.get(key) ?? { visible: new Set<string>(), hidden: new Set<string>() };
+  (isVisible ? entry.visible : entry.hidden).add(id);
+  map.set(key, entry);
+}
+
+/** Kategorinin her dildeki tam yolu (üst zincir aynı dilde; eksik dil az'a düşer). */
+function categoryPaths(
+  category: ImportCategoryRef,
+  byId: Map<string, ImportCategoryRef>,
+): string[] {
+  const paths: string[] = [];
+  for (const lang of Object.keys(category.name)) {
+    const parts: string[] = [];
+    let current: ImportCategoryRef | undefined = category;
+    for (let depth = 0; current !== undefined && depth < 5; depth++) {
+      const text = current.name[lang] ?? current.name.az ?? '';
+      if (text.trim() === '') break;
+      parts.unshift(text);
+      current = current.parentId === null ? undefined : byId.get(current.parentId);
+    }
+    if (current === undefined && parts.length > 1) paths.push(parts.join('/'));
+  }
+  return paths;
+}
+
 function buildIndexes(context: ValidationContext): Indexes {
   const visible = visibleCategoryIds(context.categories);
-  const categoriesByName = new Map<string, { visible: Set<string>; hidden: Set<string> }>();
+  const byId = new Map(context.categories.map((row) => [row.id, row]));
+  const categoriesByName = new Map<string, CategoryMatch>();
+  const categoriesByPath = new Map<string, CategoryMatch>();
   for (const category of context.categories) {
+    const isVisible = visible.has(category.id);
     for (const text of Object.values(category.name)) {
       if (typeof text !== 'string' || text.trim() === '') continue;
-      const key = nameKey(text);
-      const entry = categoriesByName.get(key) ?? { visible: new Set(), hidden: new Set() };
-      (visible.has(category.id) ? entry.visible : entry.hidden).add(category.id);
-      categoriesByName.set(key, entry);
+      addCategory(categoriesByName, nameKey(text), category.id, isVisible);
+    }
+    for (const path of categoryPaths(category, byId)) {
+      addCategory(categoriesByPath, pathKey(path), category.id, isVisible);
     }
   }
   const brandsByName = new Map(context.brands.map((brand) => [nameKey(brand.name), brand.id]));
@@ -143,7 +216,7 @@ function buildIndexes(context: ValidationContext): Indexes {
       unitsByName.set(key, codes);
     }
   }
-  return { categoriesByName, brandsByName, unitsByCode, unitsByName };
+  return { categoriesByName, categoriesByPath, brandsByName, unitsByCode, unitsByName };
 }
 
 /** Dosyada birden çok geçen SKU anahtarları (harf duyarsız, kullanıcı kararı A). */
@@ -162,23 +235,46 @@ function duplicateSkus(rows: readonly RawImportRow[]): Set<string> {
 
 type Target =
   | { readonly kind: 'insert' }
-  | { readonly kind: 'update'; readonly baseUnitCode: string }
+  | {
+      readonly kind: 'update';
+      readonly productId: string;
+      readonly variantId: string;
+      readonly baseUnitCode: string;
+      readonly unitPackagingId: string | null;
+    }
   | { readonly kind: 'error'; readonly code: ImportRowErrorCode };
 
-/** Kart K2: önce varyant SKU'su, sonra tek aktif varyantlı ürünün SKU'su; yoksa yeni ürün. */
-function resolveTarget(key: string, matches: ImportSkuMatches): Target {
-  const variant = matches.variants.get(key);
+/**
+ * Kart K2: önce varyant SKU'su, sonra tek aktif varyantlı ürünün SKU'su; yoksa yeni ürün.
+ * Eşleşme haritası ham SKU ile anahtarlı (harf duyarsızlık SQL `lower()` ile, F3.5c K7).
+ */
+function resolveTarget(sku: string, matches: ImportSkuMatches): Target {
+  const variant = matches.variants.get(sku);
   if (variant !== undefined) {
     if (variant.variantStatus === 'archived' || variant.productStatus === 'archived') {
       return { kind: 'error', code: 'archived' };
     }
-    return { kind: 'update', baseUnitCode: variant.baseUnitCode };
+    return {
+      kind: 'update',
+      productId: variant.productId,
+      variantId: variant.variantId,
+      baseUnitCode: variant.baseUnitCode,
+      unitPackagingId: variant.unitPackagingId,
+    };
   }
-  const product = matches.products.get(key);
+  const product = matches.products.get(sku);
   if (product !== undefined) {
     if (product.status === 'archived') return { kind: 'error', code: 'archived' };
-    if (product.activeVariantCount !== 1) return { kind: 'error', code: 'variant_ambiguous' };
-    return { kind: 'update', baseUnitCode: product.baseUnitCode };
+    if (product.activeVariantCount !== 1 || product.activeVariantId === null) {
+      return { kind: 'error', code: 'variant_ambiguous' };
+    }
+    return {
+      kind: 'update',
+      productId: product.productId,
+      variantId: product.activeVariantId,
+      baseUnitCode: product.baseUnitCode,
+      unitPackagingId: product.unitPackagingId,
+    };
   }
   return { kind: 'insert' };
 }
@@ -218,59 +314,88 @@ function checkUnit(
   return unit;
 }
 
+/** Kategori adı veya "Üst / Alt" yolu (K8); bulunan görünür kategori kimliği. */
 function checkCategory(
   text: string | undefined,
   target: Target,
   indexes: Indexes,
   issues: Issues,
-): void {
+): string | undefined {
   if (text === undefined) {
     if (target.kind === 'insert') issues.add('category', 'required');
-    return;
+    return undefined;
   }
-  const entry = indexes.categoriesByName.get(nameKey(text));
+  const entry =
+    (text.includes('/') ? indexes.categoriesByPath.get(pathKey(text)) : undefined) ??
+    indexes.categoriesByName.get(nameKey(text));
   if (entry === undefined) issues.add('category', 'not_found');
   else if (entry.visible.size > 1) issues.add('category', 'ambiguous');
   else if (entry.visible.size === 0) issues.add('category', 'inactive');
+  else return [...entry.visible][0];
+  return undefined;
 }
 
-function checkCaseQty(text: string, unit: ImportUnitRef | undefined, issues: Issues): void {
+function checkCaseQty(
+  text: string,
+  unit: ImportUnitRef | undefined,
+  issues: Issues,
+): string | undefined {
   const value = decimalText(text);
   if (!QUANTITY_TEXT.test(value)) {
     issues.add('case_qty', value.startsWith('-') ? 'not_positive' : 'invalid');
-    return;
+    return undefined;
   }
   const [whole = '0', fraction = ''] = value.split('.');
   const isInteger = /^0*$/.test(fraction);
   if (unit !== undefined && !unit.allowsDecimal && !isInteger) {
     issues.add('case_qty', 'not_integer');
-    return;
+    return undefined;
   }
   // Koli en az iki temel birim içerir (> 1); "1" veya "1.000" ambalaj seviyesi değildir.
   const wholeNumber = BigInt(whole);
   if (wholeNumber < 1n || (wholeNumber === 1n && isInteger)) {
     issues.add('case_qty', /[1-9]/.test(value) ? 'must_exceed_one' : 'not_positive');
+    return undefined;
   }
+  return value;
 }
 
-function checkPrice(text: string, context: ValidationContext, issues: Issues): void {
+/** Yazılacak fiyat metni; yok sayılan (izinsiz) veya hatalı fiyatta `undefined`. */
+function checkPrice(
+  text: string,
+  target: Target,
+  context: ValidationContext,
+  issues: Issues,
+): string | undefined {
   const value = decimalText(text);
   if (value.startsWith('-')) {
     issues.add('price', 'negative');
-    return;
+    return undefined;
   }
   if (!PRICE_TEXT.test(value)) {
     issues.add('price', 'invalid');
-    return;
+    return undefined;
   }
   const fraction = value.split('.')[1] ?? '';
   if (fraction.replace(/0+$/, '').length > PRICE_SCALE) {
     issues.add('price', 'too_many_decimals');
-    return;
+    return undefined;
   }
   // Mimar S2: fiyat yazma yetkisi yoksa fiyat yok sayılır, satır uygulanır.
-  if (!context.canWritePrices) issues.add('price', 'price_ignored_no_permission');
-  else if (context.defaultPriceListId === null) issues.add('price', 'no_default_price_list');
+  if (!context.canWritePrices) {
+    issues.add('price', 'price_ignored_no_permission');
+    return undefined;
+  }
+  if (context.defaultPriceListId === null) {
+    issues.add('price', 'no_default_price_list');
+    return undefined;
+  }
+  // Mimar S3: fiyat yalnız `unit` ambalajına; yeni üründe uygulama `unit` ambalajını açar.
+  if (target.kind === 'update' && target.unitPackagingId === null) {
+    issues.add('price', 'no_unit_packaging');
+    return undefined;
+  }
+  return value;
 }
 
 function validateRow(
@@ -293,7 +418,7 @@ function validateRow(
     } else if (duplicates.has(sku.toLowerCase())) {
       issues.add('sku', 'duplicate_in_file');
     } else {
-      target = resolveTarget(sku.toLowerCase(), context.matches);
+      target = resolveTarget(sku, context.matches);
       if (target.kind === 'error') issues.add('sku', target.code);
     }
   }
@@ -306,9 +431,15 @@ function validateRow(
   }
   if (target.kind === 'insert' && names.length === 0) issues.add('name_az', 'required');
 
-  if (!issues.has('category')) checkCategory(cells.category, target, indexes, issues);
+  const categoryId = issues.has('category')
+    ? undefined
+    : checkCategory(cells.category, target, indexes, issues);
   const brand = cells.brand;
-  if (brand !== undefined && !issues.has('brand') && !indexes.brandsByName.has(nameKey(brand))) {
+  const brandId =
+    brand === undefined || issues.has('brand')
+      ? undefined
+      : indexes.brandsByName.get(nameKey(brand));
+  if (brand !== undefined && !issues.has('brand') && brandId === undefined) {
     issues.add('brand', 'not_found');
   }
   const unit = issues.has('unit') ? undefined : checkUnit(cells.unit, target, indexes, issues);
@@ -316,17 +447,41 @@ function validateRow(
   if (barcode !== undefined && !issues.has('barcode') && !isValidGtin(barcode)) {
     issues.add('barcode', 'invalid_gtin');
   }
-  if (cells.case_qty !== undefined && !issues.has('case_qty')) {
-    checkCaseQty(cells.case_qty, unit, issues);
-  }
-  if (cells.price !== undefined && !issues.has('price')) checkPrice(cells.price, context, issues);
+  const caseQty =
+    cells.case_qty === undefined || issues.has('case_qty')
+      ? undefined
+      : checkCaseQty(cells.case_qty, unit, issues);
+  const price =
+    cells.price === undefined || issues.has('price')
+      ? undefined
+      : checkPrice(cells.price, target, context, issues);
 
-  const action: RowAction = issues.hasErrors
-    ? 'error'
-    : target.kind === 'update'
-      ? 'update'
-      : 'insert';
-  return { row: raw.row, sku, action, issues: issues.list };
+  if (issues.hasErrors || sku === null || target.kind === 'error') {
+    return { row: raw.row, sku, action: 'error', issues: issues.list };
+  }
+  const nameEntries: [string, string][] = [];
+  for (const column of names) nameEntries.push([column.slice(5), cells[column] ?? '']);
+  const write: RowWrite = {
+    target:
+      target.kind === 'update'
+        ? { kind: 'update', productId: target.productId, variantId: target.variantId }
+        : { kind: 'insert' },
+    sku,
+    names: Object.fromEntries(nameEntries),
+    ...(categoryId === undefined ? {} : { categoryId }),
+    ...(brandId === undefined ? {} : { brandId }),
+    ...(target.kind === 'insert' && unit !== undefined ? { baseUnitCode: unit.code } : {}),
+    ...(barcode === undefined ? {} : { gtin: barcode }),
+    ...(caseQty === undefined ? {} : { caseQty }),
+    ...(price === undefined ? {} : { price }),
+  };
+  return {
+    row: raw.row,
+    sku,
+    action: target.kind === 'update' ? 'update' : 'insert',
+    issues: issues.list,
+    write,
+  };
 }
 
 /** Bütün satırlar; sayılar ve iş notları (V3: stok sütunu henüz uygulanmıyor). */

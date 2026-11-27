@@ -4,7 +4,6 @@
 // Tekrar teslimde idempotent: yalnız `uploaded`/`validating` iş işlenir; geçiş koşullu UPDATE.
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  IMPORT_PREVIEW_ERRORS_MAX,
   IMPORT_ROW_ERROR_CODES,
   IMPORT_ROW_WARNING_CODES,
   IMPORT_NOTES,
@@ -12,7 +11,7 @@ import {
   type ImportRowProblem,
 } from '@b2b/shared';
 import { Clock } from '../../../core/clock';
-import { withTenantTx } from '../../../core/db';
+import { type Tx, withTenantTx } from '../../../core/db';
 import { DomainError } from '../../../core/errors/domain-error';
 import { ProductImportLookup } from '../../catalog';
 import { FilesService, XLSX_CONTENT_TYPE } from '../../files';
@@ -22,9 +21,9 @@ import { SettingsService } from '../../settings';
 import { ImportJobStateMachine } from '../import-job.state-machine';
 import { EMPTY_STATS, ImportsRepository, type StoredImportStats } from '../imports.repository';
 import { translator } from '../imports.service';
-import { type RowOutcome, validateRows } from '../row-validator';
+import { type RowOutcome, type ValidationResult, validateRows } from '../row-validator';
 import { buildProblemReport } from '../workbooks';
-import { readProductRows } from '../xlsx-reader';
+import { type RawImportRow, type ReadResult, readProductRows } from '../xlsx-reader';
 
 /** Outbox olay adı = BullMQ iş adı. */
 export const VALIDATE_IMPORT_EVENT = 'import.uploaded';
@@ -34,7 +33,7 @@ const BYTES_PER_MB = 1024 * 1024;
 export type ValidateOutcome = 'preview_ready' | 'failed' | 'skipped';
 
 /** Raporun çeviri anahtarları (i18n/seed/import-messages.ts). */
-const REPORT_KEYS: readonly string[] = [
+export const REPORT_KEYS: readonly string[] = [
   'imports.sheet.report',
   'imports.report.row',
   'imports.report.sku',
@@ -48,11 +47,48 @@ const REPORT_KEYS: readonly string[] = [
   ...IMPORT_NOTES.map((note) => `imports.note.${note}`),
 ];
 
-function problemsOf(outcomes: readonly RowOutcome[]): ImportRowProblem[] {
+/** Önizleme yanıtına giden ilk `max` sorunlu satır (`imports.preview_problems_max`). */
+export function problemsOf(outcomes: readonly RowOutcome[], max: number): ImportRowProblem[] {
   return outcomes
     .filter((outcome) => outcome.issues.length > 0)
-    .slice(0, IMPORT_PREVIEW_ERRORS_MAX)
+    .slice(0, max)
     .map((outcome) => ({ row: outcome.row, sku: outcome.sku, issues: outcome.issues }));
+}
+
+/** Dosyayı ayardaki sınırlarla okur (doğrulama ve uygulama aynı sınırları kullanır). */
+export async function readImportFile(
+  settings: Pick<SettingsService, 'get'>,
+  businessId: string,
+  body: Buffer,
+): Promise<ReadResult> {
+  return await readProductRows(body, {
+    maxRows: await settings.get('imports.max_rows', businessId),
+    maxUncompressedBytes: (await settings.get('imports.max_uncompressed_mb')) * BYTES_PER_MB,
+    cellMax: await settings.get('imports.cell_max_chars'),
+  });
+}
+
+/** Satırları taze katalog ve fiyat verisiyle doğrular (çağıranın kiracı işleminde, salt okuma). */
+export async function validateWithLookups(
+  tx: Tx,
+  catalog: ProductImportLookup,
+  prices: Pick<DefaultPriceListLookup, 'defaultListIdTx'>,
+  businessId: string,
+  rows: readonly RawImportRow[],
+  canWritePrices: boolean,
+): Promise<ValidationResult> {
+  return validateRows(rows, {
+    categories: await catalog.categoriesTx(tx),
+    brands: await catalog.brandsTx(tx, businessId),
+    units: await catalog.unitsTx(tx),
+    matches: await catalog.skuMatchesTx(
+      tx,
+      businessId,
+      rows.flatMap((row) => (row.cells.sku === undefined ? [] : [row.cells.sku])),
+    ),
+    defaultPriceListId: await prices.defaultListIdTx(tx, businessId),
+    canWritePrices,
+  });
 }
 
 @Injectable()
@@ -103,30 +139,19 @@ export class ValidateImportJob {
       if (error instanceof DomainError) return await this.fail(ctx, job.id, 'FILE_INVALID');
       throw error;
     }
-    const read = await readProductRows(body, {
-      maxRows: await this.settings.get('imports.max_rows', businessId),
-      maxUncompressedBytes: (await this.settings.get('imports.max_uncompressed_mb')) * BYTES_PER_MB,
-    });
+    const read = await readImportFile(this.settings, businessId, body);
     if (!read.ok) return await this.fail(ctx, job.id, read.failure);
 
     // 3. Doğrula (salt okuma; aynı işlemde tutarlı görüntü).
-    const result = await withTenantTx(ctx, async (tx) =>
-      validateRows(read.rows, {
-        categories: await this.catalog.categoriesTx(tx),
-        brands: await this.catalog.brandsTx(tx, businessId),
-        units: await this.catalog.unitsTx(tx),
-        matches: await this.catalog.skuMatchesTx(
-          tx,
-          businessId,
-          read.rows.flatMap((row) => (row.cells.sku === undefined ? [] : [row.cells.sku])),
-        ),
-        defaultPriceListId: await this.prices.defaultListIdTx(tx, businessId),
-        canWritePrices: job.canWritePrices,
-      }),
+    const result = await withTenantTx(ctx, (tx) =>
+      validateWithLookups(tx, this.catalog, this.prices, businessId, read.rows, job.canWritePrices),
     );
 
     // 4. Hata raporu (sorunlu satır veya not varsa) ve önizleme.
-    const problems = problemsOf(result.outcomes);
+    const problems = problemsOf(
+      result.outcomes,
+      await this.settings.get('imports.preview_problems_max'),
+    );
     let reportId: string | null = null;
     if (problems.length > 0 || result.notes.length > 0) {
       const t = await translator(this.i18n, REPORT_KEYS, job.locale);

@@ -151,12 +151,31 @@ describe('F3.5a içe aktarma kiracı izolasyonu', () => {
       tx.execute(sql`update import_jobs set status = 'failed' where id = ${jobA}`),
     );
     expect(update.rowCount).toBe(0);
-    const expire = (tx: Tx) =>
-      tx.execute(sql`select * from import_jobs_expire(now() + interval '1 year', 10)`);
+    const expire = (tx: Tx) => tx.execute(sql`select * from import_jobs_expire(now(), now(), 10)`);
+    const timeOut = (tx: Tx) =>
+      tx.execute(sql`select * from import_jobs_time_out(now() - interval '1 hour', 10)`);
     expect(await errorCode(() => as(sellerA.businessId, expire))).toBe('42501');
     expect(await errorCode(() => platform(expire))).toBe('42501');
-    // Bağlamsız sistem işi çalışır; `uploaded` iş silinmez (yalnız `preview_ready`).
+    expect(await errorCode(() => as(sellerA.businessId, timeOut))).toBe('42501');
+    expect(await errorCode(() => platform(timeOut))).toBe('42501');
+    // F3.5c (Müfettiş 29 not 5): sınır gelecekte olamaz.
+    expect(
+      await errorCode(() =>
+        withSystemTx((tx) =>
+          tx.execute(sql`select * from import_jobs_expire(now() + interval '1 year', now(), 10)`),
+        ),
+      ),
+    ).toBe('22023');
+    expect(
+      await errorCode(() =>
+        withSystemTx((tx) =>
+          tx.execute(sql`select * from import_jobs_time_out(now() + interval '1 hour', 10)`),
+        ),
+      ),
+    ).toBe('22023');
+    // Bağlamsız sistem işi çalışır; yeni `uploaded` iş silinmez ve düşürülmez.
     await withSystemTx(expire);
+    await withSystemTx(timeOut);
     expect(
       (
         await as(sellerA.businessId, (tx) =>
@@ -200,12 +219,14 @@ describe('F3.5a içe aktarma kiracı izolasyonu', () => {
         qual: 'true',
         with_check: null,
       },
+      // F3.5c (0038): silme önizleme + biten işler; okuma bütün durumlar (zaman aşımı takılı
+      // işleri görür); güncelleme yalnız takılı durumdan `failed` + `TIMED_OUT`'a.
       {
         tablename: 'import_jobs',
         policyname: 'import_jobs_definer_expire',
         cmd: 'DELETE',
         roles: ['migrator'],
-        qual: "(status = 'preview_ready'::text)",
+        qual: "(status = ANY (ARRAY['preview_ready'::text, 'done'::text, 'failed'::text]))",
         with_check: null,
       },
       {
@@ -213,9 +234,44 @@ describe('F3.5a içe aktarma kiracı izolasyonu', () => {
         policyname: 'import_jobs_definer_select',
         cmd: 'SELECT',
         roles: ['migrator'],
-        qual: "(status = 'preview_ready'::text)",
+        qual: 'true',
         with_check: null,
       },
+      {
+        tablename: 'import_jobs',
+        policyname: 'import_jobs_definer_time_out',
+        cmd: 'UPDATE',
+        roles: ['migrator'],
+        qual: "(status = ANY (ARRAY['uploaded'::text, 'validating'::text, 'applying'::text]))",
+        with_check: "((status = 'failed'::text) AND (failure_code = 'TIMED_OUT'::text))",
+      },
     ]);
+  });
+
+  it('F3.5c-ISO apply ucu: başka satıcı 404, perakendeci 403; can_write_prices yazılamaz; sonuç raporu başka işletmenin dosyasına bağlanamaz', async () => {
+    const apply = (who: { admin: { userId: string }; businessId: string }) =>
+      headers(who).then((set) => h.http().post(`/api/v1/imports/${jobA}/apply`).set(set));
+    expect((await apply(sellerB)).status).toBe(404);
+    expect((await apply(buyer)).status).toBe(403);
+    // Sahibi için `uploaded` iş onaylanamaz (409); durum değişmez.
+    expect((await apply(sellerA)).status).toBe(409);
+    // Not 3: fiyat izni iş açılırken yazılır, sonra değişmez (UPDATE izni yok, 42501).
+    expect(
+      await errorCode(() =>
+        as(sellerA.businessId, (tx) =>
+          tx.execute(sql`update import_jobs set can_write_prices = true where id = ${jobA}`),
+        ),
+      ),
+    ).toBe('42501');
+    const fileB = await readyImportFile(app.get(FileStorage), sellerB, await xlsx(['sku'], []));
+    expect(
+      await errorCode(() =>
+        as(sellerA.businessId, (tx) =>
+          tx.execute(
+            sql`update import_jobs set result_report_file_id = ${fileB} where id = ${jobA}`,
+          ),
+        ),
+      ),
+    ).toBe('23503');
   });
 });

@@ -5,8 +5,7 @@ import type { ProductStatus, VariantStatus } from '@b2b/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Tx } from '../../core/db';
 import { brands, categories, units } from './catalog.schema';
-import { products, productVariants } from './products.schema';
-import { skuKey } from './products.repository';
+import { productPackaging } from './products.schema';
 
 export interface ImportCategoryRef {
   readonly id: string;
@@ -34,6 +33,8 @@ export interface ImportVariantMatch {
   readonly variantStatus: VariantStatus;
   readonly productStatus: ProductStatus;
   readonly baseUnitCode: string;
+  /** Varyantın `unit` ambalajı (fiyat hedefi); yoksa null. */
+  readonly unitPackagingId: string | null;
 }
 
 export interface ImportProductMatch {
@@ -41,9 +42,12 @@ export interface ImportProductMatch {
   readonly status: ProductStatus;
   readonly baseUnitCode: string;
   readonly activeVariantCount: number;
+  /** Tek aktif varyant varsa kimliği ve `unit` ambalajı; değilse null. */
+  readonly activeVariantId: string | null;
+  readonly unitPackagingId: string | null;
 }
 
-/** Harf duyarsız SKU anahtarı → eşleşme (kart K2: önce varyant, sonra ürün SKU'su). */
+/** Dosyadaki ham SKU → eşleşme (kart K2: önce varyant, sonra ürün SKU'su; harf duyarsız SQL). */
 export interface ImportSkuMatches {
   readonly variants: ReadonlyMap<string, ImportVariantMatch>;
   readonly products: ReadonlyMap<string, ImportProductMatch>;
@@ -91,47 +95,108 @@ export class ProductImportLookup {
     }));
   }
 
-  /** Dosyadaki SKU'ların var olan varyant ve ürün eşleşmeleri (arşivliler dahil). */
+  /**
+   * Dosyadaki SKU'ların var olan varyant ve ürün eşleşmeleri (arşivliler dahil). Harf duyarsızlık
+   * veritabanının `lower()`'ı ile (benzersiz dizinlerle aynı; JS `toLowerCase` "İ" gibi harflerde
+   * farklı sonuç verir, Müfettiş 29 not 1). Haritanın anahtarı dosyadaki ham SKU metnidir.
+   */
   async skuMatchesTx(tx: Tx, sellerId: string, skus: readonly string[]): Promise<ImportSkuMatches> {
-    const keys = [...new Set(skus.map(skuKey))];
-    if (keys.length === 0) return { variants: new Map(), products: new Map() };
+    const inputs = [...new Set(skus)];
+    if (inputs.length === 0) return { variants: new Map(), products: new Map() };
+    const list = sql`(select distinct s from unnest(${sql.raw('ARRAY[')}${sql.join(
+      inputs.map((value) => sql`${value}::text`),
+      sql`, `,
+    )}${sql.raw(']')}) as s)`;
 
-    const variantRows = await tx
-      .select({
-        key: sql<string>`lower(${productVariants.sku})`,
-        variantId: productVariants.id,
-        productId: productVariants.productId,
-        variantStatus: sql<VariantStatus>`${productVariants.status}`,
-        productStatus: sql<ProductStatus>`${products.status}`,
-        baseUnitCode: products.baseUnitCode,
-      })
-      .from(productVariants)
-      .innerJoin(
-        products,
-        and(eq(products.id, productVariants.productId), eq(products.sellerId, sellerId)),
-      )
+    const variantRows = await tx.execute<{
+      input: string;
+      variant_id: string;
+      product_id: string;
+      variant_status: VariantStatus;
+      product_status: ProductStatus;
+      base_unit_code: string;
+      unit_packaging_id: string | null;
+    }>(sql`select i.s as input, v.id as variant_id, v.product_id, v.status as variant_status,
+                  p.status as product_status, p.base_unit_code,
+                  (select k.id from product_packaging k
+                    where k.variant_id = v.id and k.seller_id = ${sellerId} and k.level = 'unit')
+                    as unit_packaging_id
+             from ${list} i
+             join product_variants v on v.seller_id = ${sellerId} and lower(v.sku) = lower(i.s)
+             join products p on p.id = v.product_id and p.seller_id = ${sellerId}`);
+
+    const productRows = await tx.execute<{
+      input: string;
+      product_id: string;
+      status: ProductStatus;
+      base_unit_code: string;
+      active_variant_count: number;
+      active_variant_id: string | null;
+    }>(sql`select i.s as input, p.id as product_id, p.status, p.base_unit_code,
+                  (select count(*)::int from product_variants v
+                    where v.product_id = p.id and v.seller_id = ${sellerId} and v.status = 'active')
+                    as active_variant_count,
+                  (select min(v.id::text)::uuid from product_variants v
+                    where v.product_id = p.id and v.seller_id = ${sellerId} and v.status = 'active')
+                    as active_variant_id
+             from ${list} i
+             join products p on p.seller_id = ${sellerId} and lower(p.sku) = lower(i.s)`);
+
+    const products = new Map<string, ImportProductMatch>();
+    const variantIds = productRows.rows.flatMap((row) =>
+      row.active_variant_count === 1 && row.active_variant_id !== null
+        ? [row.active_variant_id]
+        : [],
+    );
+    const unitPackaging = await this.unitPackagingTx(tx, sellerId, variantIds);
+    for (const row of productRows.rows) {
+      products.set(row.input, {
+        productId: row.product_id,
+        status: row.status,
+        baseUnitCode: row.base_unit_code,
+        activeVariantCount: row.active_variant_count,
+        activeVariantId: row.active_variant_count === 1 ? row.active_variant_id : null,
+        unitPackagingId:
+          row.active_variant_id === null
+            ? null
+            : (unitPackaging.get(row.active_variant_id) ?? null),
+      });
+    }
+    return {
+      variants: new Map(
+        variantRows.rows.map((row) => [
+          row.input,
+          {
+            variantId: row.variant_id,
+            productId: row.product_id,
+            variantStatus: row.variant_status,
+            productStatus: row.product_status,
+            baseUnitCode: row.base_unit_code,
+            unitPackagingId: row.unit_packaging_id,
+          },
+        ]),
+      ),
+      products,
+    };
+  }
+
+  /** Varyant → `unit` ambalaj kimliği (fiyat yalnız bu seviyeye yazılır, Mimar S3). */
+  private async unitPackagingTx(
+    tx: Tx,
+    sellerId: string,
+    variantIds: readonly string[],
+  ): Promise<Map<string, string>> {
+    if (variantIds.length === 0) return new Map();
+    const rows = await tx
+      .select({ variantId: productPackaging.variantId, id: productPackaging.id })
+      .from(productPackaging)
       .where(
         and(
-          eq(productVariants.sellerId, sellerId),
-          inArray(sql`lower(${productVariants.sku})`, keys),
+          eq(productPackaging.sellerId, sellerId),
+          eq(productPackaging.level, 'unit'),
+          inArray(productPackaging.variantId, [...variantIds]),
         ),
       );
-
-    const productRows = await tx
-      .select({
-        key: sql<string>`lower(${products.sku})`,
-        productId: products.id,
-        status: sql<ProductStatus>`${products.status}`,
-        baseUnitCode: products.baseUnitCode,
-        // Alt sorgu dış satıra tam adla bağlanır (Drizzle tek tablolu seçimde sütunu nitelemez).
-        activeVariantCount: sql<number>`(select count(*)::int from product_variants v where v.product_id = "products"."id" and v.seller_id = ${sellerId} and v.status = 'active')`,
-      })
-      .from(products)
-      .where(and(eq(products.sellerId, sellerId), inArray(sql`lower(${products.sku})`, keys)));
-
-    return {
-      variants: new Map(variantRows.map(({ key, ...match }) => [key, match])),
-      products: new Map(productRows.map(({ key, ...match }) => [key, match])),
-    };
+    return new Map(rows.map((row) => [row.variantId, row.id]));
   }
 }

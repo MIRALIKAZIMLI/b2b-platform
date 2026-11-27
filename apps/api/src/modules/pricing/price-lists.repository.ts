@@ -192,7 +192,8 @@ export class PriceListsRepository {
 
   /**
    * Fiyat satırlarını yazar. Aynı (liste, ambalaj, an) satırı varsa fiyatı yalnız an henüz
-   * geçmemişse güncellenir (K5: geçerli olmuş fiyat değişmez). Yazılan satır sayısı döner.
+   * gelmemişse güncellenir (K5: geçerli olmuş fiyat değişmez; F3.5c K5 / Müfettiş 28 not 1:
+   * `valid_from = now` olan satır da geçerli sayılır, `>`). Yazılan satır sayısı döner.
    */
   async upsertItemsTx(
     tx: Tx,
@@ -206,7 +207,7 @@ export class PriceListsRepository {
       .onConflictDoUpdate({
         target: [priceListItems.priceListId, priceListItems.packagingId, priceListItems.validFrom],
         set: { unitPrice: sql`excluded.unit_price` },
-        setWhere: sql`${priceListItems.validFrom} >= ${now}`,
+        setWhere: sql`${priceListItems.validFrom} > ${now}`,
       })
       .returning({ packagingId: priceListItems.packagingId });
     return written.length;

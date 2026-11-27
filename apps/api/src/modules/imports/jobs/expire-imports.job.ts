@@ -1,4 +1,7 @@
 // Önizleme süre dolumu (F3.5a; SF-08 "Önizleme 24 saat onaylanmaz → iş ve dosya silinir").
+// F3.5c (Müfettiş 29 not 2): aynı çalışma, `imports.stuck_after_minutes` boyunca ilerlemeyen
+// `uploaded`/`validating`/`applying` işi `failed` + `TIMED_OUT` yapar (K10) ve
+// `imports.result_ttl_days` geçen `done`/`failed` işi dosya ve raporlarıyla siler (S2 = A).
 // Worker'da `imports` kuyruğunda `imports.expire_interval_minutes` aralıkla. Aynı anda tek kopya
 // (Redis kilidi, `ScheduledJobRunner`); kilit düşse bile DELETE satırı kilitlediği ve yalnız
 // `preview_ready` satırı sildiği için her iş bir kez silinir. Satırlar DEFINER fonksiyonuyla bağlamsız sistem işleminde silinir;
@@ -23,23 +26,38 @@ export interface ExpireImportsLog {
 @Injectable()
 export class ExpireImportsJob {
   constructor(
-    @Inject(ImportsRepository) private readonly repository: Pick<ImportsRepository, 'expireTx'>,
+    @Inject(ImportsRepository)
+    private readonly repository: Pick<ImportsRepository, 'expireTx' | 'timeOutTx'>,
     @Inject(FileStorage) private readonly storage: Pick<FileStorage, 'delete'>,
     @Inject(SettingsService) private readonly settings: Pick<SettingsService, 'get'>,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(ScheduledJobRunner) private readonly runner: Pick<ScheduledJobRunner, 'run'>,
   ) {}
 
-  /** Süresi dolmuş `preview_ready` işleri siler; silinen iş sayısı. */
+  /** Takılı işleri düşürür, süresi dolan işleri siler; işlenen (düşürülen + silinen) iş sayısı. */
   async run(log: ExpireImportsLog): Promise<ScheduledJobOutcome> {
     const ttlHours = await this.settings.get('imports.preview_ttl_hours');
+    const resultDays = await this.settings.get('imports.result_ttl_days');
+    const stuckMinutes = await this.settings.get('imports.stuck_after_minutes');
     const batchSize = await this.settings.get('imports.expire_batch_size');
     const lockSeconds = await this.settings.get('imports.expire_lock_seconds');
     return await this.runner.run(EXPIRE_IMPORTS_JOB, lockSeconds, async () => {
-      const cutoff = new Date(this.clock.now().getTime() - ttlHours * 3_600_000);
+      const now = this.clock.now().getTime();
+      const previewCutoff = new Date(now - ttlHours * 3_600_000);
+      const resultCutoff = new Date(now - resultDays * 86_400_000);
+      const stuckCutoff = new Date(now - stuckMinutes * 60_000);
       let total = 0;
       for (;;) {
-        const removed = await withSystemTx((tx) => this.repository.expireTx(tx, cutoff, batchSize));
+        const timedOut = await withSystemTx((tx) =>
+          this.repository.timeOutTx(tx, stuckCutoff, batchSize),
+        );
+        total += timedOut.length;
+        if (timedOut.length < batchSize) break;
+      }
+      for (;;) {
+        const removed = await withSystemTx((tx) =>
+          this.repository.expireTx(tx, previewCutoff, resultCutoff, batchSize),
+        );
         const jobs = new Set(removed.map((row) => row.jobId));
         total += jobs.size;
         for (const row of removed) {

@@ -77,6 +77,8 @@ export const AUDIT_ACTIONS = [
   'price_list.archived',
   'price_list.restored',
   'price_list.items_set',
+  // F3.5c (US-031 AC3, kart K16): içe aktarma uygulandı; yalnız sayılar (ürün başına kayıt yok).
+  'import.applied',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -126,6 +128,7 @@ export const AUDIT_TARGET_TYPES = [
   'activity_type',
   'product',
   'price_list',
+  'import_job',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 
