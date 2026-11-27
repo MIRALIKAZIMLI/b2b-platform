@@ -5,7 +5,7 @@
 // daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
 // F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım;
 // F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu; F3.2b: kategori, marka, faaliyet alanı;
-// F3.3b: toptancı ürün listesi ve formu; F3.6b: fiyat ekranları).
+// F3.3b: toptancı ürün listesi ve formu; F3.6b: fiyat ekranları; F3.5b: Excel içe aktarma sihirbazı).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -6617,5 +6617,331 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Qiymət yoxdur',
     ru: 'Цены нет',
     tr: 'Fiyat yok',
+  },
+  // F3.5b: Excel içe aktarma sihirbazı (taslak, onay bekliyor).
+  'products.import_open': {
+    az: 'Excel ilə idxal',
+    ru: 'Импорт из Excel',
+    tr: 'Excel ile içe aktar',
+  },
+  'imports.wizard.eyebrow': {
+    az: 'Məhsullar',
+    ru: 'Товары',
+    tr: 'Ürünler',
+  },
+  'imports.wizard.title': {
+    az: 'Excel ilə idxal',
+    ru: 'Импорт из Excel',
+    tr: 'Excel ile içe aktarma',
+  },
+  'imports.wizard.description': {
+    az: 'Məhsul siyahınızı şablonla yükləyin: əvvəlcə yoxlanılır, nəticəni görüb təsdiqlədikdən sonra tətbiq olunur.',
+    ru: 'Загрузите список товаров по шаблону: сначала он проверяется, а применяется только после вашего подтверждения.',
+    tr: 'Ürün listenizi şablonla yükleyin: önce kontrol edilir, sonucu görüp onayladıktan sonra uygulanır.',
+  },
+  'imports.wizard.back_to_products': {
+    az: 'Məhsullara qayıt',
+    ru: 'К товарам',
+    tr: 'Ürünlere dön',
+  },
+  'imports.wizard.no_access': {
+    az: 'Excel idxalı üçün icazəniz yoxdur.',
+    ru: 'У вас нет права на импорт из Excel.',
+    tr: 'Excel içe aktarma yetkiniz yok.',
+  },
+  'imports.wizard.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'imports.wizard.steps_label': {
+    az: 'İdxal mərhələləri',
+    ru: 'Этапы импорта',
+    tr: 'İçe aktarma adımları',
+  },
+  'imports.wizard.step.upload': {
+    az: 'Fayl',
+    ru: 'Файл',
+    tr: 'Dosya',
+  },
+  'imports.wizard.step.check': {
+    az: 'Yoxlama',
+    ru: 'Проверка',
+    tr: 'Kontrol',
+  },
+  'imports.wizard.step.confirm': {
+    az: 'Təsdiq',
+    ru: 'Подтверждение',
+    tr: 'Onay',
+  },
+  'imports.wizard.step.result': {
+    az: 'Nəticə',
+    ru: 'Результат',
+    tr: 'Sonuç',
+  },
+  'imports.wizard.template_title': {
+    az: '1. Şablonu endirin',
+    ru: '1. Скачайте шаблон',
+    tr: '1. Şablonu indirin',
+  },
+  'imports.wizard.template_hint': {
+    az: 'Sütun adlarını dəyişməyin; izahlar "Təlimat" səhifəsindədir. Eyni SKU olan məhsul yenilənir.',
+    ru: 'Не меняйте названия столбцов; пояснения — на листе «Инструкция». Товар с тем же SKU обновляется.',
+    tr: 'Sütun adlarını değiştirmeyin; açıklamalar "Açıklama" sayfasında. Aynı SKU’lu ürün güncellenir.',
+  },
+  'imports.wizard.template_download': {
+    az: 'Şablonu endir',
+    ru: 'Скачать шаблон',
+    tr: 'Şablonu indir',
+  },
+  'imports.wizard.template_loading': {
+    az: 'Hazırlanır…',
+    ru: 'Готовится…',
+    tr: 'Hazırlanıyor…',
+  },
+  'imports.wizard.drop_title': {
+    az: '2. Doldurulmuş faylı seçin və ya bura atın',
+    ru: '2. Выберите заполненный файл или перетащите его сюда',
+    tr: '2. Doldurulmuş dosyayı seçin veya buraya bırakın',
+  },
+  'imports.wizard.drop_hint': {
+    az: 'Yalnız .xlsx faylı',
+    ru: 'Только файл .xlsx',
+    tr: 'Yalnız .xlsx dosyası',
+  },
+  'imports.wizard.uploading': {
+    az: 'Fayl yüklənir…',
+    ru: 'Файл загружается…',
+    tr: 'Dosya yükleniyor…',
+  },
+  'imports.wizard.upload_error.type': {
+    az: 'Yalnız .xlsx faylı seçin.',
+    ru: 'Выберите файл .xlsx.',
+    tr: 'Yalnız .xlsx dosyası seçin.',
+  },
+  'imports.wizard.upload_error.size': {
+    az: 'Fayl çox böyükdür.',
+    ru: 'Файл слишком большой.',
+    tr: 'Dosya çok büyük.',
+  },
+  'imports.wizard.upload_error.forbidden': {
+    az: 'Excel idxalı üçün icazəniz yoxdur.',
+    ru: 'У вас нет права на импорт из Excel.',
+    tr: 'Excel içe aktarma yetkiniz yok.',
+  },
+  'imports.wizard.upload_error.failed': {
+    az: 'Fayl yüklənmədi. Yenidən cəhd edin.',
+    ru: 'Не удалось загрузить файл. Попробуйте ещё раз.',
+    tr: 'Dosya yüklenemedi. Tekrar deneyin.',
+  },
+  'imports.wizard.upload_error.template': {
+    az: 'Şablon hazırlanmadı. Yenidən cəhd edin.',
+    ru: 'Не удалось подготовить шаблон. Попробуйте ещё раз.',
+    tr: 'Şablon hazırlanamadı. Tekrar deneyin.',
+  },
+  'imports.wizard.checking_title': {
+    az: 'Fayl yoxlanılır…',
+    ru: 'Файл проверяется…',
+    tr: 'Dosya kontrol ediliyor…',
+  },
+  'imports.wizard.checking_body': {
+    az: 'Bu bir neçə dəqiqə çəkə bilər. Səhifəni bağlasanız da yoxlama davam edir.',
+    ru: 'Это может занять несколько минут. Проверка продолжится, даже если закрыть страницу.',
+    tr: 'Bu birkaç dakika sürebilir. Sayfayı kapatsanız da kontrol sürer.',
+  },
+  'imports.wizard.preview_title': {
+    az: 'Yoxlamanın nəticəsi',
+    ru: 'Результат проверки',
+    tr: 'Kontrol sonucu',
+  },
+  'imports.wizard.preview_body': {
+    az: 'Təsdiqlədikdə yalnız xətasız sətirlər tətbiq olunur. Yeni məhsullar qaralama kimi yaranır.',
+    ru: 'После подтверждения применяются только строки без ошибок. Новые товары создаются как черновики.',
+    tr: 'Onayladığınızda yalnız hatasız satırlar uygulanır. Yeni ürünler taslak olarak açılır.',
+  },
+  'imports.wizard.preview_nothing': {
+    az: 'Tətbiq olunacaq sətir yoxdur. Xətaları düzəldib faylı yenidən yükləyin.',
+    ru: 'Нет строк для применения. Исправьте ошибки и загрузите файл снова.',
+    tr: 'Uygulanacak satır yok. Hataları düzeltip dosyayı yeniden yükleyin.',
+  },
+  'imports.wizard.stat.insert': {
+    az: 'Əlavə olunacaq',
+    ru: 'Будет добавлено',
+    tr: 'Eklenecek',
+  },
+  'imports.wizard.stat.update': {
+    az: 'Yenilənəcək',
+    ru: 'Будет обновлено',
+    tr: 'Güncellenecek',
+  },
+  'imports.wizard.stat.error': {
+    az: 'Xətalı',
+    ru: 'С ошибками',
+    tr: 'Hatalı',
+  },
+  'imports.wizard.stat.warning': {
+    az: 'Xəbərdarlıqla',
+    ru: 'С предупреждением',
+    tr: 'Uyarılı',
+  },
+  'imports.wizard.problems_title': {
+    az: 'Problemli sətirlər',
+    ru: 'Строки с проблемами',
+    tr: 'Sorunlu satırlar',
+  },
+  'imports.wizard.problems_more': {
+    az: 'İlk {shown} sətir göstərilir ({total} sətirdən); tam siyahı hesabatdadır.',
+    ru: 'Показаны первые {shown} из {total} строк; полный список — в отчёте.',
+    tr: '{total} satırdan ilk {shown} satır gösteriliyor; tam liste raporda.',
+  },
+  'imports.wizard.col_row': {
+    az: 'Sətir',
+    ru: 'Строка',
+    tr: 'Satır',
+  },
+  'imports.wizard.col_problem': {
+    az: 'Problem',
+    ru: 'Проблема',
+    tr: 'Sorun',
+  },
+  'imports.wizard.future_price_hint': {
+    az: 'Məhsulun gələcək tarixli qiyməti varsa, idxal olunan qiymət o tarixə qədər qüvvədə olur.',
+    ru: 'Если у товара есть цена с будущей датой, импортированная цена действует до этой даты.',
+    tr: 'Ürünün ileri tarihli fiyatı varsa, içe aktarılan fiyat o tarihe kadar geçerli olur.',
+  },
+  'imports.wizard.expires_at': {
+    az: 'Təsdiqlənməzsə, bu nəticə {at} silinəcək.',
+    ru: 'Если не подтвердить, результат будет удалён {at}.',
+    tr: 'Onaylanmazsa bu sonuç {at} tarihinde silinir.',
+  },
+  'imports.wizard.new_file': {
+    az: 'Başqa fayl',
+    ru: 'Другой файл',
+    tr: 'Başka dosya',
+  },
+  'imports.wizard.download_problems': {
+    az: 'Problemlər hesabatını endir',
+    ru: 'Скачать отчёт о проблемах',
+    tr: 'Sorun raporunu indir',
+  },
+  'imports.wizard.confirm': {
+    az: 'Təsdiqlə və tətbiq et ({count})',
+    ru: 'Подтвердить и применить ({count})',
+    tr: 'Onayla ve uygula ({count})',
+  },
+  'imports.wizard.applying_short': {
+    az: 'Göndərilir…',
+    ru: 'Отправка…',
+    tr: 'Gönderiliyor…',
+  },
+  'imports.wizard.apply_error.not_allowed': {
+    az: 'Bu nəticəni yalnız faylı yükləyən, qiymət icazəsi olan istifadəçi təsdiqləyə bilər.',
+    ru: 'Подтвердить результат может только загрузивший файл пользователь с правом на цены.',
+    tr: 'Bu sonucu yalnız dosyayı yükleyen ve fiyat yetkisi olan kullanıcı onaylayabilir.',
+  },
+  'imports.wizard.apply_error.expired': {
+    az: 'Nəticənin müddəti bitib. Faylı yenidən yükləyin.',
+    ru: 'Срок результата истёк. Загрузите файл снова.',
+    tr: 'Sonucun süresi doldu. Dosyayı yeniden yükleyin.',
+  },
+  'imports.wizard.apply_error.moved': {
+    az: 'İdxal artıq başladılıb; vəziyyəti yeniləyirik.',
+    ru: 'Импорт уже запущен; обновляем состояние.',
+    tr: 'İçe aktarma zaten başlatıldı; durum yenileniyor.',
+  },
+  'imports.wizard.apply_error.failed': {
+    az: 'Təsdiq göndərilmədi. Yenidən cəhd edin.',
+    ru: 'Не удалось отправить подтверждение. Попробуйте ещё раз.',
+    tr: 'Onay gönderilemedi. Tekrar deneyin.',
+  },
+  'imports.wizard.applying_title': {
+    az: 'Tətbiq olunur…',
+    ru: 'Применяется…',
+    tr: 'Uygulanıyor…',
+  },
+  'imports.wizard.applying_body': {
+    az: 'Sətirlər hissə-hissə yazılır. Səhifəni bağlasanız da proses davam edir.',
+    ru: 'Строки записываются частями. Процесс продолжится, даже если закрыть страницу.',
+    tr: 'Satırlar parça parça yazılıyor. Sayfayı kapatsanız da işlem sürer.',
+  },
+  'imports.wizard.applying_rows': {
+    az: '{done} / {total} sətir',
+    ru: '{done} / {total} строк',
+    tr: '{done} / {total} satır',
+  },
+  'imports.wizard.done_title': {
+    az: 'İdxal tamamlandı',
+    ru: 'Импорт завершён',
+    tr: 'İçe aktarma tamamlandı',
+  },
+  'imports.wizard.done_body': {
+    az: '{applied} sətir tətbiq olundu, {skipped} sətir tətbiq olunmadı.',
+    ru: 'Применено строк: {applied}, не применено: {skipped}.',
+    tr: '{applied} satır uygulandı, {skipped} satır uygulanmadı.',
+  },
+  'imports.wizard.download_result': {
+    az: 'Nəticə hesabatını endir',
+    ru: 'Скачать отчёт о результате',
+    tr: 'Sonuç raporunu indir',
+  },
+  'imports.wizard.to_products': {
+    az: 'Məhsullara bax',
+    ru: 'Перейти к товарам',
+    tr: 'Ürünlere git',
+  },
+  'imports.wizard.new_import': {
+    az: 'Yeni idxal',
+    ru: 'Новый импорт',
+    tr: 'Yeni içe aktarma',
+  },
+  'imports.wizard.done_draft_hint': {
+    az: 'Yeni məhsullar qaralamadadır; satışa çıxarmaq üçün məhsul səhifəsində dərc edin.',
+    ru: 'Новые товары в черновиках; чтобы начать продажу, опубликуйте их на странице товара.',
+    tr: 'Yeni ürünler taslakta; satışa açmak için ürün sayfasında yayınlayın.',
+  },
+  'imports.wizard.failure.FILE_INVALID': {
+    az: 'Fayl oxunmadı',
+    ru: 'Файл не прочитан',
+    tr: 'Dosya okunamadı',
+  },
+  'imports.wizard.failure.IMPORT_TOO_MANY_ROWS': {
+    az: 'Faylda çox sətir var',
+    ru: 'В файле слишком много строк',
+    tr: 'Dosyada çok fazla satır var',
+  },
+  'imports.wizard.failure.APPLY_FAILED': {
+    az: 'Tətbiq yarımçıq dayandı',
+    ru: 'Применение прервано',
+    tr: 'Uygulama yarıda kaldı',
+  },
+  'imports.wizard.failure.TIMED_OUT': {
+    az: 'Tətbiq vaxtında bitmədi',
+    ru: 'Применение не завершилось вовремя',
+    tr: 'Uygulama zamanında bitmedi',
+  },
+  'imports.wizard.failed_none': {
+    az: 'Heç bir sətir tətbiq olunmadı. Faylı və şablonu yoxlayıb yenidən yükləyin.',
+    ru: 'Ни одна строка не применена. Проверьте файл по шаблону и загрузите снова.',
+    tr: 'Hiçbir satır uygulanmadı. Dosyayı şablona göre kontrol edip yeniden yükleyin.',
+  },
+  'imports.wizard.failed_partial': {
+    az: 'Faylın ilk {applied} sətri tətbiq olundu, qalanları tətbiq olunmadı. Eyni faylı yenidən yükləyə bilərsiniz: mövcud SKU-lar sadəcə yenilənir.',
+    ru: 'Первые {applied} строк файла применены, остальные — нет. Можно загрузить тот же файл снова: существующие SKU просто обновятся.',
+    tr: 'Dosyanın ilk {applied} satırı uygulandı, kalanlar uygulanmadı. Aynı dosyayı yeniden yükleyebilirsiniz: var olan SKU’lar yalnız güncellenir.',
+  },
+  'imports.wizard.missing_title': {
+    az: 'İdxal tapılmadı',
+    ru: 'Импорт не найден',
+    tr: 'İçe aktarma bulunamadı',
+  },
+  'imports.wizard.missing_body': {
+    az: 'Nəticənin müddəti bitmiş və ya başqa müəssisəyə aid ola bilər. Faylı yenidən yükləyin.',
+    ru: 'Срок результата мог истечь, или он относится к другой компании. Загрузите файл снова.',
+    tr: 'Sonucun süresi dolmuş ya da başka bir işletmeye ait olabilir. Dosyayı yeniden yükleyin.',
+  },
+  'imports.wizard.start_over': {
+    az: 'Yenidən başla',
+    ru: 'Начать заново',
+    tr: 'Baştan başla',
   },
 };
