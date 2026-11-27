@@ -10,20 +10,24 @@
 //   bugün/geçmiş kararını sunucu verir (422 → gün alanında hata).
 // - "Müştəri üçün yoxla": aktif müşteri seçilince her satırda o müşterinin fiyatı ve kaynağı
 //   (`/prices/explain`). Müşteri izni (`connections.view`) yoksa bölüm görünmez.
+// - F3.9: açıklamada isteğe bağlı miktar kutusu; ulaşılan kademe indirimi fiyatın yanında yeşil.
 // - F3.7b: müşteri seçiliyken `pricing.manage` ile her satırda "Müştəri qiyməti" kutusu: o müşteriye
 //   hemen geçerli özel fiyat yazar (ileri tarih ve kaldırma müşterinin "Xüsusi qiymətlər" sayfasında).
 import {
   addDays,
   formatDate,
+  formatTierDecimal,
   formatUnitPrice,
   pickLocalizedText,
   type PriceStartMode,
   priceItemsBody,
   priceItemsFieldErrors,
+  normalizeDecimalInput,
   priceListFailureKey,
   priceSourceKey,
   pricingAccess,
   sortPriceLists,
+  TIER_MIN_QTY_PATTERN,
 } from '@b2b/shared';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -43,10 +47,21 @@ import {
   useSetPrices,
 } from './api';
 
-interface PriceRow {
+export interface PriceRow {
   readonly packagingId: string;
   readonly variantSku: string;
   readonly label: string;
+}
+
+/** Açıklama miktarı kutusu: boş = 1 (API varsayılanı), aksi eşik deseninde ve sıfırdan büyük. */
+function explainQty(
+  input: string,
+): { kind: 'empty' } | { kind: 'invalid' } | { kind: 'ok'; value: string } {
+  const value = normalizeDecimalInput(input);
+  if (value === '') return { kind: 'empty' };
+  return TIER_MIN_QTY_PATTERN.test(value) && /[1-9]/.test(value)
+    ? { kind: 'ok', value }
+    : { kind: 'invalid' };
 }
 
 /** Toptancının saat dilimindeki bugün (`YYYY-MM-DD`); yalnız gün seçicinin alt sınırı için. */
@@ -57,6 +72,35 @@ export function sellerToday(timeZone: string): string {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date());
+}
+
+/**
+ * Fiyat satırları: aktif varyantların satış birimi olan ambalaj seviyeleri (fiyat ve kademe satış
+ * birimi başına). F3.9 kademe kartı da aynı satırları kullanır.
+ */
+export function useSalesUnitRows(product: Product, units: readonly Unit[]): PriceRow[] {
+  const tProducts = useTranslations('products');
+  const locale = useLocale();
+  const unit = units.find((item) => item.code === product.baseUnitCode);
+  const unitAbbr =
+    unit === undefined
+      ? product.baseUnitCode
+      : (pickLocalizedText(unit.abbreviation, locale) ?? product.baseUnitCode);
+  return useMemo(
+    () =>
+      product.variants
+        .filter((variant) => variant.status === 'active')
+        .flatMap((variant) =>
+          variant.packaging
+            .filter((item) => item.isSalesUnit)
+            .map((item) => ({
+              packagingId: item.id,
+              variantSku: variant.sku,
+              label: `${tProducts(`level.${item.level}`)} · ${item.baseQty} ${unitAbbr}`,
+            })),
+        ),
+    [product.variants, tProducts, unitAbbr],
+  );
 }
 
 /** `pricing.view` yoksa hiç çizilmez. */
@@ -98,7 +142,6 @@ function PricesCardBody({
   canViewCustomers: boolean;
 }) {
   const t = useTranslations('prices');
-  const tProducts = useTranslations('products');
   const tAll = useTranslations();
   const locale = useLocale();
   const shell = useShell();
@@ -118,26 +161,7 @@ function PricesCardBody({
   const [chosen, setChosen] = useState<string>();
   const list = active.find((item) => item.id === chosen) ?? active[0];
 
-  const unit = units.find((item) => item.code === product.baseUnitCode);
-  const unitAbbr =
-    unit === undefined
-      ? product.baseUnitCode
-      : (pickLocalizedText(unit.abbreviation, locale) ?? product.baseUnitCode);
-  const rows: PriceRow[] = useMemo(
-    () =>
-      product.variants
-        .filter((variant) => variant.status === 'active')
-        .flatMap((variant) =>
-          variant.packaging
-            .filter((item) => item.isSalesUnit)
-            .map((item) => ({
-              packagingId: item.id,
-              variantSku: variant.sku,
-              label: `${tProducts(`level.${item.level}`)} · ${item.baseQty} ${unitAbbr}`,
-            })),
-        ),
-    [product.variants, tProducts, unitAbbr],
-  );
+  const rows = useSalesUnitRows(product, units);
   const packagingIds = useMemo(() => rows.map((row) => row.packagingId), [rows]);
   const prices = useListPrices(businessId, list?.id, packagingIds);
   const byPackaging = new Map((prices.data ?? []).map((item) => [item.packagingId, item]));
@@ -155,10 +179,14 @@ function PricesCardBody({
   const connections = useConnections(canViewCustomers ? businessId : undefined, 'active');
   const customers = (connections.data?.pages ?? []).flatMap((page) => page.items);
   const [buyerId, setBuyerId] = useState('');
+  // F3.9: miktar (satış birimi) girilirse açıklama ulaşılan kademe indirimini de gösterir.
+  const [qtyInput, setQtyInput] = useState('');
+  const qty = explainQty(qtyInput);
   const explanations = usePriceExplanations(
     businessId,
     buyerId === '' ? undefined : buyerId,
     packagingIds,
+    qty.kind === 'ok' ? qty.value : undefined,
   );
 
   function onSave() {
@@ -481,7 +509,36 @@ function PricesCardBody({
                     {t('explain.more')}
                   </Button>
                 )}
+                <div className="w-full sm:w-40">
+                  <label htmlFor="price-explain-qty" className="sr-only">
+                    {t('explain.qty')}
+                  </label>
+                  <TextInput
+                    id="price-explain-qty"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder={t('explain.qty_placeholder')}
+                    value={qtyInput}
+                    invalid={qty.kind === 'invalid'}
+                    aria-invalid={qty.kind === 'invalid'}
+                    aria-describedby="price-explain-qty-hint"
+                    onChange={(event) => {
+                      setQtyInput(event.target.value);
+                    }}
+                  />
+                </div>
               </div>
+              <p
+                id="price-explain-qty-hint"
+                role={qty.kind === 'invalid' ? 'alert' : undefined}
+                className={
+                  qty.kind === 'invalid'
+                    ? 'text-xs font-medium text-rose-600'
+                    : 'text-xs text-slate-500'
+                }
+              >
+                {qty.kind === 'invalid' ? t('explain.qty_invalid') : t('explain.qty_hint')}
+              </p>
               {connections.isSuccess && customers.length === 0 && (
                 <p className="text-xs text-slate-500">{t('explain.no_customers')}</p>
               )}
@@ -539,6 +596,11 @@ function Explanation({
           {data.priceList === null
             ? source
             : t('explain.source_with_list', { source, name: data.priceList.name })}
+        </span>
+      )}
+      {data.tierDiscountPercent !== null && (
+        <span data-testid="price-explain-tier" className="font-medium text-emerald-700">
+          · {t('explain.tier', { percent: formatTierDecimal(data.tierDiscountPercent) })}
         </span>
       )}
     </p>

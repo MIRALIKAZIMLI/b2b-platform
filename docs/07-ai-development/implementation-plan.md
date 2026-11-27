@@ -421,6 +421,7 @@ Onayımı bekle.
 - **Dosyalar:** `tier_prices`, `PUT /api/v1/tier-prices`.
 - **Kabul:** US-037 AC1; P7.
 - **Test:** Birim.
+- **Durum:** Tek PR (`docs/tasks/F3.9.md`): migration `0041`, `GET/PUT /tier-prices`, `/prices/explain?qty=`, web ürün formunda kademe kartı (kullanıcı kararı S1 = A); kurallar S2 = A.
 
 ### F3.10 — Stok modları 0–1
 

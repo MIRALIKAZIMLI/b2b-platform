@@ -8,6 +8,7 @@ import { fromDecimalString, toDecimalString, UNIT_PRICE_SCALE } from '../../core
 import { BuyerPriceLoader } from './buyer-price.loader';
 import { CustomerPricesRepository } from './customer-prices.repository';
 import { PriceListsRepository } from './price-lists.repository';
+import { TierPricesRepository } from './tier-prices.repository';
 
 @Injectable()
 export class DefaultPriceListLookup {
@@ -182,6 +183,7 @@ export class CustomerPriceImport {
   providers: [
     PriceListsRepository,
     CustomerPricesRepository,
+    TierPricesRepository,
     BuyerPriceLoader,
     DefaultPriceListLookup,
     ImportPriceWriter,

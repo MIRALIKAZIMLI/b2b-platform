@@ -37,7 +37,7 @@ Her istek işleminin başında uygulama `SET LOCAL app.business_id = '<uuid>'` �
 **Ek RLS kuralları:**
 
 - `withSystemTx` yalnızca bağlamsız sistem okumaları (ayar, worker) içindir; kiracı verisi göremez: `app.business_id`, `app.user_id` ve `app.is_platform` boştur, T/P/U tablolarında 0 satır döner. S tablolarına yalnızca `SECURITY DEFINER` fonksiyonlarla erişir (F1.4a).
-- Platform bağlamı (`app.is_platform = true`) `orders`, `order_items`, `ledger_entries`, `payments`, `price_lists`, `price_list_items`, `customer_prices` tablolarında **yazma** iznine sahip değildir (US-016 AC5). F3.3a (R39): `products`, `product_variants`, `product_packaging`, `product_visibility` ve F3.4a'da `product_images`, F3.5a'da `import_jobs` da bu listededir (platform yalnız okur).
+- Platform bağlamı (`app.is_platform = true`) `orders`, `order_items`, `ledger_entries`, `payments`, `price_lists`, `price_list_items`, `customer_prices`, `tier_prices` (F3.9) tablolarında **yazma** iznine sahip değildir (US-016 AC5). F3.3a (R39): `products`, `product_variants`, `product_packaging`, `product_visibility` ve F3.4a'da `product_images`, F3.5a'da `import_jobs` da bu listededir (platform yalnız okur).
 - T tablolarında kiracı politikasının yanında ayrı bir platform politikası bulunur: `current_setting('app.is_platform', true) = 'true'` iken USING ve WITH CHECK (c4-component §7; `withPlatformTx` `app.business_id`'yi boş bıraktığı için kiracı politikası platforma 0 satır gösterir). İlk uygulama F1.7 (`businesses` grubu). US-016 AC5 listesindeki tablolara bu politika **asla** eklenmez. F2.18: `pnpm check-rls` bu listeyi (`PLATFORM_WRITE_FORBIDDEN_TABLES`, `check-rls.ts`) denetler: listedeki tabloda `app.is_platform` geçen veya kiracı koşulu taşımayan yazma politikası (INSERT, UPDATE, DELETE, FOR ALL) CI'ı kırar; tablo henüz yoksa kural atlanır.
 - Alıcı, satıcının ürün ve fiyat tablolarını yalnızca **aktif bağlantı** varsa okuyabilir: bu sorgular `catalog` modülünün `buyer_visible_products(buyer_id)` fonksiyonu üzerinden yapılır ve fonksiyon aktif bağlantıyı kontrol eder.
 
@@ -84,6 +84,7 @@ erDiagram
     price_lists ||--o{ price_list_items : ""
     product_packaging ||--o{ price_list_items : "satış birimi fiyatı"
     product_packaging ||--o{ customer_prices : ""
+    product_packaging ||--o{ tier_prices : "kademe"
     connections }o--o| price_lists : "atanmış liste"
     warehouses ||--o{ stock : ""
     product_variants ||--o{ stock : ""
@@ -836,7 +837,18 @@ F3.7a (`0039_customer_prices.sql`): PK `(seller_id, buyer_id, packaging_id, vali
 | percent | numeric(5,2) | 0 < x ≤ 100 | |
 | valid_from, valid_to | timestamptz | valid_to null | |
 
-#### `tier_prices` (T) — `seller_id`, `packaging_id`, `min_qty numeric(14,3)`, `discount_percent numeric(5,2)`; benzersiz `(packaging_id, min_qty)`
+#### `tier_prices` (T: `seller_id`)
+
+| Alan | Tip | Kısıt | Not |
+| --- | --- | --- | --- |
+| seller_id | uuid | PK parçası; FK businesses | |
+| packaging_id | uuid | PK parçası; bileşik FK `(packaging_id, seller_id)` → `product_packaging(id, seller_id)` ON DELETE CASCADE | Satış birimi (ambalaj seviyesi) |
+| min_qty | numeric(14,3) | PK parçası; `> 1` | Satış birimi cinsinden eşik; miktar eşiğe eşitse uygulanır (P7) |
+| discount_percent | numeric(5,2) | `> 0` ve `< 100` | |
+| created_at | timestamptz | default now() | |
+| created_by | uuid | null | |
+
+F3.9 (`0041_tier_prices.sql`; US-037 AC1, ADR-0019): PK `(seller_id, packaging_id, min_qty)` (ambalaj tek satıcıya ait olduğundan `(packaging_id, min_qty)` benzersizliğini de verir; FK kaskadı PK önekini kullanır). Kademe ambalaj seviyesinin **bütün** perakendecilerine uygulanır (`buyer_id` yok; arşiv tetikleyicisi gerekmez) ve `PriceResolver`'da seçilen fiyatın (müşteri fiyatı, atanmış liste, varsayılan liste) üzerine, şube indiriminden önce gelir; miktarın ulaştığı en büyük eşik seçilir. Tarih yok: hemen geçerli. Kurallar (kullanıcı kararı S2 = A, servis + şema): eşik tekrarsız, eşik büyüdükçe indirim büyür; ambalaj başına en çok `pricing.tier_max_per_packaging` (5) kademe. `PUT /tier-prices` ambalajın bütün satırlarını siler ve yeniden yazar (ambalaj satırı `FOR NO KEY UPDATE`; eşzamanlı yazımlar sıralanır); audit `tier_price.set` (önceki ve yeni kademeler). RLS: `tier_prices_tenant` (FOR ALL, `seller_id`), `tier_prices_platform_select`; perakendeciye politika yok. `app_user` SELECT, INSERT, DELETE (UPDATE yok).
 
 ### 4.10 `inventory`
 

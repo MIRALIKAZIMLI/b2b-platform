@@ -312,6 +312,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `imports.worker_concurrency` | 1 (aynı anda işlenen içe aktarma dosyası; worker açılışında okunur, R32, F3.5c) | tamsayı | 1 | 4 |
 | `imports.stuck_after_minutes` | 60 (bu kadar ilerlemeyen iş `failed` + `TIMED_OUT`, F3.5c) | tamsayı | 10 | 1440 |
 | `imports.result_ttl_days` | 30 (biten içe aktarmanın iş, dosya ve raporlarının saklanma süresi, gün; F3.5c S2 = A) | tamsayı | 1 | 365 |
+| `pricing.tier_max_per_packaging` | 5 (ambalaj seviyesi başına en çok kademeli indirim; aşan `PUT /tier-prices` 422, US-037, F3.9 S2 = A; işletme/plan katmanlı) | tamsayı | 1 | 20 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
 | `i18n.cache_ttl_seconds` | 60 (çeviri ve dil önbelleğinin süreç içi ömrü, F1.3) | tamsayı | 1 | 300 |
 | `directory.reindex_hour_utc` | 1 (perakendeci dizininin gece tam yeniden indekslendiği saat, UTC; worker açılışında okunur, ADR-0011, F2.11a) | tamsayı | 0 | 23 |

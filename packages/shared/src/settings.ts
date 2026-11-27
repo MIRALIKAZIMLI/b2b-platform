@@ -181,6 +181,8 @@ export const SETTING_DEFINITIONS = {
   'imports.worker_concurrency': intSetting(1, 1, 4),
   'imports.stuck_after_minutes': intSetting(60, 10, 1440),
   'imports.result_ttl_days': intSetting(30, 1, 365),
+  // F3.9 (US-037, kullanıcı kararı S2 = A): ambalaj başına en çok kademe (işletme/plan katmanlı).
+  'pricing.tier_max_per_packaging': layered(intSetting(5, 1, 20)),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
   'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
   // F2.11a: perakendeci dizini gece tam yeniden indeksleme (ADR-0011 §1, §4).

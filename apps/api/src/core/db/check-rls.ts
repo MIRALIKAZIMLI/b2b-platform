@@ -178,6 +178,8 @@ export const PLATFORM_WRITE_FORBIDDEN_TABLES: readonly string[] = [
   'price_lists',
   'price_list_items',
   'customer_prices',
+  // F3.9: kademeli indirim; platform yalnız okur.
+  'tier_prices',
   // F3.3a (R39): ürün tabloları; platform yalnız okur.
   'products',
   'product_variants',

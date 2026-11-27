@@ -312,7 +312,8 @@ export class PriceListsService {
   /**
    * `GET /prices/explain` (US-034 AC5): bir alıcı için fiyat ve kaynağı. Aktif bağlantı yoksa 404;
    * `assigned` kapsamlı üye yalnız kendisine atanmış müşteriyi görür (404). Kaynaklar: müşteri
-   * fiyatı (F3.7a), atanmış liste (aktifse) ve varsayılan liste (`BuyerPriceLoader`).
+   * fiyatı (F3.7a), atanmış liste (aktifse) ve varsayılan liste (`BuyerPriceLoader`); F3.9: `qty` ile
+   * ulaşılan kademe indirimi (verilmezse miktar 1).
    */
   async explain(tenant: TenantContext, query: PriceExplainQuery): Promise<PriceExplanationView> {
     return await withTenantTx(tenant, async (tx) => {
@@ -334,6 +335,7 @@ export class PriceListsService {
         priceListId: connection.priceListId,
         packagingIds: [query.packagingId],
         now: this.clock.now(),
+        ...(query.qty === undefined ? {} : { qty: query.qty }),
       });
       const resolved = prices.get(query.packagingId)?.resolved ?? { source: 'none' as const };
       if (resolved.source === 'none') {

@@ -7219,4 +7219,139 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'К ценам клиента',
     tr: 'Müşterinin fiyatlarına git',
   },
+  'prices.explain.qty': {
+    az: 'Miqdar',
+    ru: 'Количество',
+    tr: 'Miktar',
+  },
+  'prices.explain.qty_placeholder': {
+    az: 'Miqdar (1)',
+    ru: 'Количество (1)',
+    tr: 'Miktar (1)',
+  },
+  'prices.explain.qty_hint': {
+    az: 'Miqdar yazsanız, çatdığı pilləli endirim də hesablanır. Boş = 1 ədəd.',
+    ru: 'Укажите количество, чтобы учесть ступенчатую скидку. Пусто = 1.',
+    tr: 'Miktar yazarsanız ulaşılan kademe indirimi de hesaplanır. Boş = 1.',
+  },
+  'prices.explain.qty_invalid': {
+    az: 'Miqdar 0-dan böyük olmalı, ən çox 3 onluq rəqəm.',
+    ru: 'Количество должно быть больше 0, не более 3 знаков после запятой.',
+    tr: "Miktar 0'dan büyük olmalı, en çok 3 ondalık hane.",
+  },
+  'prices.explain.tier': {
+    az: 'pilləli endirim −{percent}%',
+    ru: 'ступенчатая скидка −{percent}%',
+    tr: 'kademe indirimi −{percent}%',
+  },
+  'prices.tiers.title': {
+    az: 'Pilləli endirim',
+    ru: 'Ступенчатая скидка',
+    tr: 'Kademeli indirim',
+  },
+  'prices.tiers.description': {
+    az: 'Sifariş miqdarı həddə çatanda qiymət faizlə azalır. Bütün müştərilərə aiddir və seçilmiş qiymətin (siyahı və ya müştəri qiyməti) üzərinə gəlir.',
+    ru: 'Когда количество в заказе достигает порога, цена снижается на процент. Действует для всех клиентов и применяется поверх выбранной цены (прайс-лист или цена клиента).',
+    tr: 'Sipariş miktarı eşiğe ulaşınca fiyat yüzde olarak düşer. Bütün müşterilere uygulanır ve seçilen fiyatın (liste veya müşteri fiyatı) üzerine gelir.',
+  },
+  'prices.tiers.no_sales_units': {
+    az: 'Satış vahidi olan qablaşdırma yoxdur.',
+    ru: 'Нет упаковок, являющихся единицей продажи.',
+    tr: 'Satış birimi olan ambalaj yok.',
+  },
+  'prices.tiers.none': {
+    az: 'Pilləli endirim yoxdur.',
+    ru: 'Ступенчатой скидки нет.',
+    tr: 'Kademeli indirim yok.',
+  },
+  'prices.tiers.chip': {
+    az: '{qty}+ → −{percent}%',
+    ru: '{qty}+ → −{percent}%',
+    tr: '{qty}+ → −{percent}%',
+  },
+  'prices.tiers.min_qty_for': {
+    az: '{label} üçün hədd miqdarı',
+    ru: 'Пороговое количество для {label}',
+    tr: '{label} için eşik miktarı',
+  },
+  'prices.tiers.percent_for': {
+    az: '{label} üçün endirim faizi',
+    ru: 'Процент скидки для {label}',
+    tr: '{label} için indirim yüzdesi',
+  },
+  'prices.tiers.and_more': {
+    az: 'və çox',
+    ru: 'и больше',
+    tr: 've üstü',
+  },
+  'prices.tiers.remove_row': {
+    az: 'Pilləni sil',
+    ru: 'Удалить ступень',
+    tr: 'Kademeyi sil',
+  },
+  'prices.tiers.add': {
+    az: 'Pillə əlavə et',
+    ru: 'Добавить ступень',
+    tr: 'Kademe ekle',
+  },
+  'prices.tiers.limit_hint': {
+    az: 'Ən çox {max} pillə',
+    ru: 'Не более {max} ступеней',
+    tr: 'En çok {max} kademe',
+  },
+  'prices.tiers.save': {
+    az: 'Yadda saxla',
+    ru: 'Сохранить',
+    tr: 'Kaydet',
+  },
+  'prices.tiers.saving': {
+    az: 'Saxlanılır…',
+    ru: 'Сохранение…',
+    tr: 'Kaydediliyor…',
+  },
+  'prices.tiers.saved': {
+    az: '{count} pillə yadda saxlanıldı və dərhal qüvvəyə mindi.',
+    ru: 'Сохранено ступеней: {count}, действуют сразу.',
+    tr: '{count} kademe kaydedildi ve hemen geçerli oldu.',
+  },
+  'prices.tiers.removed': {
+    az: 'Pilləli endirim silindi.',
+    ru: 'Ступенчатая скидка удалена.',
+    tr: 'Kademeli indirim kaldırıldı.',
+  },
+  'prices.tiers.too_many': {
+    az: 'Ən çox {max} pillə əlavə etmək olar.',
+    ru: 'Можно добавить не более {max} ступеней.',
+    tr: 'En çok {max} kademe eklenebilir.',
+  },
+  'prices.tiers.error.required': {
+    az: 'Doldurun.',
+    ru: 'Заполните.',
+    tr: 'Doldurun.',
+  },
+  'prices.tiers.error.invalid': {
+    az: 'Rəqəm yazın (məs. 10 və ya 2,5).',
+    ru: 'Введите число (напр. 10 или 2,5).',
+    tr: 'Sayı yazın (ör. 10 veya 2,5).',
+  },
+  'prices.tiers.error.min_qty_too_small': {
+    az: 'Hədd 1-dən böyük olmalıdır.',
+    ru: 'Порог должен быть больше 1.',
+    tr: "Eşik 1'den büyük olmalı.",
+  },
+  'prices.tiers.error.duplicate_min_qty': {
+    az: 'Bu hədd artıq var.',
+    ru: 'Такой порог уже есть.',
+    tr: 'Bu eşik zaten var.',
+  },
+  'prices.tiers.error.percent_out_of_range': {
+    az: 'Endirim 0 ilə 100 arasında olmalıdır.',
+    ru: 'Скидка должна быть от 0 до 100.',
+    tr: 'İndirim 0 ile 100 arasında olmalı.',
+  },
+  'prices.tiers.error.percent_not_increasing': {
+    az: 'Böyük həddin endirimi kiçik həddinkindən çox olmalıdır.',
+    ru: 'Скидка на больший порог должна быть больше, чем на меньший.',
+    tr: 'Büyük eşiğin indirimi küçük eşiğinkinden fazla olmalı.',
+  },
 };
