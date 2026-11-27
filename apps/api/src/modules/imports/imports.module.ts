@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { OutboxModule } from '../../core/outbox';
 import { OpsMetricsModule } from '../../core/ops-metrics';
-import { CatalogImportModule } from '../catalog';
+import { AuditModule } from '../../core/audit';
+import { CatalogImportModule, CatalogImportWriterModule } from '../catalog';
 import { FilesModule, FilesWorkerModule } from '../files';
 import { I18nModule } from '../i18n';
 import { PricingImportModule } from '../pricing';
@@ -10,6 +11,7 @@ import { ImportsController } from './imports.controller';
 import { ImportsProcessor } from './imports.processor';
 import { ImportsRepository } from './imports.repository';
 import { ImportsService } from './imports.service';
+import { ApplyImportJob } from './jobs/apply-import.job';
 import { ExpireImportsJob, ExpireImportsSchedule } from './jobs/expire-imports.job';
 import { ValidateImportJob } from './jobs/validate-import.job';
 
@@ -25,7 +27,8 @@ import { ValidateImportJob } from './jobs/validate-import.job';
 export class ImportsModule {}
 
 /**
- * Worker (F3.5a): `imports` kuyruğu tüketicisi (doğrulama) ve önizleme süre dolumu zamanlayıcısı.
+ * Worker (F3.5a): `imports` kuyruğu tüketicisi (doğrulama; F3.5c uygulama) ve süre dolumu /
+ * zaman aşımı zamanlayıcısı.
  * Depo global StorageModule'den, kuyruklar global QueueModule'den gelir.
  */
 @Module({
@@ -35,11 +38,14 @@ export class ImportsModule {}
     FilesWorkerModule,
     I18nModule,
     CatalogImportModule,
+    CatalogImportWriterModule,
     PricingImportModule,
+    AuditModule,
   ],
   providers: [
     ImportsRepository,
     ValidateImportJob,
+    ApplyImportJob,
     ExpireImportsJob,
     ExpireImportsSchedule,
     ImportsProcessor,

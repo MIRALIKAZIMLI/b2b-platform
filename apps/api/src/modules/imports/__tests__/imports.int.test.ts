@@ -298,18 +298,23 @@ describe('F3.5a Excel içe aktarma (entegrasyon)', () => {
       }),
     );
     const variantSku = product.variants[0]?.sku ?? '';
+    // F3.5c (Müfettiş 29 D2): aynı varyantı gösteren iki satır aynı dosyada duplicate_in_file
+    // olur; bu yüzden iki eşleşme yolu ayrı dosyalarla sınanır.
     const job = await preview([
       [variantSku.toLowerCase(), '', 'Yeni ad', '', '', '', '', '', '', '', ''],
-      [product.sku.toUpperCase(), '', '', '', '', '', '', '', '', '', ''],
       [sku('NEW'), '', 'Yeni', '', '', categoryName, '', 'əd.', '', '', ''],
     ]);
     expect(job.stats, JSON.stringify(job.problems)).toEqual({
       insert: 1,
-      update: 2,
+      update: 1,
       error: 0,
       warning: 0,
     });
     expect(job.errorReportUrl).toBeNull();
+    const byProduct = await preview([
+      [product.sku.toUpperCase(), '', '', '', '', '', '', '', '', '', ''],
+    ]);
+    expect(byProduct.stats).toEqual({ insert: 0, update: 1, error: 0, warning: 0 });
   });
 
   it('F3.5a-PRICE varsayılan liste yoksa satır hatası; fiyat izni olmayan üyede uyarı (Mimar S2)', async () => {

@@ -73,7 +73,11 @@ describe('F3.5a şablon ve rapor', () => {
     expect(units).toEqual([['H87', 'Штука', 'шт.']]);
     // Boş şablon okuyucuya verilirse sıfır satır (başlık eksiksiz).
     expect(
-      await readProductRows(body, { maxRows: 10, maxUncompressedBytes: 10 * 1024 * 1024 }),
+      await readProductRows(body, {
+        maxRows: 10,
+        maxUncompressedBytes: 10 * 1024 * 1024,
+        cellMax: 1000,
+      }),
     ).toEqual({
       ok: true,
       rows: [],

@@ -41,6 +41,7 @@ const EXPECTED_FUNCTIONS = [
   'identity_record_login',
   'identity_user_by_phone',
   'import_jobs_expire',
+  'import_jobs_time_out',
   'invitation_accept',
   'list_my_memberships',
   'otp_challenge_close',

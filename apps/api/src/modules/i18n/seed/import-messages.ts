@@ -48,9 +48,9 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   'imports.column.name_ru': t('Ad (rusca).', 'Название (на русском).', 'Ad (Rusça).'),
   'imports.column.name_tr': t('Ad (türkcə).', 'Название (на турецком).', 'Ad (Türkçe).'),
   'imports.column.category': t(
-    '"Kateqoriyalar" səhifəsindəki addır.',
-    'Название со страницы «Категории».',
-    '"Kategoriler" sayfasındaki ad.',
+    '"Kateqoriyalar" səhifəsindəki ad və ya yol (məs. "Üst / Alt"). Eyni ad bir neçə dəfə varsa, yolu yazın.',
+    'Название или путь со страницы «Категории» (напр. «Верх / Низ»). Если название повторяется, укажите путь.',
+    '"Kategoriler" sayfasındaki ad veya yol (ör. "Üst / Alt"). Aynı ad birden çok varsa yolu yazın.',
   ),
   'imports.column.brand': t(
     'Təsdiqlənmiş marka adı (boş ola bilər).',
@@ -85,6 +85,12 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
   'imports.report.kind': t('Növ', 'Тип', 'Tür'),
   'imports.report.error': t('Xəta', 'Ошибка', 'Hata'),
   'imports.report.warning': t('Xəbərdarlıq', 'Предупреждение', 'Uyarı'),
+  // F3.5c sonuç raporu (US-031 AC3).
+  'imports.sheet.result': t('Nəticə', 'Результат', 'Sonuç'),
+  'imports.report.result': t('Nəticə', 'Результат', 'Sonuç'),
+  'imports.result.insert': t('Əlavə edildi', 'Добавлен', 'Eklendi'),
+  'imports.result.update': t('Yeniləndi', 'Обновлён', 'Güncellendi'),
+  'imports.result.error': t('Tətbiq edilmədi', 'Не применён', 'Uygulanmadı'),
   // Satır hataları ve uyarıları.
   'imports.row.required': t('Doldurulmalıdır.', 'Обязательное поле.', 'Doldurulmalı.'),
   'imports.row.invalid': t('Dəyər yanlışdır.', 'Неверное значение.', 'Değer geçersiz.'),
@@ -142,6 +148,22 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     'Standart qiymət siyahısı yoxdur; əvvəlcə qiymət siyahısı yaradın.',
     'Нет прайс-листа по умолчанию; сначала создайте прайс-лист.',
     'Varsayılan fiyat listesi yok; önce fiyat listesi oluşturun.',
+  ),
+  // F3.5c: uygulamada çıkan satır hataları.
+  'imports.row.packaging_conflict': t(
+    'Qutudakı say mövcud qablaşdırma ilə uyğun gəlmir (məs. daxili paketdən böyük olmalıdır).',
+    'Количество в коробке не согласуется с упаковкой товара (напр. должно быть больше внутренней упаковки).',
+    'Koli içi adet mevcut ambalajla uyuşmuyor (ör. iç paketten büyük olmalı).',
+  ),
+  'imports.row.no_unit_packaging': t(
+    'Bu variantın "ədəd" qablaşdırması yoxdur; qiymət yazıla bilməz.',
+    'У этого варианта нет упаковки «штука»; цену записать нельзя.',
+    'Bu varyantın "adet" ambalajı yok; fiyat yazılamaz.',
+  ),
+  'imports.row.taken': t(
+    'Bu SKU artıq başqa məhsulda istifadə olunur.',
+    'Этот SKU уже используется другим товаром.',
+    'Bu SKU başka bir üründe kullanılıyor.',
   ),
   'imports.row.price_ignored_no_permission': t(
     'Qiymət yazmaq icazəniz yoxdur; qiymət nəzərə alınmayacaq.',

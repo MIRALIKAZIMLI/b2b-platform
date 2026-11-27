@@ -307,6 +307,11 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `imports.expire_interval_minutes` | 60 (önizleme süre dolumu işinin çalışma aralığı, dakika; F3.5a) | tamsayı | 5 | 1440 |
 | `imports.expire_batch_size` | 200 (süre dolumunda tek işlemde silinen en çok iş; F3.5a) | tamsayı | 10 | 1000 |
 | `imports.expire_lock_seconds` | 600 (süre dolumu işinin tek kopya kilidi, saniye; F3.5a) | tamsayı | 60 | 3600 |
+| `imports.cell_max_chars` | 1000 (Excel hücre metninin üst sınırı; aşan hücre `too_long`, F3.5c) | tamsayı | 100 | 10000 |
+| `imports.preview_problems_max` | 100 (önizleme yanıtında dönen en çok sorunlu satır; tamamı raporda, F3.5c) | tamsayı | 10 | 1000 |
+| `imports.worker_concurrency` | 1 (aynı anda işlenen içe aktarma dosyası; worker açılışında okunur, R32, F3.5c) | tamsayı | 1 | 4 |
+| `imports.stuck_after_minutes` | 60 (bu kadar ilerlemeyen iş `failed` + `TIMED_OUT`, F3.5c) | tamsayı | 10 | 1440 |
+| `imports.result_ttl_days` | 30 (biten içe aktarmanın iş, dosya ve raporlarının saklanma süresi, gün; F3.5c S2 = A) | tamsayı | 1 | 365 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
 | `i18n.cache_ttl_seconds` | 60 (çeviri ve dil önbelleğinin süreç içi ömrü, F1.3) | tamsayı | 1 | 300 |
 | `directory.reindex_hour_utc` | 1 (perakendeci dizininin gece tam yeniden indekslendiği saat, UTC; worker açılışında okunur, ADR-0011, F2.11a) | tamsayı | 0 | 23 |

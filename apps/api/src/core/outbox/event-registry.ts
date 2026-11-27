@@ -51,6 +51,8 @@ export const OUTBOX_EVENTS = {
   // F3.5a (US-031 AC2, SF-08): içe aktarma işi açıldı. Tüketici `imports` (worker doğrulama ve
   // önizleme; kart K15). `businessIds` = [satıcı]; iş kiracı bağlamını oradan kurar.
   'import.uploaded': { queue: 'imports', fields: { jobId: 'id' } },
+  // F3.5c (US-031 AC3, SF-08): önizleme onaylandı. Tüketici `imports` (worker uygulama; kart K1).
+  'import.apply_requested': { queue: 'imports', fields: { jobId: 'id' } },
   // F2.3a: perakendeci kaydoldu (SF-02). Tüketici `directory` (F2.11a, dizin indeksi).
   'buyer.registered': { queue: 'directory', fields: { businessId: 'id', regionId: 'id' } },
   // F2.10 (US-007): perakendecinin görünürlük ayarları değişti. Tüketici `directory` (F2.11a;

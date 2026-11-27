@@ -173,6 +173,14 @@ export const SETTING_DEFINITIONS = {
   'imports.expire_interval_minutes': intSetting(60, 5, 1440),
   'imports.expire_batch_size': intSetting(200, 10, 1000),
   'imports.expire_lock_seconds': intSetting(600, 60, 3600),
+  // F3.5c (Müfettiş 29 notları 2, 4; kart K10, K11, K13): hücre metni sınırı (aşan `too_long`),
+  // önizleme yanıtındaki sorunlu satır sayısı, worker eşzamanlılığı (açılışta okunur), takılı iş
+  // süresi (dk; aşan `failed` + `TIMED_OUT`), biten işlerin saklanma süresi (gün; S2 = A).
+  'imports.cell_max_chars': intSetting(1000, 100, 10_000),
+  'imports.preview_problems_max': intSetting(100, 10, 1000),
+  'imports.worker_concurrency': intSetting(1, 1, 4),
+  'imports.stuck_after_minutes': intSetting(60, 10, 1440),
+  'imports.result_ttl_days': intSetting(30, 1, 365),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
   'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
   // F2.11a: perakendeci dizini gece tam yeniden indeksleme (ADR-0011 §1, §4).

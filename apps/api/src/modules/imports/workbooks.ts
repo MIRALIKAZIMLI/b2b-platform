@@ -1,6 +1,6 @@
 // Şablon ve rapor .xlsx üreticileri (F3.5a; US-031 AC1, AC2; kart K13, K20). Metinler çeviri
 // anahtarından gelir (`imports.*`, i18n/seed/import-messages.ts); kod içinde arayüz metni yok.
-import { PRODUCT_IMPORT_COLUMNS, type ProductImportColumn } from '@b2b/shared';
+import { type ImportRowIssue, PRODUCT_IMPORT_COLUMNS, type ProductImportColumn } from '@b2b/shared';
 import ExcelJS from 'exceljs';
 import type { ImportCategoryRef, ImportUnitRef } from '../catalog';
 import type { RowOutcome } from './row-validator';
@@ -152,6 +152,47 @@ export async function buildProblemReport(input: {
         t(`imports.row.${issue.code}`),
       ]);
     }
+  }
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+/** Sonuç raporunun bir satırı (F3.5c, US-031 AC3). */
+export interface RowResult {
+  readonly row: number;
+  readonly sku: string | null;
+  readonly result: 'insert' | 'update' | 'error';
+  readonly issues: readonly ImportRowIssue[];
+}
+
+/**
+ * Sonuç raporu (F3.5c, US-031 AC3; kart K13): dosyanın her satırı; eklendi / güncellendi /
+ * uygulanmadı ve nedenler (uyarılar dahil). Yalnız bu dosyanın satırları ve kodlar girer.
+ */
+export async function buildResultReport(input: {
+  readonly t: Translate;
+  readonly results: readonly RowResult[];
+  readonly notes: readonly string[];
+}): Promise<Buffer> {
+  const { t } = input;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName(t('imports.sheet.result')), {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  sheet.columns = [
+    { header: t('imports.report.row'), width: 8 },
+    { header: t('imports.report.sku'), width: 20, style: { numFmt: '@' } },
+    { header: t('imports.report.result'), width: 16 },
+    { header: t('imports.report.problem'), width: 80 },
+  ];
+  sheet.getRow(1).font = { bold: true };
+  for (const note of input.notes) sheet.addRow(['', '', '', t(`imports.note.${note}`)]);
+  for (const result of input.results) {
+    sheet.addRow([
+      result.row,
+      safeText(result.sku ?? ''),
+      t(`imports.result.${result.result}`),
+      result.issues.map((issue) => `${issue.column}: ${t(`imports.row.${issue.code}`)}`).join('; '),
+    ]);
   }
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }

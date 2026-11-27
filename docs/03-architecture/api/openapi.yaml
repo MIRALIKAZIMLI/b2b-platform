@@ -2462,10 +2462,22 @@ paths:
     post:
       tags: [imports]
       summary: Önizlemeyi uygula
-      description: F3.5c'de uygulanır; F3.5a'da uç yok.
+      description: |
+        F3.5c (US-031 AC3, SF-08). İzin `imports.run`; yalnız işi açan kullanıcı onaylar (S1 = A,
+        başkası 403). İş `preview_ready` olmalı (değilse 409); `preview_ready → applying` ve outbox
+        `import.apply_requested` aynı işlemde. Worker dosyayı yeniden okur, satırları taze veriyle
+        yeniden doğrular ve hatasız satırları 500'lük partilerle uygular; ilerleme
+        `GET /imports/{id}` ile izlenir, bitince `resultReportUrl` dolar. Süresi dolmuş önizleme 404.
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       responses:
-        '202': { description: Uygulanıyor }
+        '202':
+          description: Uygulanıyor (iş `applying`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportJob' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /api/v1/files/upload-url:
     post:
       tags: [files]
@@ -4800,7 +4812,7 @@ components:
         downloadUrl: { type: [string, 'null'], format: uri, description: 5 dk geçerli }
     ImportJob:
       type: object
-      required: [id, type, status, stats, notes, problems, failureCode, appliedUntilRow, errorReportUrl, expiresAt, createdAt, updatedAt]
+      required: [id, type, status, stats, notes, problems, failureCode, appliedUntilRow, errorReportUrl, resultReportUrl, expiresAt, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         type: { type: string, enum: [products, customer_prices, stock] }
@@ -4813,13 +4825,19 @@ components:
             update: { type: integer }
             error: { type: integer }
             warning: { type: integer, description: Uygulanacak ama uyarılı satır sayısı }
+          description: |
+            `preview_ready`'de önizleme sayıları; F3.5c'de `done` olunca gerçekten uygulanan sayılar
+            (uygulama anındaki yeniden doğrulama ve satır hataları dahil).
         notes:
           type: array
           description: İş düzeyinde notlar (ör. `stock_column_ignored`)
           items: { type: string }
         problems:
           type: array
-          description: İlk 100 hatalı/uyarılı satır; tamamı hata raporunda
+          description: |
+            İlk `imports.preview_problems_max` (100) hatalı/uyarılı satır; tamamı raporda. Kodlar
+            `imports.row.<kod>` çeviri anahtarlarıdır; F3.5c ekleri: `packaging_conflict`,
+            `no_unit_packaging`, `taken`.
           items:
             type: object
             required: [row, sku, issues]
@@ -4834,9 +4852,20 @@ components:
                   properties:
                     column: { type: string }
                     code: { type: string }
-        failureCode: { type: [string, 'null'], enum: [FILE_INVALID, IMPORT_TOO_MANY_ROWS, APPLY_FAILED, null] }
-        appliedUntilRow: { type: [integer, 'null'] }
-        errorReportUrl: { type: [string, 'null'], format: uri, description: Süreli; hatalı satır yoksa null }
+        failureCode:
+          type: [string, 'null']
+          enum: [FILE_INVALID, IMPORT_TOO_MANY_ROWS, APPLY_FAILED, TIMED_OUT, null]
+          description: |
+            F3.5c: `APPLY_FAILED` uygulama beklenmedik hatayla durdu (uygulanan partiler kalır);
+            `TIMED_OUT` iş `imports.stuck_after_minutes` boyunca ilerlemedi.
+        appliedUntilRow:
+          type: [integer, 'null']
+          description: F3.5c, `applying`/`failed`'da son uygulanan Excel satırı (0 = henüz parti bitmedi)
+        errorReportUrl: { type: [string, 'null'], format: uri, description: Süreli; önizleme hata/uyarı raporu, sorun yoksa null }
+        resultReportUrl:
+          type: [string, 'null']
+          format: uri
+          description: F3.5c (US-031 AC3), süreli; `done` işin sonuç raporu (her satır eklendi / güncellendi / uygulanmadı + neden)
         expiresAt: { type: [string, 'null'], format: date-time, description: Yalnız `preview_ready` iken }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

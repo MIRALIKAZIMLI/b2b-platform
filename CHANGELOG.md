@@ -71,3 +71,4 @@
 - F3.6a: fiyat listeleri ve PriceResolver (migration 0036; P1–P11; ileri tarihli fiyat toptancının saatinde 00:00; bağlantıya liste atama; fiyat açıklaması)
 - F3.6b: web fiyat listeleri, ürün formunda fiyat girişi, müşteriye liste atama, fiyat kaynağı
 - F3.5a: Excel ürün içe aktarma API ve worker (migration 0037; şablon, doğrulama ve önizleme, hata raporu, 24 saatte silme; SKU harf duyarsız)
+- F3.5c: Excel içe aktarmayı uygulama (migration 0038; onay ucu, 500'lük partilerle ürün ve fiyat yazımı, sonuç raporu, takılı iş zaman aşımı, biten işleri 30 günde silme)

@@ -17,11 +17,15 @@ export const IMPORT_JOB_STATUSES = [
 ] as const;
 export type ImportJobStatus = (typeof IMPORT_JOB_STATUSES)[number];
 
-/** `failed` işin nedeni (K11). `APPLY_FAILED` F3.5c. */
+/**
+ * `failed` işin nedeni (K11). F3.5c: `APPLY_FAILED` uygulama partisi beklenmedik hatayla durdu;
+ * `TIMED_OUT` iş `imports.stuck_after_minutes` boyunca ilerlemedi (süpürücü, F3.5c K10).
+ */
 export const IMPORT_FAILURE_CODES = [
   'FILE_INVALID',
   'IMPORT_TOO_MANY_ROWS',
   'APPLY_FAILED',
+  'TIMED_OUT',
 ] as const;
 export type ImportFailureCode = (typeof IMPORT_FAILURE_CODES)[number];
 
@@ -73,6 +77,11 @@ export const IMPORT_ROW_ERROR_CODES = [
   'negative',
   'cannot_change',
   'no_default_price_list',
+  // F3.5c: güncellemede koli içi adet var olan ambalajlarla uyuşmuyor (F3.3a K4); fiyat yazılacak
+  // varyantın `unit` ambalajı yok (Mimar S3); SKU yazım anında başka ürüne geçmiş (23505, K6).
+  'packaging_conflict',
+  'no_unit_packaging',
+  'taken',
 ] as const;
 export type ImportRowErrorCode = (typeof IMPORT_ROW_ERROR_CODES)[number];
 
@@ -83,9 +92,6 @@ export type ImportRowWarningCode = (typeof IMPORT_ROW_WARNING_CODES)[number];
 /** Önizleme notları (iş düzeyinde; V3). */
 export const IMPORT_NOTES = ['stock_column_ignored'] as const;
 export type ImportNote = (typeof IMPORT_NOTES)[number];
-
-/** `GET /imports/{id}` yanıtında dönen en çok hatalı satır; tamamı hata raporunda. */
-export const IMPORT_PREVIEW_ERRORS_MAX = 100;
 
 export interface ImportRowIssue {
   readonly column: ProductImportColumn;
@@ -113,11 +119,14 @@ export interface ImportJobView {
   readonly status: ImportJobStatus;
   readonly stats: ImportJobStats;
   readonly notes: ImportNote[];
-  /** İlk `IMPORT_PREVIEW_ERRORS_MAX` hatalı/uyarılı satır. */
+  /** İlk `imports.preview_problems_max` hatalı/uyarılı satır (F3.5c: ayar). */
   readonly problems: ImportRowProblem[];
   readonly failureCode: ImportFailureCode | null;
   readonly appliedUntilRow: number | null;
+  /** Önizleme hata/uyarı raporu. */
   readonly errorReportUrl: string | null;
+  /** F3.5c (US-031 AC3): `done` işin sonuç raporu (her satır: eklendi / güncellendi / hata). */
+  readonly resultReportUrl: string | null;
   /** `preview_ready` iş bu andan sonra silinir (SF-08). */
   readonly expiresAt: string | null;
   readonly createdAt: string;

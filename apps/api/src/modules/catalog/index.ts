@@ -8,6 +8,13 @@ export {
   type ImportVariantMatch,
   ProductImportLookup,
 } from './product-import-lookup';
+export {
+  CatalogImportWriterModule,
+  type ImportProductWrite,
+  type ImportWriteResult,
+  isImportSkuTaken,
+  ProductImportWriter,
+} from './product-import-writer';
 export { type CatalogSeedResult, seedCatalog } from './catalog.seed';
 export { SEED_CATEGORIES, type SeedCategory } from './seed/categories';
 export { SEED_UNIT_CONVERSIONS, SEED_UNITS } from './seed/units';

@@ -1,6 +1,6 @@
 // F3.5a (US-031 AC2, AC4; kart K2–K10, Mimar S1–S3, V3): satır doğrulayıcı.
 import { describe, expect, it } from 'vitest';
-import type { ImportSkuMatches } from '../../catalog';
+import type { ImportProductMatch, ImportSkuMatches, ImportVariantMatch } from '../../catalog';
 import { nameKey, type RowOutcome, type ValidationContext, validateRows } from '../row-validator';
 import type { RawImportRow } from '../xlsx-reader';
 
@@ -137,43 +137,34 @@ describe('F3.5a satır doğrulayıcı', () => {
     expect(result.stats).toEqual({ insert: 1, update: 0, error: 0, warning: 1 });
   });
 
-  it('F3.5a-AC4 eşleşme: önce varyant SKU (harf duyarsız), sonra tek varyantlı ürün SKU; çok varyantlıda hata (Mimar S1)', () => {
+  it('F3.5a-AC4 eşleşme: önce varyant SKU, sonra tek varyantlı ürün SKU; çok varyantlıda hata (Mimar S1)', () => {
+    // F3.5c K7: harita dosyadaki ham SKU ile anahtarlı (harf duyarsızlık SQL `lower()`'da).
+    const v1: ImportVariantMatch = {
+      variantId: 'v1',
+      productId: 'p1',
+      variantStatus: 'active',
+      productStatus: 'active',
+      baseUnitCode: 'H87',
+      unitPackagingId: 'k1',
+    };
+    const single: ImportProductMatch = {
+      productId: 'p2',
+      status: 'draft',
+      baseUnitCode: 'H87',
+      activeVariantCount: 1,
+      activeVariantId: 'v9',
+      unitPackagingId: 'k9',
+    };
     const matches: ImportSkuMatches = {
       variants: new Map([
-        [
-          'v-1',
-          {
-            variantId: 'v1',
-            productId: 'p1',
-            variantStatus: 'active',
-            productStatus: 'active',
-            baseUnitCode: 'H87',
-          },
-        ],
-        [
-          'v-arc',
-          {
-            variantId: 'v2',
-            productId: 'p1',
-            variantStatus: 'archived',
-            productStatus: 'active',
-            baseUnitCode: 'H87',
-          },
-        ],
+        ['V-1', v1],
+        ['v-1', v1],
+        ['V-ARC', { ...v1, variantId: 'v2', variantStatus: 'archived' }],
       ]),
       products: new Map([
-        [
-          'p-single',
-          { productId: 'p2', status: 'draft', baseUnitCode: 'H87', activeVariantCount: 1 },
-        ],
-        [
-          'p-multi',
-          { productId: 'p3', status: 'active', baseUnitCode: 'H87', activeVariantCount: 2 },
-        ],
-        [
-          'p-arc',
-          { productId: 'p4', status: 'archived', baseUnitCode: 'H87', activeVariantCount: 1 },
-        ],
+        ['P-SINGLE', single],
+        ['p-multi', { ...single, productId: 'p3', activeVariantCount: 2, activeVariantId: null }],
+        ['p-arc', { ...single, productId: 'p4', status: 'archived' }],
       ]),
     };
     const ctx = context({ matches });
@@ -182,6 +173,7 @@ describe('F3.5a satır doğrulayıcı', () => {
     expect(one({ sku: 'P-SINGLE', price: '3' }, ctx)).toMatchObject({
       action: 'update',
       issues: [],
+      write: { target: { kind: 'update', productId: 'p2', variantId: 'v9' }, price: '3' },
     });
     expect(codes(one({ sku: 'p-multi' }, ctx))).toEqual(['sku:variant_ambiguous']);
     expect(codes(one({ sku: 'V-ARC' }, ctx))).toEqual(['sku:archived']);
@@ -213,5 +205,100 @@ describe('F3.5a satır doğrulayıcı', () => {
     expect(result.notes).toEqual(['stock_column_ignored']);
     expect(result.outcomes[0]?.issues).toEqual([]);
     expect(validateRows([raw(NEW)], context()).notes).toEqual([]);
+  });
+
+  it('F3.5c-AC3 hatasız satır yazılacak çözülmüş değerleri taşır; hatalıda yok', () => {
+    const outcome = one({
+      ...NEW,
+      name_ru: 'Шампунь',
+      brand: 'nivea',
+      barcode: '4006381333931',
+      case_qty: '12',
+      price: '2,50',
+    });
+    expect(outcome.write).toEqual({
+      target: { kind: 'insert' },
+      sku: 'N-1',
+      names: { az: 'Şampun 400', ru: 'Шампунь' },
+      categoryId: 'hair',
+      brandId: 'b1',
+      baseUnitCode: 'H87',
+      gtin: '4006381333931',
+      caseQty: '12',
+      price: '2.50',
+    });
+    expect(one({ sku: 'N-9' }).write).toBeUndefined();
+    // İzinsiz işte fiyat yazılmaz (uyarı), satır yine yazılır.
+    expect(one({ ...NEW, price: '3' }, context({ canWritePrices: false })).write?.price).toBe(
+      undefined,
+    );
+  });
+
+  it('F3.5c-K8 kategori tam yolla da eşleşir; aynı adlı iki kategori yolla ayrılır (Müfettiş 29 not 8)', () => {
+    expect(codes(one({ ...NEW, category: 'İkili' }))).toEqual(['category:ambiguous']);
+    expect(one({ ...NEW, category: 'Kosmetika / İkili' }).write?.categoryId).toBe('dup2');
+    expect(one({ ...NEW, category: 'kosmetika/şampun' }).write?.categoryId).toBe('hair');
+    expect(codes(one({ ...NEW, category: 'Köhnə / Gizli' }))).toEqual(['category:inactive']);
+    expect(codes(one({ ...NEW, category: 'Yox / Şampun' }))).toEqual(['category:not_found']);
+  });
+
+  it('F3.5c-PRICE güncellenen varyantın unit ambalajı yoksa fiyat satırı hatalı (Mimar S3)', () => {
+    const matches: ImportSkuMatches = {
+      variants: new Map([
+        [
+          'V-1',
+          {
+            variantId: 'v1',
+            productId: 'p1',
+            variantStatus: 'active',
+            productStatus: 'active',
+            baseUnitCode: 'H87',
+            unitPackagingId: null,
+          },
+        ],
+      ]),
+      products: new Map(),
+    };
+    expect(codes(one({ sku: 'V-1', price: '1' }, context({ matches })))).toEqual([
+      'price:no_unit_packaging',
+    ]);
+    expect(one({ sku: 'V-1' }, context({ matches })).action).toBe('update');
+  });
+
+  it('F3.5c-PRICE farklı SKU metniyle aynı varyant iki kez → ikisi de duplicate_in_file (Müfettiş 29 D2)', () => {
+    const variant: ImportVariantMatch = {
+      variantId: 'v1',
+      productId: 'p1',
+      variantStatus: 'active',
+      productStatus: 'active',
+      baseUnitCode: 'H87',
+      unitPackagingId: 'k1',
+    };
+    const matches: ImportSkuMatches = {
+      variants: new Map([['V-1', variant]]),
+      products: new Map([
+        [
+          'P-1',
+          {
+            productId: 'p1',
+            status: 'active',
+            baseUnitCode: 'H87',
+            activeVariantCount: 1,
+            activeVariantId: 'v1',
+            unitPackagingId: 'k1',
+          },
+        ],
+      ]),
+    };
+    const result = validateRows(
+      [raw({ sku: 'V-1', price: '1' }), raw({ sku: 'P-1', price: '2' })],
+      context({ matches }),
+    );
+    expect(result.outcomes.map(codes)).toEqual([
+      ['sku:duplicate_in_file'],
+      ['sku:duplicate_in_file'],
+    ]);
+    expect(result.outcomes.every((outcome) => outcome.write === undefined)).toBe(true);
+    expect(result.stats).toMatchObject({ update: 0, error: 2 });
   });
 });

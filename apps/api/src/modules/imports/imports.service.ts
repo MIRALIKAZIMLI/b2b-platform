@@ -20,6 +20,7 @@ import { FilesService, XLSX_CONTENT_TYPE } from '../files';
 import { I18nService } from '../i18n';
 import { SettingsService } from '../settings';
 import { type ImportJobRow, ImportsRepository, isFileInUse } from './imports.repository';
+import { ImportJobStateMachine } from './import-job.state-machine';
 import { buildProductTemplate, type Translate } from './workbooks';
 
 /** İstekteki Accept-Language başlığı işe yazılır (rapor dili); uzunluğu sınırlı. */
@@ -118,6 +119,51 @@ export class ImportsService {
     }
   }
 
+  /**
+   * `POST /imports/{id}/apply` (US-031 AC3, SF-08; F3.5c K9): yalnız işi açan kişi onaylar
+   * (fiyat izni ondan alındı, S1 = A); başkası 403. `preview_ready → applying` koşullu güncelleme
+   * ve outbox `import.apply_requested` aynı işlemde; ikinci onay 409. Süresi dolmuş ama henüz
+   * silinmemiş önizleme silinmiş sayılır (404).
+   */
+  async apply(tenant: TenantContext, id: string): Promise<ImportJobView> {
+    const ttlHours = await this.settings.get('imports.preview_ttl_hours');
+    const row = await withTenantTx(tenant, async (tx) => {
+      const job = await this.repository.findTx(tx, tenant.businessId, id, 'update');
+      const now = this.clock.now();
+      if (job === undefined) throw new DomainError('NOT_FOUND');
+      if (
+        job.status === 'preview_ready' &&
+        job.updatedAt.getTime() + ttlHours * 3_600_000 <= now.getTime()
+      ) {
+        throw new DomainError('NOT_FOUND');
+      }
+      if (job.createdBy !== tenant.userId) throw new DomainError('PERMISSION_DENIED');
+      // Müfettiş 29 D1: fiyat yazan iş, onay anında da fiyat iznini ister (önizlemeden sonra
+      // rolü değişen kullanıcı fiyat yazamaz; iş `preview_ready` kalır).
+      if (job.canWritePrices && !tenant.permissions.has('pricing.manage')) {
+        throw new DomainError('PERMISSION_DENIED');
+      }
+      ImportJobStateMachine.assertTransition(job.status, 'applying');
+      const moved = await this.repository.transitionTx(
+        tx,
+        job.id,
+        'preview_ready',
+        { status: 'applying' },
+        now,
+      );
+      if (!moved) throw new DomainError('INVALID_STATE_TRANSITION');
+      await this.outbox.write(tx, {
+        type: 'import.apply_requested',
+        aggregateType: 'import_job',
+        aggregateId: job.id,
+        businessIds: [tenant.businessId],
+        payload: { jobId: job.id },
+      });
+      return { ...job, status: 'applying' as const, updatedAt: now };
+    });
+    return await this.view(tenant, row);
+  }
+
   /** `GET /imports/{id}`: durum, sayılar, ilk sorunlu satırlar, rapor bağlantısı. */
   async get(tenant: TenantContext, id: string): Promise<ImportJobView> {
     const row = await withTenantTx(tenant, (tx) =>
@@ -143,6 +189,10 @@ export class ImportsService {
         row.errorReportFileId === null
           ? null
           : await this.files.getReadUrl(tenant, row.errorReportFileId),
+      resultReportUrl:
+        row.resultReportFileId === null
+          ? null
+          : await this.files.getReadUrl(tenant, row.resultReportFileId),
       expiresAt:
         row.status === 'preview_ready'
           ? new Date(row.updatedAt.getTime() + ttlHours * 3_600_000).toISOString()

@@ -761,15 +761,18 @@ Benzersiz: `(variant_id, level)`.
 | file_id | uuid | tekil; bileşik FK `(seller_id, file_id) → files(owner_business_id, id)` | Bir dosya tek işe bağlanır (`fileId: in_use`) |
 | status | text | `uploaded` / `validating` / `preview_ready` / `applying` / `done` / `failed` | state-machines §11 |
 | stats | jsonb | nesne | `{insert, update, error, warning, notes[], problems[]}`; `problems` ilk 100 sorunlu satır (`{row, sku, issues[{column, code}]}`), tamamı raporda |
-| error_report_file_id | uuid | null; bileşik FK `files` | Hata/uyarı raporu .xlsx (`purpose: import`, özel depo); F3.5c'de sonuç raporu |
-| failure_code | text | null; yalnız `failed`'da dolu | `FILE_INVALID` / `IMPORT_TOO_MANY_ROWS` / `APPLY_FAILED` (F3.5c) |
-| applied_until_row | integer | null | F3.5c: uygulama yarıda kalırsa son uygulanan satır |
-| can_write_prices | boolean | | İşi açanın `pricing.manage` izni (Mimar S2); yoksa fiyat sütunu yok sayılır + satır uyarısı |
+| error_report_file_id | uuid | null; bileşik FK `files` | Önizleme hata/uyarı raporu .xlsx (`purpose: import`, özel depo) |
+| result_report_file_id | uuid | null; bileşik FK `files` | F3.5c (US-031 AC3): `done` işin sonuç raporu .xlsx (her satır eklendi / güncellendi / uygulanmadı + neden) |
+| failure_code | text | null; yalnız `failed`'da dolu | `FILE_INVALID` / `IMPORT_TOO_MANY_ROWS` / `APPLY_FAILED` / `TIMED_OUT` (F3.5c) |
+| applied_until_row | integer | null | F3.5c: son uygulanan Excel satırı; 0 = iş alındı, henüz parti bitmedi (yinelenen teslim ikinci kez almaz) |
+| can_write_prices | boolean | | İşi açanın `pricing.manage` izni (Mimar S2); yoksa fiyat sütunu yok sayılır + satır uyarısı. F3.5c: iş açılınca değişmez (UPDATE izni yok); onaylayan = işi açan (S1 = A) |
 | locale | text | | İstekteki Accept-Language (en çok 200 karakter); rapor metinlerinin dili |
 | created_by | uuid | FK users | |
 | created_at, updated_at | timestamptz | | Süre dolumu `updated_at` + `imports.preview_ttl_hours` |
 
 F3.5a (`0037_import_jobs.sql`): RLS `import_jobs_tenant` (FOR ALL), `import_jobs_platform_select`; perakendeci erişemez; platform yazamaz (`check-rls` yasak listesi). `app_user` SELECT, INSERT, UPDATE (`status`, `stats`, `error_report_file_id`, `failure_code`, `applied_until_row`, `can_write_prices`, `updated_at`); DELETE yok. SF-08 süre dolumu: migrator sahipli `SECURITY DEFINER` `import_jobs_expire(p_cutoff, p_limit)` yalnız bağlamsız sistem işleminden; süresi dolan `preview_ready` işleri ve bağlı `import` dosya satırlarını (yüklenen dosya + rapor) tek deyimde siler, depo anahtarlarını döner (worker nesneleri sonra siler). Yalnız migrator'a açık politikalar: `import_jobs_definer_select` (SELECT) ve `import_jobs_definer_expire` (DELETE), ikisi de yalnız `preview_ready`; `files_definer_import_delete` (DELETE, yalnız `purpose = 'import'`). Dosya okuması 0021'deki `files_definer_select` ile gelir. Politika kümesi bekçi testiyle sabit (`imports.isolation.test.ts`). İndeksler `(seller_id, created_at)`, `(status, updated_at)`.
+
+F3.5c (`0038_import_apply.sql`): `result_report_file_id` + bileşik FK `import_jobs_result_file_fk`; `failure_code` CHECK'e `TIMED_OUT`; `app_user` UPDATE listesinden `can_write_prices` çıkar, `result_report_file_id` girer. `import_jobs_expire(p_preview_cutoff, p_result_cutoff, p_limit)` artık `imports.result_ttl_days` (30) geçen `done`/`failed` işleri de yüklenen dosya, hata ve sonuç raporuyla siler (S2 = A); sınırlar `now()`'dan sonra olamaz (22023). Yeni DEFINER `import_jobs_time_out(p_cutoff, p_limit)`: `imports.stuck_after_minutes` (60) boyunca ilerlemeyen `uploaded`/`validating`/`applying` işi `failed` + `TIMED_OUT` yapar (`applied_until_row` korunur). Migrator politikaları: `import_jobs_definer_select` (SELECT, bütün durumlar), `import_jobs_definer_expire` (DELETE, `preview_ready`/`done`/`failed`), `import_jobs_definer_time_out` (UPDATE, takılı durumdan yalnız `failed` + `TIMED_OUT`'a).
 
 ### 4.9 `pricing`
 

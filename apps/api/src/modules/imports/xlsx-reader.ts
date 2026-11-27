@@ -2,7 +2,7 @@
 // - Zip merkezi dizinindeki açılmış boyut toplamı `imports.max_uncompressed_mb` sınırını aşamaz.
 // - Yalnız ilk çalışma sayfası okunur; formül hesaplanmaz, dosyadaki önbellek sonucu alınır.
 // - Veri satırı `imports.max_rows` sınırını aşınca okuma durur (`IMPORT_TOO_MANY_ROWS`).
-// - Hücre metni `IMPORT_CELL_MAX` karakterden uzunsa kesilir ve satır hatası olur (`too_long`).
+// - Hücre metni `imports.cell_max_chars` karakterden uzunsa kesilir ve satır hatası olur (`too_long`).
 import { Readable } from 'node:stream';
 import {
   type ImportFailureCode,
@@ -11,9 +11,6 @@ import {
   type ProductImportColumn,
 } from '@b2b/shared';
 import ExcelJS from 'exceljs';
-
-/** Hücre metninin üst sınırı (en uzun alan: ad 200); aşan hücre `too_long`. */
-export const IMPORT_CELL_MAX = 1000;
 
 const ZIP_EOCD_SIGNATURE = 0x06054b50;
 const ZIP_CENTRAL_SIGNATURE = 0x02014b50;
@@ -27,7 +24,7 @@ export interface RawImportRow {
   readonly row: number;
   /** Kırpılmış metin; boş hücre yok sayılır. */
   readonly cells: Partial<Record<ProductImportColumn, string>>;
-  /** `IMPORT_CELL_MAX`'ı aşan sütunlar. */
+  /** `cellMax`'ı aşan sütunlar. */
   readonly tooLong: ProductImportColumn[];
 }
 
@@ -38,6 +35,8 @@ export type ReadResult =
 export interface ReadLimits {
   readonly maxRows: number;
   readonly maxUncompressedBytes: number;
+  /** Hücre metninin üst sınırı (`imports.cell_max_chars`; en uzun alan ad 200). */
+  readonly cellMax: number;
 }
 
 /**
@@ -153,7 +152,7 @@ export async function readProductRows(body: Buffer, limits: ReadLimits): Promise
           columns = header;
           continue;
         }
-        const parsed = toRow(row.number, values, columns);
+        const parsed = toRow(row.number, values, columns, limits.cellMax);
         if (parsed === null) continue;
         if (rows.length >= limits.maxRows) {
           return { ok: false, failure: 'IMPORT_TOO_MANY_ROWS', reason: 'rows' };
@@ -174,14 +173,15 @@ function toRow(
   number: number,
   values: readonly unknown[],
   columns: ReadonlyMap<number, ProductImportColumn>,
+  cellMax: number,
 ): RawImportRow | null {
   const cells: Partial<Record<ProductImportColumn, string>> = {};
   const tooLong: ProductImportColumn[] = [];
   for (const [index, column] of columns) {
     let text = cellText(values[index]).trim();
     if (text === '') continue;
-    if (text.length > IMPORT_CELL_MAX) {
-      text = text.slice(0, IMPORT_CELL_MAX);
+    if (text.length > cellMax) {
+      text = text.slice(0, cellMax);
       tooLong.push(column);
     }
     cells[column] = text;

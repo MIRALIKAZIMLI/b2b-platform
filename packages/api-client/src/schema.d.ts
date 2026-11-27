@@ -5283,7 +5283,11 @@ export interface paths {
         put?: never;
         /**
          * Önizlemeyi uygula
-         * @description F3.5c'de uygulanır; F3.5a'da uç yok.
+         * @description F3.5c (US-031 AC3, SF-08). İzin `imports.run`; yalnız işi açan kullanıcı onaylar (S1 = A,
+         *     başkası 403). İş `preview_ready` olmalı (değilse 409); `preview_ready → applying` ve outbox
+         *     `import.apply_requested` aynı işlemde. Worker dosyayı yeniden okur, satırları taze veriyle
+         *     yeniden doğrular ve hatasız satırları 500'lük partilerle uygular; ilerleme
+         *     `GET /imports/{id}` ile izlenir, bitince `resultReportUrl` dolar. Süresi dolmuş önizleme 404.
          */
         post: {
             parameters: {
@@ -5298,13 +5302,18 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Uygulanıyor */
+                /** @description Uygulanıyor (iş `applying`) */
                 202: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ImportJob"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -8763,6 +8772,10 @@ export interface components {
             type: "products" | "customer_prices" | "stock";
             /** @enum {string} */
             status: "uploaded" | "validating" | "preview_ready" | "applying" | "done" | "failed";
+            /**
+             * @description `preview_ready`'de önizleme sayıları; F3.5c'de `done` olunca gerçekten uygulanan sayılar
+             *     (uygulama anındaki yeniden doğrulama ve satır hataları dahil).
+             */
             stats: {
                 insert: number;
                 update: number;
@@ -8772,7 +8785,11 @@ export interface components {
             };
             /** @description İş düzeyinde notlar (ör. `stock_column_ignored`) */
             notes: string[];
-            /** @description İlk 100 hatalı/uyarılı satır; tamamı hata raporunda */
+            /**
+             * @description İlk `imports.preview_problems_max` (100) hatalı/uyarılı satır; tamamı raporda. Kodlar
+             *     `imports.row.<kod>` çeviri anahtarlarıdır; F3.5c ekleri: `packaging_conflict`,
+             *     `no_unit_packaging`, `taken`.
+             */
             problems: {
                 /** @description Excel satır numarası (başlık 1) */
                 row: number;
@@ -8782,14 +8799,24 @@ export interface components {
                     code: string;
                 }[];
             }[];
-            /** @enum {string|null} */
-            failureCode: "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "APPLY_FAILED" | null;
+            /**
+             * @description F3.5c: `APPLY_FAILED` uygulama beklenmedik hatayla durdu (uygulanan partiler kalır);
+             *     `TIMED_OUT` iş `imports.stuck_after_minutes` boyunca ilerlemedi.
+             * @enum {string|null}
+             */
+            failureCode: "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "APPLY_FAILED" | "TIMED_OUT" | null;
+            /** @description F3.5c, `applying`/`failed`'da son uygulanan Excel satırı (0 = henüz parti bitmedi) */
             appliedUntilRow: number | null;
             /**
              * Format: uri
-             * @description Süreli; hatalı satır yoksa null
+             * @description Süreli; önizleme hata/uyarı raporu
              */
             errorReportUrl: string | null;
+            /**
+             * Format: uri
+             * @description F3.5c (US-031 AC3), süreli; `done` işin sonuç raporu (her satır eklendi / güncellendi / uygulanmadı + neden)
+             */
+            resultReportUrl: string | null;
             /**
              * Format: date-time
              * @description Yalnız `preview_ready` iken
