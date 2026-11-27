@@ -28,6 +28,7 @@ import {
   type BrandRefRow,
   isProductSkuTaken,
   isVariantSkuTaken,
+  skuKey,
   type PackagingRow,
   type PackagingValues,
   type ProductListCursor,
@@ -280,6 +281,7 @@ export class ProductsService {
           status: 'draft',
         });
         this.checkShelfLife(bag, input.hasExpiry, input.shelfLifeMonths ?? null);
+        await this.checkSkusTx(tx, tenant.businessId, bag, input.sku, input.variants, undefined);
         await this.checkUnitsTx(tx, bag, input.baseUnitCode, input.variants, new Set());
         const regionIds = input.visibility?.regionIds ?? [];
         await this.checkRegionsTx(tx, bag, regionIds);
@@ -388,6 +390,7 @@ export class ProductsService {
         if (input.visibility !== undefined) {
           await this.checkRegionsTx(tx, bag, input.visibility.regionIds);
         }
+        await this.checkSkusTx(tx, tenant.businessId, bag, input.sku, input.variants, id);
         bag.throwIfAny();
 
         await this.repository.updateProduct(
@@ -457,6 +460,38 @@ export class ProductsService {
     if (isProductSkuTaken(error)) return invalid('sku', 'taken');
     if (isVariantSkuTaken(error)) return invalid('variants.sku', 'taken');
     return error;
+  }
+
+  /**
+   * F3.5a (kullanıcı kararı A; #77 N4, #78): SKU harf duyarsız tekil. Çakışma ilgili alana iner
+   * (`sku`, `variants.<i>.sku`); eşzamanlı yazımda veritabanı dizini (23505) yedektir.
+   */
+  private async checkSkusTx(
+    tx: Tx,
+    sellerId: string,
+    bag: FieldErrorBag,
+    sku: string | undefined,
+    variants: readonly Pick<VariantInput, 'id' | 'sku'>[] | undefined,
+    productId: string | undefined,
+  ): Promise<void> {
+    if (
+      sku !== undefined &&
+      (await this.repository.productSkuTakenTx(tx, sellerId, sku, productId))
+    ) {
+      bag.add('sku', 'taken');
+    }
+    if (variants === undefined) return;
+    const owners = await this.repository.variantIdsBySkuTx(
+      tx,
+      sellerId,
+      variants.map((variant) => variant.sku),
+    );
+    variants.forEach((variant, index) => {
+      const owner = owners.get(skuKey(variant.sku));
+      if (owner !== undefined && owner !== variant.id) {
+        bag.add(`variants.${String(index)}.sku`, 'taken');
+      }
+    });
   }
 
   private checkShelfLife(bag: FieldErrorBag, hasExpiry: boolean, months: number | null): void {

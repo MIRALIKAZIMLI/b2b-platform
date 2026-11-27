@@ -2395,6 +2395,14 @@ paths:
     post:
       tags: [imports]
       summary: Excel içe aktarma başlat (US-031)
+      description: |
+        F3.5a. İzin `imports.run`. `fileId`, F1.10 ile `purpose: import` yüklenmiş ve `ready`
+        durumdaki bu işletmenin dosyasıdır (başka işletmenin dosyası 404). Şimdilik yalnız
+        `type: products` desteklenir; diğerleri `422 VALIDATION_FAILED` (`type: not_supported`).
+        Aynı dosya ikinci işe bağlanamaz (`fileId: in_use`). Doğrulama arka planda; durum
+        `GET /imports/{id}` ile izlenir. Hata raporu ve şablon kullanıcının diline göre
+        (`Accept-Language`). Fiyat sütunu yalnız `pricing.manage` izniyle yazılır; izin yoksa
+        satır uyarısı `price_ignored_no_permission`.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
         content:
@@ -2402,26 +2410,45 @@ paths:
             schema:
               type: object
               required: [type, fileId]
+              additionalProperties: false
               properties:
                 type: { type: string, enum: [products, customer_prices, stock] }
                 fileId: { type: string, format: uuid }
       responses:
         '202':
-          description: İş oluştu
+          description: İş oluştu (`uploaded`)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ImportJob' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/imports/template:
     get:
       tags: [imports]
       summary: Şablon .xlsx indirme bağlantısı
+      description: |
+        F3.5a (US-031 AC1). Veri sayfası, açıklama sayfası, kategori ve birim listeleri;
+        başlık ve açıklamalar kullanıcının dilinde. Desteklenmeyen tür `422 VALIDATION_FAILED`.
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: type, in: query, required: true, schema: { type: string, enum: [products, customer_prices, stock] } } ]
       responses:
-        '200': { description: Süreli bağlantı }
+        '200':
+          description: Süreli bağlantı
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, expiresAt]
+                properties:
+                  url: { type: string, format: uri }
+                  expiresAt: { type: string, format: date-time }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/imports/{id}:
     get:
       tags: [imports]
       summary: İş durumu ve önizleme
+      description: Başka işletmenin işi 404. `preview_ready` iş `expiresAt` anında silinir (SF-08).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       responses:
         '200':
@@ -2429,10 +2456,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ImportJob' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /api/v1/imports/{id}/apply:
     post:
       tags: [imports]
       summary: Önizlemeyi uygula
+      description: F3.5c'de uygulanır; F3.5a'da uç yok.
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       responses:
         '202': { description: Uygulanıyor }
@@ -4770,17 +4800,46 @@ components:
         downloadUrl: { type: [string, 'null'], format: uri, description: 5 dk geçerli }
     ImportJob:
       type: object
+      required: [id, type, status, stats, notes, problems, failureCode, appliedUntilRow, errorReportUrl, expiresAt, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
-        type: { type: string }
+        type: { type: string, enum: [products, customer_prices, stock] }
         status: { type: string, enum: [uploaded, validating, preview_ready, applying, done, failed] }
         stats:
           type: object
+          required: [insert, update, error, warning]
           properties:
             insert: { type: integer }
             update: { type: integer }
             error: { type: integer }
-        errorReportUrl: { type: [string, 'null'], format: uri }
+            warning: { type: integer, description: Uygulanacak ama uyarılı satır sayısı }
+        notes:
+          type: array
+          description: İş düzeyinde notlar (ör. `stock_column_ignored`)
+          items: { type: string }
+        problems:
+          type: array
+          description: İlk 100 hatalı/uyarılı satır; tamamı hata raporunda
+          items:
+            type: object
+            required: [row, sku, issues]
+            properties:
+              row: { type: integer, description: Excel satır numarası (başlık 1) }
+              sku: { type: [string, 'null'] }
+              issues:
+                type: array
+                items:
+                  type: object
+                  required: [column, code]
+                  properties:
+                    column: { type: string }
+                    code: { type: string }
+        failureCode: { type: [string, 'null'], enum: [FILE_INVALID, IMPORT_TOO_MANY_ROWS, APPLY_FAILED, null] }
+        appliedUntilRow: { type: [integer, 'null'] }
+        errorReportUrl: { type: [string, 'null'], format: uri, description: Süreli; hatalı satır yoksa null }
+        expiresAt: { type: [string, 'null'], format: date-time, description: Yalnız `preview_ready` iken }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     DashboardCard:
       type: object
       properties:

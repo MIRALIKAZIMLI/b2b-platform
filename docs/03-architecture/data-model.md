@@ -37,7 +37,7 @@ Her istek işleminin başında uygulama `SET LOCAL app.business_id = '<uuid>'` �
 **Ek RLS kuralları:**
 
 - `withSystemTx` yalnızca bağlamsız sistem okumaları (ayar, worker) içindir; kiracı verisi göremez: `app.business_id`, `app.user_id` ve `app.is_platform` boştur, T/P/U tablolarında 0 satır döner. S tablolarına yalnızca `SECURITY DEFINER` fonksiyonlarla erişir (F1.4a).
-- Platform bağlamı (`app.is_platform = true`) `orders`, `order_items`, `ledger_entries`, `payments`, `price_lists`, `price_list_items`, `customer_prices` tablolarında **yazma** iznine sahip değildir (US-016 AC5). F3.3a (R39): `products`, `product_variants`, `product_packaging`, `product_visibility` ve F3.4a'da `product_images` da bu listededir (platform yalnız okur).
+- Platform bağlamı (`app.is_platform = true`) `orders`, `order_items`, `ledger_entries`, `payments`, `price_lists`, `price_list_items`, `customer_prices` tablolarında **yazma** iznine sahip değildir (US-016 AC5). F3.3a (R39): `products`, `product_variants`, `product_packaging`, `product_visibility` ve F3.4a'da `product_images`, F3.5a'da `import_jobs` da bu listededir (platform yalnız okur).
 - T tablolarında kiracı politikasının yanında ayrı bir platform politikası bulunur: `current_setting('app.is_platform', true) = 'true'` iken USING ve WITH CHECK (c4-component §7; `withPlatformTx` `app.business_id`'yi boş bıraktığı için kiracı politikası platforma 0 satır gösterir). İlk uygulama F1.7 (`businesses` grubu). US-016 AC5 listesindeki tablolara bu politika **asla** eklenmez. F2.18: `pnpm check-rls` bu listeyi (`PLATFORM_WRITE_FORBIDDEN_TABLES`, `check-rls.ts`) denetler: listedeki tabloda `app.is_platform` geçen veya kiracı koşulu taşımayan yazma politikası (INSERT, UPDATE, DELETE, FOR ALL) CI'ı kırar; tablo henüz yoksa kural atlanır.
 - Alıcı, satıcının ürün ve fiyat tablolarını yalnızca **aktif bağlantı** varsa okuyabilir: bu sorgular `catalog` modülünün `buyer_visible_products(buyer_id)` fonksiyonu üzerinden yapılır ve fonksiyon aktif bağlantıyı kontrol eder.
 
@@ -685,7 +685,7 @@ Benzersiz: `(seller_id, buyer_id) WHERE status = 'active'`. İndeks: `(buyer_id)
 
 **Kategori, marka, faaliyet alanı (F3.2a, `0033_catalog_taxonomy.sql`; US-029):** `categories.id` veritabanında üretilir (`gen_random_uuid()`, G istisnası, `regions` gibi); `name` az/ru/tr zorunlu jsonb. `categories_guard` tetikleyicisi (BEFORE INSERT/UPDATE) `depth`'i her zaman üstten hesaplar (kök 1, aksi üst + 1), 3'ü aşarsa `23514`; `parent_id` sonradan değişmez (`23514`; kart K4). Aynı üst altında herhangi bir dilde aynı ad olamaz (servis kuralı, 422; K3); faaliyet alanlarında da aynı kural. Görünür ağaç: kendisi ve bütün üstleri aktif düğümler. `brands`: `id` uygulamada (UUIDv7); ad tek metin (V4); `is_active` pasifleştirme içindir (K6, R38; yalnız `active` markada değişir). Benzersiz indeks `brands_name_uq` `lower(btrim(name)) WHERE status <> 'rejected'` (K1: reddedilen ad yeniden talep edilebilir). CHECK: `requested` ise `requested_by_business_id` dolu. FK'lar: `requested_by_business_id` → `businesses`, `requested_by_user_id` ve `decided_by_user_id` → `users`. RLS: okuma `status = 'active'` veya `requested_by_business_id = app.business_id` veya platform (V5); yazma yalnız platform; ayrıca yalnız `migrator`'a `brands_definer_insert` (`status = 'requested'`, işletme = bağlam). Toptancı talebi yalnız migrator sahipli `SECURITY DEFINER` `brand_request_create(p_id, p_name, p_user_id, p_limit, p_now)` ile (R37): bağlam onaylı `seller` yetenekli aktif işletme, `p_user_id` onun aktif üyesi (aksi `42501`); işletme başına `pg_advisory_xact_lock`; son 24 saatteki talep sayısı `p_limit`e (ayar `catalog.brand_request_daily_limit`, K2) ulaştıysa SQLSTATE `CT001` (API 429). Üç tabloda da (`categories`, `brands`, `activity_types`) silme politikası yoktur (R38); `activity_types_platform_delete` kaldırıldı (`app_user`'ın DELETE izni 0004'teki F1.7 testleri için duruyor, etkisi 0 satır). Durum geçişleri state-machines §13. Başlangıç verisi `pnpm db:seed`: 8 üst + 43 alt kategori (`docs/tasks/F3-seed-listeleri.md`). `business_has_history` / `business_purge_rows` değişmez: `brands` `buyer_id` taşımaz ve arşivlenen işletmenin satırı silinmez.
 
-**Ürün tabloları (F3.3a, `0034_products.sql`; US-030):** dördü T (`seller_id`, `rls:T`). Kimlikler uygulamada (UUIDv7). Çocuk tablolar üst satıra bileşik FK ile bağlanır (`(product_id, seller_id)` → `products(id, seller_id)`, `(variant_id, seller_id)` → `product_variants(id, seller_id)`): başka satıcının ürününe satır eklenemez. RLS: kiracı politikası `seller_id = app.business_id`; platform yalnız `FOR SELECT` (R39; `check-rls` yasak listesi); perakendeciye hiçbir politika yok (perakendeci listesi yalnız `buyer_visible_products`, F3.12a). `products` ve `product_variants` silinmez (DELETE izni yok; kaldırılan varyant `archived`, kart K3); `product_packaging` ve `product_visibility` silinebilir. `app_user`'ın UPDATE izni kolon düzeyinde (`id`, `seller_id`, `product_id`, `variant_id`, `level`, `created_at` değişmez). Ek kolonlar: `products.published_at`, `products.created_at/updated_at`, `product_variants.sort_order`, zaman damgaları. CHECK: `has_expiry` ise `shelf_life_months` 1–120, değilse boş (US-030 AC5); `base_qty`, `min_order_qty`, `order_multiple` > 0; `weight_g` > 0. Benzersiz: `products (seller_id, sku)`, `product_variants (seller_id, sku)` (arşivliler dahil), `product_packaging (variant_id, level)`, `product_visibility (product_id, region_id)`. Ambalaj kuralları servis katmanında (kart K4): seviye sırasıyla `base_qty` kesin artar; `unit` seviyesi `base_qty = 1` ve `unit_code = base_unit_code`; ondalığa izin vermeyen birimde tam sayı; ≥ 1 satış birimi; `min_order_qty` `order_multiple`'ın katı. `product_visibility` F3.3a'da yalnız `region_id` (not null, FK `regions`); `price_list_id` F3.6a kendi migration'ıyla eklenir. Marka reddi (V5): `brands` üzerindeki `brands_rejected_clear_products` tetikleyicisi (`requested → rejected`) migrator sahipli `SECURITY DEFINER` `product_brand_rejected_clear()` ile talep eden satıcının o markalı ürünlerinde `brand_id`'yi boşaltır (yalnız migrator'a `products_definer_brand_clear`). Satıcı özeti (S3 = A): `connection_seller_summaries` ek kolon `categories jsonb` = satıcının `active` ürünlerinin aktif kök (depth 1) kategorileri `[{id, name}]` (yalnız migrator'a `products_definer_select`). `business_has_history` / `business_purge_rows` değişmez (ürün tablolarında `buyer_id` yok; kalıcı silme yalnız perakendeci). Durum geçişleri state-machines §14.
+**Ürün tabloları (F3.3a, `0034_products.sql`; US-030):** dördü T (`seller_id`, `rls:T`). Kimlikler uygulamada (UUIDv7). Çocuk tablolar üst satıra bileşik FK ile bağlanır (`(product_id, seller_id)` → `products(id, seller_id)`, `(variant_id, seller_id)` → `product_variants(id, seller_id)`): başka satıcının ürününe satır eklenemez. RLS: kiracı politikası `seller_id = app.business_id`; platform yalnız `FOR SELECT` (R39; `check-rls` yasak listesi); perakendeciye hiçbir politika yok (perakendeci listesi yalnız `buyer_visible_products`, F3.12a). `products` ve `product_variants` silinmez (DELETE izni yok; kaldırılan varyant `archived`, kart K3); `product_packaging` ve `product_visibility` silinebilir. `app_user`'ın UPDATE izni kolon düzeyinde (`id`, `seller_id`, `product_id`, `variant_id`, `level`, `created_at` değişmez). Ek kolonlar: `products.published_at`, `products.created_at/updated_at`, `product_variants.sort_order`, zaman damgaları. CHECK: `has_expiry` ise `shelf_life_months` 1–120, değilse boş (US-030 AC5); `base_qty`, `min_order_qty`, `order_multiple` > 0; `weight_g` > 0. Benzersiz: `products (seller_id, lower(sku))`, `product_variants (seller_id, lower(sku))` (arşivliler dahil; F3.5a, kullanıcı kararı A: SKU büyük/küçük harf duyarsız, `0037`), `product_packaging (variant_id, level)`, `product_visibility (product_id, region_id)`. Ambalaj kuralları servis katmanında (kart K4): seviye sırasıyla `base_qty` kesin artar; `unit` seviyesi `base_qty = 1` ve `unit_code = base_unit_code`; ondalığa izin vermeyen birimde tam sayı; ≥ 1 satış birimi; `min_order_qty` `order_multiple`'ın katı. `product_visibility` F3.3a'da yalnız `region_id` (not null, FK `regions`); `price_list_id` F3.6a kendi migration'ıyla eklenir. Marka reddi (V5): `brands` üzerindeki `brands_rejected_clear_products` tetikleyicisi (`requested → rejected`) migrator sahipli `SECURITY DEFINER` `product_brand_rejected_clear()` ile talep eden satıcının o markalı ürünlerinde `brand_id`'yi boşaltır (yalnız migrator'a `products_definer_brand_clear`). Satıcı özeti (S3 = A): `connection_seller_summaries` ek kolon `categories jsonb` = satıcının `active` ürünlerinin aktif kök (depth 1) kategorileri `[{id, name}]` (yalnız migrator'a `products_definer_select`). `business_has_history` / `business_purge_rows` değişmez (ürün tablolarında `buyer_id` yok; kalıcı silme yalnız perakendeci). Durum geçişleri state-machines §14.
 
 #### `products` (T: `seller_id`)
 
@@ -702,7 +702,7 @@ Benzersiz: `(seller_id, buyer_id) WHERE status = 'active'`. İndeks: `(buyer_id)
 | shelf_life_months | smallint | `has_expiry` ise zorunlu | |
 | status | text | `draft` / `active` / `archived` | |
 
-Benzersiz: `(seller_id, sku)`.
+Benzersiz: `(seller_id, lower(sku))` (F3.5a: harf duyarsız).
 
 #### `product_variants` (T)
 
@@ -716,7 +716,7 @@ Benzersiz: `(seller_id, sku)`.
 | is_available | boolean | default true | Stok modu `availability` |
 | status | text | `active` / `archived` | |
 
-Benzersiz: `(seller_id, sku)`. İndeks: `(seller_id, gtin)`.
+Benzersiz: `(seller_id, lower(sku))` (F3.5a: harf duyarsız, arşivliler dahil). İndeks: `(seller_id, gtin)`.
 
 #### `product_packaging` (T)
 
@@ -755,13 +755,21 @@ Benzersiz: `(variant_id, level)`.
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| seller_id | uuid | | |
-| type | text | `products` / `customer_prices` / `stock` | |
-| file_id | uuid | | |
-| status | text | `uploaded` / `validating` / `preview_ready` / `applying` / `done` / `failed` | |
-| stats | jsonb | | `{insert, update, error}` |
-| error_report_file_id | uuid | null | |
-| created_by | uuid | | |
+| id | uuid | PK | |
+| seller_id | uuid | FK businesses | |
+| type | text | `products` / `customer_prices` / `stock` | F3.5a yalnız `products` (diğerleri 422 `type: not_supported`) |
+| file_id | uuid | tekil; bileşik FK `(seller_id, file_id) → files(owner_business_id, id)` | Bir dosya tek işe bağlanır (`fileId: in_use`) |
+| status | text | `uploaded` / `validating` / `preview_ready` / `applying` / `done` / `failed` | state-machines §11 |
+| stats | jsonb | nesne | `{insert, update, error, warning, notes[], problems[]}`; `problems` ilk 100 sorunlu satır (`{row, sku, issues[{column, code}]}`), tamamı raporda |
+| error_report_file_id | uuid | null; bileşik FK `files` | Hata/uyarı raporu .xlsx (`purpose: import`, özel depo); F3.5c'de sonuç raporu |
+| failure_code | text | null; yalnız `failed`'da dolu | `FILE_INVALID` / `IMPORT_TOO_MANY_ROWS` / `APPLY_FAILED` (F3.5c) |
+| applied_until_row | integer | null | F3.5c: uygulama yarıda kalırsa son uygulanan satır |
+| can_write_prices | boolean | | İşi açanın `pricing.manage` izni (Mimar S2); yoksa fiyat sütunu yok sayılır + satır uyarısı |
+| locale | text | | İstekteki Accept-Language (en çok 200 karakter); rapor metinlerinin dili |
+| created_by | uuid | FK users | |
+| created_at, updated_at | timestamptz | | Süre dolumu `updated_at` + `imports.preview_ttl_hours` |
+
+F3.5a (`0037_import_jobs.sql`): RLS `import_jobs_tenant` (FOR ALL), `import_jobs_platform_select`; perakendeci erişemez; platform yazamaz (`check-rls` yasak listesi). `app_user` SELECT, INSERT, UPDATE (`status`, `stats`, `error_report_file_id`, `failure_code`, `applied_until_row`, `can_write_prices`, `updated_at`); DELETE yok. SF-08 süre dolumu: migrator sahipli `SECURITY DEFINER` `import_jobs_expire(p_cutoff, p_limit)` yalnız bağlamsız sistem işleminden; süresi dolan `preview_ready` işleri ve bağlı `import` dosya satırlarını (yüklenen dosya + rapor) tek deyimde siler, depo anahtarlarını döner (worker nesneleri sonra siler). Yalnız migrator'a açık politikalar: `import_jobs_definer_select` (SELECT) ve `import_jobs_definer_expire` (DELETE), ikisi de yalnız `preview_ready`; `files_definer_import_delete` (DELETE, yalnız `purpose = 'import'`). Dosya okuması 0021'deki `files_definer_select` ile gelir. Politika kümesi bekçi testiyle sabit (`imports.isolation.test.ts`). İndeksler `(seller_id, created_at)`, `(status, updated_at)`.
 
 ### 4.9 `pricing`
 

@@ -5126,7 +5126,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Excel içe aktarma başlat (US-031) */
+        /**
+         * Excel içe aktarma başlat (US-031)
+         * @description F3.5a. İzin `imports.run`. `fileId`, F1.10 ile `purpose: import` yüklenmiş ve `ready`
+         *     durumdaki bu işletmenin dosyasıdır (başka işletmenin dosyası 404). Şimdilik yalnız
+         *     `type: products` desteklenir; diğerleri `422 VALIDATION_FAILED` (`type: not_supported`).
+         *     Aynı dosya ikinci işe bağlanamaz (`fileId: in_use`). Doğrulama arka planda; durum
+         *     `GET /imports/{id}` ile izlenir. Hata raporu ve şablon kullanıcının diline göre
+         *     (`Accept-Language`). Fiyat sütunu yalnız `pricing.manage` izniyle yazılır; izin yoksa
+         *     satır uyarısı `price_ignored_no_permission`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -5147,7 +5156,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description İş oluştu */
+                /** @description İş oluştu (`uploaded`) */
                 202: {
                     headers: {
                         [name: string]: unknown;
@@ -5156,6 +5165,9 @@ export interface paths {
                         "application/json": components["schemas"]["ImportJob"];
                     };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -5171,7 +5183,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Şablon .xlsx indirme bağlantısı */
+        /**
+         * Şablon .xlsx indirme bağlantısı
+         * @description F3.5a (US-031 AC1). Veri sayfası, açıklama sayfası, kategori ve birim listeleri;
+         *     başlık ve açıklamalar kullanıcının dilinde. Desteklenmeyen tür `422 VALIDATION_FAILED`.
+         */
         get: {
             parameters: {
                 query: {
@@ -5190,8 +5206,17 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            /** Format: date-time */
+                            expiresAt: string;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -5209,7 +5234,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** İş durumu ve önizleme */
+        /**
+         * İş durumu ve önizleme
+         * @description Başka işletmenin işi 404. `preview_ready` iş `expiresAt` anında silinir (SF-08).
+         */
         get: {
             parameters: {
                 query?: never;
@@ -5232,6 +5260,8 @@ export interface paths {
                         "application/json": components["schemas"]["ImportJob"];
                     };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -5251,7 +5281,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Önizlemeyi uygula */
+        /**
+         * Önizlemeyi uygula
+         * @description F3.5c'de uygulanır; F3.5a'da uç yok.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -8725,17 +8758,47 @@ export interface components {
         };
         ImportJob: {
             /** Format: uuid */
-            id?: string;
-            type?: string;
+            id: string;
             /** @enum {string} */
-            status?: "uploaded" | "validating" | "preview_ready" | "applying" | "done" | "failed";
-            stats?: {
-                insert?: number;
-                update?: number;
-                error?: number;
+            type: "products" | "customer_prices" | "stock";
+            /** @enum {string} */
+            status: "uploaded" | "validating" | "preview_ready" | "applying" | "done" | "failed";
+            stats: {
+                insert: number;
+                update: number;
+                error: number;
+                /** @description Uygulanacak ama uyarılı satır sayısı */
+                warning: number;
             };
-            /** Format: uri */
-            errorReportUrl?: string | null;
+            /** @description İş düzeyinde notlar (ör. `stock_column_ignored`) */
+            notes: string[];
+            /** @description İlk 100 hatalı/uyarılı satır; tamamı hata raporunda */
+            problems: {
+                /** @description Excel satır numarası (başlık 1) */
+                row: number;
+                sku: string | null;
+                issues: {
+                    column: string;
+                    code: string;
+                }[];
+            }[];
+            /** @enum {string|null} */
+            failureCode: "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "APPLY_FAILED" | null;
+            appliedUntilRow: number | null;
+            /**
+             * Format: uri
+             * @description Süreli; hatalı satır yoksa null
+             */
+            errorReportUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Yalnız `preview_ready` iken
+             */
+            expiresAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         DashboardCard: {
             /** @example orders_pending_approval */

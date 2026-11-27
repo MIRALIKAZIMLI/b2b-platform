@@ -165,6 +165,14 @@ export const SETTING_DEFINITIONS = {
   'files.xlsx_max_mb': layered(intSetting(10, 1, 50)),
   // F3.4a (R34, kart K5): görsel küçültmede kabul edilen en büyük piksel sayısı (milyon).
   'files.image_max_megapixels': intSetting(40, 1, 100),
+  // F3.5a (R32, kart K12, K19): Excel içe aktarma. Satır sınırı işletmeyle okunur (plan katmanlı);
+  // açılmış .xlsx içeriğinin üst sınırı (MB, zip bombası); onaylanmayan önizlemenin ömrü (SF-08).
+  'imports.max_rows': layered(intSetting(5000, 100, 20_000)),
+  'imports.max_uncompressed_mb': intSetting(100, 10, 500),
+  'imports.preview_ttl_hours': intSetting(24, 1, 168),
+  'imports.expire_interval_minutes': intSetting(60, 5, 1440),
+  'imports.expire_batch_size': intSetting(200, 10, 1000),
+  'imports.expire_lock_seconds': intSetting(600, 60, 3600),
   'settings.cache_ttl_seconds': intSetting(60, 1, 3600),
   'i18n.cache_ttl_seconds': intSetting(60, 1, 300),
   // F2.11a: perakendeci dizini gece tam yeniden indeksleme (ADR-0011 §1, §4).

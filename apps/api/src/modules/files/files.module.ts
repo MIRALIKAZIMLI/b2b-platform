@@ -13,3 +13,14 @@ import { FilesService } from './files.service';
   exports: [FilesService, FilesRepository],
 })
 export class FilesModule {}
+
+/**
+ * Worker (F3.5a): uç ve erişim kontrolü olmadan dosya servisi (içe aktarma dosyasını okuma, hata
+ * raporu yazma). `AccessModule` API'ye özgü bağımlılıklar getirdiği için worker'da yüklenmez.
+ */
+@Module({
+  imports: [SettingsModule],
+  providers: [FilesRepository, FilesService],
+  exports: [FilesService],
+})
+export class FilesWorkerModule {}

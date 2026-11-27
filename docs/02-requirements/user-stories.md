@@ -239,7 +239,7 @@ Bir platform admini olarak süreleri, kotaları ve politikaları kod değiştirm
 
 Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages/shared/src/settings.ts`). Sınır dışı veya yanlış tipte değer `SETTING_OUT_OF_RANGE` ile reddedilir.
 
-**Kapsam (F2.19):** Plan ve işletme kapsamında yalnızca kodun işletmeyle okuduğu anahtarlar yazılabilir: `connection.cooldown_after_reject_days`, `connection.cooldown_after_buyer_cancel_days`, `connection.daily_request_quota` ([productreport](../productreport.md) "Admin tarafından yönetilen ayarlar"), `security.require_admin_2fa`, `files.upload_url_ttl_minutes`, `files.download_url_ttl_minutes`, `files.image_max_mb`, `files.xlsx_max_mb`, `invitation.team_days`, `directory.search_max_per_minute`, `catalog.brand_request_daily_limit` (F3.2a), `catalog.product_images_max` (F3.4a). Diğer anahtarlar yalnızca platform kapsamındadır; plan veya işletme kapsamında yazma `SETTING_SCOPE_NOT_ALLOWED` ile reddedilir. Bir anahtar işletmeyle okunmaya başladığında kayıttaki `scopes` alanı aynı PR'da güncellenir.
+**Kapsam (F2.19):** Plan ve işletme kapsamında yalnızca kodun işletmeyle okuduğu anahtarlar yazılabilir: `connection.cooldown_after_reject_days`, `connection.cooldown_after_buyer_cancel_days`, `connection.daily_request_quota` ([productreport](../productreport.md) "Admin tarafından yönetilen ayarlar"), `security.require_admin_2fa`, `files.upload_url_ttl_minutes`, `files.download_url_ttl_minutes`, `files.image_max_mb`, `files.xlsx_max_mb`, `invitation.team_days`, `directory.search_max_per_minute`, `catalog.brand_request_daily_limit` (F3.2a), `catalog.product_images_max` (F3.4a), `imports.max_rows` (F3.5a). Diğer anahtarlar yalnızca platform kapsamındadır; plan veya işletme kapsamında yazma `SETTING_SCOPE_NOT_ALLOWED` ile reddedilir. Bir anahtar işletmeyle okunmaya başladığında kayıttaki `scopes` alanı aynı PR'da güncellenir.
 
 | Anahtar | Varsayılan | Tip | Alt sınır | Üst sınır |
 | --- | --- | --- | --- | --- |
@@ -301,6 +301,12 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `files.image_max_mb` | 5 (JPEG/PNG/WebP üst sınırı, NFR-49, F1.10) | tamsayı | 1 | 20 |
 | `files.xlsx_max_mb` | 10 (.xlsx üst sınırı, NFR-49, F1.10) | tamsayı | 1 | 50 |
 | `files.image_max_megapixels` | 40 (görsel küçültmede kabul edilen en çok piksel, milyon; aşan görsel `failed`, R34, F3.4a K5) | tamsayı | 1 | 100 |
+| `imports.max_rows` | 5000 (Excel içe aktarmada en çok veri satırı; aşan dosya `failed` + `IMPORT_TOO_MANY_ROWS`, US-031 AC2, F3.5a K12) | tamsayı | 100 | 20000 |
+| `imports.max_uncompressed_mb` | 100 (.xlsx açıldığında içeriğin üst sınırı, MB; aşan dosya `FILE_INVALID`, R32, F3.5a K12) | tamsayı | 10 | 500 |
+| `imports.preview_ttl_hours` | 24 (onaylanmayan önizlemenin ömrü, saat; dolunca iş, dosya ve rapor silinir, SF-08) | tamsayı | 1 | 168 |
+| `imports.expire_interval_minutes` | 60 (önizleme süre dolumu işinin çalışma aralığı, dakika; F3.5a) | tamsayı | 5 | 1440 |
+| `imports.expire_batch_size` | 200 (süre dolumunda tek işlemde silinen en çok iş; F3.5a) | tamsayı | 10 | 1000 |
+| `imports.expire_lock_seconds` | 600 (süre dolumu işinin tek kopya kilidi, saniye; F3.5a) | tamsayı | 60 | 3600 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
 | `i18n.cache_ttl_seconds` | 60 (çeviri ve dil önbelleğinin süreç içi ömrü, F1.3) | tamsayı | 1 | 300 |
 | `directory.reindex_hour_utc` | 1 (perakendeci dizininin gece tam yeniden indekslendiği saat, UTC; worker açılışında okunur, ADR-0011, F2.11a) | tamsayı | 0 | 23 |

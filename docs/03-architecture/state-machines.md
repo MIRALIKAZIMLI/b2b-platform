@@ -230,6 +230,20 @@ stateDiagram-v2
     failed --> [*]
 ```
 
+F3.5a (US-031; kart `docs/tasks/F3.5a.md`). Kod: `ImportJobStateMachine` (`apps/api/src/modules/imports/import-job.state-machine.ts`). `applying`, `done` ve `applying → failed` geçişleri F3.5c'de kullanılır.
+
+| Geçiş | Kim | Koşul (guard) | Yan etki |
+| --- | --- | --- | --- |
+| → uploaded | `imports.run` izinli toptancı kullanıcısı (`POST /imports`) | Dosya bu işletmenin, `purpose = import`, `ready`, başka işe bağlı değil (aksi 404 / 422) | Outbox `import.uploaded` → `imports` kuyruğu |
+| uploaded → validating | Worker (`ValidateImportJob`) | Durum hâlâ `uploaded` (koşullu güncelleme; değilse iş atlanır) | — |
+| validating → preview_ready | Worker | Dosya okundu (satır hataları işi düşürmez) | `stats` (sayılar, ilk 100 sorun, notlar), hata raporu dosyası (`error_report_file_id`) |
+| validating → failed | Worker | Dosya okunamadı, boyut/satır sınırı aşıldı, zorunlu sütun yok | `failure_code` |
+| preview_ready → applying | Kullanıcı onayı (F3.5c) | — | — |
+| preview_ready → (silinir) | Sistem işi `imports.expire_previews` (`import_jobs_expire`) | `updated_at` `imports.preview_ttl_hours` saatten eski | İş satırı, yüklenen dosya ve hata raporu silinir |
+| applying → done / failed | Worker (F3.5c) | — | — |
+
+Başka geçiş `409 INVALID_STATE_TRANSITION`. Süre dolumu yalnız `preview_ready` işleri siler; `uploaded`, `done`, `failed` işler kalır.
+
 ## 12. Toptancı başvurusu (`seller_applications.status`)
 
 ```mermaid

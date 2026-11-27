@@ -40,6 +40,7 @@ const EXPECTED_FUNCTIONS = [
   'idempotency_store',
   'identity_record_login',
   'identity_user_by_phone',
+  'import_jobs_expire',
   'invitation_accept',
   'list_my_memberships',
   'otp_challenge_close',

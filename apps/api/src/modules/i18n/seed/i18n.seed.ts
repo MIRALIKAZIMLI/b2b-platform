@@ -5,6 +5,7 @@
 // - Pilot bölgeler (F2.1a): docs/tasks/F2-seed-listeleri.md §1. Bölge kimliği veritabanında
 //   üretildiği için eşleşme (ülke, tip, üst bölge, `name->>'az'`) ile yapılır; var olan atlanır.
 import { ERROR_MESSAGES } from './error-messages';
+import { IMPORT_MESSAGES } from './import-messages';
 import { PERMISSION_MESSAGES } from './permission-messages';
 import { PILOT_REGIONS, type SeedRegionName } from './regions';
 import { SMS_MESSAGES } from './sms-messages';
@@ -72,6 +73,7 @@ async function insertAll(client: SeedClient): Promise<number> {
     ...Object.entries(SMS_MESSAGES),
     ...Object.entries(UI_MESSAGES),
     ...Object.entries(PERMISSION_MESSAGES),
+    ...Object.entries(IMPORT_MESSAGES),
   ]) {
     for (const lang of SEED_LANGS) {
       keys.push(key);

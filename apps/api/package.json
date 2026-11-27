@@ -33,6 +33,7 @@
     "bullmq": "5.81.5",
     "decimal.js": "10.6.0",
     "drizzle-orm": "0.45.4",
+    "exceljs": "4.4.0",
     "expo-server-sdk": "7.2.0",
     "ioredis": "5.11.1",
     "jose": "6.2.13",

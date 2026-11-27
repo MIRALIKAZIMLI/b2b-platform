@@ -7,6 +7,7 @@ import { z } from 'zod';
 /** Kuyruk adları. Yeni kuyruk, onu tüketen iş (F1.11 ve sonrası) ile birlikte eklenir. */
 // `connections` (F2.16): bugün outbox olayı yok; zamanlanmış süre dolumu işi bu kuyruktadır.
 // `catalog` (F3.4a): ürün görseli küçültme işi.
+// `imports` (F3.5a): Excel içe aktarma doğrulaması ve önizleme süre dolumu.
 export const OUTBOX_QUEUE_NAMES = [
   'test',
   'access',
@@ -14,6 +15,7 @@ export const OUTBOX_QUEUE_NAMES = [
   'directory',
   'connections',
   'catalog',
+  'imports',
 ] as const;
 export type OutboxQueueName = (typeof OUTBOX_QUEUE_NAMES)[number];
 
@@ -46,6 +48,9 @@ export const OUTBOX_EVENTS = {
   // F3.4a (US-030 AC3): ürüne görsel eklendi. Tüketici `catalog` (worker küçültme işi; kart K11).
   // `businessIds` = [satıcı]; iş kiracı bağlamını oradan kurar.
   'product_image.added': { queue: 'catalog', fields: { imageId: 'id', productId: 'id' } },
+  // F3.5a (US-031 AC2, SF-08): içe aktarma işi açıldı. Tüketici `imports` (worker doğrulama ve
+  // önizleme; kart K15). `businessIds` = [satıcı]; iş kiracı bağlamını oradan kurar.
+  'import.uploaded': { queue: 'imports', fields: { jobId: 'id' } },
   // F2.3a: perakendeci kaydoldu (SF-02). Tüketici `directory` (F2.11a, dizin indeksi).
   'buyer.registered': { queue: 'directory', fields: { businessId: 'id', regionId: 'id' } },
   // F2.10 (US-007): perakendecinin görünürlük ayarları değişti. Tüketici `directory` (F2.11a;

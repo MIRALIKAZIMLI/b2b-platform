@@ -1,0 +1,162 @@
+// Şablon ve rapor .xlsx üreticileri (F3.5a; US-031 AC1, AC2; kart K13, K20). Metinler çeviri
+// anahtarından gelir (`imports.*`, i18n/seed/import-messages.ts); kod içinde arayüz metni yok.
+import { PRODUCT_IMPORT_COLUMNS, type ProductImportColumn } from '@b2b/shared';
+import ExcelJS from 'exceljs';
+import type { ImportCategoryRef, ImportUnitRef } from '../catalog';
+import type { RowOutcome } from './row-validator';
+
+/** Çeviri: anahtar → metin (yoksa anahtarın kendisi). */
+export type Translate = (key: string) => string;
+
+/** Kullanıcının dilindeki ad; yoksa az → ilk dolu dil. */
+function localized(name: Record<string, string>, lang: string): string {
+  return name[lang] ?? name.az ?? Object.values(name)[0] ?? '';
+}
+
+/** Excel sayfa adı: en çok 31 karakter, `[]:*?/\` yok. */
+function sheetName(text: string): string {
+  return text.replace(/[[\]:*?/\\]/g, ' ').slice(0, 31) || 'Sheet';
+}
+
+/** Metin olarak tutulacak sütunlar (baştaki sıfır ve uzun barkod bozulmasın). */
+const TEXT_COLUMNS: ReadonlySet<ProductImportColumn> = new Set(['sku', 'barcode']);
+/** Sütunların "yalnız yeni üründe" zorunlu olanları (K3). */
+const REQUIRED_FOR_NEW: ReadonlySet<ProductImportColumn> = new Set(['category', 'unit', 'name_az']);
+
+/** Görünür kategorilerin tam yolu ("Üst / Alt"), dile göre sıralı. */
+function categoryRows(
+  categories: readonly ImportCategoryRef[],
+  lang: string,
+): { name: string; path: string }[] {
+  const byId = new Map(categories.map((row) => [row.id, row]));
+  const rows: { name: string; path: string }[] = [];
+  for (const category of categories) {
+    const parts: string[] = [];
+    let current: ImportCategoryRef | undefined = category;
+    let visible = true;
+    for (let depth = 0; current !== undefined && depth < 5; depth++) {
+      if (!current.isActive) visible = false;
+      parts.unshift(localized(current.name, lang));
+      current = current.parentId === null ? undefined : byId.get(current.parentId);
+    }
+    if (visible) rows.push({ name: localized(category.name, lang), path: parts.join(' / ') });
+  }
+  return rows.sort((a, b) => a.path.localeCompare(b.path, lang));
+}
+
+export async function buildProductTemplate(input: {
+  readonly lang: string;
+  readonly t: Translate;
+  readonly categories: readonly ImportCategoryRef[];
+  readonly units: readonly ImportUnitRef[];
+}): Promise<Buffer> {
+  const { t, lang } = input;
+  const workbook = new ExcelJS.Workbook();
+
+  // 1. Veri sayfası: okuyucu ilk sayfayı okur (K12); başlık satırı sabit anahtarlar (K20).
+  const data = workbook.addWorksheet(sheetName(t('imports.sheet.products')), {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  data.columns = PRODUCT_IMPORT_COLUMNS.map((key) => ({
+    header: key,
+    key,
+    width: key.startsWith('name_') ? 32 : 16,
+    ...(TEXT_COLUMNS.has(key) ? { style: { numFmt: '@' } } : {}),
+  }));
+  data.getRow(1).font = { bold: true };
+  PRODUCT_IMPORT_COLUMNS.forEach((key, index) => {
+    data.getCell(1, index + 1).note = t(`imports.column.${key}`);
+  });
+
+  // 2. Açıklama.
+  const help = workbook.addWorksheet(sheetName(t('imports.sheet.instructions')));
+  help.columns = [{ width: 14 }, { width: 80 }, { width: 18 }];
+  help.addRow([t('imports.template.intro')]);
+  help.mergeCells(1, 1, 1, 3);
+  help.getRow(1).alignment = { wrapText: true };
+  help.getRow(1).height = 48;
+  help.addRow([]);
+  const head = help.addRow([
+    t('imports.template.column'),
+    t('imports.template.description'),
+    t('imports.template.required'),
+  ]);
+  head.font = { bold: true };
+  for (const key of PRODUCT_IMPORT_COLUMNS) {
+    const requirement =
+      key === 'sku'
+        ? t('imports.template.required_always')
+        : REQUIRED_FOR_NEW.has(key)
+          ? t('imports.template.required_new')
+          : t('imports.template.optional');
+    help.addRow([key, t(`imports.column.${key}`), requirement]);
+  }
+
+  // 3. Kategoriler.
+  const categorySheet = workbook.addWorksheet(sheetName(t('imports.sheet.categories')));
+  categorySheet.columns = [
+    { header: t('imports.template.category_name'), width: 36 },
+    { header: t('imports.template.category_path'), width: 64 },
+  ];
+  categorySheet.getRow(1).font = { bold: true };
+  for (const row of categoryRows(input.categories, lang))
+    categorySheet.addRow([row.name, row.path]);
+
+  // 4. Birimler (yalnız aktif).
+  const unitSheet = workbook.addWorksheet(sheetName(t('imports.sheet.units')));
+  unitSheet.columns = [
+    { header: t('imports.template.unit_code'), width: 10 },
+    { header: t('imports.template.unit_name'), width: 28 },
+    { header: t('imports.template.unit_abbreviation'), width: 16 },
+  ];
+  unitSheet.getRow(1).font = { bold: true };
+  for (const unit of input.units.filter((row) => row.isActive)) {
+    unitSheet.addRow([unit.code, localized(unit.name, lang), localized(unit.abbreviation, lang)]);
+  }
+
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+/**
+ * Hata raporu (K13): yalnız bu dosyanın sorunlu satırları; satır no, SKU, sütun, tür, açıklama.
+ * Başka kiracının verisi girmez (satırlar yalnız yüklenen dosyadan ve kodlardan oluşur).
+ */
+export async function buildProblemReport(input: {
+  readonly t: Translate;
+  readonly outcomes: readonly RowOutcome[];
+  readonly notes: readonly string[];
+}): Promise<Buffer> {
+  const { t } = input;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName(t('imports.sheet.report')), {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  sheet.columns = [
+    { header: t('imports.report.row'), width: 8 },
+    { header: t('imports.report.sku'), width: 20, style: { numFmt: '@' } },
+    { header: t('imports.report.column'), width: 14 },
+    { header: t('imports.report.kind'), width: 16 },
+    { header: t('imports.report.problem'), width: 64 },
+  ];
+  sheet.getRow(1).font = { bold: true };
+  for (const note of input.notes) sheet.addRow(['', '', '', '', t(`imports.note.${note}`)]);
+  for (const outcome of input.outcomes) {
+    for (const issue of outcome.issues) {
+      const isWarning = issue.code === 'price_ignored_no_permission';
+      sheet.addRow([
+        outcome.row,
+        // Formül enjeksiyonu: kullanıcının metni Excel'de formül gibi çalışmasın.
+        safeText(outcome.sku ?? ''),
+        issue.column,
+        t(isWarning ? 'imports.report.warning' : 'imports.report.error'),
+        t(`imports.row.${issue.code}`),
+      ]);
+    }
+  }
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+/** `=`, `+`, `-`, `@` ile başlayan metnin önüne `'` (CSV/Excel formül enjeksiyonu). */
+export function safeText(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
