@@ -6,8 +6,10 @@ import {
   applyErrorKey,
   applyProgress,
   appliedRowsOfFailed,
+  confirmState,
   isWorking,
   isXlsxFile,
+  jobLoadErrorKey,
   sameOriginUrl,
   stepOf,
   uploadErrorKey,
@@ -82,5 +84,18 @@ describe('F3.5b içe aktarma sihirbazı (birim)', () => {
     expect(sameOriginUrl('https://cdn.example.com/a.xlsx?s=1', origin)).toBe(
       'https://cdn.example.com/a.xlsx?s=1',
     );
+  });
+
+  it('F3.7b-K11 (#85) yalnız 404 "süresi doldu"; ağ/sunucu hatası yeniden denenir', () => {
+    expect(jobLoadErrorKey(new ApiError({ code: 'NOT_FOUND' }, 404))).toBe('missing');
+    expect(jobLoadErrorKey(new ApiError(undefined, 500))).toBe('retry');
+    expect(jobLoadErrorKey(new TypeError('Failed to fetch'))).toBe('retry');
+  });
+
+  it('F3.7b-K11 (#85) onay düğmesi canApply ve uygulanacak satıra göre baştan doğru', () => {
+    const stats = { insert: 1, update: 0 };
+    expect(confirmState({ canApply: true, stats })).toBe('show');
+    expect(confirmState({ canApply: false, stats })).toBe('not_allowed');
+    expect(confirmState({ canApply: true, stats: { insert: 0, update: 0 } })).toBe('nothing');
   });
 });

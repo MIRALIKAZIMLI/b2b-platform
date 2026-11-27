@@ -11,27 +11,43 @@
 //   düğme kalkar ve neden yazılır (S1 = A: yalnız yükleyen onaylar).
 // - Sonuç: Emerald başlık + gerçek sayılar + sonuç raporu; başarısız işte neden ve kısmi uygulamada
 //   uygulanan satır sayısı; aynı dosya yeniden yüklenebilir (SKU ile güncelleme tekrarlanabilir).
+// F3.7b (US-035 AC2, S2 = A): `pricing.manage` ile yükleme adımında tür seçimi "Məhsullar /
+//   Müştəri qiymətləri". Müşteri fiyatında aktif müşteri seçilmeden şablon ve yükleme kapalı; şablon
+//   o müşteriye hazır iner. Önizleme kutuları "yeni / dəyişən / xətalı / dəyişməyən" diye adlanır;
+//   sonuçta müşterinin "Xüsusi qiymətlər" sayfasına bağlantı. #85 notları: "Təsdiqlə" sunucunun
+//   `canApply`'ına göre baştan gizlenir (neden yazılır); iş ilk yüklemede geçici hatayla gelmezse
+//   "süresi doldu" değil "yeniden dene" görünür (yalnız 404 süresi doldu).
 import {
   formatDateTime,
   IMPORT_NOTES,
   IMPORT_ROW_ERROR_CODES,
   IMPORT_ROW_WARNING_CODES,
   type ImportJobStatus,
+  pricingAccess,
 } from '@b2b/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { type ReactNode, useId, useRef, useState } from 'react';
 import { DEFAULT_TIMEZONE } from '../admin-sellers/form';
+import { useConnections } from '../customers/api';
 import { useShell } from '../shell/use-shell';
-import { Badge, Button, Card, PageHeader } from '../ui/primitives';
-import { type ImportJob, useImportJob, useImportMutations } from './api';
+import { Badge, Button, Card, PageHeader, SelectInput } from '../ui/primitives';
+import {
+  type ImportJob,
+  type ImportKind,
+  type ImportTarget,
+  useImportJob,
+  useImportMutations,
+} from './api';
 import {
   type ApplyErrorKey,
   applyErrorKey,
   applyProgress,
   appliedRowsOfFailed,
+  confirmState,
   isXlsxFile,
+  jobLoadErrorKey,
   sameOriginUrl,
   stepOf,
   type UploadErrorKey,
@@ -58,15 +74,29 @@ const linkClass =
   'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none';
 const secondaryLink = `${linkClass} border border-slate-200/80 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:shadow-md`;
 
-export function ImportWizard({ initialJobId }: { initialJobId: string | undefined }) {
+export function ImportWizard({
+  initialJobId,
+  initialType = 'products',
+  initialBuyerId,
+}: {
+  initialJobId: string | undefined;
+  initialType?: ImportKind;
+  initialBuyerId?: string | undefined;
+}) {
   const t = useTranslations('imports.wizard');
   const locale = useLocale();
   const router = useRouter();
   const shell = useShell();
   const businessId = shell.activeBusinessId;
-  const canRun = (shell.me?.activeBusiness?.permissions ?? []).some(
-    (p) => p.code === 'imports.run',
-  );
+  const codes = (shell.me?.activeBusiness?.permissions ?? []).map((p) => p.code);
+  const canRun = codes.includes('imports.run');
+  // Müşteri fiyatı işi `pricing.manage` ister (yoksa 403); müşteri listesi `connections.view`.
+  const canPrices = pricingAccess(codes).manage && codes.includes('connections.view');
+  const [target, setTarget] = useState<ImportTarget>({
+    type: initialType,
+    buyerId: initialBuyerId,
+  });
+  const effectiveTarget: ImportTarget = canPrices ? target : { type: 'products' };
   const [jobId, setJobId] = useState<string | undefined>(initialJobId);
   const job = useImportJob(businessId, jobId);
   const basePath = `/${locale}/seller/products/import`;
@@ -99,6 +129,9 @@ export function ImportWizard({ initialJobId }: { initialJobId: string | undefine
           {jobId === undefined ? (
             <UploadStep
               businessId={businessId}
+              target={effectiveTarget}
+              canPrices={canPrices}
+              onTarget={setTarget}
               onStarted={(created) => {
                 openJob(created.id);
               }}
@@ -107,6 +140,22 @@ export function ImportWizard({ initialJobId }: { initialJobId: string | undefine
             <Card className="h-48 animate-pulse bg-slate-100/60">
               <span className="sr-only">{t('loading')}</span>
             </Card>
+          ) : current === undefined && jobLoadErrorKey(job.error) === 'retry' ? (
+            <Notice
+              tone="rose"
+              title={t('load_failed_title')}
+              action={
+                <Button
+                  onClick={() => {
+                    void job.refetch();
+                  }}
+                >
+                  {t('retry')}
+                </Button>
+              }
+            >
+              {t('load_failed_body')}
+            </Notice>
           ) : current === undefined ? (
             <Notice
               tone="rose"
@@ -215,9 +264,15 @@ function Notice({
 
 function UploadStep({
   businessId,
+  target,
+  canPrices,
+  onTarget,
   onStarted,
 }: {
   businessId: string | undefined;
+  target: ImportTarget;
+  canPrices: boolean;
+  onTarget: (target: ImportTarget) => void;
   onStarted: (job: ImportJob) => void;
 }) {
   const t = useTranslations('imports.wizard');
@@ -226,25 +281,29 @@ function UploadStep({
   const { template, start } = useImportMutations(businessId);
   const [error, setError] = useState<UploadErrorKey | 'template' | undefined>();
   const [dragging, setDragging] = useState(false);
+  const needsBuyer = target.type === 'customer_prices' && target.buyerId === undefined;
 
   function upload(file: File | undefined) {
     setError(undefined);
-    if (file === undefined) return;
+    if (file === undefined || needsBuyer) return;
     if (!isXlsxFile(file)) {
       setError('type');
       return;
     }
-    start.mutate(file, {
-      onSuccess: onStarted,
-      onError: (e) => {
-        setError(uploadErrorKey(e));
+    start.mutate(
+      { file, target },
+      {
+        onSuccess: onStarted,
+        onError: (e) => {
+          setError(uploadErrorKey(e));
+        },
       },
-    });
+    );
   }
 
   function downloadTemplate() {
     setError(undefined);
-    template.mutate(undefined, {
+    template.mutate(target, {
       onSuccess: (url) => {
         window.location.assign(sameOriginUrl(url, window.location.origin));
       },
@@ -254,14 +313,23 @@ function UploadStep({
     });
   }
 
+  const customer = target.type === 'customer_prices';
   return (
     <Card className="space-y-6 p-6 sm:p-8">
+      {canPrices && <TargetPicker businessId={businessId} target={target} onTarget={onTarget} />}
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-slate-900">{t('template_title')}</p>
-          <p className="text-sm text-slate-500">{t('template_hint')}</p>
+          <p className="text-sm text-slate-500">
+            {customer ? t('template_hint_customer') : t('template_hint')}
+          </p>
         </div>
-        <Button variant="secondary" onClick={downloadTemplate} disabled={template.isPending}>
+        <Button
+          variant="secondary"
+          onClick={downloadTemplate}
+          disabled={template.isPending || needsBuyer}
+          data-testid="import-template"
+        >
           {template.isPending ? t('template_loading') : t('template_download')}
         </Button>
       </div>
@@ -284,7 +352,7 @@ function UploadStep({
           dragging
             ? 'border-indigo-400 bg-indigo-50/60'
             : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/30'
-        } ${start.isPending ? 'pointer-events-none opacity-60' : ''}`}
+        } ${start.isPending || needsBuyer ? 'pointer-events-none opacity-60' : ''}`}
       >
         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-lg text-indigo-600 ring-1 ring-indigo-100">
           ↑
@@ -300,7 +368,7 @@ function UploadStep({
           accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="sr-only"
           data-testid="import-file-input"
-          disabled={start.isPending}
+          disabled={start.isPending || needsBuyer}
           onChange={(e) => {
             upload(e.target.files?.[0]);
             if (input.current !== null) input.current.value = '';
@@ -313,6 +381,99 @@ function UploadStep({
         </p>
       )}
     </Card>
+  );
+}
+
+/** F3.7b: tür seçimi ve müşteri fiyatında müşteri (aktif bağlantılar). */
+function TargetPicker({
+  businessId,
+  target,
+  onTarget,
+}: {
+  businessId: string | undefined;
+  target: ImportTarget;
+  onTarget: (target: ImportTarget) => void;
+}) {
+  const t = useTranslations('imports.wizard');
+  const customer = target.type === 'customer_prices';
+  const connections = useConnections(customer ? businessId : undefined, 'active');
+  const customers = (connections.data?.pages ?? []).flatMap((page) => page.items);
+  const kinds: readonly ImportKind[] = ['products', 'customer_prices'];
+  return (
+    <div className="space-y-4">
+      <div
+        role="radiogroup"
+        aria-label={t('kind_label')}
+        className="inline-flex max-w-full gap-1 rounded-2xl border border-slate-200/80 bg-white/70 p-1 shadow-sm"
+      >
+        {kinds.map((kind) => {
+          const selected = target.type === kind;
+          return (
+            <button
+              key={kind}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              data-testid={`import-kind-${kind}`}
+              onClick={() => {
+                onTarget(kind === 'products' ? { type: kind } : { type: kind, buyerId: undefined });
+              }}
+              className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none ${
+                selected
+                  ? 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              {t(`kind.${kind}`)}
+            </button>
+          );
+        })}
+      </div>
+      {customer && (
+        <div className="space-y-1.5">
+          <label htmlFor="import-buyer" className="block text-sm font-medium text-slate-900">
+            {t('buyer_label')}
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="w-full sm:max-w-sm">
+              <SelectInput
+                id="import-buyer"
+                value={target.buyerId ?? ''}
+                onChange={(event) => {
+                  onTarget({
+                    type: 'customer_prices',
+                    buyerId: event.target.value === '' ? undefined : event.target.value,
+                  });
+                }}
+              >
+                <option value="">{t('buyer_choose')}</option>
+                {target.buyerId !== undefined &&
+                  !customers.some((item) => item.buyerId === target.buyerId) && (
+                    <option value={target.buyerId}>{t('buyer_selected')}</option>
+                  )}
+                {customers.map((item) => (
+                  <option key={item.id} value={item.buyerId}>
+                    {item.counterpartyName ?? t('buyer_unnamed')}
+                  </option>
+                ))}
+              </SelectInput>
+            </div>
+            {connections.hasNextPage && (
+              <Button
+                variant="secondary"
+                disabled={connections.isFetchingNextPage}
+                onClick={() => void connections.fetchNextPage()}
+              >
+                {t('buyer_more')}
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-slate-500">
+            {connections.isSuccess && customers.length === 0 ? t('buyer_none') : t('buyer_hint')}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -373,8 +534,9 @@ function Working({
   );
 }
 
-function StatTiles({ stats }: { stats: ImportJob['stats'] }) {
+function StatTiles({ stats, type }: { stats: ImportJob['stats']; type: ImportJob['type'] }) {
   const t = useTranslations('imports.wizard');
+  const prefix = type === 'customer_prices' ? 'stat_customer' : 'stat';
   const tiles = [
     { key: 'insert', value: stats.insert, tone: 'text-indigo-700', ring: 'ring-indigo-100' },
     { key: 'update', value: stats.update, tone: 'text-slate-900', ring: 'ring-slate-200/80' },
@@ -389,7 +551,7 @@ function StatTiles({ stats }: { stats: ImportJob['stats'] }) {
           data-testid={`import-stat-${tile.key}`}
           className={`rounded-2xl bg-white p-4 shadow-sm ring-1 ${tile.ring}`}
         >
-          <dt className="text-xs font-medium text-slate-500">{t(`stat.${tile.key}`)}</dt>
+          <dt className="text-xs font-medium text-slate-500">{t(`${prefix}.${tile.key}`)}</dt>
           <dd className={`mt-1 text-2xl font-semibold tracking-tight tabular-nums ${tile.tone}`}>
             {tile.value}
           </dd>
@@ -493,7 +655,9 @@ function Preview({
   const { apply } = useImportMutations(businessId);
   const [error, setError] = useState<ApplyErrorKey | undefined>();
   const applicable = job.stats.insert + job.stats.update;
+  const confirmable = confirmState(job);
   const blocked = error === 'not_allowed' || error === 'expired';
+  const customer = job.type === 'customer_prices';
 
   function confirm() {
     setError(undefined);
@@ -514,7 +678,7 @@ function Preview({
           {applicable > 0 ? tw('preview_body') : tw('preview_nothing')}
         </p>
       </div>
-      <StatTiles stats={job.stats} />
+      <StatTiles stats={job.stats} type={job.type} />
       {job.notes.length > 0 && (
         <ul className="space-y-1 rounded-2xl bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
           {job.notes
@@ -525,16 +689,24 @@ function Preview({
         </ul>
       )}
       <Problems job={job} />
-      <p className="text-xs text-slate-500">{tw('future_price_hint')}</p>
+      <p className="text-xs text-slate-500">
+        {customer ? tw('customer_price_hint') : tw('future_price_hint')}
+      </p>
       {job.expiresAt !== null && (
         <p className="text-xs text-slate-500">
           {tw('expires_at', { at: formatDateTime(job.expiresAt) })}
         </p>
       )}
-      {error !== undefined && (
+      {error !== undefined ? (
         <p role="alert" className="text-sm font-medium text-rose-600">
           {tw(`apply_error.${error}`)}
         </p>
+      ) : (
+        confirmable === 'not_allowed' && (
+          <p className="text-sm font-medium text-slate-600" data-testid="import-not-allowed">
+            {tw('apply_error.not_allowed')}
+          </p>
+        )
       )}
       <div className="flex flex-col-reverse gap-3 border-t border-slate-200/80 pt-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-3">
@@ -545,7 +717,7 @@ function Preview({
             <ReportLink url={job.errorReportUrl} label={tw('download_problems')} />
           )}
         </div>
-        {!blocked && applicable > 0 && (
+        {!blocked && confirmable === 'show' && (
           <Button onClick={confirm} disabled={apply.isPending}>
             {apply.isPending ? tw('applying_short') : tw('confirm', { count: applicable })}
           </Button>
@@ -585,25 +757,35 @@ function Applying({ job }: { job: ImportJob }) {
 function Done({ job, onRestart }: { job: ImportJob; onRestart: () => void }) {
   const t = useTranslations('imports.wizard');
   const locale = useLocale();
+  const customer = job.type === 'customer_prices' && job.buyerId !== null;
   return (
     <div className="space-y-6" data-testid="import-done">
       <Notice tone="emerald" title={t('done_title')}>
         {t('done_body', { applied: job.stats.insert + job.stats.update, skipped: job.stats.error })}
       </Notice>
       <Card className="space-y-6 p-6 sm:p-8">
-        <StatTiles stats={job.stats} />
+        <StatTiles stats={job.stats} type={job.type} />
         <div className="flex flex-col gap-3 border-t border-slate-200/80 pt-6 sm:flex-row sm:flex-wrap">
           {job.resultReportUrl !== null && (
             <ReportLink url={job.resultReportUrl} label={t('download_result')} />
           )}
-          <Link href={`/${locale}/seller/products`} className={secondaryLink}>
-            {t('to_products')}
-          </Link>
+          {customer ? (
+            <Link
+              href={`/${locale}/seller/customers/${job.buyerId ?? ''}/prices`}
+              className={secondaryLink}
+            >
+              {t('to_customer_prices')}
+            </Link>
+          ) : (
+            <Link href={`/${locale}/seller/products`} className={secondaryLink}>
+              {t('to_products')}
+            </Link>
+          )}
           <Button variant="secondary" onClick={onRestart}>
             {t('new_import')}
           </Button>
         </div>
-        <p className="text-xs text-slate-500">{t('done_draft_hint')}</p>
+        {!customer && <p className="text-xs text-slate-500">{t('done_draft_hint')}</p>}
       </Card>
     </div>
   );

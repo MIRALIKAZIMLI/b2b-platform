@@ -281,6 +281,13 @@
       "when": 1795781371600,
       "tag": "0039_customer_prices",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795791141225,
+      "tag": "0040_customer_prices_archive_guard",
+      "breakpoints": true
     }
   ]
 }

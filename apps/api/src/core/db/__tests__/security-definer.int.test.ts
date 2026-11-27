@@ -25,6 +25,8 @@ const EXPECTED_FUNCTIONS = [
   'connection_requests_expire',
   'connection_seller_recipients',
   'connection_seller_summaries',
+  // F3.7b (Müfettiş 30 not 1): arşivli perakendeciye müşteri fiyatı yazımını reddeden bekçi.
+  'customer_prices_buyer_guard',
   'dev_sms_outbox_insert',
   'dev_sms_outbox_list',
   'directory_buyer_cards',

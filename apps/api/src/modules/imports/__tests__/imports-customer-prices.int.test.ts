@@ -421,6 +421,28 @@ describe('F3.7a Excel müşteri fiyatı içe aktarma (entegrasyon)', () => {
       buyerId: buyer.businessId,
       warning: 1,
     });
+    // Müfettiş 30 not 2: elle yazımla aynı fiyat audit'i, parti başına (eski → yeni).
+    const priceAudits = await platformRows<{ target_id: string; before: unknown; after: unknown }>(
+      `select target_id, before, after from audit_logs
+        where action = 'customer_price.set' and after->>'importJobId' = $1`,
+      [ready.id],
+    );
+    expect(priceAudits).toHaveLength(1);
+    expect(priceAudits[0]?.target_id).toBe(buyer.businessId);
+    expect(priceAudits[0]?.before).toEqual({
+      prices: [
+        { packagingId: fresh.unitId, unitPrice: null },
+        { packagingId: changed.unitId, unitPrice: '5.0000' },
+      ],
+    });
+    expect(priceAudits[0]?.after).toMatchObject({
+      count: 2,
+      importJobId: ready.id,
+      prices: [
+        { packagingId: fresh.unitId, unitPrice: '3.2500' },
+        { packagingId: changed.unitId, unitPrice: '5.5000' },
+      ],
+    });
   });
 
   it('F3.7a-K9 bağlantı onaydan sonra biterse iş CONNECTION_INACTIVE ile düşer; fiyat yazılmaz (R30)', async () => {

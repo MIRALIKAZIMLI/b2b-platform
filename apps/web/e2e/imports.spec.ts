@@ -56,6 +56,9 @@ function jobBody(id: string, state: Exclude<Mock, 'real'>) {
     errorReportUrl: state === 'preview' ? '/api/v1/dev/storage/report.xlsx' : null,
     resultReportUrl: state === 'done' ? '/api/v1/dev/storage/result.xlsx' : null,
     expiresAt: state === 'preview' ? new Date(Date.now() + 86_400_000).toISOString() : null,
+    // F3.7b: sözleşme alanları (#85 `canApply`; ürün işinde `buyerId` boş).
+    buyerId: null,
+    canApply: state === 'preview',
     createdAt: now,
     updatedAt: now,
   };

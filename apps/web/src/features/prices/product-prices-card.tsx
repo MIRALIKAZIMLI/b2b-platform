@@ -10,6 +10,8 @@
 //   bugün/geçmiş kararını sunucu verir (422 → gün alanında hata).
 // - "Müştəri üçün yoxla": aktif müşteri seçilince her satırda o müşterinin fiyatı ve kaynağı
 //   (`/prices/explain`). Müşteri izni (`connections.view`) yoksa bölüm görünmez.
+// - F3.7b: müşteri seçiliyken `pricing.manage` ile her satırda "Müştəri qiyməti" kutusu: o müşteriye
+//   hemen geçerli özel fiyat yazar (ileri tarih ve kaldırma müşterinin "Xüsusi qiymətlər" sayfasında).
 import {
   addDays,
   formatDate,
@@ -34,6 +36,7 @@ import type { Product, Unit } from '../products/api';
 import { Button, Card, Field, SelectInput, TextInput } from '../ui/primitives';
 import {
   type PriceExplanation,
+  useCustomerPriceMutations,
   useListPrices,
   usePriceExplanations,
   usePriceLists,
@@ -47,7 +50,7 @@ interface PriceRow {
 }
 
 /** Toptancının saat dilimindeki bugün (`YYYY-MM-DD`); yalnız gün seçicinin alt sınırı için. */
-function sellerToday(timeZone: string): string {
+export function sellerToday(timeZone: string): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
@@ -315,6 +318,14 @@ function PricesCardBody({
                     {buyerId !== '' && (
                       <Explanation result={explanations[index]} currency={list.currency} />
                     )}
+                    {buyerId !== '' && canManage && product.status !== 'archived' && (
+                      <CustomerPriceInline
+                        businessId={businessId}
+                        buyerId={buyerId}
+                        packagingId={row.packagingId}
+                        label={`${row.variantSku} ${row.label}`}
+                      />
+                    )}
                   </div>
                   {editable && (
                     <div className="sm:w-40">
@@ -531,5 +542,91 @@ function Explanation({
         </span>
       )}
     </p>
+  );
+}
+
+/** F3.7b: seçili müşteriye tek ambalaj için hemen geçerli özel fiyat (US-035 AC1). */
+function CustomerPriceInline({
+  businessId,
+  buyerId,
+  packagingId,
+  label,
+}: {
+  businessId: string | undefined;
+  buyerId: string;
+  packagingId: string;
+  label: string;
+}) {
+  const t = useTranslations('prices');
+  const tAll = useTranslations();
+  const { set } = useCustomerPriceMutations(businessId);
+  const [value, setValue] = useState('');
+  const [state, setState] = useState<{ tone: 'ok' | 'error'; text: string }>();
+  const inputId = `customer-price-input-${packagingId}`;
+
+  function save() {
+    setState(undefined);
+    const result = priceItemsBody([{ packagingId, input: value }], 'now', '');
+    if (!result.ok) {
+      setState({ tone: 'error', text: t('card.invalid_price') });
+      return;
+    }
+    set.mutate(
+      { buyerId, ...result.body },
+      {
+        onSuccess: () => {
+          setValue('');
+          setState({ tone: 'ok', text: t('customer.saved') });
+        },
+        onError: (error) => {
+          setState({
+            tone: 'error',
+            text:
+              error instanceof ApiError && error.code === 'VALIDATION_FAILED'
+                ? t('card.invalid_price')
+                : error instanceof ApiError && error.code === 'NOT_FOUND'
+                  ? tAll('customerPrices.not_connected')
+                  : tAll(priceListFailureKey(error)),
+          });
+        },
+      },
+    );
+  }
+
+  return (
+    <div className="space-y-1 pt-1" data-testid="customer-price-inline">
+      <div className="flex max-w-sm items-center gap-2">
+        <label htmlFor={inputId} className="sr-only">
+          {t('customer.price_for', { label })}
+        </label>
+        <TextInput
+          id={inputId}
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder={t('customer.placeholder')}
+          value={value}
+          invalid={state?.tone === 'error'}
+          onChange={(event) => {
+            setValue(event.target.value);
+            setState(undefined);
+          }}
+        />
+        <Button variant="secondary" disabled={set.isPending || value.trim() === ''} onClick={save}>
+          {set.isPending ? t('card.saving') : t('customer.save')}
+        </Button>
+      </div>
+      {state !== undefined && (
+        <p
+          role={state.tone === 'ok' ? 'status' : 'alert'}
+          className={
+            state.tone === 'ok'
+              ? 'text-xs font-medium text-emerald-600'
+              : 'text-xs font-medium text-rose-600'
+          }
+        >
+          {state.tone === 'ok' ? `✓ ${state.text}` : state.text}
+        </p>
+      )}
+    </div>
   );
 }

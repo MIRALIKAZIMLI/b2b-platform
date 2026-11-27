@@ -2,7 +2,13 @@
 // Toptancı fiyat ekranları (F3.6b, US-034): openapi `/api/v1/price-lists*`, `/api/v1/prices/explain`.
 // Yalnız `packages/api-client`. POST tek `Idempotency-Key` ile (pencere açılınca üretilir).
 import type { components, paths } from '@b2b/api-client';
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { webApi } from '../../lib/session';
 import { ApiError } from '../admin-sellers/api';
 
@@ -132,4 +138,75 @@ export function usePriceExplanations(
       },
     })),
   });
+}
+
+// ---- F3.7b müşteriye özel fiyat (openapi `/api/v1/customer-prices`) ----
+
+export type CustomerPriceItem = components['schemas']['CustomerPriceItem'];
+export type CustomerPricesPut = NonNullable<
+  paths['/api/v1/customer-prices']['put']['requestBody']
+>['content']['application/json'];
+
+export const CUSTOMER_PRICES_KEY = ['customer-prices'] as const;
+
+/** Bir müşterinin özel fiyatları (yalnız fiyatı olan ambalajlar; imleçli). */
+export function useCustomerPrices(businessId: string | undefined, buyerId: string | undefined) {
+  return useInfiniteQuery({
+    queryKey: [...CUSTOMER_PRICES_KEY, businessId ?? null, buyerId ?? null],
+    enabled: businessId !== undefined && buyerId !== undefined,
+    retry: false,
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last: { nextCursor: string | null }) => last.nextCursor ?? undefined,
+    queryFn: async ({ pageParam }) => {
+      const { data, error, response } = await webApi.client.GET('/api/v1/customer-prices', {
+        params: {
+          header: header(businessId),
+          query: {
+            buyerId: buyerId ?? '',
+            limit: 50,
+            ...(pageParam === undefined ? {} : { cursor: pageParam }),
+          },
+        },
+      });
+      if (data === undefined) throw new ApiError(error, response.status);
+      return data;
+    },
+  });
+}
+
+/** Müşteri fiyatı yazma ve kaldırma; başarıda müşteri fiyatları ve açıklamalar yenilenir. */
+export function useCustomerPriceMutations(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: CUSTOMER_PRICES_KEY });
+    await queryClient.invalidateQueries({ queryKey: PRICE_LISTS_KEY });
+  };
+  const set = useMutation({
+    mutationFn: async (body: CustomerPricesPut): Promise<{ count: number; validFrom: string }> => {
+      const { data, error, response } = await webApi.client.PUT('/api/v1/customer-prices', {
+        params: { header: header(businessId) },
+        body,
+      });
+      if (data === undefined) throw new ApiError(error, response.status);
+      return data;
+    },
+    onSettled: refresh,
+  });
+  const remove = useMutation({
+    mutationFn: async ({
+      buyerId,
+      packagingId,
+    }: {
+      buyerId: string;
+      packagingId: string;
+    }): Promise<{ count: number }> => {
+      const { data, error, response } = await webApi.client.DELETE('/api/v1/customer-prices', {
+        params: { header: header(businessId), query: { buyerId, packagingId } },
+      });
+      if (data === undefined) throw new ApiError(error, response.status);
+      return data;
+    },
+    onSettled: refresh,
+  });
+  return { set, remove };
 }

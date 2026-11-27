@@ -213,14 +213,24 @@ describe('F2.1a admin toptancı açma (entegrasyon)', () => {
     expect(expired.status).toBe(404);
     expect((expired.body as ErrorJson).code).toBe('NOT_FOUND');
 
-    const list = await api
-      .http()
-      .get('/api/v1/admin/sellers')
-      .set(await api.bearer(admin))
-      .query({ limit: 100 });
-    const item = (list.body as { items: { id: string; activation: string }[] }).items.find(
-      (row) => row.id === created.businessId,
-    );
+    // Ortak test DB'sinde 100'den çok toptancı olabilir: imleçle bütün sayfalar gezilir.
+    interface Page {
+      items: { id: string; activation: string }[];
+      nextCursor: string | null;
+    }
+    let item: Page['items'][number] | undefined;
+    let cursor: string | null = null;
+    do {
+      const page: Page = (
+        await api
+          .http()
+          .get('/api/v1/admin/sellers')
+          .set(await api.bearer(admin))
+          .query(cursor === null ? { limit: 100 } : { limit: 100, cursor })
+      ).body as Page;
+      item = page.items.find((row) => row.id === created.businessId);
+      cursor = page.nextCursor;
+    } while (item === undefined && cursor !== null);
     expect(item?.activation).toBe('expired');
 
     const resent = await resend(created.businessId);
