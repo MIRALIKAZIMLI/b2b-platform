@@ -38,7 +38,10 @@ export function ProductsPage() {
   const formatDay = useFormatDay();
   const shell = useShell();
   const businessId = shell.activeBusinessId;
-  const access = productsAccess((shell.me?.activeBusiness?.permissions ?? []).map((p) => p.code));
+  const codes = (shell.me?.activeBusiness?.permissions ?? []).map((p) => p.code);
+  const access = productsAccess(codes);
+  // F3.5b: Excel içe aktarma (US-031) `imports.run` ile.
+  const canImport = codes.includes('imports.run');
   const [tab, setTab] = useState<Tab>('all');
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -70,13 +73,25 @@ export function ProductsPage() {
         title={t('title')}
         description={t('description')}
         action={
-          access.manage ? (
-            <Link
-              href={`/${locale}/seller/products/new`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/30 focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
-            >
-              {t('create_open')}
-            </Link>
+          access.manage || canImport ? (
+            <div className="flex flex-wrap gap-3">
+              {canImport && (
+                <Link
+                  href={`/${locale}/seller/products/import`}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
+                >
+                  {t('import_open')}
+                </Link>
+              )}
+              {access.manage && (
+                <Link
+                  href={`/${locale}/seller/products/new`}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/30 focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
+                >
+                  {t('create_open')}
+                </Link>
+              )}
+            </div>
           ) : undefined
         }
       />
