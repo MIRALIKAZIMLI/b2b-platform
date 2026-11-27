@@ -16,6 +16,7 @@ export * from './permissions';
 export * from './platform-roles';
 export * from './pricing';
 export * from './pricing-form';
+export * from './tier-prices';
 export * from './privacy';
 export * from './role-catalog';
 export * from './units';

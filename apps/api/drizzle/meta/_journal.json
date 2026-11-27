@@ -288,6 +288,13 @@
       "when": 1795791141225,
       "tag": "0040_customer_prices_archive_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795796133660,
+      "tag": "0041_tier_prices",
+      "breakpoints": true
     }
   ]
 }

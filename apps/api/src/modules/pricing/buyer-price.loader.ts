@@ -1,16 +1,17 @@
 // Bir perakendeci için `PriceResolver` girdilerini veritabanından yükler (F3.7a K7; ADR-0019). Hesap
 // yalnız saf çekirdekte (`resolvePrice`); bu sınıf yalnız okur. Kaynaklar: müşteri fiyatı (F3.7a),
-// bağlantıya atanmış aktif liste, varsayılan liste. Şube fiyatı/indirimi (F3.8) ve kademe (F3.9)
-// eklendikçe buraya bağlanır; F3.12a perakendeci ürün listesi de bu yükleyiciyi kullanır.
+// bağlantıya atanmış aktif liste, varsayılan liste ve kademeli indirim (F3.9). Şube fiyatı/indirimi
+// (F3.8) eklendikçe buraya bağlanır; F3.12a perakendeci ürün listesi de bu yükleyiciyi kullanır.
 import { Inject, Injectable } from '@nestjs/common';
 import type { Tx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { type CustomerPriceRow, CustomerPricesRepository } from './customer-prices.repository';
 import { type PriceListSource, type ResolvedPrice, resolvePrice } from './price-resolver';
 import { type PriceListRow, PriceListsRepository, type PriceRow } from './price-lists.repository';
+import { type TierPriceRow, TierPricesRepository } from './tier-prices.repository';
 
 export interface BuyerPrice {
-  /** Satış birimi başına, miktar 1 (kademe yok). */
+  /** Satış birimi başına, `qty` miktarında (verilmezse 1; kademe bu miktara göre). */
   readonly resolved: ResolvedPrice;
   /** Şu an geçerli müşteri fiyatı; yoksa undefined. */
   readonly customerPrice: CustomerPriceRow | undefined;
@@ -23,6 +24,8 @@ export interface BuyerPriceQuery {
   readonly priceListId: string | null;
   readonly packagingIds: readonly string[];
   readonly now: Date;
+  /** Satış birimi cinsinden miktar (F3.9 kademe); verilmezse 1. */
+  readonly qty?: string;
 }
 
 @Injectable()
@@ -30,6 +33,7 @@ export class BuyerPriceLoader {
   constructor(
     @Inject(PriceListsRepository) private readonly lists: PriceListsRepository,
     @Inject(CustomerPricesRepository) private readonly customers: CustomerPricesRepository,
+    @Inject(TierPricesRepository) private readonly tierPrices: TierPricesRepository,
   ) {}
 
   /** Ambalaj başına çözülmüş fiyat. Satıcının para birimi yoksa 404 (F3.6a ile aynı). */
@@ -60,6 +64,13 @@ export class BuyerPriceLoader {
       byListPackaging.set(key, bucket);
     }
     const customer = await this.customers.effectiveTx(tx, sellerId, buyerId, packagingIds, now);
+    const tierRows = await this.tierPrices.listTx(tx, sellerId, [...new Set(packagingIds)]);
+    const tiersByPackaging = new Map<string, TierPriceRow[]>();
+    for (const row of tierRows) {
+      const bucket = tiersByPackaging.get(row.packagingId) ?? [];
+      bucket.push(row);
+      tiersByPackaging.set(row.packagingId, bucket);
+    }
 
     const source = (list: PriceListRow | undefined, packagingId: string): PriceListSource | null =>
       list === undefined
@@ -81,7 +92,7 @@ export class BuyerPriceLoader {
       const resolved = resolvePrice({
         now,
         currency: seller.currencyCode,
-        qty: '1',
+        qty: query.qty ?? '1',
         branchPricingEnabled: false,
         branchPrices: [],
         customerPrices:
@@ -91,7 +102,10 @@ export class BuyerPriceLoader {
         // Varsayılan liste bağlantıya açıkça atanmışsa kaynak `price_list` (ADR-0019 sırası).
         assignedList: source(assignedList, packagingId),
         defaultList: source(defaultList, packagingId),
-        tiers: [],
+        tiers: (tiersByPackaging.get(packagingId) ?? []).map((row) => ({
+          minQty: row.minQty,
+          discountPercent: row.discountPercent,
+        })),
         branchDiscountPercent: null,
       });
       result.set(packagingId, { resolved, customerPrice });

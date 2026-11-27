@@ -1897,9 +1897,42 @@ paths:
       responses:
         '201': { description: Oluşturuldu }
   /api/v1/tier-prices:
+    get:
+      tags: [pricing]
+      summary: Ambalaj seviyelerinin kademeli indirimleri (US-037)
+      description: |
+        F3.9. İzin `pricing.view` (kademe müşteriye bağlı değil; `assigned` kapsamlı temsilci de okur). İstenen her
+        ambalaj seviyesi için kademeler, eşik artan; kademesi olmayan ambalaj boş listeyle döner. Başka satıcının veya
+        olmayan ambalaj sonuçta yer almaz. `maxPerPackaging` = ayar `pricing.tier_max_per_packaging`.
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - name: packagingId
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema: { type: array, minItems: 1, maxItems: 100, items: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Kademeler
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TierPricePage' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
     put:
       tags: [pricing]
       summary: Kademeli fiyat ayarla (US-037)
+      description: |
+        F3.9. İzin `pricing.manage`. Ambalaj seviyesinin **bütün** kademeleri gövdedekilerle değişir; boş `tiers`
+        kademeleri kaldırır. Kademe o ambalajı alan bütün perakendecilere uygulanır ve seçilen fiyatın (müşteri
+        fiyatı, atanmış liste, varsayılan liste) üzerine, şube indiriminden önce gelir (ADR-0019). Miktar (satış
+        birimi) eşiğe eşit veya büyükse ulaşılan en büyük kademe uygulanır. Tarih yok: hemen geçerli. Kurallar
+        (S2 = A; `422`, alan `tiers.<i>.minQty|discountPercent`): eşik 1'den büyük (`min_qty_too_small`) ve tekrarsız
+        (`duplicate_min_qty`); indirim 0'dan büyük, 100'den küçük (`percent_out_of_range`); eşik büyüdükçe indirim
+        de büyür (`percent_not_increasing`, büyük eşikli satırda). Kademe sayısı ayardan (`tiers: [too_many]`).
+        Başka satıcının ambalajı `404`. Aynı ambalaja eşzamanlı iki yazım sıralanır. Audit `tier_price.set`
+        (ambalajın önceki ve yeni kademeleri).
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
         content:
@@ -1907,18 +1940,28 @@ paths:
             schema:
               type: object
               required: [packagingId, tiers]
+              additionalProperties: false
               properties:
                 packagingId: { type: string, format: uuid }
                 tiers:
                   type: array
+                  maxItems: 20
                   items:
                     type: object
                     required: [minQty, discountPercent]
+                    additionalProperties: false
                     properties:
-                      minQty: { $ref: '#/components/schemas/Decimal' }
-                      discountPercent: { $ref: '#/components/schemas/Decimal' }
+                      minQty: { type: string, pattern: '^\d{1,11}(\.\d{1,3})?$', description: 'Satış birimi cinsinden eşik; 1''den büyük' }
+                      discountPercent: { type: string, pattern: '^\d{1,2}(\.\d{1,2})?$', description: '0 < x < 100' }
       responses:
-        '200': { description: Kaydedildi }
+        '200':
+          description: Kaydedildi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PackagingTiers' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/prices/explain:
     get:
       tags: [pricing]
@@ -1926,8 +1969,10 @@ paths:
       description: |
         F3.6a. İzin `pricing.view`; `assigned` kapsamlı üye (temsilci) yalnız kendisine atanmış müşteriyi görür.
         Alıcıyla aktif bağlantı yoksa `404`. Sıra ADR-0019; kaynaklar müşteri fiyatı (F3.7a), atanmış liste ve
-        varsayılan liste (şube fiyatı ve indirimi F3.8, kademe F3.9). `branchId` F3.8'e kadar yok sayılır.
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: buyerId, in: query, required: true, schema: { type: string, format: uuid } }, { name: branchId, in: query, schema: { type: string, format: uuid } }, { name: packagingId, in: query, required: true, schema: { type: string, format: uuid } } ]
+        varsayılan liste (şube fiyatı ve indirimi F3.8). `branchId` F3.8'e kadar yok sayılır. F3.9: `qty` satış birimi
+        cinsinden miktar (verilmezse 1); miktar bir kademeye ulaşırsa `tierDiscountPercent` dolu ve `finalUnitPrice`
+        indirimli (US-037 AC1, P7).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: buyerId, in: query, required: true, schema: { type: string, format: uuid } }, { name: branchId, in: query, schema: { type: string, format: uuid } }, { name: packagingId, in: query, required: true, schema: { type: string, format: uuid } }, { name: qty, in: query, schema: { type: string, pattern: '^\d{1,11}(\.\d{1,3})?$' }, description: 'Sıfırdan büyük; F3.9' } ]
       responses:
         '200':
           description: Çözümlenen fiyat ve kaynağı
@@ -4744,6 +4789,25 @@ components:
         itemCount: { type: integer, description: Fiyatı girilmiş ambalaj seviyesi sayısı }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    TierPrice:
+      type: object
+      required: [minQty, discountPercent]
+      properties:
+        minQty: { $ref: '#/components/schemas/Decimal' }
+        discountPercent: { $ref: '#/components/schemas/Decimal' }
+    PackagingTiers:
+      type: object
+      description: F3.9 (US-037). Kademeler eşik artan; boş liste = kademe yok.
+      required: [packagingId, tiers]
+      properties:
+        packagingId: { type: string, format: uuid }
+        tiers: { type: array, items: { $ref: '#/components/schemas/TierPrice' } }
+    TierPricePage:
+      type: object
+      required: [items, maxPerPackaging]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/PackagingTiers' } }
+        maxPerPackaging: { type: integer, description: 'Ayar `pricing.tier_max_per_packaging`' }
     CustomerPriceItem:
       type: object
       required: [packagingId, variantId, sku, productName, packagingLevel, current, scheduled]

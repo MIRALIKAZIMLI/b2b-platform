@@ -136,12 +136,20 @@ export const customerPriceRemoveQuerySchema = z
   .strict();
 export type CustomerPriceRemoveQuery = z.infer<typeof customerPriceRemoveQuerySchema>;
 
-/** `GET /prices/explain` (US-034 AC5). `branchId` F3.8'e kadar yok sayılır. */
+/**
+ * `GET /prices/explain` (US-034 AC5). `branchId` F3.8'e kadar yok sayılır. F3.9: `qty` satış birimi
+ * cinsinden miktar (kademe için; verilmezse 1), `numeric(14,3)` deseninde ve sıfırdan büyük.
+ */
 export const priceExplainQuerySchema = z
   .object({
     buyerId: z.uuid(),
     branchId: z.uuid().optional(),
     packagingId: z.uuid(),
+    qty: z
+      .string()
+      .regex(/^\d{1,11}(\.\d{1,3})?$/)
+      .refine((value) => /[1-9]/.test(value), { message: 'must_be_positive' })
+      .optional(),
   })
   .strict();
 export type PriceExplainQuery = z.infer<typeof priceExplainQuerySchema>;

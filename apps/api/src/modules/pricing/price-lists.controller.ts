@@ -26,6 +26,9 @@ import {
   type PriceListPage,
   priceListUpdateSchema,
   type PriceListView,
+  type TierPricePage,
+  tierPricesQuerySchema,
+  tierPricesSetSchema,
 } from '@b2b/shared';
 import { z } from 'zod';
 import { type AuditHttpRequest, requestAuditContext } from '../../core/audit';
@@ -33,6 +36,7 @@ import { RequirePermission } from '../../core/auth/access-decorators';
 import { CurrentTenant, type TenantContext } from '../../core/tenant-context';
 import { CustomerPricesService } from './customer-prices.service';
 import { PriceListsService } from './price-lists.service';
+import { TierPricesService } from './tier-prices.service';
 
 const idSchema = z.uuid();
 
@@ -177,5 +181,34 @@ export class CustomerPricesController {
       customerPriceRemoveQuerySchema.parse(query),
       requestAuditContext(req),
     );
+  }
+}
+
+/**
+ * Kademeli indirim (F3.9, US-037; openapi `pricing`). Okuma `pricing.view` (kademe müşteriye bağlı
+ * değil; temsilci de okur), yazma `pricing.manage`; perakendeci 403. Başka satıcının ambalajı 404.
+ */
+@Controller('api/v1/tier-prices')
+export class TierPricesController {
+  constructor(@Inject(TierPricesService) private readonly tiers: TierPricesService) {}
+
+  @Get()
+  @RequirePermission('pricing.view')
+  async list(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: unknown,
+  ): Promise<TierPricePage> {
+    return await this.tiers.list(tenant, tierPricesQuerySchema.parse(query));
+  }
+
+  /** US-037 AC1: ambalajın bütün kademeleri değişir; boş liste kademeleri kaldırır. */
+  @Put()
+  @RequirePermission('pricing.manage')
+  async set(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() body: unknown,
+    @Req() req: AuditHttpRequest,
+  ): Promise<{ packagingId: string; tiers: { minQty: string; discountPercent: string }[] }> {
+    return await this.tiers.set(tenant, tierPricesSetSchema.parse(body), requestAuditContext(req));
   }
 }

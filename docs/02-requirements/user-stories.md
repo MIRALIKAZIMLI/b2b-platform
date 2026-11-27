@@ -239,7 +239,7 @@ Bir platform admini olarak süreleri, kotaları ve politikaları kod değiştirm
 
 Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages/shared/src/settings.ts`). Sınır dışı veya yanlış tipte değer `SETTING_OUT_OF_RANGE` ile reddedilir.
 
-**Kapsam (F2.19):** Plan ve işletme kapsamında yalnızca kodun işletmeyle okuduğu anahtarlar yazılabilir: `connection.cooldown_after_reject_days`, `connection.cooldown_after_buyer_cancel_days`, `connection.daily_request_quota` ([productreport](../productreport.md) "Admin tarafından yönetilen ayarlar"), `security.require_admin_2fa`, `files.upload_url_ttl_minutes`, `files.download_url_ttl_minutes`, `files.image_max_mb`, `files.xlsx_max_mb`, `invitation.team_days`, `directory.search_max_per_minute`, `catalog.brand_request_daily_limit` (F3.2a), `catalog.product_images_max` (F3.4a), `imports.max_rows` (F3.5a). Diğer anahtarlar yalnızca platform kapsamındadır; plan veya işletme kapsamında yazma `SETTING_SCOPE_NOT_ALLOWED` ile reddedilir. Bir anahtar işletmeyle okunmaya başladığında kayıttaki `scopes` alanı aynı PR'da güncellenir.
+**Kapsam (F2.19):** Plan ve işletme kapsamında yalnızca kodun işletmeyle okuduğu anahtarlar yazılabilir: `connection.cooldown_after_reject_days`, `connection.cooldown_after_buyer_cancel_days`, `connection.daily_request_quota` ([productreport](../productreport.md) "Admin tarafından yönetilen ayarlar"), `security.require_admin_2fa`, `files.upload_url_ttl_minutes`, `files.download_url_ttl_minutes`, `files.image_max_mb`, `files.xlsx_max_mb`, `invitation.team_days`, `directory.search_max_per_minute`, `catalog.brand_request_daily_limit` (F3.2a), `catalog.product_images_max` (F3.4a), `imports.max_rows` (F3.5a), `pricing.tier_max_per_packaging` (F3.9). Diğer anahtarlar yalnızca platform kapsamındadır; plan veya işletme kapsamında yazma `SETTING_SCOPE_NOT_ALLOWED` ile reddedilir. Bir anahtar işletmeyle okunmaya başladığında kayıttaki `scopes` alanı aynı PR'da güncellenir.
 
 | Anahtar | Varsayılan | Tip | Alt sınır | Üst sınır |
 | --- | --- | --- | --- | --- |
@@ -312,6 +312,7 @@ Varsayılan değerler (alt ve üst sınır dahil; ADR-0009 §4, kayıt `packages
 | `imports.worker_concurrency` | 1 (aynı anda işlenen içe aktarma dosyası; worker açılışında okunur, R32, F3.5c) | tamsayı | 1 | 4 |
 | `imports.stuck_after_minutes` | 60 (bu kadar ilerlemeyen iş `failed` + `TIMED_OUT`, F3.5c) | tamsayı | 10 | 1440 |
 | `imports.result_ttl_days` | 30 (biten içe aktarmanın iş, dosya ve raporlarının saklanma süresi, gün; F3.5c S2 = A) | tamsayı | 1 | 365 |
+| `pricing.tier_max_per_packaging` | 5 (ambalaj seviyesi başına en çok kademeli indirim; aşan `PUT /tier-prices` 422, US-037, F3.9 S2 = A; işletme/plan katmanlı) | tamsayı | 1 | 20 |
 | `settings.cache_ttl_seconds` | 60 | tamsayı | 1 | 3600 |
 | `i18n.cache_ttl_seconds` | 60 (çeviri ve dil önbelleğinin süreç içi ömrü, F1.3) | tamsayı | 1 | 300 |
 | `directory.reindex_hour_utc` | 1 (perakendeci dizininin gece tam yeniden indekslendiği saat, UTC; worker açılışında okunur, ADR-0011, F2.11a) | tamsayı | 0 | 23 |

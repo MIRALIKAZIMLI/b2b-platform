@@ -110,3 +110,33 @@ export const customerPrices = pgTable(
     check('customer_prices_parties_check', sql`${table.sellerId} <> ${table.buyerId}`),
   ],
 );
+
+/**
+ * Kademeli indirim (F3.9, US-037 AC1; ADR-0019: seçilen fiyatın üzerine önce kademe). Ambalaj seviyesi
+ * başına, bütün perakendecilere; `buyer_id` yok. Miktar (satış birimi) `min_qty`'ye eşit veya büyükse
+ * en büyük ulaşılan kademe uygulanır (P7). `PUT /tier-prices` bir ambalajın bütün satırlarını değiştirir
+ * (sil + ekle; ambalaj satırı kilitli). Tarih yok: hemen geçerli. Ambalaj FK'sı (ON DELETE CASCADE),
+ * RLS ve GRANT migration'da elle (drizzle/0041_tier_prices.sql).
+ */
+export const tierPrices = pgTable(
+  'tier_prices',
+  {
+    sellerId: uuid('seller_id').notNull(),
+    packagingId: uuid('packaging_id').notNull(),
+    minQty: numeric('min_qty', { precision: 14, scale: 3 }).notNull(),
+    discountPercent: numeric('discount_percent', { precision: 5, scale: 2 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by'),
+  },
+  (table) => [
+    primaryKey({
+      name: 'tier_prices_pk',
+      columns: [table.sellerId, table.packagingId, table.minQty],
+    }),
+    check('tier_prices_min_qty_check', sql`${table.minQty} > 1`),
+    check(
+      'tier_prices_discount_percent_check',
+      sql`${table.discountPercent} > 0 and ${table.discountPercent} < 100`,
+    ),
+  ],
+);

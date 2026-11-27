@@ -3563,8 +3563,50 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Kademeli fiyat ayarla (US-037) */
+        /**
+         * Ambalaj seviyelerinin kademeli indirimleri (US-037)
+         * @description F3.9. İzin `pricing.view` (kademe müşteriye bağlı değil; `assigned` kapsamlı temsilci de okur). İstenen her
+         *     ambalaj seviyesi için kademeler, eşik artan; kademesi olmayan ambalaj boş listeyle döner. Başka satıcının veya
+         *     olmayan ambalaj sonuçta yer almaz. `maxPerPackaging` = ayar `pricing.tier_max_per_packaging`.
+         */
+        get: {
+            parameters: {
+                query: {
+                    packagingId: string[];
+                };
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Kademeler */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TierPricePage"];
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        /**
+         * Kademeli fiyat ayarla (US-037)
+         * @description F3.9. İzin `pricing.manage`. Ambalaj seviyesinin **bütün** kademeleri gövdedekilerle değişir; boş `tiers`
+         *     kademeleri kaldırır. Kademe o ambalajı alan bütün perakendecilere uygulanır ve seçilen fiyatın (müşteri
+         *     fiyatı, atanmış liste, varsayılan liste) üzerine, şube indiriminden önce gelir (ADR-0019). Miktar (satış
+         *     birimi) eşiğe eşit veya büyükse ulaşılan en büyük kademe uygulanır. Tarih yok: hemen geçerli. Kurallar
+         *     (S2 = A; `422`, alan `tiers.<i>.minQty|discountPercent`): eşik 1'den büyük (`min_qty_too_small`) ve tekrarsız
+         *     (`duplicate_min_qty`); indirim 0'dan büyük, 100'den küçük (`percent_out_of_range`); eşik büyüdükçe indirim
+         *     de büyür (`percent_not_increasing`, büyük eşikli satırda). Kademe sayısı ayardan (`tiers: [too_many]`).
+         *     Başka satıcının ambalajı `404`. Aynı ambalaja eşzamanlı iki yazım sıralanır. Audit `tier_price.set`
+         *     (ambalajın önceki ve yeni kademeleri).
+         */
         put: {
             parameters: {
                 query?: never;
@@ -3580,8 +3622,10 @@ export interface paths {
                         /** Format: uuid */
                         packagingId: string;
                         tiers: {
-                            minQty: components["schemas"]["Decimal"];
-                            discountPercent: components["schemas"]["Decimal"];
+                            /** @description Satış birimi cinsinden eşik; 1'den büyük */
+                            minQty: string;
+                            /** @description 0 < x < 100 */
+                            discountPercent: string;
                         }[];
                     };
                 };
@@ -3592,8 +3636,13 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["PackagingTiers"];
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         post?: never;
@@ -3614,7 +3663,9 @@ export interface paths {
          * Bir alıcı için fiyatın kaynağını göster (US-034 AC5)
          * @description F3.6a. İzin `pricing.view`; `assigned` kapsamlı üye (temsilci) yalnız kendisine atanmış müşteriyi görür.
          *     Alıcıyla aktif bağlantı yoksa `404`. Sıra ADR-0019; kaynaklar müşteri fiyatı (F3.7a), atanmış liste ve
-         *     varsayılan liste (şube fiyatı ve indirimi F3.8, kademe F3.9). `branchId` F3.8'e kadar yok sayılır.
+         *     varsayılan liste (şube fiyatı ve indirimi F3.8). `branchId` F3.8'e kadar yok sayılır. F3.9: `qty` satış birimi
+         *     cinsinden miktar (verilmezse 1); miktar bir kademeye ulaşırsa `tierDiscountPercent` dolu ve `finalUnitPrice`
+         *     indirimli (US-037 AC1, P7).
          */
         get: {
             parameters: {
@@ -3622,6 +3673,8 @@ export interface paths {
                     buyerId: string;
                     branchId?: string;
                     packagingId: string;
+                    /** @description Sıfırdan büyük; F3.9 */
+                    qty?: string;
                 };
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
@@ -8697,6 +8750,21 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        TierPrice: {
+            minQty: components["schemas"]["Decimal"];
+            discountPercent: components["schemas"]["Decimal"];
+        };
+        /** @description F3.9 (US-037). Kademeler eşik artan; boş liste = kademe yok. */
+        PackagingTiers: {
+            /** Format: uuid */
+            packagingId: string;
+            tiers: components["schemas"]["TierPrice"][];
+        };
+        TierPricePage: {
+            items: components["schemas"]["PackagingTiers"][];
+            /** @description Ayar `pricing.tier_max_per_packaging` */
+            maxPerPackaging: number;
         };
         CustomerPriceItem: {
             /** Format: uuid */

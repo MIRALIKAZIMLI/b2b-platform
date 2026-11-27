@@ -118,20 +118,32 @@ export function useSetPrices(businessId: string | undefined) {
   });
 }
 
-/** US-034 AC5: seçilen müşteri için her ambalajın fiyat kaynağı. */
+/** US-034 AC5: seçilen müşteri için her ambalajın fiyat kaynağı (F3.9: isteğe bağlı miktar). */
 export function usePriceExplanations(
   businessId: string | undefined,
   buyerId: string | undefined,
   packagingIds: readonly string[],
+  qty?: string,
 ) {
   return useQueries({
     queries: packagingIds.map((packagingId) => ({
-      queryKey: [...PRICE_LISTS_KEY, 'explain', businessId ?? null, buyerId ?? null, packagingId],
+      queryKey: [
+        ...PRICE_LISTS_KEY,
+        'explain',
+        businessId ?? null,
+        buyerId ?? null,
+        packagingId,
+        qty ?? null,
+      ],
       enabled: businessId !== undefined && buyerId !== undefined,
       retry: false,
       queryFn: async (): Promise<PriceExplanation> => {
         const { data, error, response } = await webApi.client.GET('/api/v1/prices/explain', {
-          params: { header: header(businessId), query: { buyerId: buyerId ?? '', packagingId } },
+          params: {
+            header: header(businessId),
+            // F3.9: miktar verilirse ulaşılan kademe indirimi de hesaba girer.
+            query: { buyerId: buyerId ?? '', packagingId, ...(qty === undefined ? {} : { qty }) },
+          },
         });
         if (data === undefined) throw new ApiError(error, response.status);
         return data;
@@ -209,4 +221,49 @@ export function useCustomerPriceMutations(businessId: string | undefined) {
     onSettled: refresh,
   });
   return { set, remove };
+}
+
+// ---- F3.9 kademeli indirim (openapi `/api/v1/tier-prices`) ----
+
+export type PackagingTiers = components['schemas']['PackagingTiers'];
+export type TierPricePage = components['schemas']['TierPricePage'];
+export type TierPricesPut = NonNullable<
+  paths['/api/v1/tier-prices']['put']['requestBody']
+>['content']['application/json'];
+
+export const TIER_PRICES_KEY = ['tier-prices'] as const;
+
+/** Ürünün satış birimi ambalajlarının kademeleri ve ambalaj başına sınır. */
+export function useTierPrices(businessId: string | undefined, packagingIds: readonly string[]) {
+  return useQuery({
+    queryKey: [...TIER_PRICES_KEY, businessId ?? null, packagingIds],
+    enabled: businessId !== undefined && packagingIds.length > 0,
+    retry: false,
+    queryFn: async (): Promise<TierPricePage> => {
+      const { data, error, response } = await webApi.client.GET('/api/v1/tier-prices', {
+        params: { header: header(businessId), query: { packagingId: [...packagingIds] } },
+      });
+      if (data === undefined) throw new ApiError(error, response.status);
+      return data;
+    },
+  });
+}
+
+/** Bir ambalajın bütün kademelerini yazar; başarıda kademeler ve fiyat açıklamaları yenilenir. */
+export function useSetTierPrices(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: TierPricesPut): Promise<PackagingTiers> => {
+      const { data, error, response } = await webApi.client.PUT('/api/v1/tier-prices', {
+        params: { header: header(businessId) },
+        body,
+      });
+      if (data === undefined) throw new ApiError(error, response.status);
+      return data;
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: TIER_PRICES_KEY });
+      await queryClient.invalidateQueries({ queryKey: PRICE_LISTS_KEY });
+    },
+  });
 }
