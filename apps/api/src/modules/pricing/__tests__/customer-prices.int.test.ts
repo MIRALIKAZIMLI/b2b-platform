@@ -29,6 +29,8 @@ import {
   TestHttp,
 } from './pricing-fixtures';
 
+type Client = Awaited<ReturnType<typeof connectAsMigrator>>;
+
 const BAKU_2359 = new Date('2026-11-10T19:59:00Z');
 const BAKU_0001 = new Date('2026-11-10T20:01:00Z');
 const BAKU_MIDNIGHT = '2026-11-10T20:00:00.000Z';
@@ -501,50 +503,114 @@ describe('F3.7a müşteri fiyatı API (entegrasyon)', () => {
                                                      valid_from, created_at)
                        values ($1, $2, $3, 9, now(), now())`;
 
-  it('F3.7b-R40-CONC arşiv, işlenmemiş fiyat yazımını bekler ve satırı siler (Müfettiş 30 not 1)', async () => {
+  /** Servisin yaptığı gibi: yazımdan önce aktif bağlantı satırı `FOR SHARE`. Satır sayısı döner. */
+  async function lockConnection(writer: Client, seller: Seller, buyer: Buyer): Promise<number> {
+    const result = await writer.query(
+      `select id from connections
+        where seller_id = $1 and buyer_id = $2 and status = 'active' for share`,
+      [seller.businessId, buyer.businessId],
+    );
+    return result.rowCount ?? 0;
+  }
+
+  /** Gerçek arşiv akışı (buyers-admin): platform işleminde işletme `archived`, sonra bağlantılar kapanır. */
+  async function openArchiver(userId: string) {
+    const client = await connectAsMigrator();
+    await client.query('begin');
+    await client.query("select set_config('app.is_platform', 'true', true)");
+    await client.query("select set_config('app.user_id', $1, true)", [userId]);
+    return client;
+  }
+
+  async function archiveFlow(archiver: Client, buyerId: string): Promise<void> {
+    await archiver.query(`update businesses set status = 'archived' where id = $1`, [buyerId]);
+    await archiver.query(`select * from business_close_archived_connections($1::uuid, now())`, [
+      buyerId,
+    ]);
+  }
+
+  const settle = async (promise: Promise<unknown>) =>
+    await promise.then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+
+  it('F3.7b-R40-CONC arşiv, bağlantıyı tutan işlenmemiş yazımı bekler ve satırı siler; kilitlenme yok (Müfettiş 30 not 1, Müfettiş 31 B1)', async () => {
     clock.set(BAKU_2359);
     const { seller, caseId } = await sellerWithProduct('20');
     const buyer = await newBuyer(region);
     await activeConnection(seller, buyer, BAKU_2359);
     const writer = await openWriter(seller);
+    const archiver = await openArchiver(seller.admin.userId);
     try {
-      await writer.query(insertPrice, [seller.businessId, buyer.businessId, caseId]);
+      expect(await lockConnection(writer, seller, buyer)).toBe(1);
+      // Arşiv yazımın bağlantı kilidini bekler (tetikleyici, silmeden önce).
       let archived = false;
-      const archive = platformRows(`update businesses set status = 'archived' where id = $1`, [
-        buyer.businessId,
-      ]).then(() => {
-        archived = true;
-      });
+      const archive = settle(
+        archiveFlow(archiver, buyer.businessId).then(() => {
+          archived = true;
+        }),
+      );
       await new Promise((resolve) => setTimeout(resolve, 300));
-      // Arşiv tetikleyicisi tablo kilidini bekliyor.
       expect(archived).toBe(false);
+      // Yazım, arşiv beklerken fiyat satırını yazabilir (eski tablo kilidinde burada kilitlenme vardı).
+      await writer.query(insertPrice, [seller.businessId, buyer.businessId, caseId]);
       await writer.query('commit');
-      await archive;
+      expect(await archive).toBeUndefined();
+      await archiver.query('commit');
     } finally {
       await writer.end();
+      await archiver.end();
     }
     const rows = await platformRows(`select 1 from customer_prices where buyer_id = $1`, [
       buyer.businessId,
     ]);
     expect(rows).toEqual([]);
+    const [connection] = await platformRows<{ status: string }>(
+      `select status from connections where buyer_id = $1`,
+      [buyer.businessId],
+    );
+    expect(connection?.status).toBe('cancelled');
   });
 
-  it('F3.7b-R40-CONC arşivden sonra başlayan yazım bekler ve 55000 ile reddedilir; uç 404 döner', async () => {
+  it('F3.7b-R40-CONC arşivden sonra başlayan yazım bağlantıyı bekler; kapanmış bağlantıyı görür, uç 404', async () => {
     clock.set(BAKU_2359);
     const { seller, caseId } = await sellerWithProduct('20');
     const buyer = await newBuyer(region);
     await activeConnection(seller, buyer, BAKU_2359);
-    const archiver = await connectAsMigrator();
+    const archiver = await openArchiver(seller.admin.userId);
     const writer = await openWriter(seller);
     try {
-      await archiver.query('begin');
-      await archiver.query("select set_config('app.is_platform', 'true', true)");
+      await archiveFlow(archiver, buyer.businessId);
+      const lock = lockConnection(writer, seller, buyer);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await archiver.query('commit');
+      expect(await lock).toBe(0);
+      await writer.query('rollback');
+    } finally {
+      await writer.end();
+      await archiver.end();
+    }
+    const res = await setCustomerPrice(seller, buyer, [{ packagingId: caseId, unitPrice: '5' }]);
+    expect(res.status, JSON.stringify(res.body)).toBe(404);
+  });
+
+  it('F3.7b-R40-CONC bağlantı kapatılmayan arşiv yolunda yazım bekler ve 55000 ile reddedilir; uç 404', async () => {
+    clock.set(BAKU_2359);
+    const { seller, caseId } = await sellerWithProduct('20');
+    const buyer = await newBuyer(region);
+    await activeConnection(seller, buyer, BAKU_2359);
+    const archiver = await openArchiver(seller.admin.userId);
+    const writer = await openWriter(seller);
+    try {
       await archiver.query(`update businesses set status = 'archived' where id = $1`, [
         buyer.businessId,
       ]);
-      const write = writer.query(insertPrice, [seller.businessId, buyer.businessId, caseId]).then(
-        () => undefined,
-        (error: unknown) => error,
+      const write = settle(
+        lockConnection(writer, seller, buyer).then(
+          async () =>
+            await writer.query(insertPrice, [seller.businessId, buyer.businessId, caseId]),
+        ),
       );
       await new Promise((resolve) => setTimeout(resolve, 300));
       await archiver.query('commit');
