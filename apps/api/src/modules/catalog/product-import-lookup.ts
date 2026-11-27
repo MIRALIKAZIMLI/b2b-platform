@@ -47,6 +47,13 @@ export interface ImportProductMatch {
   readonly unitPackagingId: string | null;
 }
 
+/** Müşteri fiyatı şablonunun bir satırı (F3.7a K9): arşivli olmayan varyant ve `unit` ambalajı. */
+export interface ImportPriceTemplateRow {
+  readonly sku: string;
+  readonly productName: Record<string, string>;
+  readonly unitPackagingId: string;
+}
+
 /** Dosyadaki ham SKU → eşleşme (kart K2: önce varyant, sonra ürün SKU'su; harf duyarsız SQL). */
 export interface ImportSkuMatches {
   readonly variants: ReadonlyMap<string, ImportVariantMatch>;
@@ -178,6 +185,35 @@ export class ProductImportLookup {
       ),
       products,
     };
+  }
+
+  /**
+   * F3.7a: müşteri fiyatı şablonu için satıcının arşivli olmayan (ürünü de arşivli olmayan) ve `unit`
+   * ambalajı olan varyantları, SKU'ya göre; en çok `limit` satır (`imports.max_rows`).
+   */
+  async priceTemplateRowsTx(
+    tx: Tx,
+    sellerId: string,
+    limit: number,
+  ): Promise<ImportPriceTemplateRow[]> {
+    const result = await tx.execute<{
+      sku: string;
+      product_name: Record<string, string>;
+      packaging_id: string;
+    }>(sql`select v.sku, p.name as product_name, k.id as packaging_id
+             from product_variants v
+             join products p on p.id = v.product_id and p.seller_id = ${sellerId}
+             join product_packaging k
+               on k.variant_id = v.id and k.seller_id = ${sellerId} and k.level = 'unit'
+            where v.seller_id = ${sellerId}
+              and v.status <> 'archived' and p.status <> 'archived'
+            order by lower(v.sku)
+            limit ${limit}`);
+    return result.rows.map((row) => ({
+      sku: row.sku,
+      productName: row.product_name,
+      unitPackagingId: row.packaging_id,
+    }));
   }
 
   /** Varyant → `unit` ambalaj kimliği (fiyat yalnız bu seviyeye yazılır, Mimar S3). */

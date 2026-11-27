@@ -757,13 +757,14 @@ Benzersiz: `(variant_id, level)`.
 | --- | --- | --- | --- |
 | id | uuid | PK | |
 | seller_id | uuid | FK businesses | |
-| type | text | `products` / `customer_prices` / `stock` | F3.5a yalnız `products` (diğerleri 422 `type: not_supported`) |
+| type | text | `products` / `customer_prices` / `stock` | F3.5a `products`; F3.7a `customer_prices`; `stock` 422 `type: not_supported` (F3.11a) |
+| buyer_id | uuid | null; FK businesses; CHECK `(type = 'customer_prices') = (buyer_id is not null)` | F3.7a (S2 = A): `customer_prices` işinin perakendecisi (bir dosya bir müşteri) |
 | file_id | uuid | tekil; bileşik FK `(seller_id, file_id) → files(owner_business_id, id)` | Bir dosya tek işe bağlanır (`fileId: in_use`) |
 | status | text | `uploaded` / `validating` / `preview_ready` / `applying` / `done` / `failed` | state-machines §11 |
 | stats | jsonb | nesne | `{insert, update, error, warning, notes[], problems[]}`; `problems` ilk 100 sorunlu satır (`{row, sku, issues[{column, code}]}`), tamamı raporda |
 | error_report_file_id | uuid | null; bileşik FK `files` | Önizleme hata/uyarı raporu .xlsx (`purpose: import`, özel depo) |
 | result_report_file_id | uuid | null; bileşik FK `files` | F3.5c (US-031 AC3): `done` işin sonuç raporu .xlsx (her satır eklendi / güncellendi / uygulanmadı + neden) |
-| failure_code | text | null; yalnız `failed`'da dolu | `FILE_INVALID` / `IMPORT_TOO_MANY_ROWS` / `APPLY_FAILED` / `TIMED_OUT` (F3.5c) |
+| failure_code | text | null; yalnız `failed`'da dolu | `FILE_INVALID` / `IMPORT_TOO_MANY_ROWS` / `APPLY_FAILED` / `TIMED_OUT` (F3.5c) / `CONNECTION_INACTIVE` (F3.7a) |
 | applied_until_row | integer | null | F3.5c: son uygulanan Excel satırı; 0 = iş alındı, henüz parti bitmedi (yinelenen teslim ikinci kez almaz) |
 | can_write_prices | boolean | | İşi açanın `pricing.manage` izni (Mimar S2); yoksa fiyat sütunu yok sayılır + satır uyarısı. F3.5c: iş açılınca değişmez (UPDATE izni yok); onaylayan = işi açan (S1 = A) |
 | locale | text | | İstekteki Accept-Language (en çok 200 karakter); rapor metinlerinin dili |
@@ -773,6 +774,8 @@ Benzersiz: `(variant_id, level)`.
 F3.5a (`0037_import_jobs.sql`): RLS `import_jobs_tenant` (FOR ALL), `import_jobs_platform_select`; perakendeci erişemez; platform yazamaz (`check-rls` yasak listesi). `app_user` SELECT, INSERT, UPDATE (`status`, `stats`, `error_report_file_id`, `failure_code`, `applied_until_row`, `can_write_prices`, `updated_at`); DELETE yok. SF-08 süre dolumu: migrator sahipli `SECURITY DEFINER` `import_jobs_expire(p_cutoff, p_limit)` yalnız bağlamsız sistem işleminden; süresi dolan `preview_ready` işleri ve bağlı `import` dosya satırlarını (yüklenen dosya + rapor) tek deyimde siler, depo anahtarlarını döner (worker nesneleri sonra siler). Yalnız migrator'a açık politikalar: `import_jobs_definer_select` (SELECT) ve `import_jobs_definer_expire` (DELETE), ikisi de yalnız `preview_ready`; `files_definer_import_delete` (DELETE, yalnız `purpose = 'import'`). Dosya okuması 0021'deki `files_definer_select` ile gelir. Politika kümesi bekçi testiyle sabit (`imports.isolation.test.ts`). İndeksler `(seller_id, created_at)`, `(status, updated_at)`.
 
 F3.5c (`0038_import_apply.sql`): `result_report_file_id` + bileşik FK `import_jobs_result_file_fk`; `failure_code` CHECK'e `TIMED_OUT`; `app_user` UPDATE listesinden `can_write_prices` çıkar, `result_report_file_id` girer. `import_jobs_expire(p_preview_cutoff, p_result_cutoff, p_limit)` artık `imports.result_ttl_days` (30) geçen `done`/`failed` işleri de yüklenen dosya, hata ve sonuç raporuyla siler (S2 = A); sınırlar `now()`'dan sonra olamaz (22023). Yeni DEFINER `import_jobs_time_out(p_cutoff, p_limit)`: `imports.stuck_after_minutes` (60) boyunca ilerlemeyen `uploaded`/`validating`/`applying` işi `failed` + `TIMED_OUT` yapar (`applied_until_row` korunur). Migrator politikaları: `import_jobs_definer_select` (SELECT, bütün durumlar), `import_jobs_definer_expire` (DELETE, `preview_ready`/`done`/`failed`), `import_jobs_definer_time_out` (UPDATE, takılı durumdan yalnız `failed` + `TIMED_OUT`'a).
+
+F3.7a (`0039_customer_prices.sql`): `buyer_id` + CHECK `import_jobs_buyer_check`; `failure_code` CHECK'e `CONNECTION_INACTIVE` (müşteri fiyatı işinin bağlantısı uygulama sırasında bitti). `buyer_id` iş açılınca değişmez (UPDATE izni yok).
 
 ### 4.9 `pricing`
 
@@ -810,14 +813,16 @@ PK: `(price_list_id, packaging_id, valid_from)`. Geçerli fiyat: `valid_from ≤
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| seller_id | uuid | | |
-| buyer_id | uuid | | |
-| branch_id | uuid | null | null = müşteri fiyatı; dolu = şube fiyatı (yalnızca `connections.branch_pricing_enabled`) |
-| packaging_id | uuid | | |
-| unit_price | numeric(14,4) | | |
-| valid_from | timestamptz | | |
+| seller_id | uuid | FK businesses | |
+| buyer_id | uuid | FK businesses | Perakendeci; yalnız aktif bağlantıda yazılır (US-035 AC1, R30) |
+| branch_id | uuid | null | **F3.8'de eklenecek**: null = müşteri fiyatı; dolu = şube fiyatı (yalnızca `connections.branch_pricing_enabled`) |
+| packaging_id | uuid | FK `(packaging_id, seller_id) → product_packaging(id, seller_id)` ON DELETE CASCADE | Fiyat satış birimi başınadır (liste satırlarıyla aynı) |
+| unit_price | numeric(14,4) | ≥ 0 | |
+| valid_from | timestamptz | not null | Gün, toptancının `businesses.timezone`'unda 00:00 veya hemen (F3.6a K4 ile aynı) |
+| created_at | timestamptz | | |
+| created_by | uuid | null | Yazan kullanıcı |
 
-Benzersiz: `(seller_id, buyer_id, coalesce(branch_id, …), packaging_id, valid_from)`.
+F3.7a (`0039_customer_prices.sql`): PK `(seller_id, buyer_id, packaging_id, valid_from)`; F3.8 `branch_id`'yi ekleyince benzersizlik `(seller_id, buyer_id, coalesce(branch_id, …), packaging_id, valid_from)` olur. Geçerli fiyat: `valid_from ≤ now()` olan en büyük `valid_from`; geçerli olmuş satırın fiyatı değişmez, henüz geçerli olmayanın `unit_price`'ı güncellenir. Kaldırma (kullanıcı kararı S1 = A): bir ambalajın bu perakendecideki bütün satırları silinir (`DELETE /customer-prices`, audit `customer_price.removed`). Bağlantı biterse satırlar kalır (S3 = A); perakendeci bağlantısızken hiçbir fiyat görmez. RLS: `customer_prices_tenant` (FOR ALL, `seller_id`), `customer_prices_platform_select`; perakendeciye politika yok (alıcı fiyatı yalnız `PriceResolver` üzerinden). `app_user` SELECT, INSERT, UPDATE (`unit_price`), DELETE. Arşiv (R40): `businesses.status` `archived` olunca migrator sahipli DEFINER tetikleyici `businesses_archived_clear_customer_prices` o perakendecinin bütün satırlarını siler (admin arşivi, 180. gün arşivi ve `business_purge_rows` önce `archived` yazar); yalnız migrator'a açık `customer_prices_definer_select` ve `customer_prices_definer_archive` (DELETE) politikaları. İndeks `(packaging_id)` (ambalaj silinince FK kaskadı) ve `(buyer_id)` (arşiv); kiracı sorguları PK önekini `(seller_id, buyer_id, …)` kullanır.
 
 #### `branch_discounts` (T)
 

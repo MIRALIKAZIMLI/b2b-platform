@@ -5,6 +5,7 @@
 // - Hücre metni `imports.cell_max_chars` karakterden uzunsa kesilir ve satır hatası olur (`too_long`).
 import { Readable } from 'node:stream';
 import {
+  CUSTOMER_PRICE_IMPORT_COLUMNS,
   type ImportFailureCode,
   PRODUCT_IMPORT_COLUMNS,
   PRODUCT_IMPORT_REQUIRED_COLUMNS,
@@ -31,6 +32,23 @@ export interface RawImportRow {
 export type ReadResult =
   | { readonly ok: true; readonly rows: RawImportRow[] }
   | { readonly ok: false; readonly failure: ImportFailureCode; readonly reason: string };
+
+/** Okunacak başlıklar: ürün şablonu (varsayılan) veya müşteri fiyatı şablonu (F3.7a). */
+export interface ColumnSpec {
+  readonly columns: readonly ProductImportColumn[];
+  readonly required: readonly ProductImportColumn[];
+}
+
+export const PRODUCT_COLUMN_SPEC: ColumnSpec = {
+  columns: PRODUCT_IMPORT_COLUMNS,
+  required: PRODUCT_IMPORT_REQUIRED_COLUMNS,
+};
+
+/** F3.7a: yalnız `sku` ve `price` okunur; şablondaki `name`, `current_price` yok sayılır. */
+export const CUSTOMER_PRICE_COLUMN_SPEC: ColumnSpec = {
+  columns: CUSTOMER_PRICE_IMPORT_COLUMNS,
+  required: CUSTOMER_PRICE_IMPORT_COLUMNS,
+};
 
 export interface ReadLimits {
   readonly maxRows: number;
@@ -111,8 +129,11 @@ function numberText(value: number): string {
   return String(value);
 }
 
-function headerMap(values: readonly unknown[]): Map<number, ProductImportColumn> | string {
-  const known = new Set<string>(PRODUCT_IMPORT_COLUMNS);
+function headerMap(
+  values: readonly unknown[],
+  spec: ColumnSpec,
+): Map<number, ProductImportColumn> | string {
+  const known = new Set<string>(spec.columns);
   const map = new Map<number, ProductImportColumn>();
   const seen = new Set<ProductImportColumn>();
   values.forEach((value, index) => {
@@ -123,12 +144,16 @@ function headerMap(values: readonly unknown[]): Map<number, ProductImportColumn>
     seen.add(column);
     map.set(index, column);
   });
-  const missing = PRODUCT_IMPORT_REQUIRED_COLUMNS.filter((column) => !seen.has(column));
+  const missing = spec.required.filter((column) => !seen.has(column));
   return missing.length > 0 ? `missing_columns:${missing.join(',')}` : map;
 }
 
 /** Dosyayı okur; satırlar veya `failed` nedeni. Beklenmeyen okuma hatası `FILE_INVALID`. */
-export async function readProductRows(body: Buffer, limits: ReadLimits): Promise<ReadResult> {
+export async function readProductRows(
+  body: Buffer,
+  limits: ReadLimits,
+  spec: ColumnSpec = PRODUCT_COLUMN_SPEC,
+): Promise<ReadResult> {
   if (zipUncompressedTotal(body, limits.maxUncompressedBytes) === null) {
     return { ok: false, failure: 'FILE_INVALID', reason: 'zip' };
   }
@@ -146,7 +171,7 @@ export async function readProductRows(body: Buffer, limits: ReadLimits): Promise
       for await (const row of sheet) {
         const values = Array.isArray(row.values) ? (row.values as unknown[]) : [];
         if (columns === undefined) {
-          const header = headerMap(values);
+          const header = headerMap(values, spec);
           if (typeof header === 'string')
             return { ok: false, failure: 'FILE_INVALID', reason: header };
           columns = header;

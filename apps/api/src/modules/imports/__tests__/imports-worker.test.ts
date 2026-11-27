@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { TEST_WORKER_ENV } from '../../../../test/env';
 import { OUTBOX_EVENTS } from '../../../core/outbox/event-registry';
 import { WorkerModule } from '../../../worker.module';
-import { ImportsProcessor } from '../imports.processor';
+import { IMPORTS_WORKER_CONCURRENCY, ImportsProcessor } from '../imports.processor';
 import { APPLY_IMPORT_EVENT, ApplyImportJob } from '../jobs/apply-import.job';
 import { EXPIRE_IMPORTS_JOB, ExpireImportsJob } from '../jobs/expire-imports.job';
 import { VALIDATE_IMPORT_EVENT, ValidateImportJob } from '../jobs/validate-import.job';
@@ -53,6 +53,17 @@ describe('F3.5c imports kuyruğu', () => {
     await expect(
       p.process({ name: APPLY_IMPORT_EVENT, data: { businessIds: ['x'], payload: {} } }),
     ).rejects.toThrow();
+  });
+
+  it("F3.7a-K12 açılışta imports.worker_concurrency ayarı çalışan worker'a yazılır", async () => {
+    // BullMQ ana döngüsü eşzamanlılığı her turda `worker.concurrency` alanından okur; açılışta
+    // yazılan değer dekoratördeki başlangıç değerinin (1) yerine geçer.
+    const { processor: p } = processor();
+    const worker = { concurrency: IMPORTS_WORKER_CONCURRENCY };
+    (p as unknown as { _worker: typeof worker })._worker = worker;
+    await p.onApplicationBootstrap();
+    expect(IMPORTS_WORKER_CONCURRENCY).toBe(1);
+    expect(worker.concurrency).toBe(2);
   });
 
   it('F3.5c-WORKER worker modül grafiği derlenir; içe aktarma sağlayıcıları çözülür', async () => {

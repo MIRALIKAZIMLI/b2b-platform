@@ -406,6 +406,7 @@ Onayımı bekle.
 - **Dosyalar:** `customer_prices` (branch_id null), `/api/v1/customer-prices`, `imports` modülüne `customer_prices` türü.
 - **Kabul:** US-035 AC1–AC2.
 - **Test:** Entegrasyon + P3.
+- **Bölme (H7):** F3.7a = API, migration `0039`, Excel `customer_prices` türü (`docs/tasks/F3.7a.md`); F3.7b = web "Özel fiyatlar" sekmesi ve sihirbazda müşteri fiyatı türü.
 
 ### F3.8 — Şube fiyatı ve şube indirimi
 

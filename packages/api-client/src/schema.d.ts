@@ -3357,11 +3357,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Müşteri / şube fiyatları */
+        /**
+         * Bir perakendecinin müşteri fiyatları (US-035)
+         * @description F3.7a. İzin `pricing.view`; `assigned` kapsamlı üye (temsilci) yalnız kendisine atanmış aktif bağlantının
+         *     müşterisini görür (aksi 404). Müşteri fiyatı olan her ambalaj seviyesi için şu an geçerli fiyat ve henüz
+         *     geçerli olmayan fiyatlar, SKU ve ürün adıyla. Bağlantı bittiyse fiyatlar saklanır (S3 = A) ve listelenir.
+         *     Sayfalama ambalaj kimliğine göre (`cursor` = son `packagingId`). Şube fiyatı (`branchId`) F3.8.
+         */
         get: {
             parameters: {
                 query: {
                     buyerId: string;
+                    cursor?: components["parameters"]["Cursor"];
+                    limit?: components["parameters"]["Limit"];
                 };
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
@@ -3376,11 +3384,27 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["CustomerPriceItem"][];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
             };
         };
-        /** Müşteri / şube fiyatı ayarla (US-035, US-036) */
+        /**
+         * Müşteri fiyatı ayarla (US-035 AC1; şube fiyatı F3.8)
+         * @description F3.7a. İzin `pricing.manage`. Yalnız perakendeciyle **aktif bağlantı** varsa (aksi 404; bağlantı satırı
+         *     kilitlenir, iptalle yarışta biri bekler). Fiyat satış birimi (ambalaj seviyesi) başınadır ve bu
+         *     perakendecide liste fiyatının yerine geçer (ADR-0019). `validFrom` kuralları `PUT /price-lists/{id}/items`
+         *     ile aynı: verilmezse hemen, verilirse yarın veya sonraki gün toptancının saat diliminde 00:00 (bugün veya
+         *     geçmiş `422`); bekleyen fiyat aynı günle güncellenir, geçerli olmuş fiyat değişmez. Ambalaj aynı satıcının
+         *     olmalı (`422`, `items.<i>.packagingId: [not_found]`). `branchId` F3.8'e kadar kabul edilmez (`422`).
+         *     Audit `customer_price.set` (alıcı, gün, ambalaj başına önceki ve yeni fiyat).
+         */
         put: {
             parameters: {
                 query?: never;
@@ -3395,14 +3419,15 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         buyerId: string;
-                        /** Format: uuid */
-                        branchId?: string | null;
-                        /** Format: date-time */
+                        /**
+                         * Format: date
+                         * @description YYYY-MM-DD; toptancının saat diliminde 00:00
+                         */
                         validFrom?: string;
                         items: {
                             /** Format: uuid */
                             packagingId: string;
-                            unitPrice: components["schemas"]["Decimal"];
+                            unitPrice: string;
                         }[];
                     };
                 };
@@ -3413,13 +3438,57 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            count: number;
+                            /** Format: date-time */
+                            validFrom: string;
+                        };
+                    };
                 };
                 403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         post?: never;
-        delete?: never;
+        /**
+         * Müşteri fiyatını kaldır (S1 = A)
+         * @description F3.7a. İzin `pricing.manage`. Bir ambalaj seviyesinin bu perakendecideki bütün müşteri fiyatı satırları
+         *     (geçerli ve ileri tarihli) silinir; perakendeci yeniden liste fiyatını görür. Eski siparişler etkilenmez
+         *     (fiyat siparişe kopyalanır, ADR-0019). Bağlantı durumu aranmaz (saklanan fiyat bağlantı bittikten sonra da
+         *     kaldırılabilir). Kaldırılacak satır yoksa 404. Audit `customer_price.removed` (silinen fiyatlar).
+         */
+        delete: {
+            parameters: {
+                query: {
+                    buyerId: string;
+                    packagingId: string;
+                };
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Kaldırıldı */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Silinen fiyat satırı sayısı */
+                            count: number;
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -3544,8 +3613,8 @@ export interface paths {
         /**
          * Bir alıcı için fiyatın kaynağını göster (US-034 AC5)
          * @description F3.6a. İzin `pricing.view`; `assigned` kapsamlı üye (temsilci) yalnız kendisine atanmış müşteriyi görür.
-         *     Alıcıyla aktif bağlantı yoksa `404`. Sıra ADR-0019; F3.6a'da kaynaklar atanmış liste ve varsayılan liste
-         *     (müşteri fiyatı F3.7, şube fiyatı ve indirimi F3.8, kademe F3.9). `branchId` F3.8'e kadar yok sayılır.
+         *     Alıcıyla aktif bağlantı yoksa `404`. Sıra ADR-0019; kaynaklar müşteri fiyatı (F3.7a), atanmış liste ve
+         *     varsayılan liste (şube fiyatı ve indirimi F3.8, kademe F3.9). `branchId` F3.8'e kadar yok sayılır.
          */
         get: {
             parameters: {
@@ -5129,8 +5198,11 @@ export interface paths {
         /**
          * Excel içe aktarma başlat (US-031)
          * @description F3.5a. İzin `imports.run`. `fileId`, F1.10 ile `purpose: import` yüklenmiş ve `ready`
-         *     durumdaki bu işletmenin dosyasıdır (başka işletmenin dosyası 404). Şimdilik yalnız
-         *     `type: products` desteklenir; diğerleri `422 VALIDATION_FAILED` (`type: not_supported`).
+         *     durumdaki bu işletmenin dosyasıdır (başka işletmenin dosyası 404). Desteklenen türler
+         *     `products` ve (F3.7a) `customer_prices`; `stock` `422 VALIDATION_FAILED` (`type: not_supported`).
+         *     `customer_prices` (US-035 AC2, S2 = A: bir dosya bir müşteri): `buyerId` zorunlu, ek izin
+         *     `pricing.manage` (yoksa 403), perakendeciyle aktif bağlantı (yoksa `422`, `buyerId: [not_connected]`).
+         *     Diğer türlerde `buyerId` verilirse `422` (`buyerId: [not_allowed]`).
          *     Aynı dosya ikinci işe bağlanamaz (`fileId: in_use`). Doğrulama arka planda; durum
          *     `GET /imports/{id}` ile izlenir. Hata raporu ve şablon kullanıcının diline göre
          *     (`Accept-Language`). Fiyat sütunu yalnız `pricing.manage` izniyle yazılır; izin yoksa
@@ -5152,6 +5224,11 @@ export interface paths {
                         type: "products" | "customer_prices" | "stock";
                         /** Format: uuid */
                         fileId: string;
+                        /**
+                         * Format: uuid
+                         * @description Yalnız `customer_prices` (F3.7a)
+                         */
+                        buyerId?: string;
                     };
                 };
             };
@@ -5187,11 +5264,17 @@ export interface paths {
          * Şablon .xlsx indirme bağlantısı
          * @description F3.5a (US-031 AC1). Veri sayfası, açıklama sayfası, kategori ve birim listeleri;
          *     başlık ve açıklamalar kullanıcının dilinde. Desteklenmeyen tür `422 VALIDATION_FAILED`.
+         *     F3.7a `customer_prices`: `buyerId` zorunlu, izin ayrıca `pricing.manage`, aktif bağlantı (aksi
+         *     `422 buyerId: [not_connected]`). Veri sayfası satıcının arşivli olmayan varyantlarıyla dolu gelir
+         *     (`sku`, `name`, `current_price` = bu perakendecinin bugünkü fiyatı, `price` boş); yalnız `sku` ve
+         *     `price` okunur, fiyatı boş satır atlanır.
          */
         get: {
             parameters: {
                 query: {
                     type: "products" | "customer_prices" | "stock";
+                    /** @description Yalnız `customer_prices` */
+                    buyerId?: string;
                 };
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
@@ -8615,6 +8698,19 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        CustomerPriceItem: {
+            /** Format: uuid */
+            packagingId: string;
+            /** Format: uuid */
+            variantId: string;
+            /** @description Varyant SKU'su */
+            sku: string;
+            productName: components["schemas"]["LocalizedText"];
+            /** @enum {string} */
+            packagingLevel: "unit" | "inner" | "case" | "pallet";
+            current: components["schemas"]["PricePoint"] | null;
+            scheduled: components["schemas"]["PricePoint"][];
+        };
         PricePoint: {
             unitPrice: components["schemas"]["Decimal"];
             /** Format: date-time */
@@ -8770,6 +8866,11 @@ export interface components {
             id: string;
             /** @enum {string} */
             type: "products" | "customer_prices" | "stock";
+            /**
+             * Format: uuid
+             * @description F3.7a: `customer_prices` işinin perakendecisi
+             */
+            buyerId: string | null;
             /** @enum {string} */
             status: "uploaded" | "validating" | "preview_ready" | "applying" | "done" | "failed";
             /**
@@ -8788,7 +8889,9 @@ export interface components {
             /**
              * @description İlk `imports.preview_problems_max` (100) hatalı/uyarılı satır; tamamı raporda. Kodlar
              *     `imports.row.<kod>` çeviri anahtarlarıdır; F3.5c ekleri: `packaging_conflict`,
-             *     `no_unit_packaging`, `taken`.
+             *     `no_unit_packaging`, `taken`. F3.7a (`customer_prices`) uyarısı `price_unchanged`: fiyat
+             *     bugünkü müşteri fiyatıyla aynı, satır yazılmaz (yalnız `warning` sayısına girer; `insert` =
+             *     yeni müşteri fiyatı, `update` = değişen müşteri fiyatı).
              */
             problems: {
                 /** @description Excel satır numarası (başlık 1) */
@@ -8801,10 +8904,11 @@ export interface components {
             }[];
             /**
              * @description F3.5c: `APPLY_FAILED` uygulama beklenmedik hatayla durdu (uygulanan partiler kalır);
-             *     `TIMED_OUT` iş `imports.stuck_after_minutes` boyunca ilerlemedi.
+             *     `TIMED_OUT` iş `imports.stuck_after_minutes` boyunca ilerlemedi. F3.7a:
+             *     `CONNECTION_INACTIVE` `customer_prices` işinin perakendecisiyle bağlantı uygulama sırasında bitti.
              * @enum {string|null}
              */
-            failureCode: "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "APPLY_FAILED" | "TIMED_OUT" | null;
+            failureCode: "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "APPLY_FAILED" | "TIMED_OUT" | "CONNECTION_INACTIVE" | null;
             /** @description F3.5c, `applying`/`failed`'da son uygulanan Excel satırı (0 = henüz parti bitmedi) */
             appliedUntilRow: number | null;
             /**
@@ -8822,6 +8926,11 @@ export interface components {
              * @description Yalnız `preview_ready` iken
              */
             expiresAt: string | null;
+            /**
+             * @description F3.7a (#85 notu): iş `preview_ready` ve isteyen kullanıcı onaylayabilir (işi açan kendisi; fiyat
+             *     yazan işte `pricing.manage` hâlâ var). İstemci "Uygula" düğmesini buna göre gösterir.
+             */
+            canApply: boolean;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */

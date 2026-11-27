@@ -79,6 +79,9 @@ export const AUDIT_ACTIONS = [
   'price_list.items_set',
   // F3.5c (US-031 AC3, kart K16): içe aktarma uygulandı; yalnız sayılar (ürün başına kayıt yok).
   'import.applied',
+  // F3.7a (US-035, kart K8): müşteri fiyatı. Kaldırma satırları sildiği için fiyat değerleri yazılır.
+  'customer_price.set',
+  'customer_price.removed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -104,6 +107,9 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 // after yalnız durum).
 // price_list: hedef kimliği fiyat listesi (price_lists.id; F3.6a, işletme = toptancı). Toplu fiyatta
 // after yalnız satır sayısı ve geçerlilik anı; fiyat değerleri audit'e yazılmaz (tablo geçmişi tutar).
+// customer_price: hedef kimliği perakendeci (buyer_id; F3.7a, işletme = toptancı). `set`: before
+// ambalaj başına önceki geçerli müşteri fiyatı, after gün + yazılan fiyatlar; `removed`: before
+// silinen satırlar (fiyat ve geçerlilik anı).
 // connection: hedef kimliği bağlantı (connections.id; F2.13a kabul, after: istek kimliği, veri
 // paylaşım onayı, vade). block: hedef kimliği engellenen satıcı (sellerId; işletme = alıcı).
 export const AUDIT_TARGET_TYPES = [
@@ -129,6 +135,7 @@ export const AUDIT_TARGET_TYPES = [
   'product',
   'price_list',
   'import_job',
+  'customer_price',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

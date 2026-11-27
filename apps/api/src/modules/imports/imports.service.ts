@@ -10,18 +10,20 @@ import {
   type ImportType,
 } from '@b2b/shared';
 import { Clock } from '../../core/clock';
-import { withTenantTx } from '../../core/db';
+import { type Tx, withTenantTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
 import { OutboxWriter } from '../../core/outbox';
 import type { TenantContext } from '../../core/tenant-context';
 import { ProductImportLookup } from '../catalog';
+import { CustomerPriceImport } from '../pricing';
 import { FilesService, XLSX_CONTENT_TYPE } from '../files';
 import { I18nService } from '../i18n';
 import { SettingsService } from '../settings';
 import { type ImportJobRow, ImportsRepository, isFileInUse } from './imports.repository';
 import { ImportJobStateMachine } from './import-job.state-machine';
-import { buildProductTemplate, type Translate } from './workbooks';
+import { CUSTOMER_PRICE_TEMPLATE_KEYS } from './jobs/customer-price-import';
+import { buildCustomerPriceTemplate, buildProductTemplate, type Translate } from './workbooks';
 
 /** İstekteki Accept-Language başlığı işe yazılır (rapor dili); uzunluğu sınırlı. */
 const LOCALE_MAX = 200;
@@ -57,6 +59,8 @@ export class ImportsService {
     @Inject(OutboxWriter) private readonly outbox: Pick<OutboxWriter, 'write'>,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(IdGenerator) private readonly ids: IdGenerator,
+    @Inject(CustomerPriceImport)
+    private readonly customerPrices: Pick<CustomerPriceImport, 'connectionTx' | 'currentTx'>,
   ) {}
 
   /** `GET /imports/template` (US-031 AC1): kullanıcının dilinde şablon, süreli bağlantı. */
@@ -66,7 +70,11 @@ export class ImportsService {
     acceptLanguage: string | undefined,
   ): Promise<ImportTemplateLink> {
     assertSupportedType(query.type);
+    const buyerId = this.assertBuyer(tenant, query.type, query.buyerId);
     const lang = await this.i18n.language(acceptLanguage);
+    if (buyerId !== null) {
+      return await this.customerPriceTemplate(tenant, buyerId, lang, query.type);
+    }
     const { categories, units } = await withTenantTx(tenant, async (tx) => ({
       categories: await this.catalog.categoriesTx(tx),
       units: await this.catalog.unitsTx(tx),
@@ -81,6 +89,77 @@ export class ImportsService {
     });
   }
 
+  /**
+   * F3.7a (S2 = A, K9): bir müşteri için dolu şablon: satıcının arşivli olmayan varyantları SKU, ad
+   * ve bu perakendecinin bugünkü fiyatıyla; `price` boş. En çok `imports.max_rows` satır.
+   */
+  private async customerPriceTemplate(
+    tenant: TenantContext,
+    buyerId: string,
+    lang: string,
+    type: ImportType,
+  ): Promise<ImportTemplateLink> {
+    const maxRows = await this.settings.get('imports.max_rows', tenant.businessId);
+    const rows = await withTenantTx(tenant, async (tx) => {
+      const connection = await this.connectionTx(tx, tenant.businessId, buyerId);
+      const variants = await this.catalog.priceTemplateRowsTx(tx, tenant.businessId, maxRows);
+      const current = await this.customerPrices.currentTx(tx, {
+        sellerId: tenant.businessId,
+        buyerId,
+        priceListId: connection.priceListId,
+        packagingIds: variants.map((row) => row.unitPackagingId),
+        now: this.clock.now(),
+      });
+      return variants.map((row) => ({
+        sku: row.sku,
+        productName: row.productName,
+        currentPrice: current.get(row.unitPackagingId)?.effectivePrice ?? null,
+      }));
+    });
+    const t = await translator(this.i18n, CUSTOMER_PRICE_TEMPLATE_KEYS, lang);
+    const body = await buildCustomerPriceTemplate({ lang, t, rows });
+    return await this.files.publishTransient(tenant.businessId, {
+      purpose: 'import',
+      name: `template-${type.replace('_', '-')}-${lang}`,
+      contentType: XLSX_CONTENT_TYPE,
+      body,
+    });
+  }
+
+  /**
+   * F3.7a: `customer_prices` türünde `buyerId` zorunlu ve `pricing.manage` gerekir (fiyat yazan ve
+   * fiyat gösteren tür); diğer türlerde `buyerId` verilemez. Tür `customer_prices` ise alıcı döner.
+   */
+  private assertBuyer(
+    tenant: TenantContext,
+    type: ImportType,
+    buyerId: string | undefined,
+  ): string | null {
+    if (type !== 'customer_prices') {
+      if (buyerId !== undefined) {
+        throw new DomainError('VALIDATION_FAILED', { buyerId: ['not_allowed'] });
+      }
+      return null;
+    }
+    if (!tenant.permissions.has('pricing.manage')) throw new DomainError('PERMISSION_DENIED');
+    if (buyerId === undefined)
+      throw new DomainError('VALIDATION_FAILED', { buyerId: ['required'] });
+    return buyerId;
+  }
+
+  /** Perakendeciyle aktif bağlantı (R30); yoksa `422 buyerId: not_connected`. */
+  private async connectionTx(
+    tx: Tx,
+    sellerId: string,
+    buyerId: string,
+  ): Promise<{ readonly priceListId: string | null }> {
+    const connection = await this.customerPrices.connectionTx(tx, sellerId, buyerId);
+    if (connection === null) {
+      throw new DomainError('VALIDATION_FAILED', { buyerId: ['not_connected'] });
+    }
+    return connection;
+  }
+
   /** `POST /imports` (US-031 AC2, SF-08): iş `uploaded`; doğrulama worker'da. */
   async create(
     tenant: TenantContext,
@@ -88,14 +167,17 @@ export class ImportsService {
     acceptLanguage: string | undefined,
   ): Promise<ImportJobView> {
     assertSupportedType(input.type);
+    const buyerId = this.assertBuyer(tenant, input.type, input.buyerId);
     await this.files.readyFile(tenant, input.fileId, 'import');
     const now = this.clock.now();
     try {
       const row = await withTenantTx(tenant, async (tx) => {
+        if (buyerId !== null) await this.connectionTx(tx, tenant.businessId, buyerId);
         const job = await this.repository.insertTx(tx, {
           id: this.ids.next(),
           sellerId: tenant.businessId,
           type: input.type,
+          buyerId,
           fileId: input.fileId,
           // Mimar S2: fiyat sütunu yalnız fiyat yazma izni olan üyede uygulanır.
           canWritePrices: tenant.permissions.has('pricing.manage'),
@@ -176,9 +258,12 @@ export class ImportsService {
   private async view(tenant: TenantContext, row: ImportJobRow): Promise<ImportJobView> {
     const ttlHours = await this.settings.get('imports.preview_ttl_hours');
     const { insert, update, error, warning, notes, problems } = row.stats;
+    const expiresAt =
+      row.status === 'preview_ready' ? row.updatedAt.getTime() + ttlHours * 3_600_000 : null;
     return {
       id: row.id,
       type: row.type,
+      buyerId: row.buyerId,
       status: row.status,
       stats: { insert, update, error, warning },
       notes,
@@ -193,10 +278,13 @@ export class ImportsService {
         row.resultReportFileId === null
           ? null
           : await this.files.getReadUrl(tenant, row.resultReportFileId),
-      expiresAt:
-        row.status === 'preview_ready'
-          ? new Date(row.updatedAt.getTime() + ttlHours * 3_600_000).toISOString()
-          : null,
+      expiresAt: expiresAt === null ? null : new Date(expiresAt).toISOString(),
+      // #85 notu: `apply` ile aynı kurallar (işi açan, fiyat izni, süre dolmamış).
+      canApply:
+        expiresAt !== null &&
+        expiresAt > this.clock.now().getTime() &&
+        row.createdBy === tenant.userId &&
+        (!row.canWritePrices || tenant.permissions.has('pricing.manage')),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

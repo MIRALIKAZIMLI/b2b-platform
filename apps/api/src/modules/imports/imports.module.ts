@@ -20,7 +20,14 @@ import { ValidateImportJob } from './jobs/validate-import.job';
  * imports → catalog, pricing, files (c4 §1); uygulama (F3.5c) aynı yönde yazma kapılarını kullanır.
  */
 @Module({
-  imports: [OutboxModule, SettingsModule, FilesModule, I18nModule, CatalogImportModule],
+  imports: [
+    OutboxModule,
+    SettingsModule,
+    FilesModule,
+    I18nModule,
+    CatalogImportModule,
+    PricingImportModule,
+  ],
   controllers: [ImportsController],
   providers: [ImportsRepository, ImportsService],
 })

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Inject,
@@ -12,6 +13,10 @@ import {
   Req,
 } from '@nestjs/common';
 import {
+  type CustomerPricePage,
+  customerPriceRemoveQuerySchema,
+  customerPricesQuerySchema,
+  customerPricesSetSchema,
   type PriceExplanationView,
   priceExplainQuerySchema,
   priceListCreateSchema,
@@ -26,6 +31,7 @@ import { z } from 'zod';
 import { type AuditHttpRequest, requestAuditContext } from '../../core/audit';
 import { RequirePermission } from '../../core/auth/access-decorators';
 import { CurrentTenant, type TenantContext } from '../../core/tenant-context';
+import { CustomerPricesService } from './customer-prices.service';
 import { PriceListsService } from './price-lists.service';
 
 const idSchema = z.uuid();
@@ -120,5 +126,56 @@ export class PricesController {
     @Query() query: unknown,
   ): Promise<PriceExplanationView> {
     return await this.lists.explain(tenant, priceExplainQuerySchema.parse(query));
+  }
+}
+
+/**
+ * Müşteriye özel fiyat (F3.7a, US-035; openapi `pricing`). Okuma `pricing.view` (temsilci yalnız
+ * atandığı müşteri), yazma ve kaldırma `pricing.manage`; perakendeci 403. Başka satıcının satırı
+ * RLS ile görünmez (boş liste / 404).
+ */
+@Controller('api/v1/customer-prices')
+export class CustomerPricesController {
+  constructor(
+    @Inject(CustomerPricesService) private readonly customerPrices: CustomerPricesService,
+  ) {}
+
+  @Get()
+  @RequirePermission('pricing.view')
+  async list(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: unknown,
+  ): Promise<CustomerPricePage> {
+    return await this.customerPrices.list(tenant, customerPricesQuerySchema.parse(query));
+  }
+
+  /** US-035 AC1: yalnız aktif bağlantı; `validFrom` günü toptancının saatinde 00:00. */
+  @Put()
+  @RequirePermission('pricing.manage')
+  async set(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() body: unknown,
+    @Req() req: AuditHttpRequest,
+  ): Promise<{ count: number; validFrom: string }> {
+    return await this.customerPrices.set(
+      tenant,
+      customerPricesSetSchema.parse(body),
+      requestAuditContext(req),
+    );
+  }
+
+  /** S1 = A: bir ambalajın bu perakendecideki bütün müşteri fiyatları kaldırılır. */
+  @Delete()
+  @RequirePermission('pricing.manage')
+  async remove(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: unknown,
+    @Req() req: AuditHttpRequest,
+  ): Promise<{ count: number }> {
+    return await this.customerPrices.remove(
+      tenant,
+      customerPriceRemoveQuerySchema.parse(query),
+      requestAuditContext(req),
+    );
   }
 }

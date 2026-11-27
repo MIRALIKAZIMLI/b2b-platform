@@ -314,3 +314,40 @@ export function arrayBufferOf(body: Uint8Array): ArrayBuffer {
   new Uint8Array(copy).set(body);
   return copy;
 }
+
+/**
+ * F3.7a: kabul edilmiş istek + aktif bağlantı (pricing-fixtures `activeConnection`'ın kısaltılmış
+ * kopyası; F2.13a bekçisi: bağlantı isteğin yanıt anında doğar). Bağlantı kimliği döner.
+ */
+export async function activeConnection(seller: Seller, buyer: Buyer, at: Date): Promise<string> {
+  const requestId = ids.next();
+  await businessRows(
+    seller.businessId,
+    `insert into connection_requests
+       (id, seller_id, buyer_id, sent_by_user_id, status, expires_at,
+        seller_local_date, created_at, updated_at)
+     values ($1, $2, $3, $4, 'pending', $5::timestamptz + interval '14 days', $6, $5, $5)`,
+    [
+      requestId,
+      seller.businessId,
+      buyer.businessId,
+      seller.admin.userId,
+      at,
+      at.toISOString().slice(0, 10),
+    ],
+  );
+  await businessRows(
+    buyer.businessId,
+    `update connection_requests set status = 'accepted', responded_at = $2, responded_by_user_id = $3
+      where id = $1`,
+    [requestId, at, seller.admin.userId],
+  );
+  const id = ids.next();
+  await businessRows(
+    buyer.businessId,
+    `insert into connections (id, seller_id, buyer_id, request_id, status, started_at)
+     select $1, $2, $3, $4, 'active', responded_at from connection_requests where id = $4`,
+    [id, seller.businessId, buyer.businessId, requestId],
+  );
+  return id;
+}

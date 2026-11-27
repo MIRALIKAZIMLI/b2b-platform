@@ -6919,6 +6919,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Применение не завершилось вовремя',
     tr: 'Uygulama zamanında bitmedi',
   },
+  'imports.wizard.failure.CONNECTION_INACTIVE': {
+    az: 'Müştəri ilə əlaqə bitib',
+    ru: 'Связь с клиентом завершена',
+    tr: 'Müşteriyle bağlantı bitti',
+  },
   'imports.wizard.failed_none': {
     az: 'Heç bir sətir tətbiq olunmadı. Faylı və şablonu yoxlayıb yenidən yükləyin.',
     ru: 'Ни одна строка не применена. Проверьте файл по шаблону и загрузите снова.',

@@ -16,6 +16,8 @@ const EXPECTED_FUNCTIONS = [
   'brand_request_create',
   'business_close_archived_connections',
   'business_purge',
+  // F3.7a (R40): arşivlenen perakendecinin müşteri fiyatlarını silen tetikleyici fonksiyonu.
+  'businesses_archived_clear_customer_prices',
   'buyer_dormant_touch',
   'connection_buyer_targets',
   'connection_counterpart_admins',

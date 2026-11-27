@@ -22,7 +22,12 @@ import {
 } from '../../catalog';
 import { FilesService } from '../../files';
 import { I18nService } from '../../i18n';
-import { DefaultPriceListLookup, ImportPriceWriter, PricingImportModule } from '../../pricing';
+import {
+  CustomerPriceImport,
+  DefaultPriceListLookup,
+  ImportPriceWriter,
+  PricingImportModule,
+} from '../../pricing';
 import { SettingsService } from '../../settings';
 import { ImportsRepository } from '../imports.repository';
 import { ApplyImportJob } from '../jobs/apply-import.job';
@@ -103,6 +108,7 @@ describe('F3.5c Excel içe aktarmayı uygulama (entegrasyon)', () => {
     files: FilesService;
     lookup: ProductImportLookup;
     prices: DefaultPriceListLookup;
+    customerPrices: CustomerPriceImport;
     i18n: I18nService;
     settings: SettingsService;
   };
@@ -124,6 +130,7 @@ describe('F3.5c Excel içe aktarmayı uygulama (entegrasyon)', () => {
       deps.settings,
       new AuditService(clock),
       clock,
+      deps.customerPrices,
     );
   }
 
@@ -257,6 +264,7 @@ describe('F3.5c Excel içe aktarmayı uygulama (entegrasyon)', () => {
       files: app.get(FilesService),
       lookup: app.get(ProductImportLookup),
       prices: ports.get(DefaultPriceListLookup),
+      customerPrices: ports.get(CustomerPriceImport),
       i18n: app.get(I18nService),
       settings: app.get(SettingsService),
     };
@@ -268,6 +276,7 @@ describe('F3.5c Excel içe aktarmayı uygulama (entegrasyon)', () => {
       deps.i18n,
       deps.settings,
       clock,
+      deps.customerPrices,
     );
     expire = new ExpireImportsJob(
       new ImportsRepository(),
