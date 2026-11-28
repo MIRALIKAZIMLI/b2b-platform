@@ -41,6 +41,8 @@ export type ImportWriteResult =
   | {
       readonly ok: true;
       readonly action: 'insert' | 'update';
+      /** F3.11c (V3): yazılan varyant (stok sütunu bu varyanta uygulanır). */
+      readonly variantId: string;
       /** Fiyatın yazılacağı `unit` ambalajı; yoksa null (Mimar S3). */
       readonly unitPackagingId: string | null;
     }
@@ -159,7 +161,7 @@ export class ProductImportWriter {
       if (item.level === 'unit') unitPackagingId = id;
       await this.repository.insertPackaging(tx, { ...item, id, variantId, sellerId, now });
     }
-    return { ok: true, action: 'insert', unitPackagingId };
+    return { ok: true, action: 'insert', variantId, unitPackagingId };
   }
 
   private async updateTx(
@@ -240,7 +242,7 @@ export class ProductImportWriter {
       }
     }
     const unit = current.find((row) => row.level === ('unit' satisfies PackagingLevel));
-    return { ok: true, action: 'update', unitPackagingId: unit?.id ?? null };
+    return { ok: true, action: 'update', variantId: variant.id, unitPackagingId: unit?.id ?? null };
   }
 
   private casePackaging(baseQty: string): PackagingValues {

@@ -5,7 +5,8 @@
 // daveti kabulü; F2.11b: perakendeci dizini; F2.12b: bağlantı isteği gönderme; F2.13b: gelen istekler ve engel;
 // F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım;
 // F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu; F3.2b: kategori, marka, faaliyet alanı;
-// F3.3b: toptancı ürün listesi ve formu; F3.6b: fiyat ekranları; F3.5b: Excel içe aktarma sihirbazı).
+// F3.3b: toptancı ürün listesi ve formu; F3.6b: fiyat ekranları; F3.5b: Excel içe aktarma sihirbazı;
+// F3.11c: Excel stok sayımı).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -7219,6 +7220,49 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'К ценам клиента',
     tr: 'Müşterinin fiyatlarına git',
   },
+  // F3.11c: Excel ile stok sayımı (sihirbaz + stok ekranı düğmesi).
+  'imports.wizard.kind.stock': { az: 'Anbar qalığı', ru: 'Остатки склада', tr: 'Depo stoğu' },
+  'imports.wizard.template_hint_stock': {
+    az: 'Şablon seçilmiş anbarın məhsulları və bugünkü qalığı ilə dolu gəlir. "stock" sütununa rəfdə saydığınız ümumi miqdarı yazın.',
+    ru: 'Шаблон заполнен товарами выбранного склада и текущими остатками. Впишите в столбец «stock» общее количество, посчитанное на полке.',
+    tr: 'Şablon seçilen deponun ürünleri ve bugünkü stoğuyla dolu iner. "stock" sütununa rafta saydığınız toplamı yazın.',
+  },
+  'imports.wizard.warehouse_label': { az: 'Anbar', ru: 'Склад', tr: 'Depo' },
+  'imports.wizard.warehouse_choose': {
+    az: 'Anbar seçin',
+    ru: 'Выберите склад',
+    tr: 'Depo seçin',
+  },
+  'imports.wizard.warehouse_hint': {
+    az: 'Bir fayl yalnız bir anbar üçündür.',
+    ru: 'Один файл — только для одного склада.',
+    tr: 'Bir dosya yalnız bir depo içindir.',
+  },
+  'imports.wizard.warehouse_none': {
+    az: 'Aktiv anbar yoxdur.',
+    ru: 'Нет активных складов.',
+    tr: 'Aktif depo yok.',
+  },
+  'imports.wizard.stat_stock.insert': { az: 'İlk sayım', ru: 'Первый подсчёт', tr: 'İlk sayım' },
+  'imports.wizard.stat_stock.update': { az: 'Dəyişən', ru: 'Изменится', tr: 'Değişen' },
+  'imports.wizard.stat_stock.error': { az: 'Xətalı', ru: 'С ошибкой', tr: 'Hatalı' },
+  'imports.wizard.stat_stock.warning': { az: 'Dəyişməyən', ru: 'Без изменений', tr: 'Değişmeyen' },
+  'imports.wizard.stock_hint': {
+    az: 'Qalıq sayılan ümumi miqdara bərabər olur, fərqi sistem hesablayır. Şablondan sonra qalığı dəyişən sətirlər tətbiq edilmir.',
+    ru: 'Остаток станет равен посчитанному количеству, разницу считает система. Строки, остаток которых изменился после шаблона, не применяются.',
+    tr: 'Stok sayılan toplama eşitlenir, farkı sistem hesaplar. Şablondan sonra stoğu değişen satırlar uygulanmaz.',
+  },
+  'imports.wizard.to_stock': {
+    az: 'Anbar qalığına keç',
+    ru: 'К остаткам склада',
+    tr: 'Depo stoğuna git',
+  },
+  'imports.wizard.failure.WAREHOUSE_INACTIVE': {
+    az: 'Anbar aktiv deyil',
+    ru: 'Склад неактивен',
+    tr: 'Depo aktif değil',
+  },
+  'stock.excel_upload': { az: 'Excel ilə yüklə', ru: 'Загрузить из Excel', tr: 'Excel ile yükle' },
   'prices.explain.qty': {
     az: 'Miqdar',
     ru: 'Количество',

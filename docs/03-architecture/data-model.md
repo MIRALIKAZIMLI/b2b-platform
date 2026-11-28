@@ -758,8 +758,9 @@ Benzersiz: `(variant_id, level)`.
 | --- | --- | --- | --- |
 | id | uuid | PK | |
 | seller_id | uuid | FK businesses | |
-| type | text | `products` / `customer_prices` / `stock` | F3.5a `products`; F3.7a `customer_prices`; `stock` 422 `type: not_supported` (F3.11c) |
+| type | text | `products` / `customer_prices` / `stock` | F3.5a `products`; F3.7a `customer_prices`; F3.11c `stock` (stok sayımı) |
 | buyer_id | uuid | null; FK businesses; CHECK `(type = 'customer_prices') = (buyer_id is not null)` | F3.7a (S2 = A): `customer_prices` işinin perakendecisi (bir dosya bir müşteri) |
+| warehouse_id | uuid | null; bileşik FK `(seller_id, warehouse_id) → warehouses(business_id, id)`; CHECK `(type = 'stock') = (warehouse_id is not null)` | F3.11c (S3 = A): `stock` işinin deposu (bir dosya bir depo) |
 | file_id | uuid | tekil; bileşik FK `(seller_id, file_id) → files(owner_business_id, id)` | Bir dosya tek işe bağlanır (`fileId: in_use`) |
 | status | text | `uploaded` / `validating` / `preview_ready` / `applying` / `done` / `failed` | state-machines §11 |
 | stats | jsonb | nesne | `{insert, update, error, warning, notes[], problems[]}`; `problems` ilk 100 sorunlu satır (`{row, sku, issues[{column, code}]}`), tamamı raporda |
@@ -768,6 +769,7 @@ Benzersiz: `(variant_id, level)`.
 | failure_code | text | null; yalnız `failed`'da dolu | `FILE_INVALID` / `IMPORT_TOO_MANY_ROWS` / `APPLY_FAILED` / `TIMED_OUT` (F3.5c) / `CONNECTION_INACTIVE` (F3.7a) |
 | applied_until_row | integer | null | F3.5c: son uygulanan Excel satırı; 0 = iş alındı, henüz parti bitmedi (yinelenen teslim ikinci kez almaz) |
 | can_write_prices | boolean | | İşi açanın `pricing.manage` izni (Mimar S2); yoksa fiyat sütunu yok sayılır + satır uyarısı. F3.5c: iş açılınca değişmez (UPDATE izni yok); onaylayan = işi açan (S1 = A) |
+| can_write_stock | boolean | default false | F3.11c (V3): `products` işini açanın varsayılan depoya stok yazma hakkı (`inventory.manage`, kapsamı varsayılan depoyu içerir); yoksa stok sütunu yok sayılır + satır uyarısı `stock_ignored_no_permission`. İş açılınca değişmez (UPDATE izni yok); onayda yeniden denetlenir |
 | locale | text | | İstekteki Accept-Language (en çok 200 karakter); rapor metinlerinin dili |
 | created_by | uuid | FK users | |
 | created_at, updated_at | timestamptz | | Süre dolumu `updated_at` + `imports.preview_ttl_hours` |
@@ -777,6 +779,8 @@ F3.5a (`0037_import_jobs.sql`): RLS `import_jobs_tenant` (FOR ALL), `import_jobs
 F3.5c (`0038_import_apply.sql`): `result_report_file_id` + bileşik FK `import_jobs_result_file_fk`; `failure_code` CHECK'e `TIMED_OUT`; `app_user` UPDATE listesinden `can_write_prices` çıkar, `result_report_file_id` girer. `import_jobs_expire(p_preview_cutoff, p_result_cutoff, p_limit)` artık `imports.result_ttl_days` (30) geçen `done`/`failed` işleri de yüklenen dosya, hata ve sonuç raporuyla siler (S2 = A); sınırlar `now()`'dan sonra olamaz (22023). Yeni DEFINER `import_jobs_time_out(p_cutoff, p_limit)`: `imports.stuck_after_minutes` (60) boyunca ilerlemeyen `uploaded`/`validating`/`applying` işi `failed` + `TIMED_OUT` yapar (`applied_until_row` korunur). Migrator politikaları: `import_jobs_definer_select` (SELECT, bütün durumlar), `import_jobs_definer_expire` (DELETE, `preview_ready`/`done`/`failed`), `import_jobs_definer_time_out` (UPDATE, takılı durumdan yalnız `failed` + `TIMED_OUT`'a).
 
 F3.7a (`0039_customer_prices.sql`): `buyer_id` + CHECK `import_jobs_buyer_check`; `failure_code` CHECK'e `CONNECTION_INACTIVE` (müşteri fiyatı işinin bağlantısı uygulama sırasında bitti). `buyer_id` iş açılınca değişmez (UPDATE izni yok).
+
+F3.11c (`0043_import_stock.sql`; US-039 AC7, kullanıcı kararları S1 = A sayılan toplam, S2 = B, S3 = A): `warehouse_id` + CHECK `import_jobs_warehouse_check` + bileşik FK `import_jobs_warehouse_fk`, `can_write_stock`; `failure_code` CHECK'e `WAREHOUSE_INACTIVE` (depo doğrulamada veya uygulamada pasif). RLS ve GRANT değişmez (iki kolon iş açılınca değişmez). `stock` işi stoğa yalnız `inventory` modülünün `StockImport` kapısıyla yazar: satır başına elle sayımla aynı `StockService.countTx` (`adjustment` hareketi, fark o anki `on_hand`'den, sayılan < `reserved` satır hatası `below_reserved`); şablondaki `current_stock` bugünkü `on_hand`'den farklıysa (sayılmamış = 0) satır uygulanmaz (`stock_changed`, S2 = B). Parti başına depo `FOR SHARE`, varyant kilitleri kimlik sırasıyla. Ürün şablonunun `stock` sütunu (V3): `quantity` → varsayılan depoya aynı sayım, `availability` → `product_variants.is_available` (0 = yok), `none` → yok sayılır (`stock_column_ignored`). Hareket başına audit yok; iş başına `import.applied` (+ `warehouseId`).
 
 ### 4.9 `pricing`
 

@@ -9,7 +9,8 @@ import {
   type ImportFailureCode,
   PRODUCT_IMPORT_COLUMNS,
   PRODUCT_IMPORT_REQUIRED_COLUMNS,
-  type ProductImportColumn,
+  type ImportColumn,
+  STOCK_IMPORT_COLUMNS,
 } from '@b2b/shared';
 import ExcelJS from 'exceljs';
 
@@ -24,9 +25,9 @@ export interface RawImportRow {
   /** Excel satır numarası (başlık 1). */
   readonly row: number;
   /** Kırpılmış metin; boş hücre yok sayılır. */
-  readonly cells: Partial<Record<ProductImportColumn, string>>;
+  readonly cells: Partial<Record<ImportColumn, string>>;
   /** `cellMax`'ı aşan sütunlar. */
-  readonly tooLong: ProductImportColumn[];
+  readonly tooLong: ImportColumn[];
 }
 
 export type ReadResult =
@@ -35,8 +36,8 @@ export type ReadResult =
 
 /** Okunacak başlıklar: ürün şablonu (varsayılan) veya müşteri fiyatı şablonu (F3.7a). */
 export interface ColumnSpec {
-  readonly columns: readonly ProductImportColumn[];
-  readonly required: readonly ProductImportColumn[];
+  readonly columns: readonly ImportColumn[];
+  readonly required: readonly ImportColumn[];
   /** Bu başlıklardan biri varsa dosya başka türün şablonudur (`wrong_template`, FILE_INVALID). */
   readonly foreign?: readonly string[];
 }
@@ -53,6 +54,18 @@ export const CUSTOMER_PRICE_COLUMN_SPEC: ColumnSpec = {
   // Müfettiş 30 not 3: ürün şablonu da `sku` + `price` taşır; ürün sütunu varsa reddedilir.
   foreign: PRODUCT_IMPORT_COLUMNS.filter(
     (column) => !(CUSTOMER_PRICE_IMPORT_COLUMNS as readonly string[]).includes(column),
+  ),
+};
+
+/**
+ * F3.11c: stok sayımı şablonu; `sku`, `stock` zorunlu, `current_stock` isteğe bağlı (S2 = B).
+ * Ürün ve müşteri fiyatı şablonunun sütunları varsa dosya başka türündür.
+ */
+export const STOCK_COLUMN_SPEC: ColumnSpec = {
+  columns: STOCK_IMPORT_COLUMNS,
+  required: ['sku', 'stock'],
+  foreign: PRODUCT_IMPORT_COLUMNS.filter(
+    (column) => !(STOCK_IMPORT_COLUMNS as readonly string[]).includes(column),
   ),
 };
 
@@ -138,16 +151,16 @@ function numberText(value: number): string {
 function headerMap(
   values: readonly unknown[],
   spec: ColumnSpec,
-): Map<number, ProductImportColumn> | string {
+): Map<number, ImportColumn> | string {
   const known = new Set<string>(spec.columns);
-  const map = new Map<number, ProductImportColumn>();
-  const seen = new Set<ProductImportColumn>();
+  const map = new Map<number, ImportColumn>();
+  const seen = new Set<ImportColumn>();
   const foreign = new Set<string>(spec.foreign ?? []);
   const keys = values.map((value) => cellText(value).trim().toLowerCase());
   if (keys.some((key) => foreign.has(key))) return 'wrong_template';
   keys.forEach((key, index) => {
     if (!known.has(key)) return;
-    const column = key as ProductImportColumn;
+    const column = key as ImportColumn;
     if (seen.has(column)) return;
     seen.add(column);
     map.set(index, column);
@@ -174,7 +187,7 @@ export async function readProductRows(
       entries: 'emit',
     });
     for await (const sheet of reader) {
-      let columns: Map<number, ProductImportColumn> | undefined;
+      let columns: Map<number, ImportColumn> | undefined;
       const rows: RawImportRow[] = [];
       for await (const row of sheet) {
         const values = Array.isArray(row.values) ? (row.values as unknown[]) : [];
@@ -205,11 +218,11 @@ export async function readProductRows(
 function toRow(
   number: number,
   values: readonly unknown[],
-  columns: ReadonlyMap<number, ProductImportColumn>,
+  columns: ReadonlyMap<number, ImportColumn>,
   cellMax: number,
 ): RawImportRow | null {
-  const cells: Partial<Record<ProductImportColumn, string>> = {};
-  const tooLong: ProductImportColumn[] = [];
+  const cells: Partial<Record<ImportColumn, string>> = {};
+  const tooLong: ImportColumn[] = [];
   for (const [index, column] of columns) {
     let text = cellText(values[index]).trim();
     if (text === '') continue;

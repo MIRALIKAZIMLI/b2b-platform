@@ -18,6 +18,7 @@ import { DomainError } from '../../../core/errors/domain-error';
 import { ProductImportLookup } from '../../catalog';
 import { FilesService, XLSX_CONTENT_TYPE } from '../../files';
 import { I18nService } from '../../i18n';
+import { StockImport } from '../../inventory';
 import { CustomerPriceImport, DefaultPriceListLookup } from '../../pricing';
 import { SettingsService } from '../../settings';
 import { ImportJobStateMachine } from '../import-job.state-machine';
@@ -29,7 +30,8 @@ import {
 } from '../imports.repository';
 import { translator } from '../imports.service';
 import { type RowOutcome, type ValidationResult, validateRows } from '../row-validator';
-import { buildCustomerPriceReport, buildProblemReport } from '../workbooks';
+import { matchedVariantIds } from '../stock-rows';
+import { buildCustomerPriceReport, buildProblemReport, buildStockReport } from '../workbooks';
 import {
   type ColumnSpec,
   CUSTOMER_PRICE_COLUMN_SPEC,
@@ -37,12 +39,21 @@ import {
   type RawImportRow,
   type ReadResult,
   readProductRows,
+  STOCK_COLUMN_SPEC,
 } from '../xlsx-reader';
 import {
   CUSTOMER_PRICE_REPORT_KEYS,
   rawPrices,
   validateCustomerPricesTx,
 } from './customer-price-import';
+import { rawCounts, STOCK_REPORT_KEYS, validateStockTx } from './stock-import';
+
+/** İş türünün okuyucu sütunları (F3.7a müşteri fiyatı, F3.11c stok). */
+export function columnSpecOf(type: ImportJobRow['type']): ColumnSpec {
+  if (type === 'customer_prices') return CUSTOMER_PRICE_COLUMN_SPEC;
+  if (type === 'stock') return STOCK_COLUMN_SPEC;
+  return PRODUCT_COLUMN_SPEC;
+}
 
 /** Outbox olay adı = BullMQ iş adı. */
 export const VALIDATE_IMPORT_EVENT = 'import.uploaded';
@@ -102,26 +113,36 @@ export async function readImportFile(
   );
 }
 
-/** Satırları taze katalog ve fiyat verisiyle doğrular (çağıranın kiracı işleminde, salt okuma). */
+/** Satırları taze katalog, fiyat ve stok verisiyle doğrular (çağıranın kiracı işleminde, salt okuma). */
 export async function validateWithLookups(
   tx: Tx,
-  catalog: ProductImportLookup,
-  prices: Pick<DefaultPriceListLookup, 'defaultListIdTx'>,
+  lookups: {
+    readonly catalog: ProductImportLookup;
+    readonly prices: Pick<DefaultPriceListLookup, 'defaultListIdTx'>;
+    readonly stock: Pick<StockImport, 'productStockContextTx'>;
+  },
   businessId: string,
   rows: readonly RawImportRow[],
-  canWritePrices: boolean,
+  rights: { readonly canWritePrices: boolean; readonly canWriteStock: boolean },
 ): Promise<ValidationResult> {
+  const { catalog, prices } = lookups;
+  const matches = await catalog.skuMatchesTx(
+    tx,
+    businessId,
+    rows.flatMap((row) => (row.cells.sku === undefined ? [] : [row.cells.sku])),
+  );
+  // F3.11c (V3): stok sütunu varsa mod, varsayılan depo ve oradaki sayılar.
+  const stock = rows.some((row) => row.cells.stock !== undefined)
+    ? await lookups.stock.productStockContextTx(tx, businessId, matchedVariantIds(matches))
+    : undefined;
   return validateRows(rows, {
     categories: await catalog.categoriesTx(tx),
     brands: await catalog.brandsTx(tx, businessId),
     units: await catalog.unitsTx(tx),
-    matches: await catalog.skuMatchesTx(
-      tx,
-      businessId,
-      rows.flatMap((row) => (row.cells.sku === undefined ? [] : [row.cells.sku])),
-    ),
+    matches,
     defaultPriceListId: await prices.defaultListIdTx(tx, businessId),
-    canWritePrices,
+    canWritePrices: rights.canWritePrices,
+    ...(stock === undefined ? {} : { stock: { ...stock, canWrite: rights.canWriteStock } }),
   });
 }
 
@@ -139,6 +160,11 @@ export class ValidateImportJob {
     @Inject(Clock) private readonly clock: Clock,
     @Inject(CustomerPriceImport)
     private readonly customerPrices: Pick<CustomerPriceImport, 'connectionTx' | 'currentTx'>,
+    @Inject(StockImport)
+    private readonly stock: Pick<
+      StockImport,
+      'activeWarehouseTx' | 'countsTx' | 'productStockContextTx'
+    >,
   ) {}
 
   async run(input: {
@@ -175,20 +201,28 @@ export class ValidateImportJob {
       if (error instanceof DomainError) return await this.fail(ctx, job.id, 'FILE_INVALID');
       throw error;
     }
-    const customer = job.type === 'customer_prices';
-    const read = await readImportFile(
-      this.settings,
-      businessId,
-      body,
-      customer ? CUSTOMER_PRICE_COLUMN_SPEC : PRODUCT_COLUMN_SPEC,
-    );
+    const read = await readImportFile(this.settings, businessId, body, columnSpecOf(job.type));
     if (!read.ok) return await this.fail(ctx, job.id, read.failure);
 
     // 3. Doğrula (salt okuma; aynı işlemde tutarlı görüntü) ve 4. önizleme raporu.
-    const preview = customer
-      ? await this.customerPricePreview(ctx, job, read.rows)
-      : await this.productPreview(ctx, job, read.rows);
+    if (job.type === 'stock') {
+      const stockPreview = await this.stockPreview(ctx, job, read.rows);
+      if (stockPreview === null) return await this.fail(ctx, job.id, 'WAREHOUSE_INACTIVE');
+      return await this.finish(ctx, job, stockPreview);
+    }
+    const preview =
+      job.type === 'customer_prices'
+        ? await this.customerPricePreview(ctx, job, read.rows)
+        : await this.productPreview(ctx, job, read.rows);
     if (preview === null) return await this.fail(ctx, job.id, 'CONNECTION_INACTIVE');
+    return await this.finish(ctx, job, preview);
+  }
+
+  private async finish(
+    ctx: { businessId: string; userId: string },
+    job: ImportJobRow,
+    preview: Preview,
+  ): Promise<ValidateOutcome> {
     const reportId =
       preview.report === null
         ? null
@@ -222,7 +256,13 @@ export class ValidateImportJob {
     rows: readonly RawImportRow[],
   ): Promise<Preview> {
     const result = await withTenantTx(ctx, (tx) =>
-      validateWithLookups(tx, this.catalog, this.prices, ctx.businessId, rows, job.canWritePrices),
+      validateWithLookups(
+        tx,
+        { catalog: this.catalog, prices: this.prices, stock: this.stock },
+        ctx.businessId,
+        rows,
+        { canWritePrices: job.canWritePrices, canWriteStock: job.canWriteStock },
+      ),
     );
     const problems = problemsOf(
       result.outcomes,
@@ -264,6 +304,38 @@ export class ValidateImportJob {
       t,
       outcomes: result.outcomes,
       rawPrices: rawPrices(rows),
+    });
+    return { stats: result.stats, notes: [], problems, report };
+  }
+
+  /**
+   * Stok türü (F3.11c, K7): rapor her zaman (sayılanı dolu her satır; sistemde → sayılan → fark).
+   * Depo pasif veya yoksa `null`.
+   */
+  private async stockPreview(
+    ctx: { businessId: string; userId: string },
+    job: ImportJobRow,
+    rows: readonly RawImportRow[],
+  ): Promise<Preview | null> {
+    const warehouseId = job.warehouseId;
+    if (warehouseId === null) return null;
+    const result = await withTenantTx(ctx, (tx) =>
+      validateStockTx(
+        tx,
+        { catalog: this.catalog, stock: this.stock },
+        { sellerId: ctx.businessId, warehouseId, rows },
+      ),
+    );
+    if (result === null) return null;
+    const problems = problemsOf(
+      result.outcomes,
+      await this.settings.get('imports.preview_problems_max'),
+    );
+    const t = await translator(this.i18n, STOCK_REPORT_KEYS, job.locale);
+    const report = await buildStockReport({
+      t,
+      outcomes: result.outcomes,
+      rawCounts: rawCounts(rows),
     });
     return { stats: result.stats, notes: [], problems, report };
   }

@@ -3,6 +3,7 @@
 import {
   CUSTOMER_PRICE_TEMPLATE_COLUMNS,
   type ImportRowIssue,
+  STOCK_TEMPLATE_COLUMNS,
   PRODUCT_IMPORT_COLUMNS,
   type ProductImportColumn,
 } from '@b2b/shared';
@@ -10,6 +11,9 @@ import ExcelJS from 'exceljs';
 import type { ImportCategoryRef, ImportUnitRef } from '../catalog';
 import type { CustomerPriceOutcome } from './customer-price-rows';
 import type { RowOutcome } from './row-validator';
+import type { StockOutcome } from './stock-rows';
+import type { StockTemplateRow } from '../inventory';
+import { compare, fromDecimalString, subtract, toDecimalString } from '../../core/money';
 
 /** Çeviri: anahtar → metin (yoksa anahtarın kendisi). */
 export type Translate = (key: string) => string;
@@ -179,6 +183,8 @@ export async function buildResultReport(input: {
   readonly t: Translate;
   readonly results: readonly RowResult[];
   readonly notes: readonly string[];
+  /** F3.11c: sonuç metni anahtar öneki (stokta `imports.stock_action`). */
+  readonly resultPrefix?: string;
 }): Promise<Buffer> {
   const { t } = input;
   const workbook = new ExcelJS.Workbook();
@@ -197,7 +203,7 @@ export async function buildResultReport(input: {
     sheet.addRow([
       result.row,
       safeText(result.sku ?? ''),
-      t(`imports.result.${result.result}`),
+      t(`${input.resultPrefix ?? 'imports.result'}.${result.result}`),
       result.issues.map((issue) => `${issue.column}: ${t(`imports.row.${issue.code}`)}`).join('; '),
     ]);
   }
@@ -298,6 +304,125 @@ export async function buildCustomerPriceReport(input: {
       outcome.currentPrice ?? '',
       safeText(outcome.price ?? input.rawPrices.get(outcome.row) ?? ''),
       t(`imports.action.${outcome.action}`),
+      outcome.issues
+        .map((issue) => `${issue.column}: ${t(`imports.row.${issue.code}`)}`)
+        .join('; '),
+    ]);
+  }
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+/** Varyant adı: ürün adı + özellik değerleri (aynı ürünün varyantları ayırt edilsin). */
+function variantName(row: StockTemplateRow, lang: string): string {
+  const values = Object.values(row.attributes).filter(
+    (value): value is string | number => typeof value === 'string' || typeof value === 'number',
+  );
+  const name = localized(row.productName, lang);
+  return values.length === 0 ? name : `${name} (${values.join(', ')})`;
+}
+
+/**
+ * Stok sayımı şablonu (F3.11c, S3 = A): bir depo için; depodaki satılabilir varyantlar SKU, ad,
+ * temel birim ve bugünkü miktarla (`current_stock`) dolu, `stock` boş. Okuyucu `sku`, `stock` ve
+ * `current_stock`'u okur (S2 = B). Miktarlar metin hücresi (kayan nokta yuvarlaması olmasın).
+ */
+export async function buildStockTemplate(input: {
+  readonly lang: string;
+  readonly t: Translate;
+  readonly rows: readonly StockTemplateRow[];
+}): Promise<Buffer> {
+  const { t, lang } = input;
+  const workbook = new ExcelJS.Workbook();
+  const data = workbook.addWorksheet(sheetName(t('imports.sheet.stock')), {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  data.columns = STOCK_TEMPLATE_COLUMNS.map((key) => ({
+    header: key,
+    key,
+    width: key === 'name' ? 40 : 16,
+    ...(key === 'name' || key === 'base_unit' ? {} : { style: { numFmt: '@' } }),
+  }));
+  data.getRow(1).font = { bold: true };
+  const notes: Record<(typeof STOCK_TEMPLATE_COLUMNS)[number], string> = {
+    sku: 'imports.column.sku',
+    name: 'imports.column.name',
+    base_unit: 'imports.column.base_unit',
+    current_stock: 'imports.column.current_stock',
+    stock: 'imports.column.counted_stock',
+  };
+  STOCK_TEMPLATE_COLUMNS.forEach((key, index) => {
+    data.getCell(1, index + 1).note = t(notes[key]);
+  });
+  for (const row of input.rows) {
+    data.addRow({
+      sku: safeText(row.sku),
+      name: safeText(variantName(row, lang)),
+      base_unit: row.baseUnitCode,
+      // Sayılmamış varyant boş değil 0: S2 = B karşılaştırması sayılmamışı 0 sayar.
+      current_stock: qtyText(row.onHand ?? '0'),
+      stock: '',
+    });
+  }
+
+  const help = workbook.addWorksheet(sheetName(t('imports.sheet.instructions')));
+  help.columns = [{ width: 16 }, { width: 80 }];
+  help.addRow([t('imports.template.stock_intro')]);
+  help.mergeCells(1, 1, 1, 2);
+  help.getRow(1).alignment = { wrapText: true };
+  help.getRow(1).height = 64;
+  help.addRow([]);
+  const head = help.addRow([t('imports.template.column'), t('imports.template.description')]);
+  head.font = { bold: true };
+  for (const key of STOCK_TEMPLATE_COLUMNS) help.addRow([key, t(notes[key])]);
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+/** `numeric(14,3)` metni sondaki sıfırlar atılmış ("12.500" → "12.5", "3.000" → "3"). */
+export function qtyText(value: string): string {
+  return value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value;
+}
+
+/**
+ * Stok sayımı önizleme raporu (F3.11c, K7): sayılanı dolu her satır; sistemdeki miktar, sayılan,
+ * fark, eylem ve sorunlar. Yalnız bu dosyanın satırları ve bu satıcının kendi deposu girer.
+ */
+export async function buildStockReport(input: {
+  readonly t: Translate;
+  readonly outcomes: readonly StockOutcome[];
+  readonly rawCounts: ReadonlyMap<number, string>;
+}): Promise<Buffer> {
+  const { t } = input;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName(t('imports.sheet.report')), {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  sheet.columns = [
+    { header: t('imports.report.row'), width: 8 },
+    { header: t('imports.report.sku'), width: 20, style: { numFmt: '@' } },
+    { header: t('imports.report.system_qty'), width: 16, style: { numFmt: '@' } },
+    { header: t('imports.report.counted_qty'), width: 16, style: { numFmt: '@' } },
+    { header: t('imports.report.difference'), width: 14, style: { numFmt: '@' } },
+    { header: t('imports.report.action'), width: 18 },
+    { header: t('imports.report.problem'), width: 64 },
+  ];
+  sheet.getRow(1).font = { bold: true };
+  for (const outcome of input.outcomes) {
+    let difference = '';
+    if (outcome.counted !== undefined && outcome.action !== 'error') {
+      const delta = subtract(
+        fromDecimalString(outcome.counted),
+        fromDecimalString(outcome.currentOnHand ?? '0'),
+      );
+      const text = qtyText(toDecimalString(delta, 4));
+      difference = compare(delta, fromDecimalString('0')) > 0 ? `+${text}` : text;
+    }
+    sheet.addRow([
+      outcome.row,
+      safeText(outcome.sku ?? ''),
+      outcome.currentOnHand === null ? '' : qtyText(outcome.currentOnHand),
+      safeText(outcome.counted ?? input.rawCounts.get(outcome.row) ?? ''),
+      difference,
+      t(`imports.stock_action.${outcome.action}`),
       outcome.issues
         .map((issue) => `${issue.column}: ${t(`imports.row.${issue.code}`)}`)
         .join('; '),

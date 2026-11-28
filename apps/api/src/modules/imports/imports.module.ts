@@ -5,6 +5,7 @@ import { AuditModule } from '../../core/audit';
 import { CatalogImportModule, CatalogImportWriterModule } from '../catalog';
 import { FilesModule, FilesWorkerModule } from '../files';
 import { I18nModule } from '../i18n';
+import { InventoryImportModule } from '../inventory';
 import { PricingImportModule } from '../pricing';
 import { SettingsModule } from '../settings';
 import { ImportsController } from './imports.controller';
@@ -17,7 +18,7 @@ import { ValidateImportJob } from './jobs/validate-import.job';
 
 /**
  * Excel içe aktarma (c4 §2 `imports`; F3.5a): şablon, iş açma, durum/önizleme. Bağımlılık yönü
- * imports → catalog, pricing, files (c4 §1); uygulama (F3.5c) aynı yönde yazma kapılarını kullanır.
+ * imports → catalog, pricing, inventory, files (c4 §1); uygulama (F3.5c) aynı yönde yazma kapılarını kullanır.
  */
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ValidateImportJob } from './jobs/validate-import.job';
     I18nModule,
     CatalogImportModule,
     PricingImportModule,
+    InventoryImportModule,
   ],
   controllers: [ImportsController],
   providers: [ImportsRepository, ImportsService],
@@ -47,6 +49,7 @@ export class ImportsModule {}
     CatalogImportModule,
     CatalogImportWriterModule,
     PricingImportModule,
+    InventoryImportModule,
     AuditModule,
   ],
   providers: [

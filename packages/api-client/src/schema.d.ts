@@ -5540,10 +5540,18 @@ export interface paths {
          * Excel içe aktarma başlat (US-031)
          * @description F3.5a. İzin `imports.run`. `fileId`, F1.10 ile `purpose: import` yüklenmiş ve `ready`
          *     durumdaki bu işletmenin dosyasıdır (başka işletmenin dosyası 404). Desteklenen türler
-         *     `products` ve (F3.7a) `customer_prices`; `stock` `422 VALIDATION_FAILED` (`type: not_supported`; F3.11c).
+         *     `products`, (F3.7a) `customer_prices` ve (F3.11c) `stock`.
          *     `customer_prices` (US-035 AC2, S2 = A: bir dosya bir müşteri): `buyerId` zorunlu, ek izin
          *     `pricing.manage` (yoksa 403), perakendeciyle aktif bağlantı (yoksa `422`, `buyerId: [not_connected]`).
          *     Diğer türlerde `buyerId` verilirse `422` (`buyerId: [not_allowed]`).
+         *     `stock` (F3.11c, S3 = A: bir dosya bir depo; US-039 AC7): `warehouseId` zorunlu, ek izin
+         *     `inventory.manage` (yoksa 403; kapsamı `warehouse` olan üye yalnız kendi deposu, başka depo 403, R36),
+         *     depo satıcının ve aktif olmalı (aksi `422`, `warehouseId: [not_found]`). Diğer türlerde
+         *     `warehouseId` verilirse `422` (`warehouseId: [not_allowed]`). Stok yalnız `adjustment` hareketiyle
+         *     değişir (sayılan toplam, fark sistemce; S1 = A). `products` türünde `stock` sütunu (V3): `quantity`
+         *     modunda varsayılan depoya sayım, `availability` modunda 0 = yok / > 0 = var, `none` modunda yok
+         *     sayılır (`stock_column_ignored`); varsayılan depoya stok yazma hakkı yoksa satır uyarısı
+         *     `stock_ignored_no_permission`.
          *     Aynı dosya ikinci işe bağlanamaz (`fileId: in_use`). Doğrulama arka planda; durum
          *     `GET /imports/{id}` ile izlenir. Hata raporu ve şablon kullanıcının diline göre
          *     (`Accept-Language`). Fiyat sütunu yalnız `pricing.manage` izniyle yazılır; izin yoksa
@@ -5570,6 +5578,11 @@ export interface paths {
                          * @description Yalnız `customer_prices` (F3.7a)
                          */
                         buyerId?: string;
+                        /**
+                         * Format: uuid
+                         * @description Yalnız `stock` (F3.11c)
+                         */
+                        warehouseId?: string;
                     };
                 };
             };
@@ -5609,6 +5622,11 @@ export interface paths {
          *     `422 buyerId: [not_connected]`). Veri sayfası satıcının arşivli olmayan varyantlarıyla dolu gelir
          *     (`sku`, `name`, `current_price` = bu perakendecinin bugünkü fiyatı, `price` boş); yalnız `sku` ve
          *     `price` okunur, fiyatı boş satır atlanır.
+         *     F3.11c `stock`: `warehouseId` zorunlu, izin ayrıca `inventory.manage` (kapsamı `warehouse` ise yalnız
+         *     kendi deposu, aksi 403), depo aktif (aksi `422 warehouseId: [not_found]`). Veri sayfası depodaki
+         *     satılabilir varyantlarla dolu gelir (`sku`, `name`, `base_unit`, `current_stock` = şablon anındaki
+         *     `on_hand`, sayılmamışsa 0; `stock` boş). `sku`, `current_stock`, `stock` okunur; `stock` boş satır
+         *     atlanır; `current_stock` bugünkü stoktan farklıysa satır uygulanmaz (`stock_changed`, S2 = B).
          */
         get: {
             parameters: {
@@ -5616,6 +5634,8 @@ export interface paths {
                     type: "products" | "customer_prices" | "stock";
                     /** @description Yalnız `customer_prices` */
                     buyerId?: string;
+                    /** @description Yalnız `stock` (F3.11c) */
+                    warehouseId?: string;
                 };
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
@@ -5712,6 +5732,8 @@ export interface paths {
          *     `import.apply_requested` aynı işlemde. Worker dosyayı yeniden okur, satırları taze veriyle
          *     yeniden doğrular ve hatasız satırları 500'lük partilerle uygular; ilerleme
          *     `GET /imports/{id}` ile izlenir, bitince `resultReportUrl` dolar. Süresi dolmuş önizleme 404.
+         *     F3.11c: `stock` işi ve stok sütunu yazan `products` işi onay anında da `inventory.manage` ve depo
+         *     kapsamını ister (yoksa 403, iş `preview_ready` kalır).
          */
         post: {
             parameters: {
@@ -9336,6 +9358,11 @@ export interface components {
              * @description F3.7a: `customer_prices` işinin perakendecisi
              */
             buyerId: string | null;
+            /**
+             * Format: uuid
+             * @description F3.11c: `stock` işinin deposu
+             */
+            warehouseId: string | null;
             /** @enum {string} */
             status: "uploaded" | "validating" | "preview_ready" | "applying" | "done" | "failed";
             /**
@@ -9356,7 +9383,11 @@ export interface components {
              *     `imports.row.<kod>` çeviri anahtarlarıdır; F3.5c ekleri: `packaging_conflict`,
              *     `no_unit_packaging`, `taken`. F3.7a (`customer_prices`) uyarısı `price_unchanged`: fiyat
              *     bugünkü müşteri fiyatıyla aynı, satır yazılmaz (yalnız `warning` sayısına girer; `insert` =
-             *     yeni müşteri fiyatı, `update` = değişen müşteri fiyatı).
+             *     yeni müşteri fiyatı, `update` = değişen müşteri fiyatı). F3.11c (`stock`): `insert` = ilk sayım
+             *     (stok satırı yok), `update` = değişen, `warning` = aynı (`stock_unchanged`, hareket yazılmaz);
+             *     hatalar `below_reserved` (sayılan < rezerve), `stock_changed` (`current_stock` sütununda; şablondan
+             *     sonra stok değişti, S2 = B); V3 ürün türünde `no_default_warehouse`, uyarı
+             *     `stock_ignored_no_permission`.
              */
             problems: {
                 /** @description Excel satır numarası (başlık 1) */
@@ -9371,9 +9402,11 @@ export interface components {
              * @description F3.5c: `APPLY_FAILED` uygulama beklenmedik hatayla durdu (uygulanan partiler kalır);
              *     `TIMED_OUT` iş `imports.stuck_after_minutes` boyunca ilerlemedi. F3.7a:
              *     `CONNECTION_INACTIVE` `customer_prices` işinin perakendecisiyle bağlantı uygulama sırasında bitti.
+             *     F3.11c: `WAREHOUSE_INACTIVE` `stock` işinin deposu doğrulamada veya uygulamada pasif (uygulanan
+             *     partiler kalır).
              * @enum {string|null}
              */
-            failureCode: "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "APPLY_FAILED" | "TIMED_OUT" | "CONNECTION_INACTIVE" | null;
+            failureCode: "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "APPLY_FAILED" | "TIMED_OUT" | "CONNECTION_INACTIVE" | "WAREHOUSE_INACTIVE" | null;
             /** @description F3.5c, `applying`/`failed`'da son uygulanan Excel satırı (0 = henüz parti bitmedi) */
             appliedUntilRow: number | null;
             /**
@@ -9393,7 +9426,7 @@ export interface components {
             expiresAt: string | null;
             /**
              * @description F3.7a (#85 notu): iş `preview_ready` ve isteyen kullanıcı onaylayabilir (işi açan kendisi; fiyat
-             *     yazan işte `pricing.manage` hâlâ var). İstemci "Uygula" düğmesini buna göre gösterir.
+             *     yazan işte `pricing.manage` hâlâ var; F3.11c stok yazan işte `inventory.manage` ve depo kapsamı). İstemci "Uygula" düğmesini buna göre gösterir.
              */
             canApply: boolean;
             /** Format: date-time */

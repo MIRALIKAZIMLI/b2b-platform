@@ -29,6 +29,7 @@ import {
   PricingImportModule,
 } from '../../pricing';
 import { SettingsService } from '../../settings';
+import { StockImport } from '../../inventory';
 import { ImportsRepository } from '../imports.repository';
 import { ApplyImportJob } from '../jobs/apply-import.job';
 import { ExpireImportsJob } from '../jobs/expire-imports.job';
@@ -131,6 +132,7 @@ describe('F3.5c Excel içe aktarmayı uygulama (entegrasyon)', () => {
       new AuditService(clock),
       clock,
       deps.customerPrices,
+      app.get(StockImport),
     );
   }
 
@@ -277,6 +279,7 @@ describe('F3.5c Excel içe aktarmayı uygulama (entegrasyon)', () => {
       deps.settings,
       clock,
       deps.customerPrices,
+      app.get(StockImport),
     );
     expire = new ExpireImportsJob(
       new ImportsRepository(),

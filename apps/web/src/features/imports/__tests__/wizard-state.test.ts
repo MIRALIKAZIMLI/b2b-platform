@@ -7,11 +7,14 @@ import {
   applyProgress,
   appliedRowsOfFailed,
   confirmState,
+  importKinds,
   isWorking,
   isXlsxFile,
   jobLoadErrorKey,
+  kindOf,
   sameOriginUrl,
   stepOf,
+  targetMissing,
   uploadErrorKey,
   XLSX_CONTENT_TYPE,
 } from '../wizard-state';
@@ -97,5 +100,26 @@ describe('F3.5b içe aktarma sihirbazı (birim)', () => {
     expect(confirmState({ canApply: true, stats })).toBe('show');
     expect(confirmState({ canApply: false, stats })).toBe('not_allowed');
     expect(confirmState({ canApply: true, stats: { insert: 0, update: 0 } })).toBe('nothing');
+  });
+});
+
+describe('F3.11c sihirbazda stok sayımı türü (birim)', () => {
+  it('F3.11c-WEB türler izne göre: stok yalnız inventory.manage ile; müşteri fiyatı pricing.manage + connections.view', () => {
+    expect(importKinds(['imports.run'])).toEqual(['products']);
+    expect(importKinds(['imports.run', 'inventory.manage'])).toEqual(['products', 'stock']);
+    expect(
+      importKinds(['imports.run', 'pricing.manage', 'connections.view', 'inventory.manage']),
+    ).toEqual(['products', 'customer_prices', 'stock']);
+  });
+
+  it('F3.11c-WEB depo seçilmeden şablon ve yükleme kapalı; ?type= stok ve müşteri fiyatını tanır', () => {
+    expect(targetMissing({ type: 'stock' })).toBe(true);
+    expect(targetMissing({ type: 'stock', warehouseId: 'w1' })).toBe(false);
+    expect(targetMissing({ type: 'customer_prices' })).toBe(true);
+    expect(targetMissing({ type: 'products' })).toBe(false);
+    expect(kindOf('stock')).toBe('stock');
+    expect(kindOf('customer_prices')).toBe('customer_prices');
+    expect(kindOf('other')).toBe('products');
+    expect(kindOf(undefined)).toBe('products');
   });
 });

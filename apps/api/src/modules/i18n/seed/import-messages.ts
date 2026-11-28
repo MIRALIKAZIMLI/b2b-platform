@@ -73,9 +73,9 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     'Bir temel birimin fiyatı; varsayılan fiyat listesine yazılır. En çok 4 ondalık.',
   ),
   'imports.column.stock': t(
-    'Stok sayı. Hələlik tətbiq edilmir.',
-    'Остаток. Пока не применяется.',
-    'Stok miktarı. Henüz uygulanmıyor.',
+    'Stok miqdarı (əsas vahiddə). Miqdarlı rejimdə əsas anbarın sayımıdır; "var/yox" rejimində 0 = yoxdur, 0-dan çox = var.',
+    'Остаток (в базовой единице). В количественном режиме — подсчёт основного склада; в режиме «есть/нет» 0 = нет, больше 0 = есть.',
+    'Stok miktarı (temel birimde). Miktarlı modda varsayılan deponun sayımıdır; var/yok modunda 0 = yok, 0’dan büyük = var.',
   ),
   // Rapor başlıkları.
   'imports.report.row': t('Sətir', 'Строка', 'Satır'),
@@ -205,10 +205,64 @@ export const IMPORT_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     'Цена совпадает с текущей ценой клиента; изменений нет.',
     'Fiyat şu anki müşteri fiyatıyla aynı; değişiklik yok.',
   ),
+  // F3.11c: stok sayımı şablonu ve raporu (S1 = A sayılan toplam, S2 = B, S3 = A bir depo).
+  'imports.sheet.stock': t('Anbar qalığı', 'Остатки склада', 'Depo stoğu'),
+  'imports.template.stock_intro': t(
+    'Bu fayl yalnız seçilmiş anbar üçündür. "stock" sütununa rəfdə saydığınız ümumi miqdarı yazın (əsas vahiddə); fərqi sistem hesablayır. Boş sətirlər dəyişmir. "current_stock" faylın endirildiyi andakı sistem miqdarıdır: o vaxtdan bəri qalıq dəyişibsə, sətir tətbiq edilmir və yeni şablon endirməlisiniz.',
+    'Файл только для выбранного склада. Впишите в столбец «stock» общее количество, посчитанное на полке (в базовой единице); разницу считает система. Пустые строки не меняются. «current_stock» — количество в системе на момент скачивания: если с тех пор остаток изменился, строка не применяется и нужно скачать новый шаблон.',
+    'Bu dosya yalnız seçilen depo içindir. "stock" sütununa rafta saydığınız toplam miktarı yazın (temel birimde); farkı sistem hesaplar. Boş satırlar değişmez. "current_stock" dosyanın indiği andaki sistem miktarıdır: o zamandan beri stok değiştiyse satır uygulanmaz ve yeni şablon indirmeniz gerekir.',
+  ),
+  'imports.column.base_unit': t(
+    'Əsas vahid (məlumat üçün).',
+    'Базовая единица (для справки).',
+    'Temel birim (bilgi için).',
+  ),
+  'imports.column.current_stock': t(
+    'Şablon endiriləndə sistemdəki miqdar; dəyişdirməyin.',
+    'Количество в системе при скачивании шаблона; не меняйте.',
+    'Şablon indiğinde sistemdeki miktar; değiştirmeyin.',
+  ),
+  'imports.column.counted_stock': t(
+    'Rəfdə sayılan ümumi miqdar (əsas vahiddə, 3 onluq rəqəmə qədər).',
+    'Общее количество, посчитанное на полке (в базовой единице, до 3 знаков после запятой).',
+    'Rafta sayılan toplam miktar (temel birimde, en çok 3 ondalık).',
+  ),
+  'imports.report.system_qty': t('Sistemdə', 'В системе', 'Sistemde'),
+  'imports.report.counted_qty': t('Sayılan', 'Посчитано', 'Sayılan'),
+  'imports.report.difference': t('Fərq', 'Разница', 'Fark'),
+  'imports.stock_action.insert': t('İlk sayım', 'Первый подсчёт', 'İlk sayım'),
+  'imports.stock_action.update': t('Dəyişir', 'Меняется', 'Değişiyor'),
+  'imports.stock_action.unchanged': t('Dəyişmir', 'Без изменений', 'Değişmiyor'),
+  'imports.stock_action.error': t('Tətbiq edilmədi', 'Не применено', 'Uygulanmadı'),
+  'imports.row.below_reserved': t(
+    'Sayılan miqdar rezerv olunmuş miqdardan azdır.',
+    'Посчитанное количество меньше зарезервированного.',
+    'Sayılan miktar rezerve edilen miktardan az.',
+  ),
+  'imports.row.stock_changed': t(
+    'Şablon endiriləndən sonra qalıq dəyişib; yeni şablon endirin.',
+    'Остаток изменился после скачивания шаблона; скачайте новый шаблон.',
+    'Şablon indikten sonra stok değişti; yeni şablon indirin.',
+  ),
+  'imports.row.no_default_warehouse': t(
+    'Aktiv əsas anbar yoxdur; stok yazıla bilməz.',
+    'Нет активного основного склада; остаток не записать.',
+    'Aktif varsayılan depo yok; stok yazılamaz.',
+  ),
+  'imports.row.stock_ignored_no_permission': t(
+    'Stok dəyişmək hüququnuz yoxdur; stok nəzərə alınmayacaq.',
+    'У вас нет права менять остатки; остаток будет пропущен.',
+    'Stok değiştirme yetkiniz yok; stok yok sayılacak.',
+  ),
+  'imports.row.stock_unchanged': t(
+    'Sayılan miqdar sistemdəki ilə eynidir; dəyişiklik yoxdur.',
+    'Посчитанное количество совпадает с системным; изменений нет.',
+    'Sayılan miktar sistemdekiyle aynı; değişiklik yok.',
+  ),
   // İş notları (V3).
   'imports.note.stock_column_ignored': t(
-    'Stok sütunu hələlik tətbiq edilmir.',
-    'Столбец остатков пока не применяется.',
-    'Stok sütunu henüz uygulanmıyor.',
+    'Stok izlənmədiyi üçün stok sütunu nəzərə alınmır.',
+    'Остатки не ведутся, поэтому столбец остатков не учитывается.',
+    'Stok izlenmediği için stok sütunu yok sayılır.',
   ),
 };

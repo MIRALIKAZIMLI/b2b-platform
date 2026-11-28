@@ -1,10 +1,14 @@
 // Excel içe aktarma (US-031, SF-08; F3.5a). İstemci ve sunucunun paylaştığı türler ve şemalar.
 import { z } from 'zod';
 
-/** `import_jobs.type`. F3.5a `products`; F3.7a `customer_prices`; `stock` F3.11a. */
+/** `import_jobs.type`. F3.5a `products`; F3.7a `customer_prices`; F3.11c `stock`. */
 export const IMPORT_TYPES = ['products', 'customer_prices', 'stock'] as const;
 export type ImportType = (typeof IMPORT_TYPES)[number];
-export const IMPORT_SUPPORTED_TYPES: readonly ImportType[] = ['products', 'customer_prices'];
+export const IMPORT_SUPPORTED_TYPES: readonly ImportType[] = [
+  'products',
+  'customer_prices',
+  'stock',
+];
 
 /** state-machines §11. */
 export const IMPORT_JOB_STATUSES = [
@@ -28,6 +32,8 @@ export const IMPORT_FAILURE_CODES = [
   'TIMED_OUT',
   // F3.7a: `customer_prices` işinin perakendecisiyle bağlantı uygulama sırasında bitti.
   'CONNECTION_INACTIVE',
+  // F3.11c: `stock` işinin deposu uygulama sırasında pasifleşti.
+  'WAREHOUSE_INACTIVE',
 ] as const;
 export type ImportFailureCode = (typeof IMPORT_FAILURE_CODES)[number];
 
@@ -70,6 +76,23 @@ export const CUSTOMER_PRICE_IMPORT_COLUMNS = [
 ] as const satisfies readonly ProductImportColumn[];
 export const CUSTOMER_PRICE_TEMPLATE_COLUMNS = ['sku', 'name', 'current_price', 'price'] as const;
 
+/**
+ * Stok sayımı şablonunun okunan sütunları (F3.11c, S3 = A bir dosya bir depo). `stock` = rafta
+ * sayılan toplam (S1 = A); `current_stock` = şablon indiğindeki sistem miktarı (S2 = B: bugünkü
+ * stoktan farklıysa satır uygulanmaz). `name`, `base_unit` şablonda bilgi içindir.
+ */
+export const STOCK_IMPORT_COLUMNS = ['sku', 'current_stock', 'stock'] as const;
+export const STOCK_TEMPLATE_COLUMNS = [
+  'sku',
+  'name',
+  'base_unit',
+  'current_stock',
+  'stock',
+] as const;
+
+/** Okuyucunun tanıdığı bütün sütunlar (satır sorunu hangi sütunda). */
+export type ImportColumn = ProductImportColumn | (typeof STOCK_IMPORT_COLUMNS)[number];
+
 /** Satır hatası kodları (çeviri anahtarı `imports.row.<kod>`). */
 export const IMPORT_ROW_ERROR_CODES = [
   'required',
@@ -94,6 +117,12 @@ export const IMPORT_ROW_ERROR_CODES = [
   'packaging_conflict',
   'no_unit_packaging',
   'taken',
+  // F3.11c: sayılan < rezerve (elle sayımdaki STOCK_INSUFFICIENT ile aynı kural); şablon indikten
+  // sonra stok değişti (S2 = B, `current_stock` ≠ bugünkü stok).
+  'below_reserved',
+  'stock_changed',
+  // F3.11c (V3): miktarlı modda ürün şablonunun stok sütunu, aktif varsayılan depo yok.
+  'no_default_warehouse',
 ] as const;
 export type ImportRowErrorCode = (typeof IMPORT_ROW_ERROR_CODES)[number];
 
@@ -102,15 +131,19 @@ export const IMPORT_ROW_WARNING_CODES = [
   'price_ignored_no_permission',
   // F3.7a: müşteri fiyatı bugünkü müşteri fiyatıyla aynı; satır yazılmaz.
   'price_unchanged',
+  // F3.11c: sayılan bugünkü stokla aynı; hareket yazılmaz.
+  'stock_unchanged',
+  // F3.11c (V3): ürün şablonunda stok sütunu var, işi açanın stok yazma hakkı yok; sütun yok sayılır.
+  'stock_ignored_no_permission',
 ] as const;
 export type ImportRowWarningCode = (typeof IMPORT_ROW_WARNING_CODES)[number];
 
-/** Önizleme notları (iş düzeyinde; V3). */
+/** Önizleme notları (iş düzeyinde). F3.11c (V3): `stock_column_ignored` yalnız `none` stok modunda. */
 export const IMPORT_NOTES = ['stock_column_ignored'] as const;
 export type ImportNote = (typeof IMPORT_NOTES)[number];
 
 export interface ImportRowIssue {
-  readonly column: ProductImportColumn;
+  readonly column: ImportColumn;
   readonly code: ImportRowErrorCode | ImportRowWarningCode;
 }
 
@@ -134,6 +167,8 @@ export interface ImportJobView {
   readonly type: ImportType;
   /** F3.7a: `customer_prices` işinin perakendecisi. */
   readonly buyerId: string | null;
+  /** F3.11c: `stock` işinin deposu. */
+  readonly warehouseId: string | null;
   readonly status: ImportJobStatus;
   readonly stats: ImportJobStats;
   readonly notes: ImportNote[];
@@ -163,11 +198,14 @@ export const importCreateSchema = z.strictObject({
   fileId: z.uuid(),
   /** F3.7a: yalnız `customer_prices` (servis denetler: zorunlu / izinsiz). */
   buyerId: z.uuid().optional(),
+  /** F3.11c: yalnız `stock` (servis denetler: zorunlu / izinsiz). */
+  warehouseId: z.uuid().optional(),
 });
 export type ImportCreate = z.infer<typeof importCreateSchema>;
 
 export const importTemplateQuerySchema = z.strictObject({
   type: z.enum(IMPORT_TYPES),
   buyerId: z.uuid().optional(),
+  warehouseId: z.uuid().optional(),
 });
 export type ImportTemplateQuery = z.infer<typeof importTemplateQuerySchema>;

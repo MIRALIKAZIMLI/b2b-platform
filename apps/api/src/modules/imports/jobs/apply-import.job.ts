@@ -10,11 +10,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { ImportFailureCode, ImportNote, ImportRowIssue, ImportRowProblem } from '@b2b/shared';
 import { AuditService } from '../../../core/audit';
 import { Clock } from '../../../core/clock';
+import { fromDecimalString } from '../../../core/money';
 import { type Tx, withTenantTx } from '../../../core/db';
 import { DomainError } from '../../../core/errors/domain-error';
 import { isImportSkuTaken, ProductImportLookup, ProductImportWriter } from '../../catalog';
 import { FilesService, XLSX_CONTENT_TYPE } from '../../files';
 import { I18nService } from '../../i18n';
+import { type StockCountOutcome, StockImport } from '../../inventory';
 import {
   CustomerPriceBuyerArchived,
   CustomerPriceImport,
@@ -27,9 +29,11 @@ import { EMPTY_STATS, type ImportJobRow, ImportsRepository } from '../imports.re
 import { translator } from '../imports.service';
 import type { CustomerPriceOutcome } from '../customer-price-rows';
 import type { RowOutcome } from '../row-validator';
+import type { StockOutcome } from '../stock-rows';
 import { buildResultReport, type RowResult } from '../workbooks';
-import { CUSTOMER_PRICE_COLUMN_SPEC } from '../xlsx-reader';
+import { CUSTOMER_PRICE_COLUMN_SPEC, STOCK_COLUMN_SPEC } from '../xlsx-reader';
 import { validateCustomerPricesTx } from './customer-price-import';
+import { STOCK_REPORT_KEYS, validateStockTx } from './stock-import';
 import { readImportFile, REPORT_KEYS, validateWithLookups } from './validate-import.job';
 
 /** Outbox olay adı = BullMQ iş adı. */
@@ -70,11 +74,43 @@ class JobMovedOn extends Error {}
 /** F3.7a: müşteri fiyatı işinin perakendecisiyle bağlantı uygulama sırasında bitti (R30). */
 class ConnectionLost extends Error {}
 
+/** F3.11c: `stock` işinin deposu uygulama sırasında pasifleşti (K8). */
+class WarehouseLost extends Error {}
+
 /** Partide yazılan müşteri fiyatı (audit `customer_price.set`). */
 interface PriceChange {
   readonly packagingId: string;
   readonly previous: string | null;
   readonly unitPrice: string;
+}
+
+/** F3.11c: `StockService.countTx` sonucu → sonuç raporu satırı (ilk sayım / değişen / aynı / hata). */
+function stockRowResult(row: number, sku: string | null, written: StockCountOutcome): RowResult {
+  const error = (column: ImportRowIssue['column'], code: ImportRowIssue['code']): RowResult => ({
+    row,
+    sku,
+    result: 'error',
+    issues: [{ column, code }],
+  });
+  switch (written.kind) {
+    case 'written':
+      return { row, sku, result: written.first ? 'insert' : 'update', issues: [] };
+    case 'unchanged':
+      return {
+        row,
+        sku,
+        result: 'unchanged',
+        issues: [{ column: 'stock', code: 'stock_unchanged' }],
+      };
+    case 'changed':
+      return error('current_stock', 'stock_changed');
+    case 'below_reserved':
+      return error('stock', 'below_reserved');
+    case 'archived':
+      return error('sku', 'archived');
+    case 'not_found':
+      return error('sku', 'not_found');
+  }
 }
 
 /** Postgres FK ihlali (23503): ambalaj doğrulamadan sonra silindi. */
@@ -113,6 +149,16 @@ export class ApplyImportJob {
       CustomerPriceImport,
       'connectionTx' | 'currentTx' | 'setTx'
     >,
+    @Inject(StockImport)
+    private readonly stock: Pick<
+      StockImport,
+      | 'activeWarehouseTx'
+      | 'countsTx'
+      | 'countTx'
+      | 'defaultWarehouseIdTx'
+      | 'productStockContextTx'
+      | 'setAvailabilityTx'
+    >,
   ) {}
 
   async run(
@@ -128,6 +174,9 @@ export class ApplyImportJob {
       if (error instanceof JobMovedOn) return 'skipped';
       if (error instanceof ConnectionLost) {
         return await this.fail(ctx, job.id, 'CONNECTION_INACTIVE');
+      }
+      if (error instanceof WarehouseLost) {
+        return await this.fail(ctx, job.id, 'WAREHOUSE_INACTIVE');
       }
       // Ayrıntı dosyadan gelebilir: yalnız iş kimliği ve hata adı loglanır.
       log.warn(
@@ -162,16 +211,16 @@ export class ApplyImportJob {
       throw error;
     }
     if (job.type === 'customer_prices') return await this.applyCustomerPrices(ctx, job, body);
+    if (job.type === 'stock') return await this.applyStock(ctx, job, body);
     const read = await readImportFile(this.settings, ctx.businessId, body);
     if (!read.ok) return await this.fail(ctx, job.id, 'APPLY_FAILED');
     const validation = await withTenantTx(ctx, (tx) =>
       validateWithLookups(
         tx,
-        this.catalog,
-        this.prices,
+        { catalog: this.catalog, prices: this.prices, stock: this.stock },
         ctx.businessId,
         read.rows,
-        job.canWritePrices,
+        { canWritePrices: job.canWritePrices, canWriteStock: job.canWriteStock },
       ),
     );
 
@@ -194,9 +243,13 @@ export class ApplyImportJob {
       const listId = job.canWritePrices
         ? await this.prices.defaultListIdTx(tx, ctx.businessId)
         : null;
+      // F3.11c (V3): sayım yazılacaksa varsayılan depo parti boyunca `FOR SHARE` kilitli.
+      const stockWarehouseId = batch.some((outcome) => outcome.write?.stockCount !== undefined)
+        ? await this.stock.defaultWarehouseIdTx(tx, ctx.businessId, 'share')
+        : null;
       const results: RowResult[] = [];
       for (const outcome of batch) {
-        results.push(await this.applyRow(tx, ctx, outcome, listId, now));
+        results.push(await this.applyRow(tx, ctx, outcome, { listId, stockWarehouseId }, now));
       }
       const last = batch.at(-1)?.row ?? CLAIMED;
       if (!(await this.repository.progressTx(tx, job.id, last, now))) throw new JobMovedOn();
@@ -208,9 +261,10 @@ export class ApplyImportJob {
     tx: Tx,
     ctx: JobContext,
     outcome: RowOutcome,
-    listId: string | null,
+    targets: { readonly listId: string | null; readonly stockWarehouseId: string | null },
     now: Date,
   ): Promise<RowResult> {
+    const { listId } = targets;
     const { row, sku } = outcome;
     const write = outcome.write;
     if (outcome.action === 'error' || write === undefined) {
@@ -241,6 +295,14 @@ export class ApplyImportJob {
             throw new RowRejected({ column: 'price', code: 'duplicate_in_file' });
           }
         }
+        await this.applyStockColumn(
+          sp,
+          ctx,
+          write,
+          written.variantId,
+          targets.stockWarehouseId,
+          now,
+        );
         return { row, sku, result: written.action, issues: outcome.issues };
       });
     } catch (error) {
@@ -253,6 +315,45 @@ export class ApplyImportJob {
       if (issue === undefined) throw error;
       return { row, sku, result: 'error', issues: [...outcome.issues, issue] };
     }
+  }
+
+  /**
+   * F3.11c (V3): ürün satırının stok sütunu; ürünle aynı savepoint'te (reddedilirse ürün yazımı da
+   * geri alınır). `quantity` → varsayılan depoya sayım (elle sayımla aynı kod), `availability` →
+   * var/yok işareti.
+   */
+  private async applyStockColumn(
+    tx: Tx,
+    ctx: JobContext,
+    write: NonNullable<RowOutcome['write']>,
+    variantId: string,
+    warehouseId: string | null,
+    now: Date,
+  ): Promise<void> {
+    if (write.available !== undefined) {
+      await this.stock.setAvailabilityTx(tx, {
+        sellerId: ctx.businessId,
+        variantId,
+        isAvailable: write.available,
+        now,
+      });
+    }
+    if (write.stockCount === undefined) return;
+    if (warehouseId === null) {
+      throw new RowRejected({ column: 'stock', code: 'no_default_warehouse' });
+    }
+    const counted = await this.stock.countTx(tx, {
+      sellerId: ctx.businessId,
+      warehouseId,
+      variantId,
+      counted: fromDecimalString(write.stockCount),
+      userId: ctx.userId,
+      now,
+    });
+    // `expectedOnHand` yok: `changed` olmaz; rezerve altı / arşivli satır reddedilir.
+    const result = stockRowResult(0, null, counted);
+    const issue = result.issues[0];
+    if (result.result === 'error' && issue !== undefined) throw new RowRejected(issue);
   }
 
   /**
@@ -397,11 +498,100 @@ export class ApplyImportJob {
     }
   }
 
+  /**
+   * F3.11c (K8, R35): stok sayımı satırları. Dosya yeniden okunur ve taze veriyle doğrulanır; her
+   * parti depoyu `FOR SHARE` ile yeniden denetler (pasifleşti → `WAREHOUSE_INACTIVE`, önceki
+   * partiler kalır). Satır yazımı elle sayımla aynı `StockService.countTx`: fark o anki stoktan,
+   * S2 = B kontrolü satır kilidi altında yeniden.
+   */
+  private async applyStock(
+    ctx: JobContext,
+    job: ImportJobRow,
+    body: Buffer,
+  ): Promise<ApplyOutcome> {
+    const warehouseId = job.warehouseId;
+    if (warehouseId === null) return await this.fail(ctx, job.id, 'APPLY_FAILED');
+    const read = await readImportFile(this.settings, ctx.businessId, body, STOCK_COLUMN_SPEC);
+    if (!read.ok) return await this.fail(ctx, job.id, 'APPLY_FAILED');
+    const validation = await withTenantTx(ctx, (tx) =>
+      validateStockTx(
+        tx,
+        { catalog: this.catalog, stock: this.stock },
+        { sellerId: ctx.businessId, warehouseId, rows: read.rows },
+      ),
+    );
+    if (validation === null) return await this.fail(ctx, job.id, 'WAREHOUSE_INACTIVE');
+
+    const results: RowResult[] = [];
+    const outcomes = validation.outcomes;
+    for (let start = 0; start < outcomes.length; start += APPLY_BATCH_SIZE) {
+      const batch = outcomes.slice(start, start + APPLY_BATCH_SIZE);
+      results.push(...(await this.applyStockBatch(ctx, job, warehouseId, batch)));
+    }
+    return await this.finish(ctx, job, results, [], 'imports.stock_action');
+  }
+
+  private async applyStockBatch(
+    ctx: JobContext,
+    job: ImportJobRow,
+    warehouseId: string,
+    batch: readonly StockOutcome[],
+  ): Promise<RowResult[]> {
+    return await withTenantTx(ctx, async (tx) => {
+      const now = this.clock.now();
+      if (!(await this.stock.activeWarehouseTx(tx, ctx.businessId, warehouseId, 'share'))) {
+        throw new WarehouseLost();
+      }
+      // K8: varyant kilitleri kimlik sırasıyla alınır (iki eşzamanlı içe aktarma kilitlenmez).
+      const ordered = [...batch].sort((a, b) =>
+        (a.variantId ?? '').localeCompare(b.variantId ?? ''),
+      );
+      const byRow = new Map<number, RowResult>();
+      for (const outcome of ordered) {
+        byRow.set(outcome.row, await this.applyStockRow(tx, ctx, warehouseId, outcome, now));
+      }
+      const last = batch.at(-1)?.row ?? CLAIMED;
+      if (!(await this.repository.progressTx(tx, job.id, last, now))) throw new JobMovedOn();
+      return batch.flatMap((outcome) => {
+        const result = byRow.get(outcome.row);
+        return result === undefined ? [] : [result];
+      });
+    });
+  }
+
+  private async applyStockRow(
+    tx: Tx,
+    ctx: JobContext,
+    warehouseId: string,
+    outcome: StockOutcome,
+    now: Date,
+  ): Promise<RowResult> {
+    const { row, sku, variantId, counted } = outcome;
+    if (outcome.action === 'error' || variantId === undefined || counted === undefined) {
+      return { row, sku, result: 'error', issues: outcome.issues };
+    }
+    // Savepoint: satır yazımda reddedilirse yalnız o satır düşer.
+    return await tx.transaction(async (sp) => {
+      const written = await this.stock.countTx(sp, {
+        sellerId: ctx.businessId,
+        warehouseId,
+        variantId,
+        counted: fromDecimalString(counted),
+        expectedOnHand:
+          outcome.expected === undefined ? undefined : fromDecimalString(outcome.expected),
+        userId: ctx.userId,
+        now,
+      });
+      return stockRowResult(row, sku, written);
+    });
+  }
+
   private async finish(
     ctx: JobContext,
     job: ImportJobRow,
     results: readonly RowResult[],
     notes: readonly ImportNote[],
+    resultPrefix?: string,
   ): Promise<ApplyOutcome> {
     let insert = 0;
     let update = 0;
@@ -419,11 +609,20 @@ export class ApplyImportJob {
       .filter((result) => result.issues.length > 0)
       .slice(0, problemsMax)
       .map((result) => ({ row: result.row, sku: result.sku, issues: [...result.issues] }));
-    const t = await translator(this.i18n, RESULT_KEYS, job.locale);
+    const t = await translator(
+      this.i18n,
+      job.type === 'stock' ? [...RESULT_KEYS, ...STOCK_REPORT_KEYS] : RESULT_KEYS,
+      job.locale,
+    );
     const reportId = await this.files.storeGenerated(ctx, {
       purpose: 'import',
       contentType: XLSX_CONTENT_TYPE,
-      body: await buildResultReport({ t, results, notes }),
+      body: await buildResultReport({
+        t,
+        results,
+        notes,
+        ...(resultPrefix === undefined ? {} : { resultPrefix }),
+      }),
     });
 
     ImportJobStateMachine.assertTransition('applying', 'done');
@@ -453,6 +652,8 @@ export class ApplyImportJob {
             update,
             error,
             ...(job.buyerId === null ? {} : { buyerId: job.buyerId, warning }),
+            // F3.11c K10: stok işi depo ve değişmeyen satır sayısıyla (hareket başına audit yok).
+            ...(job.warehouseId === null ? {} : { warehouseId: job.warehouseId, warning }),
           },
         });
       }

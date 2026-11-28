@@ -17,13 +17,15 @@
 //   sonuçta müşterinin "Xüsusi qiymətlər" sayfasına bağlantı. #85 notları: "Təsdiqlə" sunucunun
 //   `canApply`'ına göre baştan gizlenir (neden yazılır); iş ilk yüklemede geçici hatayla gelmezse
 //   "süresi doldu" değil "yeniden dene" görünür (yalnız 404 süresi doldu).
+// F3.11c (US-039 AC7, S3 = A): `inventory.manage` ile üçüncü tür "Anbar qalığı". Depo seçilmeden
+//   şablon ve yükleme kapalı (depo sorumlusu yalnız kendi deposunu görür); şablon o depoya hazır
+//   iner. Kutular "ilk sayım / dəyişən / xətalı / dəyişməyən"; sonuçta stok ekranına bağlantı.
 import {
   formatDateTime,
   IMPORT_NOTES,
   IMPORT_ROW_ERROR_CODES,
   IMPORT_ROW_WARNING_CODES,
   type ImportJobStatus,
-  pricingAccess,
 } from '@b2b/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -31,6 +33,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { type ReactNode, useId, useRef, useState } from 'react';
 import { DEFAULT_TIMEZONE } from '../admin-sellers/form';
 import { useConnections } from '../customers/api';
+import { useStockWarehouses } from '../inventory/api';
 import { useShell } from '../shell/use-shell';
 import { Badge, Button, Card, PageHeader, SelectInput } from '../ui/primitives';
 import {
@@ -46,10 +49,12 @@ import {
   applyProgress,
   appliedRowsOfFailed,
   confirmState,
+  importKinds,
   isXlsxFile,
   jobLoadErrorKey,
   sameOriginUrl,
   stepOf,
+  targetMissing,
   type UploadErrorKey,
   uploadErrorKey,
   WIZARD_STEPS,
@@ -78,10 +83,12 @@ export function ImportWizard({
   initialJobId,
   initialType = 'products',
   initialBuyerId,
+  initialWarehouseId,
 }: {
   initialJobId: string | undefined;
   initialType?: ImportKind;
   initialBuyerId?: string | undefined;
+  initialWarehouseId?: string | undefined;
 }) {
   const t = useTranslations('imports.wizard');
   const locale = useLocale();
@@ -90,13 +97,13 @@ export function ImportWizard({
   const businessId = shell.activeBusinessId;
   const codes = (shell.me?.activeBusiness?.permissions ?? []).map((p) => p.code);
   const canRun = codes.includes('imports.run');
-  // Müşteri fiyatı işi `pricing.manage` ister (yoksa 403); müşteri listesi `connections.view`.
-  const canPrices = pricingAccess(codes).manage && codes.includes('connections.view');
+  const kinds = importKinds(codes);
   const [target, setTarget] = useState<ImportTarget>({
     type: initialType,
     buyerId: initialBuyerId,
+    warehouseId: initialWarehouseId,
   });
-  const effectiveTarget: ImportTarget = canPrices ? target : { type: 'products' };
+  const effectiveTarget: ImportTarget = kinds.includes(target.type) ? target : { type: 'products' };
   const [jobId, setJobId] = useState<string | undefined>(initialJobId);
   const job = useImportJob(businessId, jobId);
   const basePath = `/${locale}/seller/products/import`;
@@ -130,7 +137,7 @@ export function ImportWizard({
             <UploadStep
               businessId={businessId}
               target={effectiveTarget}
-              canPrices={canPrices}
+              kinds={kinds}
               onTarget={setTarget}
               onStarted={(created) => {
                 openJob(created.id);
@@ -265,13 +272,13 @@ function Notice({
 function UploadStep({
   businessId,
   target,
-  canPrices,
+  kinds,
   onTarget,
   onStarted,
 }: {
   businessId: string | undefined;
   target: ImportTarget;
-  canPrices: boolean;
+  kinds: readonly ImportKind[];
   onTarget: (target: ImportTarget) => void;
   onStarted: (job: ImportJob) => void;
 }) {
@@ -281,7 +288,7 @@ function UploadStep({
   const { template, start } = useImportMutations(businessId);
   const [error, setError] = useState<UploadErrorKey | 'template' | undefined>();
   const [dragging, setDragging] = useState(false);
-  const needsBuyer = target.type === 'customer_prices' && target.buyerId === undefined;
+  const needsBuyer = targetMissing(target);
 
   function upload(file: File | undefined) {
     setError(undefined);
@@ -313,16 +320,21 @@ function UploadStep({
     });
   }
 
-  const customer = target.type === 'customer_prices';
+  const hint =
+    target.type === 'customer_prices'
+      ? t('template_hint_customer')
+      : target.type === 'stock'
+        ? t('template_hint_stock')
+        : t('template_hint');
   return (
     <Card className="space-y-6 p-6 sm:p-8">
-      {canPrices && <TargetPicker businessId={businessId} target={target} onTarget={onTarget} />}
+      {kinds.length > 1 && (
+        <TargetPicker businessId={businessId} target={target} kinds={kinds} onTarget={onTarget} />
+      )}
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-slate-900">{t('template_title')}</p>
-          <p className="text-sm text-slate-500">
-            {customer ? t('template_hint_customer') : t('template_hint')}
-          </p>
+          <p className="text-sm text-slate-500">{hint}</p>
         </div>
         <Button
           variant="secondary"
@@ -384,21 +396,22 @@ function UploadStep({
   );
 }
 
-/** F3.7b: tür seçimi ve müşteri fiyatında müşteri (aktif bağlantılar). */
+/** F3.7b: tür seçimi ve müşteri fiyatında müşteri (aktif bağlantılar); F3.11c stokta depo. */
 function TargetPicker({
   businessId,
   target,
+  kinds,
   onTarget,
 }: {
   businessId: string | undefined;
   target: ImportTarget;
+  kinds: readonly ImportKind[];
   onTarget: (target: ImportTarget) => void;
 }) {
   const t = useTranslations('imports.wizard');
   const customer = target.type === 'customer_prices';
   const connections = useConnections(customer ? businessId : undefined, 'active');
   const customers = (connections.data?.pages ?? []).flatMap((page) => page.items);
-  const kinds: readonly ImportKind[] = ['products', 'customer_prices'];
   return (
     <div className="space-y-4">
       <div
@@ -416,7 +429,7 @@ function TargetPicker({
               aria-checked={selected}
               data-testid={`import-kind-${kind}`}
               onClick={() => {
-                onTarget(kind === 'products' ? { type: kind } : { type: kind, buyerId: undefined });
+                onTarget({ type: kind });
               }}
               className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none ${
                 selected
@@ -473,6 +486,53 @@ function TargetPicker({
           </p>
         </div>
       )}
+      {target.type === 'stock' && (
+        <WarehousePicker businessId={businessId} target={target} onTarget={onTarget} />
+      )}
+    </div>
+  );
+}
+
+/** F3.11c (S3 = A): sayım dosyasının deposu; depo sorumlusu listede yalnız kendi deposunu görür. */
+function WarehousePicker({
+  businessId,
+  target,
+  onTarget,
+}: {
+  businessId: string | undefined;
+  target: ImportTarget;
+  onTarget: (target: ImportTarget) => void;
+}) {
+  const t = useTranslations('imports.wizard');
+  const warehouses = useStockWarehouses(businessId);
+  const list = warehouses.data ?? [];
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor="import-warehouse" className="block text-sm font-medium text-slate-900">
+        {t('warehouse_label')}
+      </label>
+      <div className="w-full sm:max-w-sm">
+        <SelectInput
+          id="import-warehouse"
+          value={target.warehouseId ?? ''}
+          onChange={(event) => {
+            onTarget({
+              type: 'stock',
+              warehouseId: event.target.value === '' ? undefined : event.target.value,
+            });
+          }}
+        >
+          <option value="">{t('warehouse_choose')}</option>
+          {list.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </SelectInput>
+      </div>
+      <p className="text-xs text-slate-500">
+        {warehouses.isSuccess && list.length === 0 ? t('warehouse_none') : t('warehouse_hint')}
+      </p>
     </div>
   );
 }
@@ -536,7 +596,8 @@ function Working({
 
 function StatTiles({ stats, type }: { stats: ImportJob['stats']; type: ImportJob['type'] }) {
   const t = useTranslations('imports.wizard');
-  const prefix = type === 'customer_prices' ? 'stat_customer' : 'stat';
+  const prefix =
+    type === 'customer_prices' ? 'stat_customer' : type === 'stock' ? 'stat_stock' : 'stat';
   const tiles = [
     { key: 'insert', value: stats.insert, tone: 'text-indigo-700', ring: 'ring-indigo-100' },
     { key: 'update', value: stats.update, tone: 'text-slate-900', ring: 'ring-slate-200/80' },
@@ -690,7 +751,11 @@ function Preview({
       )}
       <Problems job={job} />
       <p className="text-xs text-slate-500">
-        {customer ? tw('customer_price_hint') : tw('future_price_hint')}
+        {customer
+          ? tw('customer_price_hint')
+          : job.type === 'stock'
+            ? tw('stock_hint')
+            : tw('future_price_hint')}
       </p>
       {job.expiresAt !== null && (
         <p className="text-xs text-slate-500">
@@ -776,6 +841,10 @@ function Done({ job, onRestart }: { job: ImportJob; onRestart: () => void }) {
             >
               {t('to_customer_prices')}
             </Link>
+          ) : job.type === 'stock' ? (
+            <Link href={`/${locale}/seller/stock`} className={secondaryLink}>
+              {t('to_stock')}
+            </Link>
           ) : (
             <Link href={`/${locale}/seller/products`} className={secondaryLink}>
               {t('to_products')}
@@ -785,7 +854,9 @@ function Done({ job, onRestart }: { job: ImportJob; onRestart: () => void }) {
             {t('new_import')}
           </Button>
         </div>
-        {!customer && <p className="text-xs text-slate-500">{t('done_draft_hint')}</p>}
+        {job.type === 'products' && (
+          <p className="text-xs text-slate-500">{t('done_draft_hint')}</p>
+        )}
       </Card>
     </div>
   );

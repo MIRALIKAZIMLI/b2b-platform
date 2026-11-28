@@ -14,7 +14,14 @@ import { Clock } from '../../core/clock';
 import { type Tx, withTenantTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
-import { compare, fromDecimalString, subtract, toDecimalString, ZERO } from '../../core/money';
+import {
+  compare,
+  fromDecimalString,
+  type Money,
+  subtract,
+  toDecimalString,
+  ZERO,
+} from '../../core/money';
 import type { TenantContext } from '../../core/tenant-context';
 import { SellerSetupRepository } from '../businesses';
 import { InventoryRepository } from './inventory.repository';
@@ -43,6 +50,35 @@ export interface StockMovementResult {
   readonly movement: StockMovementView | null;
   readonly stock: StockRowView;
 }
+
+export interface StockCountInput {
+  readonly sellerId: string;
+  readonly warehouseId: string;
+  readonly variantId: string;
+  /** Sayılan toplam, temel birimde (S1 = A). */
+  readonly counted: Money;
+  /** F3.11c S2 = B: şablondaki sistem miktarı; bugünkü stoktan farklıysa yazılmaz. */
+  readonly expectedOnHand?: Money | undefined;
+  readonly lotNo?: string | null | undefined;
+  readonly expiryDate?: string | null | undefined;
+  readonly note?: string | null | undefined;
+  readonly userId: string;
+  readonly now: Date;
+}
+
+/** Sayım sonucu; `previous` = sayımdan önceki `on_hand` (satır yoksa null). */
+export type StockCountOutcome =
+  | {
+      readonly kind: 'written';
+      readonly movement: StockMovementView;
+      readonly previous: string | null;
+      readonly first: boolean;
+    }
+  | { readonly kind: 'unchanged'; readonly onHand: string | null }
+  | { readonly kind: 'changed'; readonly onHand: string | null }
+  | { readonly kind: 'below_reserved'; readonly reserved: string }
+  | { readonly kind: 'not_found' }
+  | { readonly kind: 'archived' };
 
 export interface StockListQuery {
   readonly warehouseId?: string | undefined;
@@ -166,44 +202,44 @@ export class StockService {
       if (warehouse?.status !== 'active') {
         throw new DomainError('NOT_FOUND');
       }
-      const variant = await this.inventory.lockVariantTx(tx, sellerId, input.variantId);
-      if (variant === undefined) throw new DomainError('NOT_FOUND');
-      if (variant.status === 'archived' || variant.productStatus === 'archived') {
-        throw new DomainError('INVALID_STATE_TRANSITION');
-      }
-
-      let delta = qty;
-      let firstCount = false;
+      const extra = {
+        lotNo: input.lotNo ?? null,
+        expiryDate: input.expiryDate ?? null,
+        note: input.note ?? null,
+      };
+      let movement: StockMovementView | null;
       if (input.type === 'adjustment') {
-        const counts = await this.repository.countsTx(
-          tx,
+        const counted = await this.countTx(tx, {
           sellerId,
-          input.warehouseId,
-          input.variantId,
-        );
-        const onHand = fromDecimalString(counts?.onHand ?? '0');
-        const reserved = fromDecimalString(counts?.reserved ?? '0');
-        if (compare(qty, reserved) < 0) {
-          throw new DomainError('STOCK_INSUFFICIENT', { reserved: counts?.reserved ?? '0' });
+          warehouseId: input.warehouseId,
+          variantId: input.variantId,
+          counted: qty,
+          userId: tenant.userId,
+          now,
+          ...extra,
+        });
+        if (counted.kind === 'not_found') throw new DomainError('NOT_FOUND');
+        if (counted.kind === 'archived') throw new DomainError('INVALID_STATE_TRANSITION');
+        if (counted.kind === 'below_reserved') {
+          throw new DomainError('STOCK_INSUFFICIENT', { reserved: counted.reserved });
         }
-        delta = subtract(qty, onHand);
-        firstCount = counts === undefined;
-      }
-
-      let movement: StockMovementView | null = null;
-      if (compare(delta, ZERO) !== 0 || firstCount) {
+        movement = counted.kind === 'written' ? counted.movement : null;
+      } else {
+        const variant = await this.inventory.lockVariantTx(tx, sellerId, input.variantId);
+        if (variant === undefined) throw new DomainError('NOT_FOUND');
+        if (variant.status === 'archived' || variant.productStatus === 'archived') {
+          throw new DomainError('INVALID_STATE_TRANSITION');
+        }
         movement = await this.repository.insertMovementTx(tx, {
           id: this.ids.next(),
           sellerId,
           warehouseId: input.warehouseId,
           variantId: input.variantId,
-          type: input.type,
-          onHandDelta: toDecimalString(delta, QTY_TEXT_SCALE),
-          lotNo: input.lotNo ?? null,
-          expiryDate: input.expiryDate ?? null,
-          note: input.note ?? null,
+          type: 'receipt',
+          onHandDelta: toDecimalString(qty, QTY_TEXT_SCALE),
           createdBy: tenant.userId,
           now,
+          ...extra,
         });
       }
       const stock = await this.repository.stockRowTx(
@@ -215,6 +251,53 @@ export class StockService {
       if (stock === undefined) throw new Error('stok satırı hareketten sonra bulunamadı');
       return { movement, stock };
     });
+  }
+
+  /**
+   * Sayım düzeltmesi (S1 = A; elle sayım ve F3.11c Excel sayımı aynı kod). Çağıranın kiracı
+   * işleminde; depo satırını çağıran `FOR SHARE` kilitlemiş ve aktif olduğunu denetlemiş olmalı.
+   * Varyantı `FOR NO KEY UPDATE` kilitler, farkı taze sayıdan hesaplar, `adjustment` hareketi ekler
+   * (fark 0 ise yalnız satırın ilk sayımında). `expectedOnHand` verilirse (F3.11c S2 = B) bugünkü
+   * stok ondan farklıysa hiçbir şey yazmaz (`changed`; sayılmamış satır 0 sayılır).
+   */
+  async countTx(tx: Tx, input: StockCountInput): Promise<StockCountOutcome> {
+    const variant = await this.inventory.lockVariantTx(tx, input.sellerId, input.variantId);
+    if (variant === undefined) return { kind: 'not_found' };
+    if (variant.status === 'archived' || variant.productStatus === 'archived') {
+      return { kind: 'archived' };
+    }
+    const counts = await this.repository.countsTx(
+      tx,
+      input.sellerId,
+      input.warehouseId,
+      input.variantId,
+    );
+    const onHand = fromDecimalString(counts?.onHand ?? '0');
+    const reserved = fromDecimalString(counts?.reserved ?? '0');
+    const previous = counts?.onHand ?? null;
+    if (input.expectedOnHand !== undefined && compare(input.expectedOnHand, onHand) !== 0) {
+      return { kind: 'changed', onHand: previous };
+    }
+    if (compare(input.counted, reserved) < 0) {
+      return { kind: 'below_reserved', reserved: counts?.reserved ?? '0' };
+    }
+    const delta = subtract(input.counted, onHand);
+    const firstCount = counts === undefined;
+    if (compare(delta, ZERO) === 0 && !firstCount) return { kind: 'unchanged', onHand: previous };
+    const movement = await this.repository.insertMovementTx(tx, {
+      id: this.ids.next(),
+      sellerId: input.sellerId,
+      warehouseId: input.warehouseId,
+      variantId: input.variantId,
+      type: 'adjustment',
+      onHandDelta: toDecimalString(delta, QTY_TEXT_SCALE),
+      lotNo: input.lotNo ?? null,
+      expiryDate: input.expiryDate ?? null,
+      note: input.note ?? null,
+      createdBy: input.userId,
+      now: input.now,
+    });
+    return { kind: 'written', movement, previous, first: firstCount };
   }
 
   /** `GET /stock` (US-039): kapsamlı kullanıcı yalnız kendi deposu. */

@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-28 (F3.11b: depo stok ekranı web).
+Son güncelleme: 2026-11-28 (F3.11c: Excel stok sayımı).
 
 ## 1. Mimari özeti
 
@@ -153,7 +153,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F3.11a | Miktarlı stok API (US-039 AC1, AC7; 0042): `stock` / `stock_movements` (T). Stok yalnız hareketle değişir: `stock_movements_apply` tetikleyicisi (DEFINER) satırı günceller, `app_user` `stock`'a yazamaz, hareketi güncelleyemez/silemez. `POST /stock/movements` (`receipt`, `adjustment` = sayılan toplam S1 = A; `Idempotency-Key` zorunlu; depo `FOR SHARE` → varyant `FOR NO KEY UPDATE`; kapsam `warehouse` yalnız kendi deposu), `GET /stock`, `GET /stock/movements`. Miktarlı mod `POST /stock-mode/quantity` (S5 = B; sayılmamış varyant `409 STOCK_UNCOUNTED_VARIANTS`, onayla açılır S2 = A). `@b2b/shared` `stockDisplay` → F3.12a. Excel `stock` türü F3.11c |
 | F3.11b | Depo stok ekranı web (US-039 AC1, AC6, AC7): migration yok. `GET /stock/warehouses` (`inventory.view`; aktif depolar, kapsam `warehouse` yalnız kendi deposu), `GET /stock/items` (depodaki tüm satılabilir varyantlar, sayılmamış `counted:false`; `filter` all/low/uncounted, `q`). "Az qalan" eşiği S1 = A: tek toptancı ayarı `lowStockDisplayThreshold` (satış biriminde, PATCH seller-profile), karşılaştırma `available ≤ eşik × en büyük satış birimi`; `stock.low_threshold` yazılmaz. Web `/seller/stock` (koli + temel birim; `@b2b/shared` `toBaseQty`/`splitByUnit`/`countDelta`), Ayarlar > Stok'ta "Miqdar" açılır (409 → onay). S2 = A depo için ekip kuralı ayrı kart. Mobil F3.11d |
 
-**Sıradaki:** F3.11c Excel `stock` türü / F3.11d mobil depo ekranı (faz spesifikasyonu `tasks/F3-faz-spesifikasyonu.md` §3); not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
+| F3.11c | Excel stok sayımı (US-039 AC7): migration 0043 (`import_jobs.warehouse_id`, `can_write_stock`, `WAREHOUSE_INACTIVE`). `stock` türü: `warehouseId` zorunlu + `inventory.manage` (kapsam `warehouse` yalnız kendi deposu); S1 = A Depo Sorumlusu rolünde `imports.run` yok, elle sayar. Şablon depodaki varyantlar + `current_stock`; S2 = B `current_stock` ≠ bugünkü stok → `stock_changed`. Yazım `inventory` `StockImport` → `StockService.countTx` (elle sayımla aynı). V3 ürün şablonu stok sütunu: quantity → varsayılan depo sayımı, availability → var/yok, none → not. Web sihirbazında "Anbar qalığı", stok ekranında "Excel ilə yüklə" |
+
+**Sıradaki:** F3.11d mobil depo ekranı (faz spesifikasyonu `tasks/F3-faz-spesifikasyonu.md` §3); not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
