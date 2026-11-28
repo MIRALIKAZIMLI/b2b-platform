@@ -1987,31 +1987,152 @@ paths:
   /api/v1/stock:
     get:
       tags: [inventory]
-      summary: Stok (seller)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { name: warehouseId, in: query, schema: { type: string, format: uuid } }, { name: low, in: query, schema: { type: boolean } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      summary: Depo stokları (seller; F3.11a, US-039)
+      description: |
+        İzin `inventory.view`. Kapsam `warehouse` olan kullanıcı yalnız kendi deposunu görür; başka
+        `warehouseId` `403`. Sayılar temel birimde (`numeric(14,3)`), `available = onHand − reserved`.
+        `low=true`: `available ≤ eşik` satırları; eşik satırın `lowThreshold`'u, yoksa
+        `seller_profiles.low_stock_display_threshold`. Sıra: ürün SKU, varyant SKU, depo; imleçli.
+        Stok her modda okunur (S5 = B hazırlık adımı); perakendeci gösterimi yalnız `quantity` modunda.
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: variantId, in: query, schema: { type: string, format: uuid } }
+        - { name: low, in: query, schema: { type: boolean } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
       responses:
-        '200': { description: Liste }
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/StockRow' } }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/stock/movements:
+    get:
+      tags: [inventory]
+      summary: Stok hareketleri (seller; F3.11a)
+      description: |
+        İzin `inventory.view` (kapsam `warehouse`: yalnız kendi deposu, başka `warehouseId` `403`).
+        Yeniden eskiye, imleçli. Hareketler değiştirilemez ve silinemez (R35).
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: variantId, in: query, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/StockMovement' } }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [inventory]
-      summary: Mal girişi veya sayım düzeltmesi (US-039)
-      parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      summary: Mal girişi veya sayım düzeltmesi (US-039 AC1, AC7; F3.11a)
+      description: |
+        İzin `inventory.manage`; kapsam `warehouse` olan kullanıcı yalnız kendi deposuna yazar
+        (başka depo `403`, R36). `Idempotency-Key` zorunlu (yoksa `422`); aynı anahtar ve gövde aynı
+        yanıtı döner, tek hareket yazılır. Miktar temel birimde, en çok 3 ondalık.
+        - `receipt` (mal girişi): `qty > 0`; `onHand` `qty` kadar artar.
+        - `adjustment` (sayım düzeltmesi, kullanıcı kararı S1 = A): `qty` sayılan **toplamdır**
+          (`≥ 0`); hareket farkı (`qty − onHand`) yazar. Fark 0 ise hareket yazılmaz
+          (`movement: null`); yalnız satırın ilk sayımı 0 ise 0 farklı hareket satırı açar
+          (varyant "sayıldı", `POST /stock-mode/quantity` uyarısına girmez). Sayılan < `reserved` ise `409 STOCK_INSUFFICIENT`.
+        Stok yalnız bu hareketle değişir; doğrudan değiştirme yolu yoktur (veritabanında zorlanır).
+        Her stok modunda yazılabilir (S5 = B: miktarlı moda geçmeden önce sayım girilir).
+        Pasif veya başka satıcının deposu, olmayan varyant `404`; arşivli varyant / ürün
+        `409 INVALID_STATE_TRANSITION`. Lot ve son kullanma tarihi isteğe bağlıdır (D24).
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 64 }
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [warehouseId, variantId, type, qty]
               properties:
                 warehouseId: { type: string, format: uuid }
                 variantId: { type: string, format: uuid }
                 type: { type: string, enum: [receipt, adjustment] }
-                qty: { $ref: '#/components/schemas/Decimal' }
-                lotNo: { type: string }
+                qty: { type: string, pattern: '^[0-9]{1,11}(\.[0-9]{1,3})?$' }
+                lotNo: { type: string, minLength: 1, maxLength: 64 }
                 expiryDate: { type: string, format: date }
-                note: { type: string }
+                note: { type: string, minLength: 1, maxLength: 500 }
       responses:
-        '201': { description: Kaydedildi }
+        '201':
+          description: Kaydedildi
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [movement, stock]
+                properties:
+                  movement:
+                    oneOf:
+                      - $ref: '#/components/schemas/StockMovement'
+                      - type: 'null'
+                  stock: { $ref: '#/components/schemas/StockRow' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/stock-mode/quantity:
+    post:
+      tags: [inventory]
+      summary: Miktarlı stoğu etkinleştir (S5 = B ikinci adım; F3.11a)
+      description: |
+        İzin `business.manage` (mod ayarı). Mod `quantity` olur; audit `seller_profile.updated`.
+        Aktif bir depoda stok satırı olmayan satılabilir varyant (varyant ve ürün arşivli değil)
+        varsa ve `confirmUncounted: true` verilmemişse `409 STOCK_UNCOUNTED_VARIANTS`
+        (`details.uncountedCount`); onayla açılır, sayılmamış varyant perakendecide "Stokta yok"
+        görünür (kullanıcı kararı S2 = A). Mod zaten `quantity` ise sonuç aynı, audit yazılmaz.
+        Moddan çıkış `PATCH /business/seller-profile` ile (`none` / `availability`).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                confirmUncounted: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Mod `quantity`
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [stockMode, uncountedCount]
+                properties:
+                  stockMode: { $ref: '#/components/schemas/StockMode' }
+                  uncountedCount: { type: integer, minimum: 0 }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /api/v1/stock-mode:
     get:
       tags: [inventory]
@@ -2542,7 +2663,7 @@ paths:
       description: |
         F3.5a. İzin `imports.run`. `fileId`, F1.10 ile `purpose: import` yüklenmiş ve `ready`
         durumdaki bu işletmenin dosyasıdır (başka işletmenin dosyası 404). Desteklenen türler
-        `products` ve (F3.7a) `customer_prices`; `stock` `422 VALIDATION_FAILED` (`type: not_supported`).
+        `products` ve (F3.7a) `customer_prices`; `stock` `422 VALIDATION_FAILED` (`type: not_supported`; F3.11c).
         `customer_prices` (US-035 AC2, S2 = A: bir dosya bir müşteri): `buyerId` zorunlu, ek izin
         `pricing.manage` (yoksa 403), perakendeciyle aktif bağlantı (yoksa `422`, `buyerId: [not_connected]`).
         Diğer türlerde `buyerId` verilirse `422` (`buyerId: [not_allowed]`).
@@ -3921,6 +4042,7 @@ components:
         - PRICE_LIST_IN_USE
         - PRICE_LIST_DEFAULT_PROTECTED
         - STOCK_MODE_MISMATCH
+        - STOCK_UNCOUNTED_VARIANTS
         - INTERNAL_ERROR
     PhoneE164:
       type: string
@@ -4397,7 +4519,7 @@ components:
         stockMode: { $ref: '#/components/schemas/StockMode' }
     StockMode:
       type: string
-      description: ADR-0018. `none` her aktif varyant sipariş edilebilir; `availability` var/yok işareti; `quantity` miktarlı stok (F3.11a).
+      description: ADR-0018. `none` her aktif varyant sipariş edilebilir; `availability` var/yok işareti; `quantity` miktarlı stok (F3.11a; `POST /stock-mode/quantity` ile açılır).
       enum: [none, availability, quantity]
     StockModeView:
       type: object
@@ -4412,6 +4534,41 @@ components:
       properties:
         variantId: { type: string, format: uuid }
         isAvailable: { type: boolean }
+    StockRow:
+      type: object
+      description: F3.11a. Bir depodaki bir varyantın stoğu; sayılar temel birimde.
+      additionalProperties: false
+      required: [warehouseId, variantId, productId, productName, sku, baseUnitCode, onHand, reserved, available, lowThreshold, updatedAt]
+      properties:
+        warehouseId: { type: string, format: uuid }
+        variantId: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { $ref: '#/components/schemas/LocalizedText' }
+        sku: { type: string, description: Varyant SKU }
+        baseUnitCode: { type: string }
+        onHand: { $ref: '#/components/schemas/Decimal' }
+        reserved: { $ref: '#/components/schemas/Decimal' }
+        available: { $ref: '#/components/schemas/Decimal' }
+        lowThreshold: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
+        updatedAt: { type: string, format: date-time }
+    StockMovement:
+      type: object
+      description: F3.11a. Silinmez, değiştirilemez stok hareketi (R35).
+      additionalProperties: false
+      required: [id, warehouseId, variantId, type, onHandDelta, reservedDelta, orderId, lotNo, expiryDate, note, createdBy, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        variantId: { type: string, format: uuid }
+        type: { type: string, enum: [receipt, reserve, release, ship, return, adjustment] }
+        onHandDelta: { $ref: '#/components/schemas/Decimal' }
+        reservedDelta: { $ref: '#/components/schemas/Decimal' }
+        orderId: { type: [string, 'null'], format: uuid }
+        lotNo: { type: [string, 'null'] }
+        expiryDate: { type: [string, 'null'], format: date }
+        note: { type: [string, 'null'] }
+        createdBy: { type: [string, 'null'], format: uuid }
+        createdAt: { type: string, format: date-time }
     SellerProfileUpdate:
       type: object
       additionalProperties: false
@@ -4431,7 +4588,7 @@ components:
         requireDeliveryPhoto: { type: boolean }
         stockMode:
           type: string
-          description: F3.10. `quantity` F3.11a'da iki adımlı geçişle; bugün `422`.
+          description: F3.10. `quantity` yalnız `POST /stock-mode/quantity` ile (F3.11a, S5 = B); burada `422`. Miktarlı moddan çıkış buradan.
           enum: [none, availability]
     ServiceAreas:
       type: object

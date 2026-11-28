@@ -18,15 +18,23 @@ export interface LockedVariant {
 @Injectable()
 export class InventoryRepository {
   /**
-   * Toptancının stok modu; satır yoksa (eski veri) varsayılan `availability`. `share` true ise satır
-   * `FOR SHARE` kilitlenir: aynı anda gelen mod değişikliği bu işlem bitene kadar bekler.
+   * Toptancının stok modu; satır yoksa (eski veri) varsayılan `availability`. `share`: satır
+   * `FOR SHARE` (aynı anda gelen mod değişikliği bu işlem bitene kadar bekler); `update`: F3.11a
+   * miktarlı moda geçiş satırı `FOR UPDATE` kilitler (iki eşzamanlı geçiş tek audit yazar).
    */
-  async stockModeTx(tx: Tx, sellerId: string, share = false): Promise<StockMode> {
-    const result = await tx.execute<{ stock_mode: StockMode }>(
-      share
-        ? sql`select stock_mode from seller_profiles where business_id = ${sellerId} for share`
-        : sql`select stock_mode from seller_profiles where business_id = ${sellerId}`,
-    );
+  async stockModeTx(
+    tx: Tx,
+    sellerId: string,
+    lock: 'none' | 'share' | 'update' = 'none',
+  ): Promise<StockMode> {
+    const base = sql`select stock_mode from seller_profiles where business_id = ${sellerId}`;
+    const query =
+      lock === 'share'
+        ? sql`${base} for share`
+        : lock === 'update'
+          ? sql`${base} for update`
+          : base;
+    const result = await tx.execute<{ stock_mode: StockMode }>(query);
     return result.rows[0]?.stock_mode ?? 'availability';
   }
 

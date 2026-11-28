@@ -57,6 +57,8 @@ export const ERROR_CODES = [
   'PRICE_LIST_IN_USE',
   'PRICE_LIST_DEFAULT_PROTECTED',
   'STOCK_MODE_MISMATCH',
+  // F3.11a (S2 = A): miktarlı stok açılırken sayılmamış varyant var; onayla tekrar gönderilir.
+  'STOCK_UNCOUNTED_VARIANTS',
   'INTERNAL_ERROR',
 ] as const;
 
