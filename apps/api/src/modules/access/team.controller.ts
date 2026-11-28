@@ -7,7 +7,12 @@ import { CurrentTenant, type TenantContext } from '../../core/tenant-context';
 import type { RoleTemplateView } from './team-roles.repository';
 import { TeamRolesService } from './team-roles.service';
 import type { JobTitleRow, TeamRoleRow } from './team.repository';
-import { type TeamInvitationView, type TeamMemberView, TeamService } from './team.service';
+import {
+  type TeamInvitationView,
+  type TeamMemberView,
+  type TeamScopeOptions,
+  TeamService,
+} from './team.service';
 
 // openapi `/api/v1/team/*` (F2.7a, US-013; F2.8 özel roller, US-014). Hepsi `team.manage` (c4 §5). Davet oluşturma
 // (`POST /team/invitations`) onboarding modülünde, kabul `InvitationsController`'da.
@@ -93,6 +98,13 @@ export class TeamController {
     @Req() req: AuditHttpRequest,
   ): Promise<void> {
     await this.team.revokeInvitation(tenant, idSchema.parse(id), requestAuditContext(req));
+  }
+
+  /** F3.11e K3: ekip formunun şube / depo seçenekleri (`business.manage` gerekmez). */
+  @Get('scope-options')
+  @RequirePermission('team.manage')
+  async scopeOptions(@CurrentTenant() tenant: TenantContext): Promise<TeamScopeOptions> {
+    return await this.team.listScopeOptions(tenant);
   }
 
   @Get('roles')

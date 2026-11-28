@@ -168,7 +168,7 @@ flowchart LR
 | İzin kodu | Yetenek | Kapsam seçenekleri | Kullanıldığı yer |
 | --- | --- | --- | --- |
 | `business.manage` | any | all | Profil, depolar, şubeler, gizlilik, işletme ayarları |
-| `team.manage` | any | all | Ekip, davet, roller (US-013, US-014) |
+| `team.manage` | any | all | Ekip, davet, roller (US-013, US-014). Kapsam kuralı (F2.5 S1, F3.11e): admin olmayan aktör kendi şubesine / deposuna bağlıysa yalnız onu yönetir; bağlı değilse hepsini |
 | `audit.view` | any | all | Audit log ekranı (US-057) |
 | `reports.view` | any | all, branch, warehouse, assigned | Dashboard (US-056) |
 | `documents.generate` | any | all, branch, assigned | Sipariş belgesi, ekstre (US-044, US-052) |

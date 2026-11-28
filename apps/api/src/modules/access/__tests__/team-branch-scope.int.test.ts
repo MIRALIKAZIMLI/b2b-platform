@@ -1,6 +1,7 @@
 // F2.5 S1 (kullanıcı kararı 2026-11-13, Müfettiş 13 N1): işletme admini olmayan ekip yöneticisi
-// üyeyi yalnız kendi şubesine bağlar; başka şubedeki üyeyi değiştiremez / çıkaramaz. Diğer
-// şubeleri yalnız işletme admini yönetir. Uygulama bağlantısı RLS'e tabi app_user.
+// üyeyi yalnız kendi şubesine bağlar; başka şubedeki üyeyi değiştiremez / çıkaramaz. F3.11e S2 = B
+// (2026-11-28): şubeye bağlı olmayan yönetici (izinleri tüm işletmede) tüm şubeleri yönetir.
+// Uygulama bağlantısı RLS'e tabi app_user.
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from '../../../../test/http-app';
@@ -28,6 +29,19 @@ interface ErrorJson {
 }
 
 /** buyer_branch_admin izinleri + team.manage (admin olmayan şube yöneticisi). */
+/** Şubeye bağlı olmayan yönetici (S2 = B): team.manage + tüm işletmede görme izinleri. */
+const HQ_PERMS = [
+  { code: 'team.manage', scope: 'all' },
+  { code: 'catalog.browse', scope: 'all' },
+  { code: 'orders.view', scope: 'all' },
+];
+
+/** Şube kapsamlı izleyici rolü: HQ yöneticisinin verebileceği şube rolü. */
+const VIEWER_PERMS = [
+  { code: 'catalog.browse', scope: 'branch' },
+  { code: 'orders.view', scope: 'branch' },
+];
+
 const MANAGER_PERMS = [
   { code: 'team.manage', scope: 'all' },
   { code: 'catalog.browse', scope: 'branch' },
@@ -231,6 +245,71 @@ describe('F2.5 S1 şube kapsamı: yönetici yalnız kendi şubesi', () => {
       );
       expect(row.status === 'inactive' && row.open > 0).toBe(false);
     }
+  });
+
+  it('F3.11e-S2 şubeye bağlı olmayan yönetici her şubeye davet eder, taşır, çıkarır ve daveti geri çeker', async () => {
+    const template = await one<{ id: string }>(
+      "select id from role_templates where code = 'buyer_branch_staff'",
+      [],
+    );
+    const role = async (name: string, permissions: object[]) => {
+      const res = await http()
+        .post('/api/v1/team/roles')
+        .set(admin.auth)
+        .send({ templateId: template.id, name: { az: name }, permissions });
+      expect(res.status, JSON.stringify(res.body)).toBe(201);
+      return (res.body as { id: string }).id;
+    };
+    const hqRole = await role('Mərkəz meneceri', HQ_PERMS);
+    const viewerRole = await role('Filial baxışı', VIEWER_PERMS);
+    const hqUserId = await addMemberFromTemplate(admin.businessId, 'buyer_branch_staff');
+    const hqMember = await patchMember(admin, await membershipOf(hqUserId), { roleId: hqRole });
+    expect(hqMember.status, JSON.stringify(hqMember.body)).toBe(200);
+    expect((hqMember.body as { branchId: string | null }).branchId).toBeNull();
+    const hq = await as(hqUserId, admin.businessId);
+
+    const invited = await http().post('/api/v1/team/invitations').set(hq.auth).send({
+      phone: randomTestPhone(),
+      fullName: 'Baxış işçisi',
+      jobTitleId: staffTitleId,
+      roleId: viewerRole,
+      branchId: branchY,
+    });
+    expect(invited.status, JSON.stringify(invited.body)).toBe(201);
+    const fromAdmin = await invite(admin, branchX);
+    const revoked = await http()
+      .post(
+        `/api/v1/team/invitations/${(fromAdmin.body as { invitationId: string }).invitationId}/revoke`,
+      )
+      .set(hq.auth);
+    expect(revoked.status).toBe(204);
+
+    const viewerUserId = await addMemberFromTemplate(admin.businessId, 'buyer_branch_staff');
+    const viewer = await membershipOf(viewerUserId);
+    const assigned = await patchMember(admin, viewer, { roleId: viewerRole, branchId: branchX });
+    expect(assigned.status, JSON.stringify(assigned.body)).toBe(200);
+    const moved = await patchMember(hq, viewer, { branchId: branchY });
+    expect(moved.status, JSON.stringify(moved.body)).toBe(200);
+    const removed = await patchMember(hq, viewer, { status: 'removed' });
+    expect(removed.status, JSON.stringify(removed.body)).toBe(200);
+
+    const options = await http().get('/api/v1/team/scope-options').set(hq.auth);
+    const ids = (options.body as { branches: { id: string }[] }).branches.map((b) => b.id);
+    expect(ids).toEqual(expect.arrayContaining([branchX, branchY]));
+  });
+
+  it('F3.11e-OPT scope-options: şube yöneticisi yalnız kendi şubesi, admin tüm aktif şubeler, depo listesi boş', async () => {
+    const own = await http().get('/api/v1/team/scope-options').set(manager.auth);
+    expect(own.status).toBe(200);
+    expect(own.body).toEqual({ branches: [{ id: branchX, name: 'Şube X' }], warehouses: [] });
+    const all = await http().get('/api/v1/team/scope-options').set(admin.auth);
+    const rows = (all.body as { branches: { id: string }[] }).branches.map((b) => b.id);
+    expect(rows).toEqual(expect.arrayContaining([branchX, branchY]));
+    const inactive = await platformRows<{ id: string }>(
+      "select id from branches where business_id = $1 and status = 'inactive'",
+      [admin.businessId],
+    );
+    for (const row of inactive) expect(rows).not.toContain(row.id);
   });
 
   it('F2.5-S1 işletme admini her şubeye atar ve davet eder', async () => {

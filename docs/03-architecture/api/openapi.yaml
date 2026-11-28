@@ -692,6 +692,11 @@ paths:
         `409 LAST_ADMIN_PROTECTED` (US-013 AC3). Çıkarılmış üye yalnızca yeniden davetle döner
         (`status: active` gönderilemez). Rol değişikliği audit'e kim, kime, eski ve yeni rol yazar;
         sonraki istekte geçerli olur (US-013 AC4). Aktif olmayan veya başka işletmenin üyeliği `404`.
+        Kapsam kuralı (F2.5 S1, F3.11e S1 = A, S2 = B): işletme admini olmayan aktör kendi şubesine
+        bağlıysa üyeyi yalnız o şubeye bağlar ve başka şubedeki üyeyi değiştiremez / çıkaramaz; kendi
+        deposuna bağlıysa aynı kural depoda geçerlidir → `403 PERMISSION_DENIED`
+        (`branchId` / `warehouseId: [beyond_actor]`). Şubeye / depoya bağlı olmayan aktör tüm şube ve
+        depoları yönetir (rol koruması F2.8 aynen geçerli).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       requestBody:
         content:
@@ -734,7 +739,7 @@ paths:
       summary: Kullanıcı davet et (US-013)
       description: >-
         İzin `team.manage`. Unvan aktif ve işletmenin yeteneğinde, rol işletmenin rolü olmalı;
-        kapsam kuralı `PATCH /team/members/{id}` ile aynı (şube/depo). Telefon kayıtlı değilse
+        kapsam kuralı `PATCH /team/members/{id}` ile aynı (şube/depo; F3.11e aktör kuralı dahil). Telefon kayıtlı değilse
         kullanıcı satırı `fullName` ile oluşur, kayıtlıysa adı değişmez (F2.7 K1); yanıt iki durumda
         aynıdır. Telefon işletmede aktif üye → `409 MEMBER_ALREADY_EXISTS`. Aynı telefona açık davet
         varsa kapanır, yenisi gider (VARSAYIM K3). Planın `users.max` hakkı aktif üye + açık davet
@@ -779,12 +784,31 @@ paths:
       description: >-
         İzin `team.manage`. Davetin süresi şimdiye çekilir (`expires_at = now`); bağlantı artık
         kabul edilmez ve `users.max` sayacından düşer. Kabul edilmiş, süresi dolmuş veya başka
-        işletmenin daveti `404`.
+        işletmenin daveti `404`. İşletme admini olmayan aktör kendi şubesine / deposuna bağlıysa
+        başka şubenin / deponun davetini geri çekemez → `403` (F2.5 K1, F3.11e).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       responses:
         '204': { description: Geri çekildi }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /api/v1/team/scope-options:
+    get:
+      tags: [team]
+      summary: Ekip formunda seçilebilecek şube ve depolar (F3.11e)
+      description: >-
+        İzin `team.manage`. Aktörün üyeye atayabileceği **aktif** şubeler (yetenek `buyer`) ve depolar
+        (yetenek `seller`), ada göre sıralı. İşletme admini ve şubeye / depoya bağlı olmayan aktör
+        hepsini alır; kendi şubesine / deposuna bağlı admin olmayan aktör yalnız onu alır
+        (`PATCH /team/members/{id}` kapsam kuralı). İşletmenin yeteneğinde olmayan liste boş döner.
+        `business.manage` gerekmez (F2.5 T8 notu).
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Seçenekler
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamScopeOptions' }
+        '403': { $ref: '#/components/responses/Error' }
   /api/v1/team/invitations/accept:
     post:
       tags: [team]
@@ -4274,6 +4298,22 @@ components:
         warehouseId: { type: [string, 'null'], format: uuid }
         expiresAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
+    TeamScopeOptions:
+      type: object
+      required: [branches, warehouses]
+      properties:
+        branches:
+          type: array
+          items: { $ref: '#/components/schemas/TeamScopeOption' }
+        warehouses:
+          type: array
+          items: { $ref: '#/components/schemas/TeamScopeOption' }
+    TeamScopeOption:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
     TeamRole:
       type: object
       required: [id, name, capability, isBusinessAdmin, sourceTemplateId, isCustom, permissions]

@@ -66,6 +66,12 @@ export interface MembershipPatch {
   readonly status?: 'removed';
 }
 
+/** Ekip formu şube / depo seçeneği (openapi `TeamScopeOption`). */
+export interface ScopeOptionRow {
+  readonly id: string;
+  readonly name: string;
+}
+
 @Injectable()
 export class TeamRepository {
   async listMembers(tx: Tx, businessId: string): Promise<TeamMemberRow[]> {
@@ -194,6 +200,44 @@ export class TeamRepository {
     return rows[0]?.status;
   }
 
+  /** Aktif şubeler ada göre; `onlyId` verilirse yalnız o şube (F3.11e K3). */
+  async activeBranchOptions(
+    tx: Tx,
+    businessId: string,
+    onlyId: string | null,
+  ): Promise<ScopeOptionRow[]> {
+    return await tx
+      .select({ id: branches.id, name: branches.name })
+      .from(branches)
+      .where(
+        and(
+          eq(branches.businessId, businessId),
+          eq(branches.status, 'active'),
+          onlyId === null ? undefined : eq(branches.id, onlyId),
+        ),
+      )
+      .orderBy(asc(branches.name), asc(branches.id));
+  }
+
+  /** Aktif depolar ada göre; `onlyId` verilirse yalnız o depo (F3.11e K3). */
+  async activeWarehouseOptions(
+    tx: Tx,
+    businessId: string,
+    onlyId: string | null,
+  ): Promise<ScopeOptionRow[]> {
+    return await tx
+      .select({ id: warehouses.id, name: warehouses.name })
+      .from(warehouses)
+      .where(
+        and(
+          eq(warehouses.businessId, businessId),
+          eq(warehouses.status, 'active'),
+          onlyId === null ? undefined : eq(warehouses.id, onlyId),
+        ),
+      )
+      .orderBy(asc(warehouses.name), asc(warehouses.id));
+  }
+
   /** Rolün izin kapsamları (kapsam kuralı, K9). */
   async roleScopes(tx: Tx, roleId: string): Promise<Set<string>> {
     const rows = await tx
@@ -301,15 +345,15 @@ export class TeamRepository {
       .orderBy(asc(invitations.createdAt), asc(invitations.id));
   }
 
-  /** Açık davetin şubesi (kilitli); açık davet yoksa undefined (F2.5 K1). */
-  async lockOpenInvitationBranch(
+  /** Açık davetin şubesi ve deposu (kilitli); açık davet yoksa undefined (F2.5 K1, F3.11e). */
+  async lockOpenInvitationScope(
     tx: Tx,
     businessId: string,
     invitationId: string,
     now: Date,
-  ): Promise<{ branchId: string | null } | undefined> {
+  ): Promise<{ branchId: string | null; warehouseId: string | null } | undefined> {
     const rows = await tx
-      .select({ branchId: invitations.branchId })
+      .select({ branchId: invitations.branchId, warehouseId: invitations.warehouseId })
       .from(invitations)
       .where(
         and(

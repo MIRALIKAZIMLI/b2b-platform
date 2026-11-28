@@ -4,12 +4,7 @@
 // en altta açık davetler kartı. Satır eylemleri ikincil düğme; çıkarma ve geri çekme iki adımlı
 // onaylı (rose yalnız onay kutusunda). `team.manage` yoksa bilgi kartı (menüde de görünmez, AC5).
 // F2.8: en altta "Rollar" kartı (özel rol oluşturma / düzenleme, US-014).
-import {
-  assignableBranches,
-  type GrantActor,
-  pickLocalizedText,
-  type TimeZoneChain,
-} from '@b2b/shared';
+import { type GrantActor, pickLocalizedText, type TimeZoneChain } from '@b2b/shared';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useRegionOptions } from '../admin-sellers/api';
@@ -25,12 +20,13 @@ import {
   useTeamInvitations,
   useTeamMembers,
   useTeamRoles,
+  useTeamScopeOptions,
 } from './api';
 import { InvitationList } from './invitation-list';
 import { InviteCard } from './invite-card';
 import { MemberList } from './member-list';
 import { RoleList } from './role-list';
-import type { ScopeOptions } from './scope-fields';
+import { mergeOptions, type ScopeOptions } from './scope-options';
 
 export function TeamPage() {
   const t = useTranslations('team');
@@ -43,7 +39,8 @@ export function TeamPage() {
   const isSeller = capability === 'seller';
   const canManageBusiness = permissions.some((item) => item.code === 'business.manage');
   const canReadWarehouses = isSeller && canManageBusiness;
-  // F2.5b: şube listesi `business.manage` ister (T8, depolarla aynı); yoksa açıklama gösterilir.
+  // Tam şube / depo listesi yalnız üye satırlarındaki adlar için (`business.manage`); seçenekler
+  // F3.11e'den beri `GET /team/scope-options` ile gelir.
   const canReadBranches = capability === 'buyer' && canManageBusiness;
   const scoped = allowed ? businessId : undefined;
 
@@ -52,6 +49,7 @@ export function TeamPage() {
   const roles = useTeamRoles(scoped);
   const jobTitles = useJobTitles(scoped);
   const roleTemplates = useRoleTemplates(scoped);
+  const choices = useTeamScopeOptions(scoped);
   const warehouses = useWarehouses(canReadWarehouses ? scoped : undefined);
   const branches = useBranches(canReadBranches ? scoped : undefined);
   const regions = useRegionOptions(locale);
@@ -74,27 +72,26 @@ export function TeamPage() {
       })),
     [jobTitles.data, locale],
   );
-  // F2.5 S1: admin olmayan yönetici yalnız kendi şubesini seçer (sunucu da 403 verir).
+  // F2.5 S1 + F3.11e: admin olmayan yönetici kendi şubesine / deposuna bağlıysa yalnız onu seçer;
+  // bağlı değilse hepsini (S2 = B). Seçenekleri sunucu süzer, sunucu ayrıca 403 verir.
   const self = members.data?.find((m) => m.isSelf);
   const selfIsAdmin = self?.isBusinessAdmin ?? false;
-  const selfBranchId = self?.branchId ?? null;
+  const branchOwnOnly = !selfIsAdmin && (self?.branchId ?? null) !== null;
+  const warehouseOwnOnly = !selfIsAdmin && (self?.warehouseId ?? null) !== null;
   const scopeOptions = useMemo<ScopeOptions>(() => {
-    const activeBranches = branches.data
-      ?.filter((item) => item.status === 'active')
-      .map((item) => ({ id: item.id, label: item.name }));
+    const toOption = (item: { id: string; name: string }) => ({ id: item.id, label: item.name });
+    const branchChoices = choices.data?.branches.map(toOption);
+    const warehouseChoices = choices.data?.warehouses.map(toOption);
     return {
-      warehouses: warehouses.data
-        ?.filter((item) => item.status === 'active')
-        .map((item) => ({ id: item.id, label: item.name })),
-      branches: branches.data?.map((item) => ({ id: item.id, label: item.name })),
-      branchChoices: assignableBranches(activeBranches, {
-        isBusinessAdmin: selfIsAdmin,
-        branchId: selfBranchId,
-      }),
-      branchOwnOnly: !selfIsAdmin,
+      branches: mergeOptions(branches.data?.map(toOption), branchChoices),
+      warehouses: mergeOptions(warehouses.data?.map(toOption), warehouseChoices),
+      branchChoices,
+      warehouseChoices,
+      branchOwnOnly,
+      warehouseOwnOnly,
       regions: regions.data ?? [],
     };
-  }, [warehouses.data, branches.data, regions.data, selfIsAdmin, selfBranchId]);
+  }, [choices.data, warehouses.data, branches.data, regions.data, branchOwnOnly, warehouseOwnOnly]);
   // F2.8 (R3): rol düzenleyicide aktörün verebileceği izinler. Admin bayrağı üye listesinden
   // (`isSelf`); sunucu aynı kuralı ayrıca uygular.
   const actor = useMemo<GrantActor>(

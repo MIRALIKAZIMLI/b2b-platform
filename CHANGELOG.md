@@ -80,3 +80,4 @@
 - F3.11b: depo stok ekranı web (depodaki tüm ürünler koli + adetle, mal girişi, sayım, hareket geçmişi, "az qalan" eşiği toptancı ayarı, Ayarlarda miktarlı modu açma; `GET /stock/warehouses`, `GET /stock/items`)
 - F3.11c: Excel ile stok sayımı (migration 0043; depo seçilerek dolu şablon, sayılan toplam, şablondan sonra değişen stok uygulanmaz, ürün şablonundaki stok sütunu, sihirbazda "Anbar qalığı" ve stok ekranında Excel düğmesi)
 - F3.11d: mobil depo stok ekranı (mal girişi, sayım, hareket geçmişi)
+- F3.11e: depo ekip kuralı (admin olmayan yönetici yalnız kendi deposu/şubesi; bağsız yönetici hepsi), GET /team/scope-options

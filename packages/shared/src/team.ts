@@ -194,18 +194,6 @@ const FIELD_REASONS: Readonly<Record<string, TeamFieldError>> = {
   beyond_actor: 'beyond_actor',
 };
 
-/**
- * F2.5 S1: ekip formunda seçilebilecek şubeler. İşletme admini tüm aktif şubeleri seçer; admin
- * olmayan yönetici yalnız kendi şubesini (şubesi yoksa boş liste). Liste okunamadıysa `undefined`.
- */
-export function assignableBranches<T extends { readonly id: string }>(
-  active: readonly T[] | undefined,
-  actor: { readonly isBusinessAdmin: boolean; readonly branchId: string | null },
-): readonly T[] | undefined {
-  if (active === undefined || actor.isBusinessAdmin) return active;
-  return active.filter((item) => item.id === actor.branchId);
-}
-
 export type TeamFailure =
   | { readonly kind: 'plan_limit' }
   | { readonly kind: 'fields'; readonly fields: Partial<Record<string, TeamFieldError>> }

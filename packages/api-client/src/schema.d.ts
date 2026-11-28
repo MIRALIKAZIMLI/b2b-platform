@@ -1211,7 +1211,7 @@ export interface paths {
         head?: never;
         /**
          * Üyenin rolünü / kapsamını değiştir veya çıkar (US-013)
-         * @description İzin `team.manage`. Yalnız verilen alanlar değişir; boş gövde `422`. Rol işletmenin rolü ve işletmenin yeteneğinde olmalı. Kapsam rolden türetilir (F2.7 K9): rolde `branch` kapsamlı izin varsa üyeliğin şubesi, `warehouse` kapsamlı izin varsa deposu olmalı; gerekmeyen kapsam alanı veya `assigned` kapsamı olmayan rolde `regionIds` `422 VALIDATION_FAILED`. Başka işletmenin şubesi/deposu veya olmayan bölge `404`. `status: removed` üyeliği çıkarır (bölgeleri silinir); tek admin kendi rolünü düşüremez / kendini çıkaramaz → `409 LAST_ADMIN_PROTECTED` (US-013 AC3). Çıkarılmış üye yalnızca yeniden davetle döner (`status: active` gönderilemez). Rol değişikliği audit'e kim, kime, eski ve yeni rol yazar; sonraki istekte geçerli olur (US-013 AC4). Aktif olmayan veya başka işletmenin üyeliği `404`.
+         * @description İzin `team.manage`. Yalnız verilen alanlar değişir; boş gövde `422`. Rol işletmenin rolü ve işletmenin yeteneğinde olmalı. Kapsam rolden türetilir (F2.7 K9): rolde `branch` kapsamlı izin varsa üyeliğin şubesi, `warehouse` kapsamlı izin varsa deposu olmalı; gerekmeyen kapsam alanı veya `assigned` kapsamı olmayan rolde `regionIds` `422 VALIDATION_FAILED`. Başka işletmenin şubesi/deposu veya olmayan bölge `404`. `status: removed` üyeliği çıkarır (bölgeleri silinir); tek admin kendi rolünü düşüremez / kendini çıkaramaz → `409 LAST_ADMIN_PROTECTED` (US-013 AC3). Çıkarılmış üye yalnızca yeniden davetle döner (`status: active` gönderilemez). Rol değişikliği audit'e kim, kime, eski ve yeni rol yazar; sonraki istekte geçerli olur (US-013 AC4). Aktif olmayan veya başka işletmenin üyeliği `404`. Kapsam kuralı (F2.5 S1, F3.11e S1 = A, S2 = B): işletme admini olmayan aktör kendi şubesine bağlıysa üyeyi yalnız o şubeye bağlar ve başka şubedeki üyeyi değiştiremez / çıkaramaz; kendi deposuna bağlıysa aynı kural depoda geçerlidir → `403 PERMISSION_DENIED` (`branchId` / `warehouseId: [beyond_actor]`). Şubeye / depoya bağlı olmayan aktör tüm şube ve depoları yönetir (rol koruması F2.8 aynen geçerli).
          */
         patch: {
             parameters: {
@@ -1291,7 +1291,7 @@ export interface paths {
         put?: never;
         /**
          * Kullanıcı davet et (US-013)
-         * @description İzin `team.manage`. Unvan aktif ve işletmenin yeteneğinde, rol işletmenin rolü olmalı; kapsam kuralı `PATCH /team/members/{id}` ile aynı (şube/depo). Telefon kayıtlı değilse kullanıcı satırı `fullName` ile oluşur, kayıtlıysa adı değişmez (F2.7 K1); yanıt iki durumda aynıdır. Telefon işletmede aktif üye → `409 MEMBER_ALREADY_EXISTS`. Aynı telefona açık davet varsa kapanır, yenisi gider (VARSAYIM K3). Planın `users.max` hakkı aktif üye + açık davet sayısıyla denetlenir; doluysa `403 ENTITLEMENT_LIMIT_REACHED` (US-013 AC2, VARSAYIM K2). Geçerlilik `invitation.team_days`. SMS (`WEB_BASE_URL/<dil>/activate?token=`) işlemden sonra gider; gönderilemezse davet kalır, `smsSent: false`. Kabul `POST /team/invitations/accept`.
+         * @description İzin `team.manage`. Unvan aktif ve işletmenin yeteneğinde, rol işletmenin rolü olmalı; kapsam kuralı `PATCH /team/members/{id}` ile aynı (şube/depo; F3.11e aktör kuralı dahil). Telefon kayıtlı değilse kullanıcı satırı `fullName` ile oluşur, kayıtlıysa adı değişmez (F2.7 K1); yanıt iki durumda aynıdır. Telefon işletmede aktif üye → `409 MEMBER_ALREADY_EXISTS`. Aynı telefona açık davet varsa kapanır, yenisi gider (VARSAYIM K3). Planın `users.max` hakkı aktif üye + açık davet sayısıyla denetlenir; doluysa `403 ENTITLEMENT_LIMIT_REACHED` (US-013 AC2, VARSAYIM K2). Geçerlilik `invitation.team_days`. SMS (`WEB_BASE_URL/<dil>/activate?token=`) işlemden sonra gider; gönderilemezse davet kalır, `smsSent: false`. Kabul `POST /team/invitations/accept`.
          */
         post: {
             parameters: {
@@ -1357,7 +1357,7 @@ export interface paths {
         put?: never;
         /**
          * Açık daveti geri çek (F2.7)
-         * @description İzin `team.manage`. Davetin süresi şimdiye çekilir (`expires_at = now`); bağlantı artık kabul edilmez ve `users.max` sayacından düşer. Kabul edilmiş, süresi dolmuş veya başka işletmenin daveti `404`.
+         * @description İzin `team.manage`. Davetin süresi şimdiye çekilir (`expires_at = now`); bağlantı artık kabul edilmez ve `users.max` sayacından düşer. Kabul edilmiş, süresi dolmuş veya başka işletmenin daveti `404`. İşletme admini olmayan aktör kendi şubesine / deposuna bağlıysa başka şubenin / deponun davetini geri çekemez → `403` (F2.5 K1, F3.11e).
          */
         post: {
             parameters: {
@@ -1383,6 +1383,48 @@ export interface paths {
                 404: components["responses"]["Error"];
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/scope-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ekip formunda seçilebilecek şube ve depolar (F3.11e)
+         * @description İzin `team.manage`. Aktörün üyeye atayabileceği **aktif** şubeler (yetenek `buyer`) ve depolar (yetenek `seller`), ada göre sıralı. İşletme admini ve şubeye / depoya bağlı olmayan aktör hepsini alır; kendi şubesine / deposuna bağlı admin olmayan aktör yalnız onu alır (`PATCH /team/members/{id}` kapsam kuralı). İşletmenin yeteneğinde olmayan liste boş döner. `business.manage` gerekmez (F2.5 T8 notu).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Seçenekler */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamScopeOptions"];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8356,6 +8398,15 @@ export interface components {
             expiresAt: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        TeamScopeOptions: {
+            branches: components["schemas"]["TeamScopeOption"][];
+            warehouses: components["schemas"]["TeamScopeOption"][];
+        };
+        TeamScopeOption: {
+            /** Format: uuid */
+            id: string;
+            name: string;
         };
         TeamRole: {
             /** Format: uuid */
