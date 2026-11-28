@@ -429,6 +429,7 @@ Onayımı bekle.
 - **Dosyalar:** `seller_profiles.stock_mode` ayar ekranı, `PUT /api/v1/variants/{id}/availability`.
 - **Kabul:** US-038 AC1–AC2.
 - **Test:** Entegrasyon.
+- **Durum:** Tek PR (`docs/tasks/F3.10.md`): migration yok; `GET /stock-mode`, `PUT /variants/{id}/availability` (`modules/inventory`), satıcı profilinde `stockMode`; web "Stok" sekmesi + ürün formunda var/yok kartı. Perakendeci etiketi F3.12a, sepet engeli F4.1.
 
 ### F3.11 — Miktarlı stok ve hareketler
 

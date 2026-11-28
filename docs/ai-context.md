@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-26 (F3.3b: web ürün listesi ve formu).
+Son güncelleme: 2026-11-27 (F3.10: stok modları 0–1).
 
 ## 1. Mimari özeti
 
@@ -149,8 +149,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 | F3.7b | Müşteri fiyatı web (US-035): müşteri satırında "Xüsusi qiymətlər" sayfası (`/seller/customers/{buyerId}/prices`: geçerli + ileri tarihli, değiştir, sil), ürün fiyat kartında seçili müşteriye hemen geçerli fiyat, sihirbazda `customer_prices` türü + müşteri seçimi (`?type=&buyerId=`). #85: onay düğmesi `canApply`'a göre, yalnız 404 "süresi doldu". Müfettiş 30: `0040` arşiv yarışı (bağlantı satırı kilidi + `customer_prices_buyer_guard`), Excel fiyat audit'i, ürün şablonu müşteri fiyatı işinde `wrong_template` |
 | F3.5b | Web içe aktarma sihirbazı (US-031 AC1–AC3): `/seller/products/import` (ürünler sayfasında "Excel ilə idxal", `imports.run`), iş kimliği adreste `?job=`. Adımlar Fayl · Yoxlama · Təsdiq · Nəticə; worker sürerken 2 sn izleme; önizlemede sayılar, ilk sorunlu satırlar, rapor, ileri tarihli fiyat notu; 403 onayda düğme kalkar (S1 = A); tətbiqdə `appliedUntilRow` ilerlemesi, kısmi başarısızlıkta uygulanan satır sayısı (Müfettiş 29 not 1, 3). Saf yardımcılar `features/imports/wizard-state.ts`; E2E worker yokken iş yanıtlarını taklit eder |
 | F3.9 | Kademeli fiyat (US-037 AC1; S1 = A web kartı, S2 = A artan indirim + `pricing.tier_max_per_packaging` 5): `0041` `tier_prices` (T; PK `(seller, packaging, min_qty)`; bileşik FK ambalaj CASCADE; `min_qty > 1`, `0 < % < 100`; platform yalnız SELECT; `buyer_id` yok, bütün perakendecilere). `GET/PUT /tier-prices` (PUT ambalajın bütün kademelerini değiştirir, ambalaj `FOR NO KEY UPDATE`; audit `tier_price.set`); kurallar `@b2b/shared` `tier-prices.ts`. `BuyerPriceLoader` kademeyi çekirdeğe verir; `/prices/explain?qty=`. Web ürün formunda "Pilləli endirim" kartı + açıklamada miktar. Sepette gösterim F4.1 |
+| F3.10 | Stok modları 0–1 (US-038, ADR-0018): migration yok. Satıcı profili `stockMode` (`none`/`availability`; `quantity` 422 → F3.11a, S5 = B). Yeni `modules/inventory`: `GET /stock-mode` (`inventory.view`), `PUT /variants/{id}/availability` (`inventory.manage`, depo kapsamı dahil; mod satırı `FOR SHARE`, varyant `FOR NO KEY UPDATE`; başka modda `409 STOCK_MODE_MISMATCH`; arşivli 409; audit `variant.availability_set` yalnız değişince). Kural `@b2b/shared` `variantBlockedByStock` → F3.12a etiket, F4.1 sepet. Web ayarlarda "Stok" sekmesi + ürün formunda "Stok vəziyyəti" kartı |
 
-**Sıradaki:** F3.10 stok modları 0–1 (faz spesifikasyonu `tasks/F3-faz-spesifikasyonu.md` §3); not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
+**Sıradaki:** F3.11a miktarlı stok API (faz spesifikasyonu `tasks/F3-faz-spesifikasyonu.md` §3); not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 

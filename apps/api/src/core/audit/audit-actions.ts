@@ -84,6 +84,8 @@ export const AUDIT_ACTIONS = [
   'customer_price.removed',
   // F3.9 (US-037): kademeli indirim; ambalajın önceki ve yeni kademeleri (boş = kaldırıldı).
   'tier_price.set',
+  // F3.10 (US-038 AC2): varyantın var/yok işareti; yalnız değer değişince (before/after isAvailable).
+  'variant.availability_set',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -141,6 +143,8 @@ export const AUDIT_TARGET_TYPES = [
   'import_job',
   'customer_price',
   'tier_price',
+  // F3.10: hedef kimliği product_variants.id.
+  'product_variant',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

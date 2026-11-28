@@ -58,6 +58,7 @@ import { type BrandChoice, BrandPicker } from './brand-picker';
 import { useFieldError } from './error-text';
 import { ProductPricesCard } from '../prices/product-prices-card';
 import { ProductTierPricesCard } from '../prices/product-tier-prices-card';
+import { VariantAvailabilityCard } from '../inventory/variant-availability-card';
 import { ImagesCard } from './images-card';
 import { StatusBadge } from './products-page';
 import { unitLabel, VariantsEditor } from './variants-editor';
@@ -601,6 +602,11 @@ function ProductFormView({
       {product !== undefined && (
         <div className="mt-6">
           <ProductTierPricesCard businessId={businessId} product={product} units={units} />
+        </div>
+      )}
+      {product !== undefined && (
+        <div className="mt-6">
+          <VariantAvailabilityCard businessId={businessId} product={product} />
         </div>
       )}
       {confirmArchive && (

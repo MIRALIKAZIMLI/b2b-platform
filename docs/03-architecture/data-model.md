@@ -850,6 +850,8 @@ F3.7a (`0039_customer_prices.sql`): PK `(seller_id, buyer_id, packaging_id, vali
 
 F3.9 (`0041_tier_prices.sql`; US-037 AC1, ADR-0019): PK `(seller_id, packaging_id, min_qty)` (ambalaj tek satıcıya ait olduğundan `(packaging_id, min_qty)` benzersizliğini de verir; FK kaskadı PK önekini kullanır). Kademe ambalaj seviyesinin **bütün** perakendecilerine uygulanır (`buyer_id` yok; arşiv tetikleyicisi gerekmez) ve `PriceResolver`'da seçilen fiyatın (müşteri fiyatı, atanmış liste, varsayılan liste) üzerine, şube indiriminden önce gelir; miktarın ulaştığı en büyük eşik seçilir. Tarih yok: hemen geçerli. Kurallar (kullanıcı kararı S2 = A, servis + şema): eşik tekrarsız, eşik büyüdükçe indirim büyür; ambalaj başına en çok `pricing.tier_max_per_packaging` (5) kademe. `PUT /tier-prices` ambalajın bütün satırlarını siler ve yeniden yazar (ambalaj satırı `FOR NO KEY UPDATE`; eşzamanlı yazımlar sıralanır); audit `tier_price.set` (önceki ve yeni kademeler). RLS: `tier_prices_tenant` (FOR ALL, `seller_id`), `tier_prices_platform_select`; perakendeciye politika yok. `app_user` SELECT, INSERT, DELETE (UPDATE yok).
 
+F3.10 (migration yok; US-038, ADR-0018): `seller_profiles.stock_mode` satıcı profili PATCH'iyle `none` / `availability` yazılır (`quantity` F3.11a'da iki adımlı geçişle, S5 = B). `product_variants.is_available` yalnız `inventory` modülünde (`PUT /variants/{id}/availability`) ve yalnız mod `availability` iken yazılır; mod değişince işaret silinmez, `none` / `quantity` modunda yok sayılır. Ürün düzenlemesi işarete dokunmaz.
+
 ### 4.10 `inventory`
 
 #### `stock` (T)

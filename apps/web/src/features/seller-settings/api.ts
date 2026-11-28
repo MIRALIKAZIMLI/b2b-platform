@@ -7,6 +7,7 @@ import type { SellerProfileBody } from '@b2b/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { webApi } from '../../lib/session';
 import { ApiError } from '../admin-sellers/api';
+import { STOCK_MODE_KEY } from '../inventory/api';
 
 export type Warehouse = components['schemas']['Warehouse'];
 export type SellerProfile = components['schemas']['SellerProfile'];
@@ -103,6 +104,8 @@ export function useUpdateSellerProfile(businessId: string | undefined) {
     },
     onSuccess: (profile) => {
       queryClient.setQueryData([...SELLER_PROFILE_KEY, businessId ?? null], profile);
+      // F3.10: ürün formundaki var/yok kartı modu bu önbellekten okur.
+      queryClient.setQueryData([...STOCK_MODE_KEY, businessId ?? null], profile.stockMode);
     },
   });
 }

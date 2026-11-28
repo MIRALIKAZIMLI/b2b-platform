@@ -1,7 +1,7 @@
 'use client';
 // Toptancı ayarları (F2.6, US-011). UX kararları: tek sayfa, üç sekme (satıcı profili, depolar,
 // hizmet bölgeleri); her sekme kendi "Kaydet"iyle bağımsız (yarım kalan form diğerini etkilemez).
-// Para birimi (minimum tutarın yanında) işletme profilinden.
+// Para birimi (minimum tutarın yanında) işletme profilinden. F3.10: dördüncü sekme "Stok" (stok rejimi).
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useBusinessProfile } from '../buyer-registration/api';
@@ -9,9 +9,10 @@ import { useShell } from '../shell/use-shell';
 import { PageHeader } from '../ui/primitives';
 import { SellerProfileCard } from './profile-card';
 import { ServiceAreasCard } from './service-areas-card';
+import { StockModeCard } from './stock-mode-card';
 import { WarehousesCard } from './warehouses-card';
 
-const TABS = ['profile', 'warehouses', 'areas'] as const;
+const TABS = ['profile', 'warehouses', 'areas', 'stock'] as const;
 type Tab = (typeof TABS)[number];
 
 export function SellerSettingsPage() {
@@ -63,6 +64,7 @@ export function SellerSettingsPage() {
         )}
         {tab === 'warehouses' && <WarehousesCard businessId={activeBusinessId} />}
         {tab === 'areas' && <ServiceAreasCard businessId={activeBusinessId} />}
+        {tab === 'stock' && <StockModeCard businessId={activeBusinessId} />}
       </section>
     </div>
   );

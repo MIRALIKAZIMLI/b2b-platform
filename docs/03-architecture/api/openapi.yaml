@@ -541,9 +541,11 @@ paths:
       tags: [business]
       summary: Satıcı profilini güncelle (F2.6)
       description: >
-        Yalnız gönderilen alanlar yazılır. `minOrderAmount: null` alt sınırı kaldırır. Stok modu ve
-        düşük stok eşiği stok adımında (F3), varsayılan fiyat listesi F3.6'da; varsayılan depo
-        `PATCH /api/v1/warehouses/{id}` (`isDefault: true`) ile değişir.
+        Yalnız gönderilen alanlar yazılır. `minOrderAmount: null` alt sınırı kaldırır. Stok modu
+        (F3.10, US-038 AC1) `none` veya `availability` olarak yazılır; `quantity` iki adımlı geçişle
+        F3.11a'da gelir (S5 = B), bugün `422`. Mod değişince varyantların var/yok işaretleri silinmez,
+        `availability`'ye dönünce yeniden geçerli olur. Düşük stok eşiği F3.11a'da, varsayılan fiyat
+        listesi F3.6'da; varsayılan depo `PATCH /api/v1/warehouses/{id}` (`isDefault: true`) ile değişir.
       parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
       requestBody:
         content:
@@ -2010,21 +2012,52 @@ paths:
                 note: { type: string }
       responses:
         '201': { description: Kaydedildi }
+  /api/v1/stock-mode:
+    get:
+      tags: [inventory]
+      summary: Toptancının stok modu (F3.10)
+      description: >
+        `inventory.view` ile okunur (satıcı profili `business.manage` ister; depo ve satış ekranları
+        modu buradan öğrenir). Mod `PATCH /api/v1/business/seller-profile` ile değişir.
+      parameters: [ { $ref: '#/components/parameters/BusinessId' } ]
+      responses:
+        '200':
+          description: Mod
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StockModeView' }
+        '403': { $ref: '#/components/responses/Error' }
   /api/v1/variants/{id}/availability:
     put:
       tags: [inventory]
-      summary: Var / yok işaretle (US-038)
+      summary: Var / yok işaretle (US-038 AC2, F3.10)
+      description: >
+        İzin `inventory.manage` (kapsam `all` veya `warehouse`: işaret depoya değil varyanta aittir).
+        Yalnız stok modu `availability` iken: başka modda `409 STOCK_MODE_MISMATCH`. Arşivli varyant
+        veya arşivli ürün `409 INVALID_STATE_TRANSITION`; başka satıcının veya olmayan varyant `404`.
+        Aynı değer tekrar gönderilirse sonuç aynıdır, audit yazılmaz; değişince audit
+        `variant.availability_set`. `isAvailable: false` varyant perakendecide "Stokta yok" görünür
+        ve sepete eklenemez (liste F3.12a, sepet F4.1; kural `@b2b/shared` `variantBlockedByStock`).
       parameters: [ { $ref: '#/components/parameters/BusinessId' }, { $ref: '#/components/parameters/Id' } ]
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [isAvailable]
               properties:
                 isAvailable: { type: boolean }
       responses:
-        '200': { description: Güncellendi }
+        '200':
+          description: Güncellendi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VariantAvailability' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
 
   # ---------------------------------------------------------------- cart
   /api/v1/cart:
@@ -3887,6 +3920,7 @@ components:
         - JOB_TITLE_IN_USE
         - PRICE_LIST_IN_USE
         - PRICE_LIST_DEFAULT_PROTECTED
+        - STOCK_MODE_MISMATCH
         - INTERNAL_ERROR
     PhoneE164:
       type: string
@@ -4347,7 +4381,7 @@ components:
         status: { type: string, enum: [active, inactive] }
     SellerProfile:
       type: object
-      required: [description, minOrderAmount, requireDeliveryPhoto, defaultWarehouseId]
+      required: [description, minOrderAmount, requireDeliveryPhoto, defaultWarehouseId, stockMode]
       properties:
         description:
           oneOf:
@@ -4360,6 +4394,24 @@ components:
             - type: 'null'
         requireDeliveryPhoto: { type: boolean }
         defaultWarehouseId: { type: [string, 'null'], format: uuid }
+        stockMode: { $ref: '#/components/schemas/StockMode' }
+    StockMode:
+      type: string
+      description: ADR-0018. `none` her aktif varyant sipariş edilebilir; `availability` var/yok işareti; `quantity` miktarlı stok (F3.11a).
+      enum: [none, availability, quantity]
+    StockModeView:
+      type: object
+      additionalProperties: false
+      required: [stockMode]
+      properties:
+        stockMode: { $ref: '#/components/schemas/StockMode' }
+    VariantAvailability:
+      type: object
+      additionalProperties: false
+      required: [variantId, isAvailable]
+      properties:
+        variantId: { type: string, format: uuid }
+        isAvailable: { type: boolean }
     SellerProfileUpdate:
       type: object
       additionalProperties: false
@@ -4377,6 +4429,10 @@ components:
               pattern: '^[0-9]{1,12}(\.[0-9]{1,2})?$'
             - type: 'null'
         requireDeliveryPhoto: { type: boolean }
+        stockMode:
+          type: string
+          description: F3.10. `quantity` F3.11a'da iki adımlı geçişle; bugün `422`.
+          enum: [none, availability]
     ServiceAreas:
       type: object
       additionalProperties: false

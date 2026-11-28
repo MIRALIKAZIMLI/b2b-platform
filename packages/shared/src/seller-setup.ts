@@ -1,6 +1,7 @@
 // Toptancı kurulumu formları (F2.6, US-011): satıcı profili ve depo. Asıl doğrulama API'dedir
 // (`/api/v1/business/seller-profile`, `/api/v1/warehouses`); burası alanın yanında erken geri
 // bildirim ve API hatası → alan hatası eşlemesi içindir. Saf fonksiyonlar; birim testli.
+import type { SelectableStockMode } from './stock';
 
 /** Tanıtım metninin düzenlendiği diller (arayüz dilleri; `en` F2'de yok). */
 export const SELLER_DESCRIPTION_LANGUAGES = ['az', 'ru', 'tr'] as const;
@@ -30,6 +31,8 @@ export interface SellerProfileBody {
   description?: Record<string, string> | null;
   minOrderAmount?: string | null;
   requireDeliveryPhoto?: boolean;
+  /** F3.10: ayarlardaki "Stok" sekmesi yalnız bu alanı gönderir. */
+  stockMode?: SelectableStockMode;
 }
 
 /** Hata nedeni = `sellerSettings.error.<neden>` çeviri anahtarının sonu. */

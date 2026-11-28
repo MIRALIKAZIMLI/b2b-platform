@@ -238,6 +238,7 @@ describe('F2.6 depolar, satıcı profili, hizmet bölgeleri', () => {
         minOrderAmount: null,
         requireDeliveryPhoto: false,
         defaultWarehouseId: null,
+        stockMode: 'availability',
       });
 
       const response = await patchProfile(who, {
@@ -251,6 +252,7 @@ describe('F2.6 depolar, satıcı profili, hizmet bölgeleri', () => {
         minOrderAmount: '150.50',
         requireDeliveryPhoto: true,
         defaultWarehouseId: null,
+        stockMode: 'availability',
       });
 
       const cleared = await patchProfile(who, { minOrderAmount: null, description: { az: '' } });
@@ -273,7 +275,9 @@ describe('F2.6 depolar, satıcı profili, hizmet bölgeleri', () => {
         const response = await patchProfile(who, { minOrderAmount });
         expect(response.status, String(minOrderAmount)).toBe(422);
       }
-      expect((await patchProfile(who, { stockMode: 'none' })).status).toBe(422);
+      // F3.10: `none` / `availability` yazılır; `quantity` F3.11a'ya kadar 422 (S5 = B).
+      expect((await patchProfile(who, { stockMode: 'quantity' })).status).toBe(422);
+      expect((await patchProfile(who, { stockMode: 'sync' })).status).toBe(422);
       expect((await patchProfile(who, {})).status).toBe(422);
     });
 

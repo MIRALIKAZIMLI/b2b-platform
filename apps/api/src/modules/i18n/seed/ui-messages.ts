@@ -7354,4 +7354,95 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Скидка на больший порог должна быть больше, чем на меньший.',
     tr: 'Büyük eşiğin indirimi küçük eşiğinkinden fazla olmalı.',
   },
+  // F3.10 (US-038): stok rejimi ve var/yok kartı; çeviriler taslak, kullanıcı onayı bekliyor.
+  'sellerSettings.tab.stock': {
+    az: 'Stok',
+    ru: 'Остатки',
+    tr: 'Stok',
+  },
+  'sellerSettings.stock.title': {
+    az: 'Stok rejimi',
+    ru: 'Режим учёта остатков',
+    tr: 'Stok modu',
+  },
+  'sellerSettings.stock.description': {
+    az: 'Pərakəndəçilərin məhsullarınızı necə sifariş edə biləcəyini seçin.',
+    ru: 'Выберите, как розничные покупатели смогут заказывать ваши товары.',
+    tr: 'Perakendecilerin ürünlerinizi nasıl sipariş edebileceğini seçin.',
+  },
+  'sellerSettings.stock.soon': {
+    az: 'Tezliklə',
+    ru: 'Скоро',
+    tr: 'Yakında',
+  },
+  'sellerSettings.stock.mode.none.title': {
+    az: 'İzlənmir',
+    ru: 'Не ведётся',
+    tr: 'Takip edilmez',
+  },
+  'sellerSettings.stock.mode.none.hint': {
+    az: 'Stok izlənmir; bütün aktiv məhsullar sifariş edilə bilər.',
+    ru: 'Остатки не ведутся; все активные товары доступны для заказа.',
+    tr: 'Stok tutulmaz; tüm aktif ürünler sipariş edilebilir.',
+  },
+  'sellerSettings.stock.mode.availability.title': {
+    az: 'Var / yoxdur',
+    ru: 'Есть / нет',
+    tr: 'Var / yok',
+  },
+  'sellerSettings.stock.mode.availability.hint': {
+    az: 'Hər variantı "var" və ya "yoxdur" kimi işarələyirsiniz.',
+    ru: 'Вы отмечаете каждый вариант как «есть» или «нет».',
+    tr: 'Her varyantı "var" veya "yok" olarak işaretlersiniz.',
+  },
+  'sellerSettings.stock.mode.quantity.title': {
+    az: 'Miqdar',
+    ru: 'Количество',
+    tr: 'Miktar',
+  },
+  'sellerSettings.stock.mode.quantity.hint': {
+    az: 'Anbar üzrə dəqiq miqdar. Növbəti yeniləmədə.',
+    ru: 'Точное количество по складам. В следующем обновлении.',
+    tr: 'Depo bazında tam miktar. Sonraki güncellemede.',
+  },
+  'sellerSettings.stock.effect.none': {
+    az: 'Bütün aktiv məhsullar sifariş edilə bilər. Variantların "yoxdur" işarələri saxlanılır və "Var / yoxdur" rejiminə qayıtdıqda yenidən qüvvəyə minir.',
+    ru: 'Все активные товары доступны для заказа. Отметки «нет» у вариантов сохраняются и снова действуют при возврате в режим «Есть / нет».',
+    tr: 'Tüm aktif ürünler sipariş edilebilir. Varyantların "yok" işaretleri saklanır ve "Var / yok" moduna dönünce yeniden geçerli olur.',
+  },
+  'sellerSettings.stock.effect.availability': {
+    az: '"Yoxdur" işarələnmiş variant pərakəndəçidə "Stokda yoxdur" görünür və səbətə əlavə edilə bilməz. İşarəni məhsul kartında dəyişin.',
+    ru: 'Вариант с отметкой «нет» показывается покупателю как «Нет в наличии» и не добавляется в корзину. Отметку меняйте в карточке товара.',
+    tr: '"Yok" işaretli varyant perakendecide "Stokta yok" görünür ve sepete eklenemez. İşareti ürün kartında değiştirin.',
+  },
+  'inventory.availability.title': {
+    az: 'Stok vəziyyəti',
+    ru: 'Наличие',
+    tr: 'Stok durumu',
+  },
+  'inventory.availability.description': {
+    az: 'Variantı "yoxdur" etdikdə dərhal qüvvəyə minir.',
+    ru: 'Изменение вступает в силу сразу.',
+    tr: 'Varyantı "yok" yaptığınızda hemen geçerli olur.',
+  },
+  'inventory.availability.in_stock': {
+    az: 'Var',
+    ru: 'Есть',
+    tr: 'Var',
+  },
+  'inventory.availability.out_of_stock': {
+    az: 'Yoxdur',
+    ru: 'Нет',
+    tr: 'Yok',
+  },
+  'inventory.availability.switch_label': {
+    az: '{sku} stokda var',
+    ru: '{sku} в наличии',
+    tr: '{sku} stokta var',
+  },
+  'inventory.availability.buyer_hint': {
+    az: '"Yoxdur" variant pərakəndəçidə "Stokda yoxdur" görünür və səbətə əlavə edilə bilməz.',
+    ru: 'Вариант «нет» показывается покупателю как «Нет в наличии» и не добавляется в корзину.',
+    tr: '"Yok" varyant perakendecide "Stokta yok" görünür ve sepete eklenemez.',
+  },
 };
