@@ -239,6 +239,7 @@ describe('F2.6 depolar, satıcı profili, hizmet bölgeleri', () => {
         requireDeliveryPhoto: false,
         defaultWarehouseId: null,
         stockMode: 'availability',
+        lowStockDisplayThreshold: '5',
       });
 
       const response = await patchProfile(who, {
@@ -253,6 +254,7 @@ describe('F2.6 depolar, satıcı profili, hizmet bölgeleri', () => {
         requireDeliveryPhoto: true,
         defaultWarehouseId: null,
         stockMode: 'availability',
+        lowStockDisplayThreshold: '5',
       });
 
       const cleared = await patchProfile(who, { minOrderAmount: null, description: { az: '' } });

@@ -24,6 +24,63 @@ export interface StockRowView {
   readonly updatedAt: string;
 }
 
+export interface StockPackagingView {
+  readonly level: string;
+  readonly unitCode: string;
+  readonly baseQty: string;
+  readonly isSalesUnit: boolean;
+}
+
+/** `GET /stock/items` satırı (F3.11b): depodaki her satılabilir varyant, sayılmamışlar dahil. */
+export interface StockItemView {
+  readonly variantId: string;
+  readonly productId: string;
+  readonly productName: Record<string, string>;
+  readonly attributes: Record<string, unknown>;
+  readonly sku: string;
+  readonly baseUnitCode: string;
+  readonly packaging: StockPackagingView[];
+  readonly displayUnit: { readonly unitCode: string; readonly baseQty: string } | null;
+  readonly counted: boolean;
+  readonly onHand: string | null;
+  readonly reserved: string | null;
+  readonly available: string | null;
+  readonly low: boolean;
+  readonly updatedAt: string | null;
+}
+
+export interface StockItemFilterInput {
+  readonly warehouseId: string;
+  readonly q?: string | undefined;
+  readonly filter: 'all' | 'low' | 'uncounted';
+  readonly lowThresholdUnits: string;
+  readonly after?: { readonly sku: string; readonly variantId: string } | undefined;
+  readonly limit: number;
+}
+
+interface StockItemDb extends Record<string, unknown> {
+  variant_id: string;
+  product_id: string;
+  product_name: Record<string, string>;
+  attributes: Record<string, unknown>;
+  sku: string;
+  base_unit_code: string;
+  packaging: StockPackagingView[] | null;
+  display_unit_code: string | null;
+  display_base_qty: string | null;
+  counted: boolean;
+  on_hand: string | null;
+  reserved: string | null;
+  available: string | null;
+  low: boolean;
+  updated_at: Date | string | null;
+}
+
+/** `ilike` deseninde `%`, `_` ve `\\` harfiyen aranır. */
+function likePattern(value: string): string {
+  return `%${value.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+}
+
 export interface StockMovementView {
   readonly id: string;
   readonly warehouseId: string;
@@ -61,8 +118,11 @@ export interface NewStockMovement {
 export interface StockListFilter {
   readonly warehouseId?: string | undefined;
   readonly variantId?: string | undefined;
-  /** `available ≤ coalesce(low_threshold, varsayılan)` satırları. */
-  readonly lowDefault?: string | undefined;
+  /**
+   * "Az qalan" eşiği, satış biriminde (`seller_profiles.low_stock_display_threshold`; S1 = A).
+   * Karşılaştırma temel birimde: `available ≤ eşik × satış birimi` (F3.11b, Müfettiş #90 notu).
+   */
+  readonly lowThresholdUnits?: string | undefined;
   readonly after?: { readonly sku: string; readonly warehouseId: string } | undefined;
   readonly limit: number;
 }
@@ -140,6 +200,24 @@ function toMovement(row: MovementRowDb): StockMovementView {
   };
 }
 
+/**
+ * Varyantın gösterim birimi: en büyük satış birimi ("koli", F3.11b K1); `du` takma adıyla
+ * `left join lateral` olarak bağlanır. Satış birimi yoksa satır null, çarpan 1.
+ */
+const DISPLAY_UNIT_JOIN = sql`
+    left join lateral (
+      select pk.unit_code, pk.base_qty from product_packaging pk
+       where pk.variant_id = v.id and pk.seller_id = v.seller_id and pk.is_sales_unit
+       order by pk.base_qty desc, pk.level limit 1) du on true`;
+
+/**
+ * "Az qalan" (US-039 AC6, S1 = A): eşik satış biriminde, karşılaştırma temel birimde. Satırın
+ * `low_threshold`'u (temel birim) bugün yazılmaz (S1 = A); doluysa önceliklidir.
+ */
+function lowCondition(thresholdUnits: string): SQL {
+  return sql`(s.on_hand - s.reserved) <= coalesce(s.low_threshold, ${thresholdUnits}::numeric * coalesce(du.base_qty, 1))`;
+}
+
 /** Sayılar metin olarak (`numeric` → string; `decimal.js` hesapları serviste). */
 const STOCK_SELECT = sql`
   select s.warehouse_id, s.variant_id, p.id as product_id, p.name as product_name, v.sku,
@@ -148,7 +226,8 @@ const STOCK_SELECT = sql`
          s.updated_at
     from stock s
     join product_variants v on v.id = s.variant_id and v.seller_id = s.seller_id
-    join products p on p.id = v.product_id and p.seller_id = v.seller_id`;
+    join products p on p.id = v.product_id and p.seller_id = v.seller_id
+${DISPLAY_UNIT_JOIN}`;
 
 @Injectable()
 export class StockRepository {
@@ -229,10 +308,8 @@ export class StockRepository {
     if (filter.variantId !== undefined) {
       conditions.push(sql`s.variant_id = ${filter.variantId}::uuid`);
     }
-    if (filter.lowDefault !== undefined) {
-      conditions.push(
-        sql`(s.on_hand - s.reserved) <= coalesce(s.low_threshold, ${filter.lowDefault}::numeric)`,
-      );
+    if (filter.lowThresholdUnits !== undefined) {
+      conditions.push(lowCondition(filter.lowThresholdUnits));
     }
     if (filter.after !== undefined) {
       conditions.push(
@@ -246,6 +323,80 @@ export class StockRepository {
            limit ${filter.limit}`,
     );
     return result.rows.map(toStockRow);
+  }
+
+  /**
+   * `GET /stock/items` (F3.11b): satıcının arşivli olmayan her varyantı + verilen depodaki stok
+   * satırı (yoksa `counted = false`). Sıra varyant SKU (`collate "C"`), varyant kimliği; `limit`
+   * satır (çağıran +1 ister). Arama ürün adı (tüm diller), ürün ve varyant SKU'sunda.
+   */
+  async listItemsTx(
+    tx: Tx,
+    sellerId: string,
+    filter: StockItemFilterInput,
+  ): Promise<StockItemView[]> {
+    const conditions: SQL[] = [
+      sql`v.seller_id = ${sellerId}`,
+      sql`v.status <> 'archived'`,
+      sql`p.status <> 'archived'`,
+    ];
+    if (filter.q !== undefined) {
+      const pattern = likePattern(filter.q);
+      conditions.push(
+        sql`(v.sku ilike ${pattern} or p.sku ilike ${pattern} or p.name::text ilike ${pattern})`,
+      );
+    }
+    if (filter.filter === 'uncounted') conditions.push(sql`s.variant_id is null`);
+    if (filter.filter === 'low') {
+      conditions.push(sql`s.variant_id is not null`, lowCondition(filter.lowThresholdUnits));
+    }
+    if (filter.after !== undefined) {
+      conditions.push(
+        sql`(v.sku collate "C", v.id) > (${filter.after.sku} collate "C", ${filter.after.variantId}::uuid)`,
+      );
+    }
+    const result = await tx.execute<StockItemDb>(
+      sql`select v.id as variant_id, p.id as product_id, p.name as product_name, v.attributes,
+                 v.sku, p.base_unit_code,
+                 (select json_agg(json_build_object('level', pk.level, 'unitCode', pk.unit_code,
+                                   'baseQty', pk.base_qty::text, 'isSalesUnit', pk.is_sales_unit)
+                                   order by pk.base_qty, pk.level)
+                    from product_packaging pk
+                   where pk.variant_id = v.id and pk.seller_id = v.seller_id) as packaging,
+                 du.unit_code as display_unit_code, du.base_qty::text as display_base_qty,
+                 (s.variant_id is not null) as counted,
+                 s.on_hand::text as on_hand, s.reserved::text as reserved,
+                 (s.on_hand - s.reserved)::text as available,
+                 coalesce(${lowCondition(filter.lowThresholdUnits)}, false) as low,
+                 s.updated_at
+            from product_variants v
+            join products p on p.id = v.product_id and p.seller_id = v.seller_id
+            left join stock s on s.seller_id = v.seller_id and s.variant_id = v.id
+                             and s.warehouse_id = ${filter.warehouseId}::uuid
+${DISPLAY_UNIT_JOIN}
+           where ${sql.join(conditions, sql` and `)}
+           order by v.sku collate "C", v.id
+           limit ${filter.limit}`,
+    );
+    return result.rows.map((row) => ({
+      variantId: row.variant_id,
+      productId: row.product_id,
+      productName: row.product_name,
+      attributes: row.attributes,
+      sku: row.sku,
+      baseUnitCode: row.base_unit_code,
+      packaging: row.packaging ?? [],
+      displayUnit:
+        row.display_unit_code === null || row.display_base_qty === null
+          ? null
+          : { unitCode: row.display_unit_code, baseQty: row.display_base_qty },
+      counted: row.counted,
+      onHand: row.on_hand,
+      reserved: row.reserved,
+      available: row.available,
+      low: row.low,
+      updatedAt: row.updated_at === null ? null : iso(row.updated_at),
+    }));
   }
 
   /** `GET /stock/movements`: yeniden eskiye; `limit` satır (çağıran +1 ister). */

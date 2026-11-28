@@ -131,6 +131,28 @@ describe('F3.11a miktarlı stok kiracı izolasyonu', () => {
     }
   });
 
+  it("F3.11b-ISO B'nin depo seçicisinde ve depo ekranında A'nın deposu / varyantı yok; A'nın deposu 404", async () => {
+    const list = await h
+      .http()
+      .get('/api/v1/stock/warehouses')
+      .set(await headers(sellerB));
+    expect(list.status).toBe(200);
+    expect((list.body as { id: string }[]).map((w) => w.id)).toEqual([warehouseB]);
+    const foreign = await h
+      .http()
+      .get(`/api/v1/stock/items?warehouseId=${warehouseA}`)
+      .set(await headers(sellerB));
+    expect(foreign.status).toBe(404);
+    const own = await h
+      .http()
+      .get(`/api/v1/stock/items?warehouseId=${warehouseB}`)
+      .set(await headers(sellerB));
+    expect(own.status).toBe(200);
+    expect((own.body as { items: { variantId: string }[] }).items.map((i) => i.variantId)).toEqual([
+      variantB,
+    ]);
+  });
+
   it("F3.11a-ISO tenant işlemiyle B, A'nın stok ve hareket satırlarını göremez; A adına hareket ekleyemez (42501)", async () => {
     const seen = await withTenantTx(
       { businessId: sellerB.businessId, userId: null },

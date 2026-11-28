@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   MIN_ORDER_AMOUNT_PATTERN,
+  LOW_STOCK_THRESHOLD_PATTERN,
   SELECTABLE_STOCK_MODES,
   SELLER_DESCRIPTION_MAX,
 } from '@b2b/shared';
@@ -66,6 +67,8 @@ const sellerProfileUpdateSchema = z
     requireDeliveryPhoto: z.boolean(),
     // F3.10 (US-038 AC1): `quantity` iki adımlı geçişle F3.11a'da (S5 = B); bugün 422.
     stockMode: z.enum(SELECTABLE_STOCK_MODES),
+    // F3.11b (US-039 AC6, kullanıcı kararı S1 = A): "Son X koli" / "az qalan" eşiği, satış biriminde.
+    lowStockDisplayThreshold: z.string().regex(LOW_STOCK_THRESHOLD_PATTERN, 'invalid'),
   })
   .partial()
   .refine((body) => Object.keys(body).length > 0, { message: 'empty_body' });

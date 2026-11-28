@@ -40,6 +40,7 @@ export interface SellerProfileUpdate {
   readonly minOrderAmount?: string | null | undefined;
   readonly requireDeliveryPhoto?: boolean | undefined;
   readonly stockMode?: SelectableStockMode | undefined;
+  readonly lowStockDisplayThreshold?: string | undefined;
 }
 
 /** Profil satırı yoksa (eski veri) varsayılanlar; F2.1a her toptancıya satır açar. */
@@ -49,6 +50,8 @@ export interface SellerProfileView {
   readonly requireDeliveryPhoto: boolean;
   readonly defaultWarehouseId: string | null;
   readonly stockMode: StockMode;
+  /** Satış biriminde tam sayı metni (F3.11b, S1 = A); satır yoksa varsayılan 5. */
+  readonly lowStockDisplayThreshold: string;
 }
 
 function toProfileView(row: SellerProfileRow | undefined): SellerProfileView {
@@ -59,7 +62,13 @@ function toProfileView(row: SellerProfileRow | undefined): SellerProfileView {
     defaultWarehouseId: row?.defaultWarehouseId ?? null,
     // Kolon CHECK ile üç değerden biri (data-model §seller_profiles); satır yoksa varsayılan.
     stockMode: (row?.stockMode as StockMode | undefined) ?? 'availability',
+    lowStockDisplayThreshold: normalizeThreshold(row?.lowStockDisplayThreshold ?? '5'),
   };
+}
+
+/** `numeric(14,3)` metni ("5.000") → "5"; eşik tam sayıdır (girdi şeması). */
+function normalizeThreshold(value: string): string {
+  return value.includes('.') ? value.replace(/\.?0+$/, '') : value;
 }
 
 function profilePatch(input: SellerProfileUpdate): SellerProfilePatch {
@@ -70,6 +79,9 @@ function profilePatch(input: SellerProfileUpdate): SellerProfilePatch {
       ? {}
       : { requireDeliveryPhoto: input.requireDeliveryPhoto }),
     ...(input.stockMode === undefined ? {} : { stockMode: input.stockMode }),
+    ...(input.lowStockDisplayThreshold === undefined
+      ? {}
+      : { lowStockDisplayThreshold: input.lowStockDisplayThreshold }),
   };
 }
 

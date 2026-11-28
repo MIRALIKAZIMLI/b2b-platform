@@ -1991,8 +1991,10 @@ paths:
       description: |
         İzin `inventory.view`. Kapsam `warehouse` olan kullanıcı yalnız kendi deposunu görür; başka
         `warehouseId` `403`. Sayılar temel birimde (`numeric(14,3)`), `available = onHand − reserved`.
-        `low=true`: `available ≤ eşik` satırları; eşik satırın `lowThreshold`'u, yoksa
-        `seller_profiles.low_stock_display_threshold`. Sıra: ürün SKU, varyant SKU, depo; imleçli.
+        `low=true`: `available ≤ eşik` satırları. Eşik satış biriminde
+        (`seller_profiles.low_stock_display_threshold`, S1 = A); karşılaştırma temel birimde:
+        `available ≤ eşik × en büyük satış biriminin baseQty'si` (satış birimi yoksa × 1). Satırın
+        `lowThreshold`'u (temel birim) doluysa önceliklidir; bugün yazılmaz. Sıra: varyant SKU, depo; imleçli.
         Stok her modda okunur (S5 = B hazırlık adımı); perakendeci gösterimi yalnız `quantity` modunda.
       parameters:
         - { $ref: '#/components/parameters/BusinessId' }
@@ -2014,6 +2016,56 @@ paths:
                   items: { type: array, items: { $ref: '#/components/schemas/StockRow' } }
                   nextCursor: { type: [string, 'null'] }
         '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/stock/warehouses:
+    get:
+      tags: [inventory]
+      summary: Stok ekranının depo seçicisi (seller; F3.11b)
+      description: |
+        İzin `inventory.view` (`GET /warehouses` `business.manage` ister; depo çalışanı burayı kullanır).
+        Yalnız aktif depolar; varsayılan önce, sonra ada göre. Kapsam `warehouse`: yalnız kendi deposu
+        (deposu atanmamışsa `403`).
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/StockWarehouse' } }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/v1/stock/items:
+    get:
+      tags: [inventory]
+      summary: Depodaki tüm satılabilir varyantlar ve stokları (seller; F3.11b)
+      description: |
+        İzin `inventory.view`. Arşivli olmayan her varyant, verilen depodaki stok satırıyla; satırı
+        olmayan varyant `counted: false` ve sayılar `null` (S5 = B: miktarlı moda geçmeden sayım).
+        `filter=low`: sayılmış ve `available ≤ eşik × displayUnit.baseQty` (eşik satış biriminde,
+        `GET /stock?low=true` ile aynı kural); `filter=uncounted`: satırı olmayanlar. `q` ürün adında
+        (tüm diller), ürün ve varyant SKU'sunda arar. Sıra: varyant SKU, varyant kimliği; imleçli.
+        Olmayan / pasif depo `404`; kapsam `warehouse` iken başka depo `403`.
+      parameters:
+        - { $ref: '#/components/parameters/BusinessId' }
+        - { name: warehouseId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string, minLength: 1, maxLength: 100 } }
+        - { name: filter, in: query, schema: { type: string, enum: [all, low, uncounted], default: all } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/StockItem' } }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
   /api/v1/stock/movements:
     get:
@@ -4503,7 +4555,7 @@ components:
         status: { type: string, enum: [active, inactive] }
     SellerProfile:
       type: object
-      required: [description, minOrderAmount, requireDeliveryPhoto, defaultWarehouseId, stockMode]
+      required: [description, minOrderAmount, requireDeliveryPhoto, defaultWarehouseId, stockMode, lowStockDisplayThreshold]
       properties:
         description:
           oneOf:
@@ -4517,6 +4569,10 @@ components:
         requireDeliveryPhoto: { type: boolean }
         defaultWarehouseId: { type: [string, 'null'], format: uuid }
         stockMode: { $ref: '#/components/schemas/StockMode' }
+        lowStockDisplayThreshold:
+          type: string
+          pattern: '^(0|[1-9][0-9]{0,3})$'
+          description: F3.11b (US-039 AC6, kullanıcı kararı S1 = A). "Son X koli" / "az qalan" eşiği, satış biriminde tam sayı; varsayılan 5.
     StockMode:
       type: string
       description: ADR-0018. `none` her aktif varyant sipariş edilebilir; `availability` var/yok işareti; `quantity` miktarlı stok (F3.11a; `POST /stock-mode/quantity` ile açılır).
@@ -4551,6 +4607,56 @@ components:
         available: { $ref: '#/components/schemas/Decimal' }
         lowThreshold: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
         updatedAt: { type: string, format: date-time }
+    StockWarehouse:
+      type: object
+      description: F3.11b. Stok ekranı depo seçicisi.
+      additionalProperties: false
+      required: [id, name, isDefault]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        isDefault: { type: boolean }
+    StockItem:
+      type: object
+      description: |
+        F3.11b. Bir depodaki bir satılabilir varyant. Sayılar temel birimde; `displayUnit` en büyük
+        satış birimi (ekranda "koli"; satış birimi yoksa null). Sayılmamış varyantta sayılar null.
+      additionalProperties: false
+      required: [variantId, productId, productName, attributes, sku, baseUnitCode, packaging, displayUnit, counted, onHand, reserved, available, low, updatedAt]
+      properties:
+        variantId: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { $ref: '#/components/schemas/LocalizedText' }
+        attributes: { type: object, additionalProperties: true }
+        sku: { type: string, description: Varyant SKU }
+        baseUnitCode: { type: string }
+        packaging:
+          type: array
+          description: Küçükten büyüğe.
+          items:
+            type: object
+            additionalProperties: false
+            required: [level, unitCode, baseQty, isSalesUnit]
+            properties:
+              level: { type: string, enum: [unit, inner, case, pallet] }
+              unitCode: { type: string }
+              baseQty: { $ref: '#/components/schemas/Decimal' }
+              isSalesUnit: { type: boolean }
+        displayUnit:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [unitCode, baseQty]
+              properties:
+                unitCode: { type: string }
+                baseQty: { $ref: '#/components/schemas/Decimal' }
+            - type: 'null'
+        counted: { type: boolean }
+        onHand: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
+        reserved: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
+        available: { oneOf: [ { $ref: '#/components/schemas/Decimal' }, { type: 'null' } ] }
+        low: { type: boolean, description: '`filter=low` kuralı (sayılmamışta false)' }
+        updatedAt: { type: [string, 'null'], format: date-time }
     StockMovement:
       type: object
       description: F3.11a. Silinmez, değiştirilemez stok hareketi (R35).
@@ -4590,6 +4696,10 @@ components:
           type: string
           description: F3.10. `quantity` yalnız `POST /stock-mode/quantity` ile (F3.11a, S5 = B); burada `422`. Miktarlı moddan çıkış buradan.
           enum: [none, availability]
+        lowStockDisplayThreshold:
+          type: string
+          pattern: '^(0|[1-9][0-9]{0,3})$'
+          description: F3.11b (S1 = A). Satış biriminde 0–9999; audit `seller_profile.updated`.
     ServiceAreas:
       type: object
       additionalProperties: false

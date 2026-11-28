@@ -1,5 +1,5 @@
 // F3.10 (web): stok rejimi ayarı ve ürün kartında var/yok (US-038 AC1–AC2). Varsayılan "Var / yoxdur";
-// "Miqdar" kilitli. Varyant "Yoxdur" yapılır, yenilemeden sonra kalır; "İzlənmir" seçilince kart
+// "Miqdar" F3.11b'den beri seçilebilir (iki adımlı geçiş stock.spec.ts'te). Varyant "Yoxdur" yapılır, yenilemeden sonra kalır; "İzlənmir" seçilince kart
 // gizlenir, geri dönünce işaret yeniden görünür. SHOTS verilirse ekran görüntüsü (yalnız yerel).
 import { randomUUID } from 'node:crypto';
 import { expect, type Page, test } from '@playwright/test';
@@ -38,12 +38,11 @@ test('F3.10-AC1 F3.10-AC2 stok rejimi seçimi, varyantı "yoxdur" işarələmək
   await loginThroughUi(page, 'az', sellerAdmin.phone);
   await page.waitForURL('**/az/seller');
 
-  // Varsayılan rejim "Var / yoxdur"; "Miqdar" kilitli.
+  // Varsayılan rejim "Var / yoxdur"; "Miqdar" seçilebilir (F3.11b).
   await page.goto('/az/seller/settings');
   await page.getByRole('tab', { name: 'Stok' }).click();
   await expect(page.getByTestId('stock-mode-availability').locator('input')).toBeChecked();
-  await expect(page.getByTestId('stock-mode-quantity').locator('input')).toBeDisabled();
-  await expect(page.getByTestId('stock-mode-quantity')).toContainText('Tezliklə');
+  await expect(page.getByTestId('stock-mode-quantity').locator('input')).toBeEnabled();
   await shot(page, '1-stok-rejimi-az');
 
   // Ürün (qaralama) açılır; kartda variant "Var".

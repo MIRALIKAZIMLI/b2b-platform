@@ -381,7 +381,7 @@ Kural: `seller` yeteneği yalnızca platform bağlamında `approved` yapılabili
 | stock_mode | text | `none` / `availability` / `quantity` | default `availability` |
 | min_order_amount | numeric(14,2) | null | Para birimi: işletme |
 | require_delivery_photo | boolean | default false | |
-| low_stock_display_threshold | numeric(14,3) | default 5 | US-039 AC6 |
+| low_stock_display_threshold | numeric(14,3) | default 5 | US-039 AC6; satış biriminde tam sayı 0–9999, `PATCH /business/seller-profile` (F3.11b, S1 = A). "Az qalan": `available ≤ eşik × en büyük satış biriminin base_qty'si` |
 | default_price_list_id | uuid | FK price_lists | |
 | default_warehouse_id | uuid | FK warehouses | Bileşik FK `(business_id, default_warehouse_id)` → `warehouses(business_id, id)`: yalnızca kendi deposu (FK kontrolü RLS'e bakmaz) |
 
@@ -863,7 +863,7 @@ F3.10 (migration yok; US-038, ADR-0018): `seller_profiles.stock_mode` satıcı p
 | variant_id | uuid | PK parçası; bileşik FK `(variant_id, seller_id)` → `product_variants(id, seller_id)` | Yalnızca kendi varyantı; `id` yok |
 | on_hand | numeric(14,3) | ≥ 0 | Temel birimde (F3.11a K1) |
 | reserved | numeric(14,3) | ≥ 0, ≤ on_hand | Rezervasyon F4.4 |
-| low_threshold | numeric(14,3) | null | Depo uyarısı; yazma ekranı F3.11b |
+| low_threshold | numeric(14,3) | null | Temel birimde satır eşiği; doluysa "az qalan" kuralında önceliklidir. Kullanıcı kararı S1 = A (F3.11b): yazılmaz, eşik `seller_profiles.low_stock_display_threshold` |
 | updated_at | timestamptz | | Son hareketin anı |
 
 #### `stock_movements` (T, yalnızca ekleme)

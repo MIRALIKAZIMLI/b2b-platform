@@ -33,6 +33,8 @@ export interface SellerProfilePatch {
   readonly defaultWarehouseId?: string;
   /** PATCH yalnız `none` / `availability` yazar; `quantity` yalnız `inventory` (F3.11a, S5 = B). */
   readonly stockMode?: StockMode;
+  /** F3.11b (S1 = A): satış biriminde "az qalan" eşiği. */
+  readonly lowStockDisplayThreshold?: string;
 }
 
 @Injectable()
@@ -72,6 +74,15 @@ export class SellerSetupRepository {
       .from(warehouses)
       .where(and(eq(warehouses.businessId, businessId), eq(warehouses.id, id)))
       .for('update');
+    return rows[0];
+  }
+
+  /** F3.11b: kilitsiz okuma (stok ekranı depo denetimi). Yoksa (başka işletme dahil) undefined. */
+  async findWarehouseTx(tx: Tx, businessId: string, id: string): Promise<WarehouseRow | undefined> {
+    const rows = await tx
+      .select()
+      .from(warehouses)
+      .where(and(eq(warehouses.businessId, businessId), eq(warehouses.id, id)));
     return rows[0];
   }
 
