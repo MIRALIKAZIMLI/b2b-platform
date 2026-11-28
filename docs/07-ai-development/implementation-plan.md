@@ -437,7 +437,7 @@ Onayımı bekle.
 - **Dosyalar:** `m/inventory/*` (`stock`, `stock_movements`), `StockService` (receipt, adjustment), `/api/v1/stock*`, depo ekranı (web + mobil), `imports` modülüne `stock` türü.
 - **Kabul:** Belirtilen AC'ler; hareket olmadan stok değişmez.
 - **Test:** Entegrasyon.
-- **Durum:** F3.11a (`docs/tasks/F3.11a.md`): migration 0042, `StockService`, `/stock*`, `POST /stock-mode/quantity`. Excel `stock` türü ve ürün şablonu stok sütunu (V3) boyut nedeniyle **F3.11c**'ye ayrıldı; depo ekranları F3.11b (`docs/tasks/F3.11b.md`, web) ve **F3.11d** (mobil, boyut). F3.11c (`docs/tasks/F3.11c.md`): migration 0043, Excel `stock` türü (S3 = A bir dosya bir depo, S2 = B şablondan sonra değişen stok uygulanmaz) + ürün şablonu stok sütunu (V3) + web sihirbazında "Anbar qalığı".
+- **Durum:** F3.11a (`docs/tasks/F3.11a.md`): migration 0042, `StockService`, `/stock*`, `POST /stock-mode/quantity`. Excel `stock` türü ve ürün şablonu stok sütunu (V3) boyut nedeniyle **F3.11c**'ye ayrıldı; depo ekranları F3.11b (`docs/tasks/F3.11b.md`, web) ve **F3.11d** (mobil, boyut). F3.11c (`docs/tasks/F3.11c.md`): migration 0043, Excel `stock` türü (S3 = A bir dosya bir depo, S2 = B şablondan sonra değişen stok uygulanmaz) + ürün şablonu stok sütunu (V3) + web sihirbazında "Anbar qalığı". F3.11d (`docs/tasks/F3.11d.md`): mobil depo ekranı, API değişikliği yok.
 
 ### F3.12 — Ürün arama ve perakendeci ürün listesi
 

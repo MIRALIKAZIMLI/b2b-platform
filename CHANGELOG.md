@@ -79,3 +79,4 @@
 - F3.11a: miktarlı stok API (migration 0042; stok yalnız silinmez hareketle değişir, mal girişi ve sayım düzeltmesi, depo kapsamı, iki adımlı miktarlı moda geçiş, "Son X koli" kuralı)
 - F3.11b: depo stok ekranı web (depodaki tüm ürünler koli + adetle, mal girişi, sayım, hareket geçmişi, "az qalan" eşiği toptancı ayarı, Ayarlarda miktarlı modu açma; `GET /stock/warehouses`, `GET /stock/items`)
 - F3.11c: Excel ile stok sayımı (migration 0043; depo seçilerek dolu şablon, sayılan toplam, şablondan sonra değişen stok uygulanmaz, ürün şablonundaki stok sütunu, sihirbazda "Anbar qalığı" ve stok ekranında Excel düğmesi)
+- F3.11d: mobil depo stok ekranı (mal girişi, sayım, hareket geçmişi)

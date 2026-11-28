@@ -43,6 +43,7 @@ export function mobileMenu(me: Pick<Me, 'activeBusiness'>, area: MobileArea): Me
 /**
  * Hazır menü öğesinin mobil adresi (expo-router; grup adı adreste yoktur). Yalnız mobilde ekranı
  * olan öğeler; diğerleri bağlantısız kalır. F2.4: perakendeci profili. F2.11b: dizin. F2.12b: istekler.
+ * F3.11d: depo stoğu (Müfettiş #91: menüdeki "Stok" mobilde rotasızdı).
  */
 type MobileRoute =
   | '/business-profile'
@@ -50,7 +51,8 @@ type MobileRoute =
   | '/requests'
   | '/incoming-requests'
   | '/suppliers'
-  | '/branches';
+  | '/branches'
+  | '/stock';
 
 const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'buyer:profile': '/business-profile',
@@ -64,6 +66,8 @@ const MOBILE_ROUTES: Readonly<Record<string, MobileRoute>> = {
   'buyer:suppliers': '/suppliers',
   // F2.5b: şubeler ve onay kuralı (US-010).
   'buyer:branches': '/branches',
+  // F3.11d: depo stoğu, mal girişi, sayım (US-039).
+  'seller:stock': '/stock',
 };
 
 /** Menü `path`'i → mobil adres (push dokunuşu için; `MOBILE_ROUTES` ile aynı ekranlar). */

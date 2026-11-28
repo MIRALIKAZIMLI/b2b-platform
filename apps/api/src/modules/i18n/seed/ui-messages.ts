@@ -6,7 +6,7 @@
 // F2.14b: toptancı müşterileri ve bağlantı koşulları; F2.15b: bağlantı iptali, toptancılarım;
 // F2.5b: şubeler ve onay kuralı; F3.1: birim kataloğu; F3.2b: kategori, marka, faaliyet alanı;
 // F3.3b: toptancı ürün listesi ve formu; F3.6b: fiyat ekranları; F3.5b: Excel içe aktarma sihirbazı;
-// F3.11c: Excel stok sayımı).
+// F3.11c: Excel stok sayımı; F3.11d: mobil depo ekranı).
 // Taslak AI tarafından yazıldı; platform sahibi PR'da gözden geçirir (az/ru/tr onayı bekliyor).
 // Yer tutucular next-intl (ICU) biçiminde: {phone}.
 import type { ErrorMessageText } from './error-messages';
@@ -7799,6 +7799,24 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Düzgün miqdar yazın (ən çox 3 onluq rəqəm).',
     ru: 'Введите корректное количество (не более 3 знаков после запятой).',
     tr: 'Geçerli bir miktar yazın (en çok 3 ondalık).',
+  },
+  // F3.11d: mobil depo ekranı.
+  'stock.error.expiry_invalid': {
+    az: 'Tarixi il-ay-gün şəklində yazın, məsələn 2027-03-31.',
+    ru: 'Введите дату в формате год-месяц-день, например 2027-03-31.',
+    tr: 'Tarihi yıl-ay-gün biçiminde yazın, örneğin 2027-03-31.',
+  },
+  'stock.dialog.expiry_hint': {
+    az: 'İstəyə bağlı · il-ay-gün',
+    ru: 'Необязательно · год-месяц-день',
+    tr: 'İsteğe bağlı · yıl-ay-gün',
+  },
+  'stock.mobile.back': { az: 'Geri', ru: 'Назад', tr: 'Geri' },
+  'stock.mobile.retry': { az: 'Yenidən cəhd et', ru: 'Повторить', tr: 'Tekrar dene' },
+  'stock.mobile.web_hint': {
+    az: 'Rejimi veb versiyada Ayarlar › Stok bölməsindən açın.',
+    ru: 'Включите режим в веб-версии: Настройки › Остатки.',
+    tr: 'Modu web sürümünde Ayarlar › Stok bölümünden açın.',
   },
   'stock.done.receipt': {
     az: '{product}: qəbul yazıldı, yeni qalıq: {qty}',
