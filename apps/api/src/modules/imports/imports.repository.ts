@@ -25,6 +25,8 @@ export interface ImportJobRow {
   readonly type: ImportType;
   /** F3.7a: `customer_prices` işinin perakendecisi. */
   readonly buyerId: string | null;
+  /** F3.11c: `stock` işinin deposu. */
+  readonly warehouseId: string | null;
   readonly fileId: string;
   readonly status: ImportJobStatus;
   readonly stats: StoredImportStats;
@@ -33,6 +35,8 @@ export interface ImportJobRow {
   readonly failureCode: ImportFailureCode | null;
   readonly appliedUntilRow: number | null;
   readonly canWritePrices: boolean;
+  /** F3.11c (V3): ürün işinde stok sütununu yazma hakkı. */
+  readonly canWriteStock: boolean;
   readonly locale: string;
   readonly createdBy: string;
   readonly createdAt: Date;
@@ -44,8 +48,10 @@ export interface NewImportJob {
   readonly sellerId: string;
   readonly type: ImportType;
   readonly buyerId: string | null;
+  readonly warehouseId: string | null;
   readonly fileId: string;
   readonly canWritePrices: boolean;
+  readonly canWriteStock: boolean;
   readonly locale: string;
   readonly createdBy: string;
   readonly now: Date;
@@ -104,10 +110,12 @@ export class ImportsRepository {
         sellerId: job.sellerId,
         type: job.type,
         buyerId: job.buyerId,
+        warehouseId: job.warehouseId,
         fileId: job.fileId,
         status: 'uploaded',
         stats: EMPTY_STATS,
         canWritePrices: job.canWritePrices,
+        canWriteStock: job.canWriteStock,
         locale: job.locale,
         createdBy: job.createdBy,
         createdAt: job.now,

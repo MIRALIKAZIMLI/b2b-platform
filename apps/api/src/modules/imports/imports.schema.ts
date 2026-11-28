@@ -29,6 +29,8 @@ export const importJobs = pgTable(
     type: text('type').notNull(),
     /** F3.7a (S2 = A): `customer_prices` işinin perakendecisi; FK `businesses` migration'da. */
     buyerId: uuid('buyer_id'),
+    /** F3.11c (S3 = A): `stock` işinin deposu; bileşik FK `warehouses` migration'da. */
+    warehouseId: uuid('warehouse_id'),
     fileId: uuid('file_id').notNull(),
     status: text('status').notNull().default('uploaded'),
     /** `{insert, update, error, warning, notes[], problems[]}` (K13). */
@@ -41,6 +43,11 @@ export const importJobs = pgTable(
     appliedUntilRow: integer('applied_until_row'),
     /** İşi açanın `pricing.manage` izni (Mimar S2); fiyat sütunu yoksa yok sayılır. */
     canWritePrices: boolean('can_write_prices').notNull(),
+    /**
+     * F3.11c (V3): ürün işini açanın varsayılan depoya stok yazma hakkı (`inventory.manage`, kapsamı
+     * varsayılan depoyu içerir); yoksa stok sütunu yok sayılır + satır uyarısı. İş açılınca değişmez.
+     */
+    canWriteStock: boolean('can_write_stock').notNull().default(false),
     /** Rapor metinlerinin dili (istekteki Accept-Language'den, K13). */
     locale: text('locale').notNull(),
     createdBy: uuid('created_by').notNull(),
@@ -54,6 +61,10 @@ export const importJobs = pgTable(
     check(
       'import_jobs_buyer_check',
       sql`(${table.type} = 'customer_prices') = (${table.buyerId} is not null)`,
+    ),
+    check(
+      'import_jobs_warehouse_check',
+      sql`(${table.type} = 'stock') = (${table.warehouseId} is not null)`,
     ),
     check('import_jobs_status_check', sql`${table.status} in (${inList(IMPORT_JOB_STATUSES)})`),
     check(

@@ -274,4 +274,51 @@ describe('F3.5a içe aktarma kiracı izolasyonu', () => {
       ),
     ).toBe('23503');
   });
+
+  it('F3.11c-ISO stok işi: bileşik FK başka satıcının deposunu reddeder; warehouse_id ve can_write_stock yazılamaz; başka satıcının deposuyla şablon 422', async () => {
+    const warehouse = async (who: Seller, name: string) => {
+      const response = await h
+        .http()
+        .post('/api/v1/warehouses')
+        .set(await headers(who))
+        .send({ name });
+      expect(response.status, JSON.stringify(response.body)).toBe(201);
+      return (response.body as { id: string }).id;
+    };
+    const warehouseA = await warehouse(sellerA, 'A anbarı');
+    const warehouseB = await warehouse(sellerB, 'B anbarı');
+    const freeB = await readyImportFile(app.get(FileStorage), sellerB, await xlsx(['sku'], []));
+    expect(
+      await errorCode(() =>
+        as(sellerB.businessId, (tx) =>
+          tx.execute(sql`insert into import_jobs (id, seller_id, type, warehouse_id, file_id,
+                                                  can_write_prices, locale, created_by)
+                         values (${randomUUID()}, ${sellerB.businessId}, 'stock', ${warehouseA},
+                                 ${freeB}, false, '', ${sellerB.admin.userId})`),
+        ),
+      ),
+    ).toBe('23503');
+    for (const column of ['warehouse_id', 'can_write_stock']) {
+      const value = column === 'warehouse_id' ? warehouseA : true;
+      expect(
+        await errorCode(() =>
+          as(sellerA.businessId, (tx) =>
+            tx.execute(
+              sql`update import_jobs set ${sql.identifier(column)} = ${value} where id = ${jobA}`,
+            ),
+          ),
+        ),
+      ).toBe('42501');
+    }
+    const template = await h
+      .http()
+      .get(`/api/v1/imports/template?type=stock&warehouseId=${warehouseA}`)
+      .set(await headers(sellerB));
+    expect(template.status).toBe(422);
+    const own = await h
+      .http()
+      .get(`/api/v1/imports/template?type=stock&warehouseId=${warehouseB}`)
+      .set(await headers(sellerB));
+    expect(own.status).toBe(200);
+  });
 });

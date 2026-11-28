@@ -10,8 +10,9 @@ import {
   type ImportRowIssue,
   type ImportRowWarningCode,
   isValidGtin,
+  type StockMode,
   PRODUCT_NAME_MAX,
-  type ProductImportColumn,
+  type ImportColumn,
   skuSchema,
 } from '@b2b/shared';
 import type {
@@ -20,6 +21,8 @@ import type {
   ImportSkuMatches,
   ImportUnitRef,
 } from '../catalog';
+import { compare, fromDecimalString } from '../../core/money';
+import type { StockCounts } from '../inventory';
 import type { RawImportRow } from './xlsx-reader';
 
 export type RowAction = 'insert' | 'update' | 'error';
@@ -43,6 +46,18 @@ export interface RowWrite {
   readonly caseQty?: string;
   /** Noktalı ondalık metin; yalnız fiyat yazılabilecekse (izin + varsayılan liste). */
   readonly price?: string;
+  /** F3.11c (V3) `quantity` modu: varsayılan depoya sayılan toplam (S1 = A). */
+  readonly stockCount?: string;
+  /** F3.11c (V3) `availability` modu: 0 = yok, 0'dan büyük = var. */
+  readonly available?: boolean;
+}
+
+/** F3.11c (V3): stok sütununu uygulamak için mod, yazma hakkı, varsayılan depo ve oradaki sayılar. */
+export interface StockColumnContext {
+  readonly mode: StockMode;
+  readonly canWrite: boolean;
+  readonly defaultWarehouseId: string | null;
+  readonly counts: ReadonlyMap<string, StockCounts>;
 }
 
 export interface RowOutcome {
@@ -62,6 +77,8 @@ export interface ValidationContext {
   readonly matches: ImportSkuMatches;
   readonly defaultPriceListId: string | null;
   readonly canWritePrices: boolean;
+  /** Yoksa stok sütunu yok sayılır (`none` moduyla aynı; not `stock_column_ignored`). */
+  readonly stock?: StockColumnContext;
 }
 
 export interface ValidationResult {
@@ -73,6 +90,7 @@ export interface ValidationResult {
 const NAME_COLUMNS = ['name_az', 'name_ru', 'name_tr'] as const;
 const WARNING_CODES: ReadonlySet<string> = new Set<ImportRowWarningCode>([
   'price_ignored_no_permission',
+  'stock_ignored_no_permission',
 ]);
 /** `numeric(14,3)` miktar: en çok 11 tam, 3 ondalık hane. */
 const QUANTITY_TEXT = /^\d{1,11}(\.\d{1,3})?$/;
@@ -95,7 +113,7 @@ export function nameKey(value: string): string {
 }
 
 /** Excel'de ondalık virgülle yazılmış sayı ("12,50") noktaya çevrilir. */
-function decimalText(value: string): string {
+export function decimalText(value: string): string {
   const compact = value.replace(/\s+/g, '');
   return /^-?\d+,\d+$/.test(compact) ? compact.replace(',', '.') : compact;
 }
@@ -103,13 +121,13 @@ function decimalText(value: string): string {
 class Issues {
   readonly list: ImportRowIssue[] = [];
 
-  add(column: ProductImportColumn, code: ImportRowErrorCode | ImportRowWarningCode): void {
+  add(column: ImportColumn, code: ImportRowErrorCode | ImportRowWarningCode): void {
     if (!this.list.some((issue) => issue.column === column && issue.code === code)) {
       this.list.push({ column, code });
     }
   }
 
-  has(column: ProductImportColumn): boolean {
+  has(column: ImportColumn): boolean {
     return this.list.some((issue) => issue.column === column);
   }
 
@@ -364,6 +382,26 @@ function checkCaseQty(
  * Fiyat hücresinin biçim denetimi (F3.5a; F3.7a müşteri fiyatı da kullanır): noktalı ondalık metin
  * veya hata kodu. Ondalık virgül kabul edilir; para `number`'a çevrilmez.
  */
+/** `numeric(14,3)`: en çok 11 tam hane; ondalık hane sayısı ayrıca denetlenir. */
+const QTY_TEXT = /^\d{1,11}(\.\d+)?$/;
+const QTY_SCALE = 3;
+
+/** F3.11c: stok miktarı metni (sayılan toplam, ≥ 0, en çok 3 ondalık). */
+export function parseQtyText(
+  text: string,
+):
+  | { readonly ok: true; readonly value: string }
+  | { readonly ok: false; readonly code: ImportRowErrorCode } {
+  const value = decimalText(text);
+  if (value.startsWith('-')) return { ok: false, code: 'negative' };
+  if (!QTY_TEXT.test(value)) return { ok: false, code: 'invalid' };
+  const fraction = value.split('.')[1] ?? '';
+  if (fraction.replace(/0+$/, '').length > QTY_SCALE) {
+    return { ok: false, code: 'too_many_decimals' };
+  }
+  return { ok: true, value };
+}
+
 export function parsePriceText(
   text: string,
 ):
@@ -407,6 +445,50 @@ function checkPrice(
     return undefined;
   }
   return value;
+}
+
+/**
+ * F3.11c (V3): ürün şablonunun stok sütunu. `quantity` → varsayılan depoya sayım (sayılan toplam;
+ * rezerveden az olamaz); `availability` → 0 yok / > 0 var; `none` → yok sayılır (iş notu). Yazma
+ * hakkı yoksa yok sayılır + uyarı (fiyatla aynı, Mimar S2).
+ */
+function checkStock(
+  text: string,
+  target: Target,
+  stock: StockColumnContext,
+  issues: Issues,
+): Pick<RowWrite, 'stockCount' | 'available'> {
+  if (!stock.canWrite) {
+    issues.add('stock', 'stock_ignored_no_permission');
+    return {};
+  }
+  const parsed = parseQtyText(text);
+  if (!parsed.ok) {
+    issues.add('stock', parsed.code);
+    return {};
+  }
+  const value = fromDecimalString(parsed.value);
+  if (stock.mode === 'availability') {
+    return { available: compare(value, fromDecimalString('0')) > 0 };
+  }
+  if (stock.defaultWarehouseId === null) {
+    issues.add('stock', 'no_default_warehouse');
+    return {};
+  }
+  const reserved =
+    target.kind === 'update' ? stock.counts.get(target.variantId)?.reserved : undefined;
+  if (reserved !== undefined && compare(value, fromDecimalString(reserved)) < 0) {
+    issues.add('stock', 'below_reserved');
+    return {};
+  }
+  return { stockCount: parsed.value };
+}
+
+/** Stok sütunu uygulanacak mı (mod `none` değil). */
+function stockApplies(context: ValidationContext): context is ValidationContext & {
+  readonly stock: StockColumnContext;
+} {
+  return context.stock !== undefined && context.stock.mode !== 'none';
 }
 
 function validateRow(
@@ -466,6 +548,10 @@ function validateRow(
     cells.price === undefined || issues.has('price')
       ? undefined
       : checkPrice(cells.price, target, context, issues);
+  const stock =
+    cells.stock === undefined || issues.has('stock') || !stockApplies(context)
+      ? {}
+      : checkStock(cells.stock, target, context.stock, issues);
 
   if (issues.hasErrors || sku === null || target.kind === 'error') {
     return { row: raw.row, sku, action: 'error', issues: issues.list };
@@ -485,6 +571,7 @@ function validateRow(
     ...(barcode === undefined ? {} : { gtin: barcode }),
     ...(caseQty === undefined ? {} : { caseQty }),
     ...(price === undefined ? {} : { price }),
+    ...stock,
   };
   return {
     row: raw.row,
@@ -520,7 +607,7 @@ function sameTargetAsErrors(outcomes: readonly RowOutcome[]): RowOutcome[] {
   });
 }
 
-/** Bütün satırlar; sayılar ve iş notları (V3: stok sütunu henüz uygulanmıyor). */
+/** Bütün satırlar; sayılar ve iş notları (V3: stok sütunu `none` modunda yok sayılır). */
 export function validateRows(
   rows: readonly RawImportRow[],
   context: ValidationContext,
@@ -540,8 +627,9 @@ export function validateRows(
     else error++;
     if (outcome.action !== 'error' && outcome.issues.length > 0) warning++;
   }
-  const notes: ImportNote[] = rows.some((row) => row.cells.stock !== undefined)
-    ? ['stock_column_ignored']
-    : [];
+  const notes: ImportNote[] =
+    !stockApplies(context) && rows.some((row) => row.cells.stock !== undefined)
+      ? ['stock_column_ignored']
+      : [];
   return { outcomes, stats: { insert, update, error, warning }, notes };
 }

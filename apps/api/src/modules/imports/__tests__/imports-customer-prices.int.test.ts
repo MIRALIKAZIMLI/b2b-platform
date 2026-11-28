@@ -22,6 +22,7 @@ import {
   PricingImportModule,
 } from '../../pricing';
 import { SettingsService } from '../../settings';
+import { StockImport } from '../../inventory';
 import { ImportsRepository } from '../imports.repository';
 import { ApplyImportJob } from '../jobs/apply-import.job';
 import { ValidateImportJob } from '../jobs/validate-import.job';
@@ -199,6 +200,7 @@ describe('F3.7a Excel müşteri fiyatı içe aktarma (entegrasyon)', () => {
       app.get(SettingsService),
       clock,
       customerPrices,
+      app.get(StockImport),
     );
     applyJob = new ApplyImportJob(
       new ImportsRepository(),
@@ -212,6 +214,7 @@ describe('F3.7a Excel müşteri fiyatı içe aktarma (entegrasyon)', () => {
       new AuditService(clock),
       clock,
       customerPrices,
+      app.get(StockImport),
     );
     const list = await h
       .http()

@@ -1,5 +1,5 @@
 'use client';
-// Excel ürün ve müşteri fiyatı içe aktarma (F3.5b, F3.7b; US-031, US-035 AC2; SF-08): openapi `/api/v1/imports*` ve F1.10 dosya
+// Excel ürün, müşteri fiyatı ve stok sayımı içe aktarma (F3.5b, F3.7b, F3.11c; US-031, US-035 AC2, US-039; SF-08): openapi `/api/v1/imports*` ve F1.10 dosya
 // yükleme (`purpose: import`). Yalnız `packages/api-client` (coding-guidelines §9.1).
 import type { components } from '@b2b/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,17 +8,26 @@ import { ApiError } from '../admin-sellers/api';
 import { isWorking, sameOriginUrl, XLSX_CONTENT_TYPE } from './wizard-state';
 
 export type ImportJob = components['schemas']['ImportJob'];
-/** F3.7b: ürün veya müşteri fiyatı (S2 = A: bir dosya bir müşteri, `buyerId` zorunlu). */
-export type ImportKind = 'products' | 'customer_prices';
+/**
+ * F3.7b: ürün veya müşteri fiyatı (S2 = A: bir dosya bir müşteri, `buyerId` zorunlu). F3.11c: stok
+ * sayımı (S3 = A: bir dosya bir depo, `warehouseId` zorunlu).
+ */
+export type ImportKind = 'products' | 'customer_prices' | 'stock';
 export interface ImportTarget {
   readonly type: ImportKind;
   readonly buyerId?: string | undefined;
+  readonly warehouseId?: string | undefined;
 }
 
-const targetQuery = (target: ImportTarget) =>
-  target.type === 'customer_prices' && target.buyerId !== undefined
-    ? { type: target.type, buyerId: target.buyerId }
-    : { type: target.type };
+const targetQuery = (target: ImportTarget) => {
+  if (target.type === 'customer_prices' && target.buyerId !== undefined) {
+    return { type: target.type, buyerId: target.buyerId };
+  }
+  if (target.type === 'stock' && target.warehouseId !== undefined) {
+    return { type: target.type, warehouseId: target.warehouseId };
+  }
+  return { type: target.type };
+};
 
 export const IMPORTS_KEY = ['imports'] as const;
 

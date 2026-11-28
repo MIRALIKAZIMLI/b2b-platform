@@ -247,6 +247,24 @@ export class StockRepository {
     return row === undefined ? undefined : { onHand: row.on_hand, reserved: row.reserved };
   }
 
+  /** F3.11c önizleme: depodaki varyantların bugünkü sayıları (kilitsiz okuma), varyant → sayılar. */
+  async countsForVariantsTx(
+    tx: Tx,
+    sellerId: string,
+    warehouseId: string,
+    variantIds: readonly string[],
+  ): Promise<Map<string, StockCounts>> {
+    if (variantIds.length === 0) return new Map();
+    const result = await tx.execute<{ variant_id: string; on_hand: string; reserved: string }>(
+      sql`select variant_id, on_hand::text as on_hand, reserved::text as reserved from stock
+           where seller_id = ${sellerId} and warehouse_id = ${warehouseId}::uuid
+             and variant_id = any(${`{${variantIds.join(',')}}`}::uuid[])`,
+    );
+    return new Map(
+      result.rows.map((row) => [row.variant_id, { onHand: row.on_hand, reserved: row.reserved }]),
+    );
+  }
+
   /** Hareketi ekler; tetikleyici aynı ifadede stok satırını günceller (R35). */
   async insertMovementTx(tx: Tx, input: NewStockMovement): Promise<StockMovementView> {
     const rows = await tx

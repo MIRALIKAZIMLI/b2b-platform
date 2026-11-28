@@ -16,6 +16,7 @@ import { IdGenerator } from '../../core/id-generator';
 import { OutboxWriter } from '../../core/outbox';
 import type { TenantContext } from '../../core/tenant-context';
 import { ProductImportLookup } from '../catalog';
+import { StockImport } from '../inventory';
 import { CustomerPriceImport } from '../pricing';
 import { FilesService, XLSX_CONTENT_TYPE } from '../files';
 import { I18nService } from '../i18n';
@@ -23,7 +24,13 @@ import { SettingsService } from '../settings';
 import { type ImportJobRow, ImportsRepository, isFileInUse } from './imports.repository';
 import { ImportJobStateMachine } from './import-job.state-machine';
 import { CUSTOMER_PRICE_TEMPLATE_KEYS } from './jobs/customer-price-import';
-import { buildCustomerPriceTemplate, buildProductTemplate, type Translate } from './workbooks';
+import { STOCK_TEMPLATE_KEYS } from './jobs/stock-import';
+import {
+  buildCustomerPriceTemplate,
+  buildProductTemplate,
+  buildStockTemplate,
+  type Translate,
+} from './workbooks';
 
 /** İstekteki Accept-Language başlığı işe yazılır (rapor dili); uzunluğu sınırlı. */
 const LOCALE_MAX = 200;
@@ -32,6 +39,16 @@ export function assertSupportedType(type: ImportType): void {
   if (!IMPORT_SUPPORTED_TYPES.includes(type)) {
     throw new DomainError('VALIDATION_FAILED', { type: ['not_supported'] });
   }
+}
+
+/**
+ * F3.11c (K2, R36): `stock` işini açma ve onaylama hakkı. `inventory.manage` gerekir; kapsamı
+ * `warehouse` olan üye yalnız kendi deposunda.
+ */
+export function canWriteStock(tenant: TenantContext, warehouseId: string | null): boolean {
+  const scope = tenant.permissions.get('inventory.manage');
+  if (scope === undefined || warehouseId === null) return false;
+  return scope !== 'warehouse' || tenant.warehouseId === warehouseId;
 }
 
 /** Çeviri anahtarı → metin; çeviri yoksa anahtar (hata atmaz). */
@@ -61,6 +78,11 @@ export class ImportsService {
     @Inject(IdGenerator) private readonly ids: IdGenerator,
     @Inject(CustomerPriceImport)
     private readonly customerPrices: Pick<CustomerPriceImport, 'connectionTx' | 'currentTx'>,
+    @Inject(StockImport)
+    private readonly stock: Pick<
+      StockImport,
+      'activeWarehouseTx' | 'templateRowsTx' | 'defaultWarehouseIdTx'
+    >,
   ) {}
 
   /** `GET /imports/template` (US-031 AC1): kullanıcının dilinde şablon, süreli bağlantı. */
@@ -71,7 +93,9 @@ export class ImportsService {
   ): Promise<ImportTemplateLink> {
     assertSupportedType(query.type);
     const buyerId = this.assertBuyer(tenant, query.type, query.buyerId);
+    const warehouseId = this.assertWarehouse(tenant, query.type, query.warehouseId);
     const lang = await this.i18n.language(acceptLanguage);
+    if (warehouseId !== null) return await this.stockTemplate(tenant, warehouseId, lang);
     if (buyerId !== null) {
       return await this.customerPriceTemplate(tenant, buyerId, lang, query.type);
     }
@@ -127,6 +151,60 @@ export class ImportsService {
   }
 
   /**
+   * F3.11c (S3 = A, K3): bir depo için dolu şablon: depodaki satılabilir varyantlar SKU, ad, temel
+   * birim ve bugünkü miktarla; `stock` boş. En çok `imports.max_rows` satır.
+   */
+  private async stockTemplate(
+    tenant: TenantContext,
+    warehouseId: string,
+    lang: string,
+  ): Promise<ImportTemplateLink> {
+    const maxRows = await this.settings.get('imports.max_rows', tenant.businessId);
+    const rows = await withTenantTx(tenant, async (tx) => {
+      await this.activeWarehouseTx(tx, tenant.businessId, warehouseId);
+      return await this.stock.templateRowsTx(tx, tenant.businessId, warehouseId, maxRows);
+    });
+    const t = await translator(this.i18n, STOCK_TEMPLATE_KEYS, lang);
+    const body = await buildStockTemplate({ lang, t, rows });
+    return await this.files.publishTransient(tenant.businessId, {
+      purpose: 'import',
+      name: `template-stock-${lang}`,
+      contentType: XLSX_CONTENT_TYPE,
+      body,
+    });
+  }
+
+  /**
+   * F3.11c (K1, K2): `stock` türünde `warehouseId` zorunlu ve `inventory.manage` gerekir; kapsamı
+   * `warehouse` olan üye başka depoyla 403 (R36). Diğer türlerde `warehouseId` verilemez.
+   */
+  private assertWarehouse(
+    tenant: TenantContext,
+    type: ImportType,
+    warehouseId: string | undefined,
+  ): string | null {
+    if (type !== 'stock') {
+      if (warehouseId !== undefined) {
+        throw new DomainError('VALIDATION_FAILED', { warehouseId: ['not_allowed'] });
+      }
+      return null;
+    }
+    if (!tenant.permissions.has('inventory.manage')) throw new DomainError('PERMISSION_DENIED');
+    if (warehouseId === undefined) {
+      throw new DomainError('VALIDATION_FAILED', { warehouseId: ['required'] });
+    }
+    if (!canWriteStock(tenant, warehouseId)) throw new DomainError('PERMISSION_DENIED');
+    return warehouseId;
+  }
+
+  /** Satıcının aktif deposu; değilse (başka satıcının deposu dahil) `422 warehouseId: not_found`. */
+  private async activeWarehouseTx(tx: Tx, sellerId: string, warehouseId: string): Promise<void> {
+    if (!(await this.stock.activeWarehouseTx(tx, sellerId, warehouseId))) {
+      throw new DomainError('VALIDATION_FAILED', { warehouseId: ['not_found'] });
+    }
+  }
+
+  /**
    * F3.7a: `customer_prices` türünde `buyerId` zorunlu ve `pricing.manage` gerekir (fiyat yazan ve
    * fiyat gösteren tür); diğer türlerde `buyerId` verilemez. Tür `customer_prices` ise alıcı döner.
    */
@@ -168,19 +246,27 @@ export class ImportsService {
   ): Promise<ImportJobView> {
     assertSupportedType(input.type);
     const buyerId = this.assertBuyer(tenant, input.type, input.buyerId);
+    const warehouseId = this.assertWarehouse(tenant, input.type, input.warehouseId);
     await this.files.readyFile(tenant, input.fileId, 'import');
     const now = this.clock.now();
     try {
       const row = await withTenantTx(tenant, async (tx) => {
         if (buyerId !== null) await this.connectionTx(tx, tenant.businessId, buyerId);
+        if (warehouseId !== null) await this.activeWarehouseTx(tx, tenant.businessId, warehouseId);
         const job = await this.repository.insertTx(tx, {
           id: this.ids.next(),
           sellerId: tenant.businessId,
           type: input.type,
           buyerId,
+          warehouseId,
           fileId: input.fileId,
-          // Mimar S2: fiyat sütunu yalnız fiyat yazma izni olan üyede uygulanır.
-          canWritePrices: tenant.permissions.has('pricing.manage'),
+          // Mimar S2: fiyat sütunu yalnız fiyat yazma izni olan üyede uygulanır (stok işi fiyat
+          // yazmaz).
+          canWritePrices: input.type !== 'stock' && tenant.permissions.has('pricing.manage'),
+          // F3.11c (V3): ürün şablonunun stok sütunu varsayılan depoya yazılır.
+          canWriteStock:
+            input.type === 'products' &&
+            canWriteStock(tenant, await this.stock.defaultWarehouseIdTx(tx, tenant.businessId)),
           locale: (acceptLanguage ?? '').slice(0, LOCALE_MAX),
           createdBy: tenant.userId,
           now,
@@ -225,6 +311,16 @@ export class ImportsService {
       if (job.canWritePrices && !tenant.permissions.has('pricing.manage')) {
         throw new DomainError('PERMISSION_DENIED');
       }
+      // F3.11c K2: stok işi onay anında da stok iznini ve depo kapsamını ister.
+      if (job.type === 'stock' && !canWriteStock(tenant, job.warehouseId)) {
+        throw new DomainError('PERMISSION_DENIED');
+      }
+      if (
+        job.canWriteStock &&
+        !canWriteStock(tenant, await this.stock.defaultWarehouseIdTx(tx, tenant.businessId))
+      ) {
+        throw new DomainError('PERMISSION_DENIED');
+      }
       ImportJobStateMachine.assertTransition(job.status, 'applying');
       const moved = await this.repository.transitionTx(
         tx,
@@ -264,6 +360,7 @@ export class ImportsService {
       id: row.id,
       type: row.type,
       buyerId: row.buyerId,
+      warehouseId: row.warehouseId,
       status: row.status,
       stats: { insert, update, error, warning },
       notes,
@@ -284,7 +381,9 @@ export class ImportsService {
         expiresAt !== null &&
         expiresAt > this.clock.now().getTime() &&
         row.createdBy === tenant.userId &&
-        (!row.canWritePrices || tenant.permissions.has('pricing.manage')),
+        (!row.canWritePrices || tenant.permissions.has('pricing.manage')) &&
+        (row.type !== 'stock' || canWriteStock(tenant, row.warehouseId)) &&
+        (!row.canWriteStock || tenant.permissions.has('inventory.manage')),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

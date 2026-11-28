@@ -1,7 +1,8 @@
 // İçe aktarma sihirbazının saf yardımcıları (F3.5b): adım, ilerleme, hata mesajı seçimi.
 // React'e bağlı değil; birim testi `__tests__/wizard-state.test.ts`.
-import type { ImportJobStatus } from '@b2b/shared';
+import { type ImportJobStatus, pricingAccess } from '@b2b/shared';
 import { ApiError } from '../admin-sellers/api';
+import type { ImportKind, ImportTarget } from './api';
 
 /** F1.10 `purpose: import` için tek izinli tür (files.service). */
 export const XLSX_CONTENT_TYPE =
@@ -21,6 +22,31 @@ export function stepOf(status: ImportJobStatus | undefined): WizardStep {
   if (status === 'uploaded' || status === 'validating') return 'check';
   if (status === 'preview_ready') return 'confirm';
   return 'result';
+}
+
+/**
+ * Üyenin seçebileceği içe aktarma türleri (F3.7b, F3.11c). Müşteri fiyatı `pricing.manage` +
+ * `connections.view` (müşteri listesi); stok sayımı `inventory.manage` (kapsamı sunucu denetler).
+ */
+export function importKinds(codes: readonly string[]): ImportKind[] {
+  const kinds: ImportKind[] = ['products'];
+  if (pricingAccess(codes).manage && codes.includes('connections.view')) {
+    kinds.push('customer_prices');
+  }
+  if (codes.includes('inventory.manage')) kinds.push('stock');
+  return kinds;
+}
+
+/** Şablon ve yükleme için hedef eksik mi (müşteri fiyatında müşteri, stokta depo seçilmeli). */
+export function targetMissing(target: ImportTarget): boolean {
+  if (target.type === 'customer_prices') return target.buyerId === undefined;
+  if (target.type === 'stock') return target.warehouseId === undefined;
+  return false;
+}
+
+/** Seçili sayfadan gelen tür (`?type=`); bilinmeyen tür ürün. */
+export function kindOf(value: string | undefined): ImportKind {
+  return value === 'customer_prices' || value === 'stock' ? value : 'products';
 }
 
 /** Seçilen dosya .xlsx mi? Tarayıcı türü bazen boş verir; uzantı da kabul edilir. */

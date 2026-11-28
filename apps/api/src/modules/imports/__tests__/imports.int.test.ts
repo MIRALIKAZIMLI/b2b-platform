@@ -18,6 +18,7 @@ import { FilesService } from '../../files';
 import { I18nService } from '../../i18n';
 import { CustomerPriceImport, DefaultPriceListLookup, PricingImportModule } from '../../pricing';
 import { SettingsService } from '../../settings';
+import { StockImport } from '../../inventory';
 import { ImportsRepository } from '../imports.repository';
 import { ExpireImportsJob } from '../jobs/expire-imports.job';
 import { ValidateImportJob } from '../jobs/validate-import.job';
@@ -187,6 +188,7 @@ describe('F3.5a Excel içe aktarma (entegrasyon)', () => {
       settings,
       clock,
       pricing.get(CustomerPriceImport),
+      app.get(StockImport),
     );
     expire = new ExpireImportsJob(new ImportsRepository(), storage, settings, clock, directRunner);
   });
@@ -347,8 +349,16 @@ describe('F3.5a Excel içe aktarma (entegrasyon)', () => {
     ]);
   });
 
-  it('F3.5a-V3 stok dolu ise önizlemede not; rapor üretilir', async () => {
+  // F3.11c: V3 artık uygulanıyor; not yalnız stok izlenmeyen (`none`) modda (F3 spes. V3).
+  it('F3.5a-V3 stok izlenmiyorsa (none) stok dolu satırda önizlemede not; rapor üretilir', async () => {
+    await platformRows(`update seller_profiles set stock_mode = 'none' where business_id = $1`, [
+      seller.businessId,
+    ]);
     const job = await preview([[sku('S'), '', 'Ad', '', '', categoryName, '', 'H87', '', '', 10]]);
+    await platformRows(
+      `update seller_profiles set stock_mode = 'availability' where business_id = $1`,
+      [seller.businessId],
+    );
     expect(job.notes).toEqual(['stock_column_ignored']);
     expect(job.stats.error).toBe(0);
     expect(job.errorReportUrl).not.toBeNull();

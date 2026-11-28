@@ -7,6 +7,7 @@
 // - Masaüstünde tablo, dar ekranda kart: ürün + SKU, mövcud (koli + kalan, altında temel birim),
 //   rezerv, satılabilir, durum rozeti. Satır eylemleri: Mal girişi, Sayım (yalnız `inventory.manage`),
 //   Tarixçə (sayılmış satırda).
+// - F3.11c: başlıkta "Excel ilə yüklə" (Excel izni + stok izni): seçili depoyla sihirbaz açılır.
 // - İşlem sonrası tek satırlık yeşil durum; liste yenilenir.
 import {
   inventoryAccess,
@@ -34,7 +35,9 @@ export function StockPage() {
   const locale = useLocale();
   const shell = useShell();
   const businessId = shell.activeBusinessId;
-  const access = inventoryAccess((shell.me?.activeBusiness?.permissions ?? []).map((p) => p.code));
+  const codes = (shell.me?.activeBusiness?.permissions ?? []).map((p) => p.code);
+  const access = inventoryAccess(codes);
+  const canExcel = access.manage && codes.includes('imports.run');
   const mode = useStockMode(businessId);
   const warehouses = useStockWarehouses(businessId);
   const [warehouseId, setWarehouseId] = useState<string>();
@@ -246,7 +249,22 @@ export function StockPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:py-12">
-      <PageHeader eyebrow={t('eyebrow')} title={t('title')} description={t('description')} />
+      <PageHeader
+        eyebrow={t('eyebrow')}
+        title={t('title')}
+        description={t('description')}
+        action={
+          canExcel && warehouseId !== undefined ? (
+            <Link
+              href={`/${locale}/seller/products/import?type=stock&warehouseId=${warehouseId}`}
+              data-testid="stock-excel"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none"
+            >
+              {t('excel_upload')}
+            </Link>
+          ) : undefined
+        }
+      />
       {mode.data !== undefined && mode.data !== 'quantity' && (
         <p
           data-testid="stock-mode-banner"
