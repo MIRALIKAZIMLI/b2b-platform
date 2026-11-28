@@ -21,11 +21,18 @@ import { assertWithinActor } from './team-roles.service';
 import {
   type JobTitleRow,
   type MembershipPatch,
+  type ScopeOptionRow,
   type TeamInvitationRow,
   type TeamMemberRow,
   TeamRepository,
   type TeamRoleRow,
 } from './team.repository';
+
+/** openapi `TeamScopeOptions` (F3.11e). */
+export interface TeamScopeOptions {
+  readonly branches: readonly ScopeOptionRow[];
+  readonly warehouses: readonly ScopeOptionRow[];
+}
 
 /** openapi `TeamMember`. */
 export interface TeamMemberView {
@@ -115,16 +122,45 @@ export class TeamService {
   }
 
   /**
-   * F2.5 S1 (kullanıcı kararı 2026-11-13, Müfettiş 13 N1): işletme admini olmayan aktör üyeyi
-   * yalnız kendi şubesine bağlar; başka şubedeki üyeyi değiştiremez ve çıkaramaz, başka şubenin
-   * davetini geri çekemez (K1, Mimar kararı). Diğer
-   * şubeleri yalnız işletme admini yönetir. Şubesiz aktör şube kapsamlı üye yönetemez.
+   * Kapsam kuralı (F2.5 S1, kullanıcı kararı 2026-11-13; F3.11e S1 = A, S2 = B, 2026-11-28):
+   * işletme admini olmayan aktör kendi şubesine bağlıysa üyeyi yalnız o şubeye bağlar, başka
+   * şubedeki üyeyi değiştiremez / çıkaramaz, başka şubenin davetini geri çekemez (K1). Depoda
+   * aynı kural aktörün deposuyla geçerlidir. Şubeye / depoya bağlı olmayan aktör (izinleri tüm
+   * işletmede geçerli) tüm şube / depoları yönetir; rol koruması (F2.8) ayrıca uygulanır.
    */
-  private assertBranchWithinActor(tenant: TenantContext, branchId: string | null): void {
-    if (tenant.isBusinessAdmin || branchId === null) return;
-    if (branchId !== tenant.branchId) {
+  private assertScopeWithinActor(
+    tenant: TenantContext,
+    scope: { branchId: string | null; warehouseId: string | null },
+  ): void {
+    if (tenant.isBusinessAdmin) return;
+    if (scope.branchId !== null && tenant.branchId !== null && scope.branchId !== tenant.branchId) {
       throw new DomainError('PERMISSION_DENIED', { branchId: ['beyond_actor'] });
     }
+    if (
+      scope.warehouseId !== null &&
+      tenant.warehouseId !== null &&
+      scope.warehouseId !== tenant.warehouseId
+    ) {
+      throw new DomainError('PERMISSION_DENIED', { warehouseId: ['beyond_actor'] });
+    }
+  }
+
+  /** Ekip formunda aktörün atayabileceği aktif şube ve depolar (F3.11e K3). */
+  async listScopeOptions(tenant: TenantContext): Promise<TeamScopeOptions> {
+    capabilitiesOf(tenant);
+    const ownOnly = (own: string | null): string | null => (tenant.isBusinessAdmin ? null : own);
+    return await withTenantTx(tenant, async (tx) => ({
+      branches: hasCapability(tenant, 'buyer')
+        ? await this.repository.activeBranchOptions(tx, tenant.businessId, ownOnly(tenant.branchId))
+        : [],
+      warehouses: hasCapability(tenant, 'seller')
+        ? await this.repository.activeWarehouseOptions(
+            tx,
+            tenant.businessId,
+            ownOnly(tenant.warehouseId),
+          )
+        : [],
+    }));
   }
 
   async listMembers(tenant: TenantContext): Promise<TeamMemberView[]> {
@@ -176,7 +212,7 @@ export class TeamService {
         { id: member.roleId, isBusinessAdmin: member.isBusinessAdmin },
         'membership',
       );
-      this.assertBranchWithinActor(tenant, member.branchId);
+      this.assertScopeWithinActor(tenant, member);
       const oldRegions = (await this.repository.regionsOf(tx, [member.id])).get(member.id) ?? [];
 
       if (input.status === 'removed') {
@@ -227,7 +263,7 @@ export class TeamService {
         input.warehouseId,
         member.warehouseId,
       );
-      this.assertBranchWithinActor(tenant, branchId);
+      this.assertScopeWithinActor(tenant, { branchId, warehouseId });
       let regionIds: readonly string[] = scopes.has('assigned') ? oldRegions : [];
       if (input.regionIds !== undefined) {
         if (!scopes.has('assigned')) throw invalid('regionIds', 'not_allowed');
@@ -290,17 +326,17 @@ export class TeamService {
   ): Promise<void> {
     const now = this.clock.now();
     await withTenantTx(tenant, async (tx) => {
-      // F2.5 K1 (Mimar kararı, S1'in uzantısı): admin olmayan yönetici yalnız kendi şubesinin
-      // davetini geri çeker; başka şubenin davetinde 403.
+      // F2.5 K1 (Mimar kararı, S1'in uzantısı) + F3.11e: admin olmayan yönetici yalnız kendi
+      // şubesinin / deposunun davetini geri çeker; başkasınınkinde 403.
       if (!tenant.isBusinessAdmin) {
-        const open = await this.repository.lockOpenInvitationBranch(
+        const open = await this.repository.lockOpenInvitationScope(
           tx,
           tenant.businessId,
           invitationId,
           now,
         );
         if (open === undefined) throw new DomainError('NOT_FOUND');
-        this.assertBranchWithinActor(tenant, open.branchId);
+        this.assertScopeWithinActor(tenant, open);
       }
       if (!(await this.repository.expireOpenInvitation(tx, tenant.businessId, invitationId, now))) {
         throw new DomainError('NOT_FOUND');
@@ -365,7 +401,7 @@ export class TeamService {
       target.warehouseId,
       null,
     );
-    this.assertBranchWithinActor(tenant, branchId);
+    this.assertScopeWithinActor(tenant, { branchId, warehouseId });
     return { branchId, warehouseId };
   }
 

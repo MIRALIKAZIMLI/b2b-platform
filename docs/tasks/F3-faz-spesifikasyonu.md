@@ -146,7 +146,7 @@ Kullanıcı kararı bekleyen eski notlar (değişmedi): az/ru/tr çevirilerinin 
 | `seller_profiles.default_price_list_id` FK'sı (ai-context: "F3") ve `connections.price_list_id` FK'sı; bağlantı koşullarında fiyat listesi seçimi (F2.14'te `null` bırakıldı) | F3.6a |
 | `seller_profiles.stock_mode` ayar ekranı (F2.6'da "stok modu F3") | F3.10 |
 | `ConnectionCancelledHandler` kancası (F2.15): bağlantı iptal olunca ürünler perakendecide kaybolur (E2E-09). F3'te ek iş gerekmez: görünürlük aktif bağlantıya bakar (R26). Sepet temizliği F4.1. | F3.12a (test) |
-| F2.5 S1 kuralının depoya uygulanması (admin olmayan yönetici yalnız kendi deposu) henüz karar bekliyor; depo ekranı F3.11b'de gelir. | F3.11 kartında sorulur |
+| ~~F2.5 S1 kuralının depoya uygulanması~~ — kapandı: F3.11e (kullanıcı 2026-11-28, S1 = A kendi deposu, S2 = B şubeye/depoya bağlı olmayan yönetici hepsini yönetir). | F3.11e |
 | `features/team` başka feature'lardan içe aktarıyor (ai-context notu) | İlk web ekran kartında (F3.2b) ortak yere taşınabilir; ayrı iş değil |
 | `ai-context.md` 15 KB sınırını aşıyor (≈50 KB, H12) | F3.1'den önce ayrı belge PR'ı (Sonnet) |
 | Müfettiş küçük notları (#53–#73) | İlgili ekranlara dokunan kartlarda; F3'e özel olan yok |

@@ -12,6 +12,7 @@ export type TeamInvitation = components['schemas']['TeamInvitation'];
 export type TeamRole = components['schemas']['TeamRole'];
 export type JobTitle = components['schemas']['JobTitle'];
 export type RoleTemplate = components['schemas']['RoleTemplate'];
+export type TeamScopeOptions = components['schemas']['TeamScopeOptions'];
 
 const TEAM_KEY = ['team'] as const;
 
@@ -57,6 +58,13 @@ export function useTeamRoles(businessId: string | undefined) {
 export function useRoleTemplates(businessId: string | undefined) {
   return useTeamList(businessId, 'role-templates', () =>
     webApi.client.GET('/api/v1/team/role-templates', { params: header(businessId) }),
+  );
+}
+
+/** F3.11e K3: aktörün atayabileceği aktif şube / depolar (`business.manage` gerekmez). */
+export function useTeamScopeOptions(businessId: string | undefined) {
+  return useTeamList(businessId, 'scope-options', () =>
+    webApi.client.GET('/api/v1/team/scope-options', { params: header(businessId) }),
   );
 }
 

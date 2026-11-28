@@ -9,7 +9,6 @@ import {
   roleScopeNeeds,
   suggestedRoleId,
   teamFailure,
-  assignableBranches,
   validateInvitation,
 } from '../team';
 
@@ -132,21 +131,17 @@ describe('F2.7b ekip formu', () => {
     expect(teamFailure(undefined, fields)).toEqual({ kind: 'code', code: 'INTERNAL_ERROR' });
   });
 
-  it('F2.5 S1 admin olmayan yönetici yalnız kendi şubesini seçer; sunucu reddi anlaşılır alan hatası', () => {
-    const active = [{ id: 'b1' }, { id: 'b2' }];
-    expect(assignableBranches(active, { isBusinessAdmin: true, branchId: null })).toEqual(active);
-    expect(assignableBranches(active, { isBusinessAdmin: false, branchId: 'b2' })).toEqual([
-      { id: 'b2' },
-    ]);
-    expect(assignableBranches(active, { isBusinessAdmin: false, branchId: null })).toEqual([]);
-    expect(assignableBranches(undefined, { isBusinessAdmin: false, branchId: 'b1' })).toBe(
-      undefined,
-    );
+  it('F2.5 S1 + F3.11e kapsam reddi (şube / depo) anlaşılır alan hatası', () => {
     expect(
       teamFailure({ code: 'PERMISSION_DENIED', details: { branchId: ['beyond_actor'] } }, [
         'branchId',
       ]),
     ).toEqual({ kind: 'fields', fields: { branchId: 'beyond_actor' } });
+    expect(
+      teamFailure({ code: 'PERMISSION_DENIED', details: { warehouseId: ['beyond_actor'] } }, [
+        'warehouseId',
+      ]),
+    ).toEqual({ kind: 'fields', fields: { warehouseId: 'beyond_actor' } });
   });
 
   it('F2.7b davet token: boş, eksik veya uzun token reddedilir', () => {

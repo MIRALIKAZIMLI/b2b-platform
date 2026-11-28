@@ -1397,14 +1397,14 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Bölgeler, çalışan daveti kabul ettikten sonra listede atanır.',
   },
   'team.branch_unavailable': {
-    az: 'Filial siyahısını görmək üçün biznes parametrləri icazəsi lazımdır.',
-    ru: 'Чтобы видеть филиалы, нужно право на настройки бизнеса.',
-    tr: 'Şube listesini görmek için işletme ayarları yetkisi gerekir.',
+    az: 'Seçə biləcəyiniz aktiv filial yoxdur.',
+    ru: 'Нет активных филиалов, которые вы можете выбрать.',
+    tr: 'Seçebileceğiniz aktif şube yok.',
   },
   'team.warehouse_unavailable': {
-    az: 'Anbar siyahısını görmək üçün biznes parametrləri icazəsi lazımdır.',
-    ru: 'Чтобы видеть склады, нужно право на настройки бизнеса.',
-    tr: 'Depo listesini görmek için işletme ayarları yetkisi gerekir.',
+    az: 'Seçə biləcəyiniz aktiv anbar yoxdur.',
+    ru: 'Нет активных складов, которые вы можете выбрать.',
+    tr: 'Seçebileceğiniz aktif depo yok.',
   },
   'team.choose': {
     az: 'Seçin',
@@ -1590,6 +1590,11 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: 'Biznes admini olmadığınız üçün yalnız öz filialınızı seçə bilərsiniz.',
     ru: 'Вы не администратор бизнеса, поэтому можно выбрать только свой филиал.',
     tr: 'İşletme admini olmadığınız için yalnızca kendi şubenizi seçebilirsiniz.',
+  },
+  'team.warehouse_own_only': {
+    az: 'Biznes admini olmadığınız üçün yalnız öz anbarınızı seçə bilərsiniz.',
+    ru: 'Вы не администратор бизнеса, поэтому можно выбрать только свой склад.',
+    tr: 'İşletme admini olmadığınız için yalnızca kendi deponuzu seçebilirsiniz.',
   },
   'team.error.invalid': {
     az: 'Dəyər yanlışdır.',

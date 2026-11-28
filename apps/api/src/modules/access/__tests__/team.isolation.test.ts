@@ -15,6 +15,7 @@ import {
   addMemberFromTemplate,
   newTestBusiness,
   platformRows,
+  roleFromTemplate,
   runTeamSeeds,
 } from './team-fixtures';
 
@@ -100,6 +101,7 @@ describe('F2.7a izolasyon: ekip, davetler, roller', () => {
       http().post(`/api/v1/team/invitations/${aInvitationId}/revoke`).set(headers(b, a.businessId)),
       http().get('/api/v1/team/roles').set(headers(b, a.businessId)),
       http().get('/api/v1/team/job-titles').set(headers(b, a.businessId)),
+      http().get('/api/v1/team/scope-options').set(headers(b, a.businessId)),
     ];
     for (const response of await Promise.all(calls)) expect(response.status).toBe(403);
   });
@@ -183,5 +185,30 @@ describe('F2.7a izolasyon: ekip, davetler, roller', () => {
           and contype = 'f'`,
     );
     expect(fk).toHaveLength(1);
+  });
+
+  it("F3.11e-ISO B'nin scope-options listesinde A'nın deposu yok; A'nın deposuna davet 404", async () => {
+    const aWarehouse = randomUUID();
+    await platformRows(
+      "insert into warehouses (id, business_id, name, status) values ($1, $2, 'A anbarı', 'active')",
+      [aWarehouse, a.businessId],
+    );
+    const own = headers(b, b.businessId);
+    const options = await http().get('/api/v1/team/scope-options').set(own);
+    expect(options.status).toBe(200);
+    const ids = (options.body as { warehouses: { id: string }[] }).warehouses.map((w) => w.id);
+    expect(ids).not.toContain(aWarehouse);
+    const { roleId, jobTitleId } = await roleFromTemplate(b.businessId, 'seller_warehouse');
+    const invite = await http().post('/api/v1/team/invitations').set(own).send({
+      phone: randomTestPhone(),
+      fullName: 'X',
+      roleId,
+      jobTitleId,
+      warehouseId: aWarehouse,
+    });
+    expect(invite.status, JSON.stringify(invite.body)).toBe(404);
+    expect((invite.body as { details?: unknown }).details).toMatchObject({
+      warehouseId: ['not_found'],
+    });
   });
 });
