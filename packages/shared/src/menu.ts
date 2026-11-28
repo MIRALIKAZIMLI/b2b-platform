@@ -133,7 +133,7 @@ export const MENUS: Readonly<Record<ShellArea, readonly MenuItem[]>> = {
     { key: 'products', anyOf: ['catalog.view'], ready: true, path: 'products' },
     // F3.6b: fiyat listeleri (US-034); fiyat girişi ürün formunda. Yalnız web.
     { key: 'prices', anyOf: ['pricing.view'], ready: true, path: 'prices' },
-    // F3.11b: depo stok ekranı (US-039); web. Mobil F3.11d.
+    // F3.11b: depo stok ekranı (US-039); web. F3.11d: mobil.
     { key: 'stock', anyOf: ['inventory.view'], ready: true, path: 'stock' },
     soon('orders', ['orders.view', 'orders.prepare']),
     soon('delivery', ['delivery.view']),

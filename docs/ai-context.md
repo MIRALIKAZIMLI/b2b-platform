@@ -2,7 +2,7 @@
 
 Usta ve Müfettiş göreve başlarken önce bu dosyayı ve görev kartını okur. Müfettiş ayrıca [review-guide.md](07-ai-development/review-guide.md) dosyasını okur. Bu dosya bir **özettir**; ayrıntı ve kesin metin bağlantı verilen belgededir. Çelişkide belge geçerlidir. Her PR bu dosyayı gerekiyorsa günceller (bitmiş adımlar, yeni ortak kural, yeni varsayılan karar).
 
-Son güncelleme: 2026-11-28 (F3.11c: Excel stok sayımı).
+Son güncelleme: 2026-11-28 (F3.11d: mobil depo ekranı).
 
 ## 1. Mimari özeti
 
@@ -155,7 +155,9 @@ Tam liste: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §6, [data-mo
 
 | F3.11c | Excel stok sayımı (US-039 AC7): migration 0043 (`import_jobs.warehouse_id`, `can_write_stock`, `WAREHOUSE_INACTIVE`). `stock` türü: `warehouseId` zorunlu + `inventory.manage` (kapsam `warehouse` yalnız kendi deposu); S1 = A Depo Sorumlusu rolünde `imports.run` yok, elle sayar. Şablon depodaki varyantlar + `current_stock`; S2 = B `current_stock` ≠ bugünkü stok → `stock_changed`. Yazım `inventory` `StockImport` → `StockService.countTx` (elle sayımla aynı). V3 ürün şablonu stok sütunu: quantity → varsayılan depo sayımı, availability → var/yok, none → not. Web sihirbazında "Anbar qalığı", stok ekranında "Excel ilə yüklə" |
 
-**Sıradaki:** F3.11d mobil depo ekranı (faz spesifikasyonu `tasks/F3-faz-spesifikasyonu.md` §3); not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
+| F3.11d | Mobil depo stok ekranı (US-039 AC1, AC6, AC7): API/migration yok. `apps/mobile` `/stock` (`features/inventory`): depo çipleri, arama, süzgeç, kart başına koli + temel birim, mal girişi / sayım alt sayfası (`Idempotency-Key` açılışta bir kez, birim çipleri, son kullanma YYYY-AA-GG metni), hareket geçmişi. Saf kurallar `stock-form.ts` (test). Menüde `seller:stock` → `/stock` (Müfettiş #91). Excel ve Miqdar moduna geçiş yalnız web (K1) |
+
+**Sıradaki:** depo ekip kuralı kartı (F3.11b S2 = A), sonra F3.12a (faz spesifikasyonu `tasks/F3-faz-spesifikasyonu.md` §3); not: `features/team` başka feature'lardan `ApiError`/`useRegionOptions`/`seller-settings` içe aktarıyor, ortak yere taşınabilir); sıra ve riskler [F2 faz spesifikasyonu](tasks/F2-faz-spesifikasyonu.md). M1'de açık kalan: gerçek cihazda push (EAS, F6) ve mobil E2E'nin elle kontrol listesi.
 
 Sıra ve bağımlılıklar: [F1 faz spesifikasyonu](tasks/F1-faz-spesifikasyonu.md) §2. Kayıt: `CHANGELOG.md`.
 
