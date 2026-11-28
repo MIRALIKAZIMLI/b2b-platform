@@ -129,7 +129,7 @@ test('F3.5b-AC1 F3.5b-AC2 F3.5b-AC3 F3.5b-PROG F3.5b-PART şablon, yükleme, ön
   await expect(page.getByTestId('import-stat-update')).toContainText('3');
   await expect(page.getByTestId('import-stat-error')).toContainText('1');
   await expect(page.getByTestId('import-problems')).toContainText('Tapılmadı.');
-  await expect(page.getByText('Stok sütunu hələlik tətbiq edilmir.')).toBeVisible();
+  await expect(page.getByText('Stok izlənmədiyi üçün stok sütunu nəzərə alınmır.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Problemlər hesabatını endir' })).toBeVisible();
   await expect(page.getByText(/gələcək tarixli qiyməti/)).toBeVisible();
   await shot(page, '2-onizleme-az');
