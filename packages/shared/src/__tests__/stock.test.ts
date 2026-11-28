@@ -2,13 +2,18 @@
 // (F3.12a, F4.1) bu kuraldan okunur.
 import { describe, expect, it } from 'vitest';
 import {
+  countDelta,
   inventoryAccess,
   isSelectableStockMode,
+  LOW_STOCK_THRESHOLD_PATTERN,
   quantityActivationSchema,
   SELECTABLE_STOCK_MODES,
+  splitByUnit,
   stockDisplay,
   stockMovementCreateSchema,
   stockQuerySchema,
+  toBaseQty,
+  trimQty,
   variantBlockedByStock,
 } from '../stock';
 
@@ -112,5 +117,40 @@ describe('F3.11a miktarlı stok gösterimi ve şemaları', () => {
     );
     expect(stockQuerySchema.parse({ low: 'true', limit: '10' })).toEqual({ low: true, limit: 10 });
     expect(quantityActivationSchema.safeParse({ confirmUncounted: 'yes' }).success).toBe(false);
+  });
+});
+
+describe('F3.11b depo ekranı miktar çevirisi', () => {
+  it('F3.11b-UNIT toBaseQty seçilen ambalajı temel birime çevirir; 3 ondalığı aşan veya geçersiz girdi null', () => {
+    expect(toBaseQty('12', '24')).toBe('288');
+    expect(toBaseQty('1,5', '24.000')).toBe('36');
+    expect(toBaseQty('0.25', '0.5')).toBe('0.125');
+    expect(toBaseQty('0.001', '0.5')).toBeNull();
+    expect(toBaseQty('-1', '24')).toBeNull();
+    expect(toBaseQty('abc', '24')).toBeNull();
+    expect(toBaseQty('99999999999', '24')).toBeNull();
+  });
+
+  it('F3.11b-UNIT splitByUnit tam ambalaj + kalan (yuvarlama yok); negatif fark işareti korunur', () => {
+    expect(splitByUnit('294.000', '24.000')).toEqual({ units: '12', remainder: '6' });
+    expect(splitByUnit('288', '24')).toEqual({ units: '12', remainder: '0' });
+    expect(splitByUnit('5', '24')).toEqual({ units: '0', remainder: '5' });
+    expect(splitByUnit('-30', '24')).toEqual({ units: '-1', remainder: '6' });
+    expect(splitByUnit('-5', '24')).toEqual({ units: '0', remainder: '-5' });
+    expect(splitByUnit('5', '0')).toBeNull();
+  });
+
+  it('F3.11b-AC7 sayım farkı önizlemesi: sayılan toplam − mevcut', () => {
+    expect(countDelta('100', '120.000')).toBe('-20');
+    expect(countDelta('120', '120.000')).toBe('0');
+    expect(countDelta('0.5', '0')).toBe('0.5');
+    expect(trimQty('144.000')).toBe('144');
+  });
+
+  it('F3.11b-THR eşik deseni 0–9999 tam sayı', () => {
+    for (const ok of ['0', '5', '9999']) expect(LOW_STOCK_THRESHOLD_PATTERN.test(ok)).toBe(true);
+    for (const bad of ['', '-1', '05', '1.5', '10000']) {
+      expect(LOW_STOCK_THRESHOLD_PATTERN.test(bad)).toBe(false);
+    }
   });
 });

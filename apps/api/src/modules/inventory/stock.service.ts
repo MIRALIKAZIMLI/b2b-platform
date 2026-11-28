@@ -11,14 +11,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ManualStockMovementType, PermissionCode } from '@b2b/shared';
 import { Clock } from '../../core/clock';
-import { withTenantTx } from '../../core/db';
+import { type Tx, withTenantTx } from '../../core/db';
 import { DomainError } from '../../core/errors/domain-error';
 import { IdGenerator } from '../../core/id-generator';
 import { compare, fromDecimalString, subtract, toDecimalString, ZERO } from '../../core/money';
 import type { TenantContext } from '../../core/tenant-context';
 import { SellerSetupRepository } from '../businesses';
 import { InventoryRepository } from './inventory.repository';
-import { type StockMovementView, StockRepository, type StockRowView } from './stock.repository';
+import {
+  type StockItemView,
+  type StockMovementView,
+  StockRepository,
+  type StockRowView,
+} from './stock.repository';
 
 export const STOCK_LIST_LIMIT_DEFAULT = 20;
 /** `numeric(14,3)` metni `Decimal` şemasında; 4 hane güvenli (girdi en çok 3 ondalık). */
@@ -45,6 +50,21 @@ export interface StockListQuery {
   readonly low?: boolean | undefined;
   readonly cursor?: string | undefined;
   readonly limit?: number | undefined;
+}
+
+export interface StockItemsQueryInput {
+  readonly warehouseId: string;
+  readonly q?: string | undefined;
+  readonly filter?: 'all' | 'low' | 'uncounted' | undefined;
+  readonly cursor?: string | undefined;
+  readonly limit?: number | undefined;
+}
+
+/** openapi `StockWarehouse` (F3.11b): depo ekranı seçicisi. */
+export interface StockWarehouseView {
+  readonly id: string;
+  readonly name: string;
+  readonly isDefault: boolean;
 }
 
 export interface Page<T> {
@@ -79,6 +99,16 @@ function decodeStockCursor(value: string): { sku: string; warehouseId: string } 
     if (!(error instanceof SyntaxError)) throw error;
   }
   throw invalidCursor();
+}
+
+/** Depo ekranı imleci: `[sku, variantId]` JSON, base64url. */
+function encodeItemCursor(row: StockItemView): string {
+  return Buffer.from(JSON.stringify([row.sku, row.variantId])).toString('base64url');
+}
+
+function decodeItemCursor(value: string): { sku: string; variantId: string } {
+  const parsed = decodeStockCursor(value);
+  return { sku: parsed.sku, variantId: parsed.warehouseId };
 }
 
 /** Hareket imleci: `<createdAt ISO>|<id>` base64url. */
@@ -193,15 +223,12 @@ export class StockService {
     const limit = query.limit ?? STOCK_LIST_LIMIT_DEFAULT;
     const after = query.cursor === undefined ? undefined : decodeStockCursor(query.cursor);
     const rows = await withTenantTx(tenant, async (tx) => {
-      let lowDefault: string | undefined;
-      if (query.low === true) {
-        const profile = await this.sellerSetup.findSellerProfileTx(tx, tenant.businessId);
-        lowDefault = profile?.lowStockDisplayThreshold ?? '5';
-      }
+      const lowThresholdUnits =
+        query.low === true ? await this.lowThresholdTx(tx, tenant.businessId) : undefined;
       return await this.repository.listTx(tx, tenant.businessId, {
         warehouseId,
         variantId: query.variantId,
-        lowDefault,
+        lowThresholdUnits,
         after,
         limit: limit + 1,
       });
@@ -211,6 +238,58 @@ export class StockService {
     return {
       items: page,
       nextCursor: rows.length > limit && last !== undefined ? encodeStockCursor(last) : null,
+    };
+  }
+
+  /** S1 = A: "az qalan" eşiği satış biriminde, toptancı ayarı (varsayılan 5). */
+  private async lowThresholdTx(tx: Tx, sellerId: string): Promise<string> {
+    const profile = await this.sellerSetup.findSellerProfileTx(tx, sellerId);
+    return profile?.lowStockDisplayThreshold ?? '5';
+  }
+
+  /**
+   * `GET /stock/warehouses` (F3.11b): stok ekranının depo seçicisi. Pasif depo listede yok (K3);
+   * kapsamı `warehouse` olan kullanıcı yalnız kendi deposunu alır (R36).
+   */
+  async warehouses(tenant: TenantContext): Promise<StockWarehouseView[]> {
+    const own = this.scopedWarehouse(tenant, 'inventory.view', undefined);
+    const rows = await withTenantTx(tenant, (tx) =>
+      this.sellerSetup.listWarehousesTx(tx, tenant.businessId),
+    );
+    return rows
+      .filter((row) => row.status === 'active' && (own === undefined || row.id === own))
+      .map((row) => ({ id: row.id, name: row.name, isDefault: row.isDefault }));
+  }
+
+  /**
+   * `GET /stock/items` (F3.11b): bir depodaki tüm satılabilir varyantlar, sayılmamışlar dahil
+   * (S5 = B hazırlık). Olmayan veya pasif depo 404 (F3.11a K10); başka depo kapsam dışıysa 403.
+   */
+  async items(tenant: TenantContext, query: StockItemsQueryInput): Promise<Page<StockItemView>> {
+    this.scopedWarehouse(tenant, 'inventory.view', query.warehouseId);
+    const limit = query.limit ?? STOCK_LIST_LIMIT_DEFAULT;
+    const after = query.cursor === undefined ? undefined : decodeItemCursor(query.cursor);
+    const rows = await withTenantTx(tenant, async (tx) => {
+      const warehouse = await this.sellerSetup.findWarehouseTx(
+        tx,
+        tenant.businessId,
+        query.warehouseId,
+      );
+      if (warehouse?.status !== 'active') throw new DomainError('NOT_FOUND');
+      return await this.repository.listItemsTx(tx, tenant.businessId, {
+        warehouseId: query.warehouseId,
+        q: query.q,
+        filter: query.filter ?? 'all',
+        lowThresholdUnits: await this.lowThresholdTx(tx, tenant.businessId),
+        after,
+        limit: limit + 1,
+      });
+    });
+    const page = rows.slice(0, limit);
+    const last = page.at(-1);
+    return {
+      items: page,
+      nextCursor: rows.length > limit && last !== undefined ? encodeItemCursor(last) : null,
     };
   }
 

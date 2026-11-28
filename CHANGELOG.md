@@ -77,3 +77,4 @@
 - F3.7b: müşteri fiyatı web ekranları (müşterinin özel fiyatları, ürün kartında müşteri fiyatı, sihirbazda müşteri fiyatı türü) ve migration 0040 (arşiv yarışı bekçisi)
 - F3.9: kademeli fiyat (migration 0041; ambalaj başına kademe API'si, fiyat çözümlemeye bağlama, ürün kartında "Pilləli endirim", açıklamada miktar)
 - F3.11a: miktarlı stok API (migration 0042; stok yalnız silinmez hareketle değişir, mal girişi ve sayım düzeltmesi, depo kapsamı, iki adımlı miktarlı moda geçiş, "Son X koli" kuralı)
+- F3.11b: depo stok ekranı web (depodaki tüm ürünler koli + adetle, mal girişi, sayım, hareket geçmişi, "az qalan" eşiği toptancı ayarı, Ayarlarda miktarlı modu açma; `GET /stock/warehouses`, `GET /stock/items`)

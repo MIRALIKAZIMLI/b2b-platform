@@ -3,7 +3,7 @@
 // hizmet bölgeleri); her sekme kendi "Kaydet"iyle bağımsız (yarım kalan form diğerini etkilemez).
 // Para birimi (minimum tutarın yanında) işletme profilinden. F3.10: dördüncü sekme "Stok" (stok rejimi).
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useBusinessProfile } from '../buyer-registration/api';
 import { useShell } from '../shell/use-shell';
 import { PageHeader } from '../ui/primitives';
@@ -20,6 +20,13 @@ export function SellerSettingsPage() {
   const { activeBusinessId } = useShell();
   const business = useBusinessProfile(activeBusinessId, true);
   const [tab, setTab] = useState<Tab>('profile');
+
+  // F3.11b: stok ekranındaki "Ayarlar > Stok" bağlantısı `?tab=stock` ile açar.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('tab');
+    const match = TABS.find((key) => key === wanted);
+    if (match !== undefined) setTab(match);
+  }, []);
 
   return (
     <div className="space-y-8 px-4 py-8 sm:px-6 lg:py-10">

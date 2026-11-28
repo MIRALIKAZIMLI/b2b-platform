@@ -3715,8 +3715,10 @@ export interface paths {
          * Depo stokları (seller; F3.11a, US-039)
          * @description İzin `inventory.view`. Kapsam `warehouse` olan kullanıcı yalnız kendi deposunu görür; başka
          *     `warehouseId` `403`. Sayılar temel birimde (`numeric(14,3)`), `available = onHand − reserved`.
-         *     `low=true`: `available ≤ eşik` satırları; eşik satırın `lowThreshold`'u, yoksa
-         *     `seller_profiles.low_stock_display_threshold`. Sıra: ürün SKU, varyant SKU, depo; imleçli.
+         *     `low=true`: `available ≤ eşik` satırları. Eşik satış biriminde
+         *     (`seller_profiles.low_stock_display_threshold`, S1 = A); karşılaştırma temel birimde:
+         *     `available ≤ eşik × en büyük satış biriminin baseQty'si` (satış birimi yoksa × 1). Satırın
+         *     `lowThreshold`'u (temel birim) doluysa önceliklidir; bugün yazılmaz. Sıra: varyant SKU, depo; imleçli.
          *     Stok her modda okunur (S5 = B hazırlık adımı); perakendeci gösterimi yalnız `quantity` modunda.
          */
         get: {
@@ -3749,6 +3751,108 @@ export interface paths {
                     };
                 };
                 403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stok ekranının depo seçicisi (seller; F3.11b)
+         * @description İzin `inventory.view` (`GET /warehouses` `business.manage` ister; depo çalışanı burayı kullanır).
+         *     Yalnız aktif depolar; varsayılan önce, sonra ada göre. Kapsam `warehouse`: yalnız kendi deposu
+         *     (deposu atanmamışsa `403`).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StockWarehouse"][];
+                    };
+                };
+                403: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Depodaki tüm satılabilir varyantlar ve stokları (seller; F3.11b)
+         * @description İzin `inventory.view`. Arşivli olmayan her varyant, verilen depodaki stok satırıyla; satırı
+         *     olmayan varyant `counted: false` ve sayılar `null` (S5 = B: miktarlı moda geçmeden sayım).
+         *     `filter=low`: sayılmış ve `available ≤ eşik × displayUnit.baseQty` (eşik satış biriminde,
+         *     `GET /stock?low=true` ile aynı kural); `filter=uncounted`: satırı olmayanlar. `q` ürün adında
+         *     (tüm diller), ürün ve varyant SKU'sunda arar. Sıra: varyant SKU, varyant kimliği; imleçli.
+         *     Olmayan / pasif depo `404`; kapsam `warehouse` iken başka depo `403`.
+         */
+        get: {
+            parameters: {
+                query: {
+                    warehouseId: string;
+                    q?: string;
+                    filter?: "all" | "low" | "uncounted";
+                    cursor?: components["parameters"]["Cursor"];
+                    limit?: components["parameters"]["Limit"];
+                };
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["StockItem"][];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
                 422: components["responses"]["Error"];
             };
         };
@@ -8510,6 +8614,8 @@ export interface components {
             /** Format: uuid */
             defaultWarehouseId: string | null;
             stockMode: components["schemas"]["StockMode"];
+            /** @description F3.11b (US-039 AC6, kullanıcı kararı S1 = A). "Son X koli" / "az qalan" eşiği, satış biriminde tam sayı; varsayılan 5. */
+            lowStockDisplayThreshold: string;
         };
         /**
          * @description ADR-0018. `none` her aktif varyant sipariş edilebilir; `availability` var/yok işareti; `quantity` miktarlı stok (F3.11a; `POST /stock-mode/quantity` ile açılır).
@@ -8542,6 +8648,50 @@ export interface components {
             lowThreshold: components["schemas"]["Decimal"] | null;
             /** Format: date-time */
             updatedAt: string;
+        };
+        /** @description F3.11b. Stok ekranı depo seçicisi. */
+        StockWarehouse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            isDefault: boolean;
+        };
+        /**
+         * @description F3.11b. Bir depodaki bir satılabilir varyant. Sayılar temel birimde; `displayUnit` en büyük
+         *     satış birimi (ekranda "koli"; satış birimi yoksa null). Sayılmamış varyantta sayılar null.
+         */
+        StockItem: {
+            /** Format: uuid */
+            variantId: string;
+            /** Format: uuid */
+            productId: string;
+            productName: components["schemas"]["LocalizedText"];
+            attributes: {
+                [key: string]: unknown;
+            };
+            /** @description Varyant SKU */
+            sku: string;
+            baseUnitCode: string;
+            /** @description Küçükten büyüğe. */
+            packaging: {
+                /** @enum {string} */
+                level: "unit" | "inner" | "case" | "pallet";
+                unitCode: string;
+                baseQty: components["schemas"]["Decimal"];
+                isSalesUnit: boolean;
+            }[];
+            displayUnit: {
+                unitCode: string;
+                baseQty: components["schemas"]["Decimal"];
+            } | null;
+            counted: boolean;
+            onHand: components["schemas"]["Decimal"] | null;
+            reserved: components["schemas"]["Decimal"] | null;
+            available: components["schemas"]["Decimal"] | null;
+            /** @description `filter=low` kuralı (sayılmamışta false) */
+            low: boolean;
+            /** Format: date-time */
+            updatedAt: string | null;
         };
         /** @description F3.11a. Silinmez, değiştirilemez stok hareketi (R35). */
         StockMovement: {
@@ -8577,6 +8727,8 @@ export interface components {
              * @enum {string}
              */
             stockMode?: "none" | "availability";
+            /** @description F3.11b (S1 = A). Satış biriminde 0–9999; audit `seller_profile.updated`. */
+            lowStockDisplayThreshold?: string;
         };
         ServiceAreas: {
             regionIds: string[];

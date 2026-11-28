@@ -505,19 +505,21 @@ describe('F3.11a miktarlı stok (entegrasyon)', () => {
     expect(await movements(seller, variantId)).toHaveLength(0);
   });
 
-  it('F3.11a-V3 low=true satılabilir miktarı eşiğe eşit veya altındaki satırları döner; imleç sayfalar', async () => {
+  // F3.11b (Müfettiş #90 notu, S1 = A): eşik satış biriminde (5 koli × 24 = 120 adet), karşılaştırma
+  // temel birimde; eski beklenen (3, 5 adet) eşiği temel birim sanıyordu.
+  it('F3.11a-V3 low=true satılabilir miktarı eşik × satış birimine eşit veya altındaki satırları döner; imleç sayfalar', async () => {
     const seller = await newSeller(region);
     const warehouseId = await newWarehouse(seller, 'Anbar');
     const variants: string[] = [];
     for (let i = 0; i < 3; i++) variants.push((await newProduct(seller)).variants[0]?.id ?? '');
-    const qtys = ['3', '5', '12'];
+    const qtys = ['96', '120', '121'];
     for (const [i, variantId] of variants.entries()) {
       await move(seller, { warehouseId, variantId, type: 'receipt', qty: qtys[i] });
     }
     const low = await (await admin(seller)).get('/api/v1/stock?low=true');
     expect(
       (low.body as { items: StockRowJson[] }).items.map((i) => num(i.onHand)).sort((a, b) => a - b),
-    ).toEqual([3, 5]);
+    ).toEqual([96, 120]);
 
     const page1 = await (await admin(seller)).get('/api/v1/stock?limit=2');
     const body1 = page1.body as { items: StockRowJson[]; nextCursor: string | null };

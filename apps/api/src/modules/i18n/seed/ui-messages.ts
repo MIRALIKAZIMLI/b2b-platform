@@ -7370,11 +7370,6 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     ru: 'Выберите, как розничные покупатели смогут заказывать ваши товары.',
     tr: 'Perakendecilerin ürünlerinizi nasıl sipariş edebileceğini seçin.',
   },
-  'sellerSettings.stock.soon': {
-    az: 'Tezliklə',
-    ru: 'Скоро',
-    tr: 'Yakında',
-  },
   'sellerSettings.stock.mode.none.title': {
     az: 'İzlənmir',
     ru: 'Не ведётся',
@@ -7401,9 +7396,9 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     tr: 'Miktar',
   },
   'sellerSettings.stock.mode.quantity.hint': {
-    az: 'Anbar üzrə dəqiq miqdar. Növbəti yeniləmədə.',
-    ru: 'Точное количество по складам. В следующем обновлении.',
-    tr: 'Depo bazında tam miktar. Sonraki güncellemede.',
+    az: 'Anbar üzrə dəqiq miqdar; mal qəbulu və sayımla dəyişir.',
+    ru: 'Точное количество по складам; меняется приёмкой и инвентаризацией.',
+    tr: 'Depo bazında tam miktar; mal girişi ve sayımla değişir.',
   },
   'sellerSettings.stock.effect.none': {
     az: 'Bütün aktiv məhsullar sifariş edilə bilər. Variantların "yoxdur" işarələri saxlanılır və "Var / yoxdur" rejiminə qayıtdıqda yenidən qüvvəyə minir.',
@@ -7444,5 +7439,401 @@ export const UI_MESSAGES: Readonly<Record<string, ErrorMessageText>> = {
     az: '"Yoxdur" variant pərakəndəçidə "Stokda yoxdur" görünür və səbətə əlavə edilə bilməz.',
     ru: 'Вариант «нет» показывается покупателю как «Нет в наличии» и не добавляется в корзину.',
     tr: '"Yok" varyant perakendecide "Stokta yok" görünür ve sepete eklenemez.',
+  },
+  // F3.11b: çeviriler taslak, kullanıcı onayı bekliyor.
+  'sellerSettings.stock.effect.quantity': {
+    az: 'Pərakəndəçi qalığı görür: az qaldıqda "Son X qutu", bitəndə "Stokda yoxdur". Sayılmamış məhsul "Stokda yoxdur" görünür. Əvvəlcə anbar ekranında qalığı daxil edin.',
+    ru: 'Покупатель видит остаток: при малом количестве «Осталось X кор.», при нуле «Нет в наличии». Непосчитанный товар показывается как «Нет в наличии». Сначала введите остатки на экране склада.',
+    tr: 'Perakendeci stoğu görür: az kalınca "Son X koli", bitince "Stokta yok". Sayılmamış ürün "Stokta yok" görünür. Önce depo ekranında stoğu girin.',
+  },
+  'sellerSettings.stock.open_stock': {
+    az: 'Anbar ekranına keçin',
+    ru: 'Перейти к складу',
+    tr: 'Depo ekranına git',
+  },
+  'sellerSettings.stock.threshold.label': {
+    az: '"Az qalıb" həddi (satış vahidi)',
+    ru: 'Порог «мало» (в единицах продажи)',
+    tr: '"Az kaldı" eşiği (satış birimi)',
+  },
+  'sellerSettings.stock.threshold.hint': {
+    az: 'Satıla bilən qalıq bu saydan az və ya bərabər olduqda "Son X qutu" göstərilir. Bütün məhsullar və anbarlar üçün eynidir.',
+    ru: 'Если доступный остаток меньше или равен этому числу, показывается «Осталось X кор.». Одинаково для всех товаров и складов.',
+    tr: 'Satılabilir stok bu sayıya eşit veya altındaysa "Son X koli" gösterilir. Tüm ürün ve depolar için aynıdır.',
+  },
+  'sellerSettings.stock.threshold.invalid': {
+    az: '0 ilə 9999 arasında tam ədəd yazın.',
+    ru: 'Введите целое число от 0 до 9999.',
+    tr: '0 ile 9999 arasında tam sayı yazın.',
+  },
+  'sellerSettings.stock.confirm.title': {
+    az: 'Miqdar rejimi açılsın?',
+    ru: 'Включить учёт по количеству?',
+    tr: 'Miktarlı stok açılsın mı?',
+  },
+  'sellerSettings.stock.confirm.body': {
+    az: '{count} məhsulun qalığı hələ daxil edilməyib. Onlar pərakəndəçidə "Stokda yoxdur" görünəcək və sifariş edilə bilməyəcək.',
+    ru: 'Остатки {count} товаров ещё не введены. У покупателей они будут «Нет в наличии» и не будут доступны для заказа.',
+    tr: '{count} ürünün stoğu henüz girilmedi. Bu ürünler perakendecide "Stokta yok" görünecek ve sipariş edilemeyecek.',
+  },
+  'sellerSettings.stock.confirm.count_first': {
+    az: 'Əvvəlcə sayım edim',
+    ru: 'Сначала посчитаю',
+    tr: 'Önce sayım yapayım',
+  },
+  'sellerSettings.stock.confirm.submit': {
+    az: 'Yenə də aç',
+    ru: 'Всё равно включить',
+    tr: 'Yine de aç',
+  },
+  'stock.eyebrow': {
+    az: 'Anbar',
+    ru: 'Склад',
+    tr: 'Depo',
+  },
+  'stock.title': {
+    az: 'Anbar qalığı',
+    ru: 'Остатки на складе',
+    tr: 'Depo stoğu',
+  },
+  'stock.description': {
+    az: 'Mal qəbulu və sayımla anbardakı qalığı idarə edin. Qalıq yalnız bu əməliyyatlarla dəyişir.',
+    ru: 'Управляйте остатками через приёмку и инвентаризацию. Остаток меняется только этими операциями.',
+    tr: 'Mal girişi ve sayımla depodaki stoğu yönetin. Stok yalnız bu işlemlerle değişir.',
+  },
+  'stock.mode_banner': {
+    az: 'Miqdar rejimi hələ açılmayıb: qalığı indi daxil edə bilərsiniz, pərakəndəçi isə rejim açılanda görəcək.',
+    ru: 'Учёт по количеству ещё не включён: можно вводить остатки сейчас, покупатели увидят их после включения.',
+    tr: 'Miktarlı stok henüz açık değil: stoğu şimdi girebilirsiniz, perakendeci açtığınızda görür.',
+  },
+  'stock.mode_banner_link': {
+    az: 'Ayarlar › Stok',
+    ru: 'Настройки › Остатки',
+    tr: 'Ayarlar › Stok',
+  },
+  'stock.warehouse': {
+    az: 'Anbar',
+    ru: 'Склад',
+    tr: 'Depo',
+  },
+  'stock.search': {
+    az: 'Ad və ya SKU ilə axtarın',
+    ru: 'Поиск по названию или SKU',
+    tr: 'Ad veya SKU ile arayın',
+  },
+  'stock.filter_label': {
+    az: 'Süzgəc',
+    ru: 'Фильтр',
+    tr: 'Süzgeç',
+  },
+  'stock.filter.all': {
+    az: 'Hamısı',
+    ru: 'Все',
+    tr: 'Hepsi',
+  },
+  'stock.filter.low': {
+    az: 'Az qalan',
+    ru: 'Заканчивается',
+    tr: 'Az kalan',
+  },
+  'stock.filter.uncounted': {
+    az: 'Sayılmayıb',
+    ru: 'Не посчитано',
+    tr: 'Sayılmadı',
+  },
+  'stock.col.product': {
+    az: 'Məhsul',
+    ru: 'Товар',
+    tr: 'Ürün',
+  },
+  'stock.col.on_hand': {
+    az: 'Mövcud',
+    ru: 'В наличии',
+    tr: 'Mevcut',
+  },
+  'stock.col.reserved': {
+    az: 'Rezerv',
+    ru: 'Резерв',
+    tr: 'Rezerve',
+  },
+  'stock.col.available': {
+    az: 'Satıla bilən',
+    ru: 'Доступно',
+    tr: 'Satılabilir',
+  },
+  'stock.col.status': {
+    az: 'Vəziyyət',
+    ru: 'Статус',
+    tr: 'Durum',
+  },
+  'stock.col.actions': {
+    az: 'Əməliyyatlar',
+    ru: 'Действия',
+    tr: 'İşlemler',
+  },
+  'stock.status.uncounted': {
+    az: 'Sayılmayıb',
+    ru: 'Не посчитано',
+    tr: 'Sayılmadı',
+  },
+  'stock.status.out': {
+    az: 'Bitib',
+    ru: 'Нет в наличии',
+    tr: 'Bitti',
+  },
+  'stock.status.low': {
+    az: 'Az qalıb',
+    ru: 'Заканчивается',
+    tr: 'Az kaldı',
+  },
+  'stock.status.in': {
+    az: 'Stokda',
+    ru: 'В наличии',
+    tr: 'Stokta',
+  },
+  'stock.action.receipt': {
+    az: 'Mal qəbulu',
+    ru: 'Приёмка',
+    tr: 'Mal girişi',
+  },
+  'stock.action.count': {
+    az: 'Sayım',
+    ru: 'Инвентаризация',
+    tr: 'Sayım',
+  },
+  'stock.action.history': {
+    az: 'Tarixçə',
+    ru: 'История',
+    tr: 'Geçmiş',
+  },
+  'stock.qty.amount': {
+    az: '{qty} {unit}',
+    ru: '{qty} {unit}',
+    tr: '{qty} {unit}',
+  },
+  'stock.qty.with_rest': {
+    az: '{units} + {rest}',
+    ru: '{units} + {rest}',
+    tr: '{units} + {rest}',
+  },
+  'stock.loading': {
+    az: 'Yüklənir…',
+    ru: 'Загрузка…',
+    tr: 'Yükleniyor…',
+  },
+  'stock.more': {
+    az: 'Daha çox',
+    ru: 'Показать ещё',
+    tr: 'Daha fazla',
+  },
+  'stock.no_warehouse': {
+    az: 'Sizə görünən aktiv anbar yoxdur. Anbarı Ayarlar › Anbarlar bölməsində əlavə edin və ya admininizdən anbar təyin etməsini istəyin.',
+    ru: 'Нет доступных активных складов. Добавьте склад в Настройки › Склады или попросите администратора назначить вам склад.',
+    tr: 'Size görünen aktif depo yok. Depoyu Ayarlar › Depolar bölümünde ekleyin veya yöneticinizden depo atamasını isteyin.',
+  },
+  'stock.empty.all': {
+    az: 'Bu anbarda göstəriləcək məhsul yoxdur.',
+    ru: 'На этом складе нет товаров для отображения.',
+    tr: 'Bu depoda gösterilecek ürün yok.',
+  },
+  'stock.empty.low': {
+    az: 'Az qalan məhsul yoxdur.',
+    ru: 'Заканчивающихся товаров нет.',
+    tr: 'Az kalan ürün yok.',
+  },
+  'stock.empty.uncounted': {
+    az: 'Bütün məhsullar sayılıb.',
+    ru: 'Все товары посчитаны.',
+    tr: 'Tüm ürünler sayıldı.',
+  },
+  'stock.empty.products_link': {
+    az: 'Məhsul əlavə edin',
+    ru: 'Добавить товар',
+    tr: 'Ürün ekleyin',
+  },
+  'stock.dialog.receipt.title': {
+    az: 'Mal qəbulu',
+    ru: 'Приёмка товара',
+    tr: 'Mal girişi',
+  },
+  'stock.dialog.receipt.qty': {
+    az: 'Gələn miqdar',
+    ru: 'Поступившее количество',
+    tr: 'Gelen miktar',
+  },
+  'stock.dialog.receipt.qty_hint': {
+    az: 'Anbara daxil olan miqdar; qalığa əlavə olunur.',
+    ru: 'Количество, поступившее на склад; прибавляется к остатку.',
+    tr: 'Depoya giren miktar; stoğa eklenir.',
+  },
+  'stock.dialog.receipt.submit': {
+    az: 'Qəbul et',
+    ru: 'Принять',
+    tr: 'Girişi kaydet',
+  },
+  'stock.dialog.adjustment.title': {
+    az: 'Sayım',
+    ru: 'Инвентаризация',
+    tr: 'Sayım',
+  },
+  'stock.dialog.adjustment.qty': {
+    az: 'Rəfdə saydığınız ümumi miqdar',
+    ru: 'Общее количество, посчитанное на полке',
+    tr: 'Rafta saydığınız toplam',
+  },
+  'stock.dialog.adjustment.qty_hint': {
+    az: 'Fərqi deyil, ümumi miqdarı yazın; fərqi sistem hesablayır.',
+    ru: 'Введите общее количество, а не разницу; разницу посчитает система.',
+    tr: 'Farkı değil, toplamı yazın; farkı sistem hesaplar.',
+  },
+  'stock.dialog.adjustment.submit': {
+    az: 'Sayımı yadda saxla',
+    ru: 'Сохранить инвентаризацию',
+    tr: 'Sayımı kaydet',
+  },
+  'stock.dialog.adjustment.current': {
+    az: 'İndiki qalıq: {qty}',
+    ru: 'Текущий остаток: {qty}',
+    tr: 'Şimdiki stok: {qty}',
+  },
+  'stock.dialog.adjustment.first': {
+    az: 'Bu məhsul bu anbarda ilk dəfə sayılır.',
+    ru: 'Этот товар считается на этом складе впервые.',
+    tr: 'Bu ürün bu depoda ilk kez sayılıyor.',
+  },
+  'stock.dialog.adjustment.same': {
+    az: 'Qalıq dəyişməyəcək.',
+    ru: 'Остаток не изменится.',
+    tr: 'Stok değişmeyecek.',
+  },
+  'stock.dialog.adjustment.delta': {
+    az: 'Fərq: {delta}',
+    ru: 'Разница: {delta}',
+    tr: 'Fark: {delta}',
+  },
+  'stock.dialog.unit': {
+    az: 'Vahid',
+    ru: 'Единица',
+    tr: 'Birim',
+  },
+  'stock.dialog.unit_option': {
+    az: '{unit} ({qty} {base})',
+    ru: '{unit} ({qty} {base})',
+    tr: '{unit} ({qty} {base})',
+  },
+  'stock.dialog.equals': {
+    az: '= {qty}',
+    ru: '= {qty}',
+    tr: '= {qty}',
+  },
+  'stock.dialog.lot': {
+    az: 'Partiya nömrəsi',
+    ru: 'Номер партии',
+    tr: 'Parti no',
+  },
+  'stock.dialog.expiry': {
+    az: 'Son istifadə tarixi',
+    ru: 'Срок годности',
+    tr: 'Son kullanma tarihi',
+  },
+  'stock.dialog.note': {
+    az: 'Qeyd',
+    ru: 'Примечание',
+    tr: 'Not',
+  },
+  'stock.dialog.cancel': {
+    az: 'Ləğv et',
+    ru: 'Отмена',
+    tr: 'Vazgeç',
+  },
+  'stock.error.qty_positive': {
+    az: '0-dan böyük miqdar yazın.',
+    ru: 'Введите количество больше 0.',
+    tr: "0'dan büyük miktar yazın.",
+  },
+  'stock.error.qty_invalid': {
+    az: 'Düzgün miqdar yazın (ən çox 3 onluq rəqəm).',
+    ru: 'Введите корректное количество (не более 3 знаков после запятой).',
+    tr: 'Geçerli bir miktar yazın (en çok 3 ondalık).',
+  },
+  'stock.done.receipt': {
+    az: '{product}: qəbul yazıldı, yeni qalıq: {qty}',
+    ru: '{product}: приёмка записана, новый остаток: {qty}',
+    tr: '{product}: giriş kaydedildi, yeni stok: {qty}',
+  },
+  'stock.done.adjustment': {
+    az: '{product}: sayım yazıldı, yeni qalıq: {qty}',
+    ru: '{product}: инвентаризация записана, новый остаток: {qty}',
+    tr: '{product}: sayım kaydedildi, yeni stok: {qty}',
+  },
+  'stock.done.unchanged': {
+    az: '{product}: qalıq eynidir, dəyişiklik yazılmadı.',
+    ru: '{product}: остаток тот же, изменений нет.',
+    tr: '{product}: stok aynı, değişiklik yazılmadı.',
+  },
+  'stock.history.title': {
+    az: 'Hərəkət tarixçəsi',
+    ru: 'История движений',
+    tr: 'Hareket geçmişi',
+  },
+  'stock.history.empty': {
+    az: 'Hələ hərəkət yoxdur.',
+    ru: 'Движений пока нет.',
+    tr: 'Henüz hareket yok.',
+  },
+  'stock.history.failed': {
+    az: 'Tarixçə yüklənmədi. Yenidən cəhd edin.',
+    ru: 'Не удалось загрузить историю. Попробуйте ещё раз.',
+    tr: 'Geçmiş yüklenemedi. Yeniden deneyin.',
+  },
+  'stock.history.counted': {
+    az: 'Sayıldı, fərq yoxdur',
+    ru: 'Посчитано, без разницы',
+    tr: 'Sayıldı, fark yok',
+  },
+  'stock.history.lot': {
+    az: 'partiya {lot}',
+    ru: 'партия {lot}',
+    tr: 'parti {lot}',
+  },
+  'stock.history.expiry': {
+    az: 'son istifadə {date}',
+    ru: 'годен до {date}',
+    tr: 'son kullanma {date}',
+  },
+  'stock.history.close': {
+    az: 'Bağla',
+    ru: 'Закрыть',
+    tr: 'Kapat',
+  },
+  'stock.type.receipt': {
+    az: 'Mal qəbulu',
+    ru: 'Приёмка',
+    tr: 'Mal girişi',
+  },
+  'stock.type.adjustment': {
+    az: 'Sayım',
+    ru: 'Инвентаризация',
+    tr: 'Sayım',
+  },
+  'stock.type.reserve': {
+    az: 'Rezerv',
+    ru: 'Резерв',
+    tr: 'Rezerve',
+  },
+  'stock.type.release': {
+    az: 'Rezervin buraxılması',
+    ru: 'Снятие резерва',
+    tr: 'Rezerve bırakma',
+  },
+  'stock.type.ship': {
+    az: 'Göndəriş',
+    ru: 'Отгрузка',
+    tr: 'Sevk',
+  },
+  'stock.type.return': {
+    az: 'Qaytarma',
+    ru: 'Возврат',
+    tr: 'İade',
   },
 };

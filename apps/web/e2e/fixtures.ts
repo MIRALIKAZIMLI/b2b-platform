@@ -421,3 +421,26 @@ export async function approveBrandRequest(name: string): Promise<void> {
     await client.query('commit');
   });
 }
+
+/**
+ * F3.11b: varyanta "koli" satış birimi ekler (web formunda ambalaj adımı uzun; stok ekranı testi için
+ * kestirme). Satıcı bağlamında (`app.business_id`) yazılır, RLS kiracı politikası geçerli.
+ */
+export async function addCasePackaging(
+  sellerId: string,
+  variantSku: string,
+  baseQty: string,
+): Promise<void> {
+  await withMigrator(async (client) => {
+    await client.query('begin');
+    await client.query("select set_config('app.business_id', $1, true)", [sellerId]);
+    const result = await client.query(
+      `insert into product_packaging (id, variant_id, seller_id, level, unit_code, base_qty, is_sales_unit)
+       select $1, v.id, v.seller_id, 'case', 'XCT', $2, true
+         from product_variants v where v.seller_id = $3 and v.sku = $4`,
+      [randomUUID(), baseQty, sellerId, variantSku],
+    );
+    await client.query('commit');
+    expect(result.rowCount).toBe(1);
+  });
+}

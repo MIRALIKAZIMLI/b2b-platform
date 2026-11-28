@@ -85,6 +85,24 @@ export type StockMovementsQuery = z.infer<typeof stockMovementsQuerySchema>;
 export const stockQuerySchema = stockMovementsQuerySchema.extend({ low: queryBoolean.optional() });
 export type StockQuery = z.infer<typeof stockQuerySchema>;
 
+/** "Az qalan" / "Son X koli" eşiği (F3.11b, S1 = A): satış biriminde tam sayı, 0–9999. */
+export const LOW_STOCK_THRESHOLD_PATTERN = /^(0|[1-9][0-9]{0,3})$/;
+
+/** `GET /stock/items` süzgeci (F3.11b): hepsi, az qalan (sayılmış), sayılmamış. */
+export const STOCK_ITEM_FILTERS = ['all', 'low', 'uncounted'] as const;
+export type StockItemFilter = (typeof STOCK_ITEM_FILTERS)[number];
+export const STOCK_ITEM_QUERY_MAX = 100;
+
+/** `GET /stock/items` sorgusu: bir depodaki tüm satılabilir varyantlar (sayılmamışlar dahil). */
+export const stockItemsQuerySchema = z.strictObject({
+  warehouseId: z.uuid(),
+  q: z.string().trim().min(1).max(STOCK_ITEM_QUERY_MAX).optional(),
+  filter: z.enum(STOCK_ITEM_FILTERS).optional(),
+  cursor: z.string().max(300).optional(),
+  limit: z.coerce.number().int().min(1).max(STOCK_LIST_LIMIT_MAX).optional(),
+});
+export type StockItemsQuery = z.infer<typeof stockItemsQuerySchema>;
+
 /** `POST /stock-mode/quantity` gövdesi (S2 = A: sayılmamış varyant varken açık onay). */
 export const quantityActivationSchema = z.strictObject({
   confirmUncounted: z.boolean().optional(),
@@ -98,6 +116,64 @@ function toMilli(value: string): bigint {
   const [whole = '0', fraction = ''] = (negative ? value.slice(1) : value).split('.');
   const milli = BigInt(whole) * QTY_SCALE + BigInt(fraction.padEnd(3, '0').slice(0, 3));
   return negative ? -milli : milli;
+}
+
+function fromMilli(value: bigint, scale = 3): string {
+  const negative = value < 0n;
+  const abs = negative ? -value : value;
+  const unit = 10n ** BigInt(scale);
+  const whole = abs / unit;
+  const fraction = (abs % unit).toString().padStart(scale, '0').replace(/0+$/, '');
+  return `${negative ? '-' : ''}${whole.toString()}${fraction === '' ? '' : `.${fraction}`}`;
+}
+
+/** Sayı metnini sadeleştirir ("144.000" → "144", "-2.500" → "-2.5"). */
+export function trimQty(value: string): string {
+  return fromMilli(toMilli(value));
+}
+
+/**
+ * Ekranda girilen miktarı (seçilen ambalajda) temel birime çevirir (F3.11b K2). Sonuç
+ * `STOCK_QTY_PATTERN`'e uymuyorsa (3 ondalığı aşar, çok büyük, negatif) null: alan hatası.
+ * Girdi en çok 3 ondalık; çarpım 6 ondalığa çıkabilir, 3'ün ötesi sıfır değilse reddedilir.
+ */
+export function toBaseQty(qty: string, baseQtyPerUnit: string): string | null {
+  const text = qty.trim().replace(',', '.');
+  if (!STOCK_QTY_PATTERN.test(text) || !STOCK_QTY_PATTERN.test(baseQtyPerUnit)) return null;
+  const micro = toMilli(text) * toMilli(baseQtyPerUnit);
+  if (micro % QTY_SCALE !== 0n) return null;
+  const result = fromMilli(micro / QTY_SCALE);
+  return STOCK_QTY_PATTERN.test(result) ? result : null;
+}
+
+export interface QtyInUnits {
+  /** Tam ambalaj sayısı (ör. 12 koli). */
+  readonly units: string;
+  /** Kalan temel birim (ör. 6 adet); 0 ise "0". */
+  readonly remainder: string;
+}
+
+/**
+ * Temel birimdeki miktarı ambalaja böler: `⌊miktar / ambalaj⌋` ve kalan (yuvarlama yok, F3.11b K1).
+ * Negatif fark (sayım) işaretini tam kısma taşır. Ambalaj ≤ 0 ise null.
+ */
+export function splitByUnit(baseQty: string, baseQtyPerUnit: string): QtyInUnits | null {
+  const per = toMilli(baseQtyPerUnit);
+  if (per <= 0n) return null;
+  const value = toMilli(baseQty);
+  const negative = value < 0n;
+  const abs = negative ? -value : value;
+  const units = abs / per;
+  const remainder = abs - units * per;
+  return {
+    units: `${negative && units > 0n ? '-' : ''}${units.toString()}`,
+    remainder: `${negative && units === 0n && remainder > 0n ? '-' : ''}${fromMilli(remainder)}`,
+  };
+}
+
+/** Sayım farkı önizlemesi (S1 = A): sayılan − mevcut, temel birimde. */
+export function countDelta(countedBase: string, onHand: string): string {
+  return fromMilli(toMilli(countedBase) - toMilli(onHand));
 }
 
 export type StockDisplayState = 'untracked' | 'in_stock' | 'low' | 'out_of_stock';
