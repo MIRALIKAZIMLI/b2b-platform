@@ -282,6 +282,12 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, ErrorMessageText>> = {
     ru: 'Это действие недоступно в текущем режиме учёта остатков. Проверьте режим в настройках.',
     tr: 'Bu işlem mevcut stok modunda yapılamaz. Ayarlardan stok modunu kontrol edin.',
   },
+  // F3.11a: çeviriler taslak, kullanıcı onayı bekliyor.
+  STOCK_UNCOUNTED_VARIANTS: {
+    az: 'Bəzi məhsulların stoku hələ daxil edilməyib. Onlar pərakəndəçidə "Stokda yoxdur" görünəcək.',
+    ru: 'Остатки некоторых товаров ещё не введены. У розничных покупателей они будут показаны как «Нет в наличии».',
+    tr: 'Bazı ürünlerin stoğu henüz girilmedi. Bu ürünler perakendecide "Stokta yok" görünecek.',
+  },
   INTERNAL_ERROR: {
     az: 'Gözlənilməz xəta baş verdi. Bir az sonra yenidən cəhd edin.',
     ru: 'Произошла непредвиденная ошибка. Повторите попытку позже.',

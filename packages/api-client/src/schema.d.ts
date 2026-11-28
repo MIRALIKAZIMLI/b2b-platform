@@ -3711,11 +3711,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Stok (seller) */
+        /**
+         * Depo stokları (seller; F3.11a, US-039)
+         * @description İzin `inventory.view`. Kapsam `warehouse` olan kullanıcı yalnız kendi deposunu görür; başka
+         *     `warehouseId` `403`. Sayılar temel birimde (`numeric(14,3)`), `available = onHand − reserved`.
+         *     `low=true`: `available ≤ eşik` satırları; eşik satırın `lowThreshold`'u, yoksa
+         *     `seller_profiles.low_stock_display_threshold`. Sıra: ürün SKU, varyant SKU, depo; imleçli.
+         *     Stok her modda okunur (S5 = B hazırlık adımı); perakendeci gösterimi yalnız `quantity` modunda.
+         */
         get: {
             parameters: {
                 query?: {
                     warehouseId?: string;
+                    variantId?: string;
                     low?: boolean;
                     cursor?: components["parameters"]["Cursor"];
                     limit?: components["parameters"]["Limit"];
@@ -3733,8 +3741,15 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["StockRow"][];
+                            nextCursor: string | null;
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         put?: never;
@@ -3752,15 +3767,65 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Stok hareketleri (seller; F3.11a)
+         * @description İzin `inventory.view` (kapsam `warehouse`: yalnız kendi deposu, başka `warehouseId` `403`).
+         *     Yeniden eskiye, imleçli. Hareketler değiştirilemez ve silinemez (R35).
+         */
+        get: {
+            parameters: {
+                query?: {
+                    warehouseId?: string;
+                    variantId?: string;
+                    cursor?: components["parameters"]["Cursor"];
+                    limit?: components["parameters"]["Limit"];
+                };
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["StockMovement"][];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
         put?: never;
-        /** Mal girişi veya sayım düzeltmesi (US-039) */
+        /**
+         * Mal girişi veya sayım düzeltmesi (US-039 AC1, AC7; F3.11a)
+         * @description İzin `inventory.manage`; kapsam `warehouse` olan kullanıcı yalnız kendi deposuna yazar
+         *     (başka depo `403`, R36). `Idempotency-Key` zorunlu (yoksa `422`); aynı anahtar ve gövde aynı
+         *     yanıtı döner, tek hareket yazılır. Miktar temel birimde, en çok 3 ondalık.
+         *     - `receipt` (mal girişi): `qty > 0`; `onHand` `qty` kadar artar.
+         *     - `adjustment` (sayım düzeltmesi, kullanıcı kararı S1 = A): `qty` sayılan **toplamdır**
+         *       (`≥ 0`); hareket farkı (`qty − onHand`) yazar. Fark 0 ise hareket yazılmaz
+         *       (`movement: null`); yalnız satırın ilk sayımı 0 ise 0 farklı hareket satırı açar
+         *       (varyant "sayıldı", `POST /stock-mode/quantity` uyarısına girmez). Sayılan < `reserved` ise `409 STOCK_INSUFFICIENT`.
+         *     Stok yalnız bu hareketle değişir; doğrudan değiştirme yolu yoktur (veritabanında zorlanır).
+         *     Her stok modunda yazılabilir (S5 = B: miktarlı moda geçmeden önce sayım girilir).
+         *     Pasif veya başka satıcının deposu, olmayan varyant `404`; arşivli varyant / ürün
+         *     `409 INVALID_STATE_TRANSITION`. Lot ve son kullanma tarihi isteğe bağlıdır (D24).
+         */
         post: {
             parameters: {
                 query?: never;
                 header: {
                     "X-Business-Id": components["parameters"]["BusinessId"];
-                    "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                    "Idempotency-Key": string;
                 };
                 path?: never;
                 cookie?: never;
@@ -3774,7 +3839,7 @@ export interface paths {
                         variantId: string;
                         /** @enum {string} */
                         type: "receipt" | "adjustment";
-                        qty: components["schemas"]["Decimal"];
+                        qty: string;
                         lotNo?: string;
                         /** Format: date */
                         expiryDate?: string;
@@ -3788,8 +3853,76 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            movement: components["schemas"]["StockMovement"] | null;
+                            stock: components["schemas"]["StockRow"];
+                        };
+                    };
                 };
+                403: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock-mode/quantity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Miktarlı stoğu etkinleştir (S5 = B ikinci adım; F3.11a)
+         * @description İzin `business.manage` (mod ayarı). Mod `quantity` olur; audit `seller_profile.updated`.
+         *     Aktif bir depoda stok satırı olmayan satılabilir varyant (varyant ve ürün arşivli değil)
+         *     varsa ve `confirmUncounted: true` verilmemişse `409 STOCK_UNCOUNTED_VARIANTS`
+         *     (`details.uncountedCount`); onayla açılır, sayılmamış varyant perakendecide "Stokta yok"
+         *     görünür (kullanıcı kararı S2 = A). Mod zaten `quantity` ise sonuç aynı, audit yazılmaz.
+         *     Moddan çıkış `PATCH /business/seller-profile` ile (`none` / `availability`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Business-Id": components["parameters"]["BusinessId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @default false */
+                        confirmUncounted?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Mod `quantity` */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            stockMode: components["schemas"]["StockMode"];
+                            uncountedCount: number;
+                        };
+                    };
+                };
+                403: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+                422: components["responses"]["Error"];
             };
         };
         delete?: never;
@@ -5303,7 +5436,7 @@ export interface paths {
          * Excel içe aktarma başlat (US-031)
          * @description F3.5a. İzin `imports.run`. `fileId`, F1.10 ile `purpose: import` yüklenmiş ve `ready`
          *     durumdaki bu işletmenin dosyasıdır (başka işletmenin dosyası 404). Desteklenen türler
-         *     `products` ve (F3.7a) `customer_prices`; `stock` `422 VALIDATION_FAILED` (`type: not_supported`).
+         *     `products` ve (F3.7a) `customer_prices`; `stock` `422 VALIDATION_FAILED` (`type: not_supported`; F3.11c).
          *     `customer_prices` (US-035 AC2, S2 = A: bir dosya bir müşteri): `buyerId` zorunlu, ek izin
          *     `pricing.manage` (yoksa 403), perakendeciyle aktif bağlantı (yoksa `422`, `buyerId: [not_connected]`).
          *     Diğer türlerde `buyerId` verilirse `422` (`buyerId: [not_allowed]`).
@@ -7931,7 +8064,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "SETTING_SCOPE_NOT_ALLOWED" | "JOB_TITLE_IN_USE" | "PRICE_LIST_IN_USE" | "PRICE_LIST_DEFAULT_PROTECTED" | "STOCK_MODE_MISMATCH" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_FAILED" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "CAPABILITY_REQUIRED" | "NOT_FOUND" | "INVALID_STATE_TRANSITION" | "IDEMPOTENCY_CONFLICT" | "RATE_LIMITED" | "CONFIRMATION_REQUIRED" | "OTP_RATE_LIMITED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_LOCKED" | "SMS_UNAVAILABLE" | "TOTP_REQUIRED" | "TOTP_INVALID" | "REFRESH_TOKEN_REUSED" | "USER_DISABLED" | "BUSINESS_SUSPENDED" | "SUBSCRIPTION_READ_ONLY" | "ENTITLEMENT_LIMIT_REACHED" | "VOEN_INVALID" | "VOEN_ALREADY_REGISTERED" | "VOEN_REQUIRED" | "SELLER_APPLICATION_ALREADY_PENDING" | "PHONE_ALREADY_REGISTERED" | "LAST_ADMIN_PROTECTED" | "MEMBER_ALREADY_EXISTS" | "CONNECTION_ALREADY_ACTIVE" | "CONNECTION_REQUEST_ALREADY_PENDING" | "CONNECTION_REQUEST_EXPIRED" | "CONNECTION_BLOCKED" | "CONNECTION_COOLDOWN_ACTIVE" | "CONNECTION_DAILY_QUOTA_EXCEEDED" | "CONNECTION_NOT_ACTIVE" | "PRICE_NOT_AVAILABLE" | "QTY_NOT_MULTIPLE" | "BELOW_MIN_ORDER_QTY" | "BELOW_MIN_ORDER_AMOUNT" | "VARIANT_UNAVAILABLE" | "CURRENCY_MISMATCH" | "STOCK_INSUFFICIENT" | "ORDER_QTY_INCREASE_NOT_ALLOWED" | "ORDER_EMPTY_USE_REJECT" | "DELIVERY_PHOTO_REQUIRED" | "DELIVERY_TIMESTAMP_TOO_OLD" | "FILE_INVALID" | "IMPORT_TOO_MANY_ROWS" | "SETTING_OUT_OF_RANGE" | "SETTING_SCOPE_NOT_ALLOWED" | "JOB_TITLE_IN_USE" | "PRICE_LIST_IN_USE" | "PRICE_LIST_DEFAULT_PROTECTED" | "STOCK_MODE_MISMATCH" | "STOCK_UNCOUNTED_VARIANTS" | "INTERNAL_ERROR";
         /** @example +994501234567 */
         PhoneE164: string;
         Voen: string;
@@ -8379,7 +8512,7 @@ export interface components {
             stockMode: components["schemas"]["StockMode"];
         };
         /**
-         * @description ADR-0018. `none` her aktif varyant sipariş edilebilir; `availability` var/yok işareti; `quantity` miktarlı stok (F3.11a).
+         * @description ADR-0018. `none` her aktif varyant sipariş edilebilir; `availability` var/yok işareti; `quantity` miktarlı stok (F3.11a; `POST /stock-mode/quantity` ile açılır).
          * @enum {string}
          */
         StockMode: "none" | "availability" | "quantity";
@@ -8391,6 +8524,48 @@ export interface components {
             variantId: string;
             isAvailable: boolean;
         };
+        /** @description F3.11a. Bir depodaki bir varyantın stoğu; sayılar temel birimde. */
+        StockRow: {
+            /** Format: uuid */
+            warehouseId: string;
+            /** Format: uuid */
+            variantId: string;
+            /** Format: uuid */
+            productId: string;
+            productName: components["schemas"]["LocalizedText"];
+            /** @description Varyant SKU */
+            sku: string;
+            baseUnitCode: string;
+            onHand: components["schemas"]["Decimal"];
+            reserved: components["schemas"]["Decimal"];
+            available: components["schemas"]["Decimal"];
+            lowThreshold: components["schemas"]["Decimal"] | null;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @description F3.11a. Silinmez, değiştirilemez stok hareketi (R35). */
+        StockMovement: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            warehouseId: string;
+            /** Format: uuid */
+            variantId: string;
+            /** @enum {string} */
+            type: "receipt" | "reserve" | "release" | "ship" | "return" | "adjustment";
+            onHandDelta: components["schemas"]["Decimal"];
+            reservedDelta: components["schemas"]["Decimal"];
+            /** Format: uuid */
+            orderId: string | null;
+            lotNo: string | null;
+            /** Format: date */
+            expiryDate: string | null;
+            note: string | null;
+            /** Format: uuid */
+            createdBy: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
         SellerProfileUpdate: {
             /** @description Dil başına en çok 2000 karakter; `null` metni siler. */
             description?: components["schemas"]["LocalizedText"] | null;
@@ -8398,7 +8573,7 @@ export interface components {
             minOrderAmount?: string | null;
             requireDeliveryPhoto?: boolean;
             /**
-             * @description F3.10. `quantity` F3.11a'da iki adımlı geçişle; bugün `422`.
+             * @description F3.10. `quantity` yalnız `POST /stock-mode/quantity` ile (F3.11a, S5 = B); burada `422`. Miktarlı moddan çıkış buradan.
              * @enum {string}
              */
             stockMode?: "none" | "availability";

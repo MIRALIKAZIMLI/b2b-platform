@@ -62,6 +62,8 @@ const EXPECTED_FUNCTIONS = [
   'settings_admin_list',
   'settings_get',
   'settings_put',
+  // F3.11a (R35): hareket eklenince stok satırını açan/güncelleyen tetikleyici fonksiyonu.
+  'stock_movements_apply',
   'subscription_start_self_signup',
   'user_create_self_signup',
   'user_ensure_for_invitation',

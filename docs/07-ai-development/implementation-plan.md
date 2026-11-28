@@ -437,6 +437,7 @@ Onayımı bekle.
 - **Dosyalar:** `m/inventory/*` (`stock`, `stock_movements`), `StockService` (receipt, adjustment), `/api/v1/stock*`, depo ekranı (web + mobil), `imports` modülüne `stock` türü.
 - **Kabul:** Belirtilen AC'ler; hareket olmadan stok değişmez.
 - **Test:** Entegrasyon.
+- **Durum:** F3.11a (`docs/tasks/F3.11a.md`): migration 0042, `StockService`, `/stock*`, `POST /stock-mode/quantity`. Excel `stock` türü ve ürün şablonu stok sütunu (V3) boyut nedeniyle **F3.11c**'ye ayrıldı; depo ekranları F3.11b.
 
 ### F3.12 — Ürün arama ve perakendeci ürün listesi
 

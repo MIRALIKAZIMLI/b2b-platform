@@ -1,7 +1,7 @@
 // Toptancı kurulumu (F2.6, US-011): depolar, satıcı profili, hizmet bölgeleri. Tüm yöntemler
 // çağıranın kiracı işleminde çalışır; RLS başka işletmenin satırını göstermez ve yazdırmaz.
 import { Injectable } from '@nestjs/common';
-import type { SelectableStockMode } from '@b2b/shared';
+import type { StockMode } from '@b2b/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Tx } from '../../core/db';
 import { regions } from '../i18n';
@@ -31,7 +31,8 @@ export interface SellerProfilePatch {
   readonly minOrderAmount?: string | null;
   readonly requireDeliveryPhoto?: boolean;
   readonly defaultWarehouseId?: string;
-  readonly stockMode?: SelectableStockMode;
+  /** PATCH yalnız `none` / `availability` yazar; `quantity` yalnız `inventory` (F3.11a, S5 = B). */
+  readonly stockMode?: StockMode;
 }
 
 @Injectable()
@@ -71,6 +72,23 @@ export class SellerSetupRepository {
       .from(warehouses)
       .where(and(eq(warehouses.businessId, businessId), eq(warehouses.id, id)))
       .for('update');
+    return rows[0];
+  }
+
+  /**
+   * F3.11a: stok hareketi depo satırını `FOR SHARE` kilitler; eşzamanlı pasifleştirme (`FOR UPDATE`)
+   * hareket bitene kadar bekler. Yoksa (başka işletme dahil) undefined.
+   */
+  async shareWarehouseTx(
+    tx: Tx,
+    businessId: string,
+    id: string,
+  ): Promise<WarehouseRow | undefined> {
+    const rows = await tx
+      .select()
+      .from(warehouses)
+      .where(and(eq(warehouses.businessId, businessId), eq(warehouses.id, id)))
+      .for('share');
     return rows[0];
   }
 

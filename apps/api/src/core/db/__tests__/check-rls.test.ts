@@ -203,6 +203,8 @@ describe('evaluateRlsTable — platformun yazamadığı tablolar (F2.18, US-016 
         'price_list_items',
         'price_lists',
         'tier_prices',
+        'stock',
+        'stock_movements',
         'products',
         'product_variants',
         'product_packaging',

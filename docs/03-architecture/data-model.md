@@ -758,7 +758,7 @@ Benzersiz: `(variant_id, level)`.
 | --- | --- | --- | --- |
 | id | uuid | PK | |
 | seller_id | uuid | FK businesses | |
-| type | text | `products` / `customer_prices` / `stock` | F3.5a `products`; F3.7a `customer_prices`; `stock` 422 `type: not_supported` (F3.11a) |
+| type | text | `products` / `customer_prices` / `stock` | F3.5a `products`; F3.7a `customer_prices`; `stock` 422 `type: not_supported` (F3.11c) |
 | buyer_id | uuid | null; FK businesses; CHECK `(type = 'customer_prices') = (buyer_id is not null)` | F3.7a (S2 = A): `customer_prices` işinin perakendecisi (bir dosya bir müşteri) |
 | file_id | uuid | tekil; bileşik FK `(seller_id, file_id) → files(owner_business_id, id)` | Bir dosya tek işe bağlanır (`fileId: in_use`) |
 | status | text | `uploaded` / `validating` / `preview_ready` / `applying` / `done` / `failed` | state-machines §11 |
@@ -858,30 +858,37 @@ F3.10 (migration yok; US-038, ADR-0018): `seller_profiles.stock_mode` satıcı p
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| seller_id | uuid | | |
-| warehouse_id | uuid | PK parçası | `id` yok |
-| variant_id | uuid | PK parçası | |
-| on_hand | numeric(14,3) | ≥ 0 | Temel birimde |
-| reserved | numeric(14,3) | ≥ 0, ≤ on_hand | |
-| low_threshold | numeric(14,3) | null | Depo uyarısı |
+| seller_id | uuid | PK parçası; FK businesses | |
+| warehouse_id | uuid | PK parçası; bileşik FK `(seller_id, warehouse_id)` → `warehouses(business_id, id)` | Yalnızca kendi deposu |
+| variant_id | uuid | PK parçası; bileşik FK `(variant_id, seller_id)` → `product_variants(id, seller_id)` | Yalnızca kendi varyantı; `id` yok |
+| on_hand | numeric(14,3) | ≥ 0 | Temel birimde (F3.11a K1) |
+| reserved | numeric(14,3) | ≥ 0, ≤ on_hand | Rezervasyon F4.4 |
+| low_threshold | numeric(14,3) | null | Depo uyarısı; yazma ekranı F3.11b |
+| updated_at | timestamptz | | Son hareketin anı |
 
 #### `stock_movements` (T, yalnızca ekleme)
 
 | Alan | Tip | Kısıt | Not |
 | --- | --- | --- | --- |
-| seller_id | uuid | | |
+| id | uuid | PK | |
+| seller_id | uuid | bileşik FK `(seller_id, warehouse_id, variant_id)` → `stock` | |
 | warehouse_id | uuid | | |
 | variant_id | uuid | | |
-| type | text | `receipt` / `reserve` / `release` / `ship` / `return` / `adjustment` | |
-| on_hand_delta | numeric(14,3) | | |
-| reserved_delta | numeric(14,3) | | |
-| order_id | uuid | null | |
-| lot_no | text | null | D24 |
+| type | text | `receipt` / `reserve` / `release` / `ship` / `return` / `adjustment` | F3.11a yalnız `receipt`, `adjustment` yazar |
+| on_hand_delta | numeric(14,3) | `receipt`: > 0 | `adjustment`: sayılan − on_hand; 0 yalnız satırın ilk sayımında |
+| reserved_delta | numeric(14,3) | default 0; `receipt` / `adjustment`: = 0 | |
+| order_id | uuid | null | F4.4 |
+| lot_no | text | null, ≤ 64 | D24 |
 | expiry_date | date | null | |
-| note | text | null | |
-| created_by | uuid | null | |
+| note | text | null, ≤ 500 | |
+| created_by | uuid | null; FK users | |
+| created_at | timestamptz | | `Clock` |
 
-İndeks: `(warehouse_id, variant_id, created_at)`.
+İndeks: `(seller_id, warehouse_id, variant_id, created_at)`.
+
+F3.11a (`0042_stock.sql`; US-039 AC1, AC7, ADR-0018, R35, R36, R39). **Stok yalnızca hareketle değişir ve bu veritabanında zorlanır:** `stock_movements` BEFORE INSERT tetikleyicisi `stock_movements_apply` (migrator sahipli `SECURITY DEFINER`, D6) stok satırını ekler veya `on_hand += on_hand_delta`, `reserved += reserved_delta` ile günceller; CHECK ihlali (`on_hand < 0`, `reserved > on_hand`) hareketi de geri alır. `app_user`: `stock` yalnız SELECT (INSERT / UPDATE / DELETE yok), `stock_movements` SELECT + INSERT (UPDATE / DELETE yok). RLS: `stock_tenant`, `stock_movements_tenant` (FOR ALL, `seller_id`; tetikleyici aynı kiracı ayarıyla çalışır), `*_platform_select`; platform yazma politikası yok (`check-rls` yasak listesi), perakendeciye politika yok (gösterim F3.12a'da). Eşzamanlılık: `StockService` her hareketten önce varyant satırını `FOR NO KEY UPDATE` kilitler (aynı varyantın hareketleri sıralanır; sayım farkı taze sayıdan hesaplanır). Sayım düzeltmesi (kullanıcı kararı S1 = A): kullanıcı sayılan **toplamı** girer, `on_hand_delta = sayılan − on_hand`; fark 0 ise hareket yazılmaz (yalnız satırın ilk sayımı 0 ise 0 farklı hareket satırı açar: varyant "sayıldı" olur); sayılan < `reserved` ise `409 STOCK_INSUFFICIENT`. Hareket başına audit yazılmaz (hareket kaydı kendisi izdir, F3.11a K2).
+
+Miktarlı moda geçiş (S5 = B, iki adım; yeni kolon yok): stok her modda yazılabilir (hazırlık), yalnız `quantity` modunda gösterimde ve siparişte kullanılır. İkinci adım `POST /api/v1/stock-mode/quantity` (`inventory` modülü, `business.manage`) `seller_profiles.stock_mode = quantity` yazar; aktif bir depoda stok satırı olmayan satılabilir varyant (varyant ve ürün arşivli değil) varsa ve `confirmUncounted` verilmemişse `409 STOCK_UNCOUNTED_VARIANTS` (`details.uncountedCount`; kullanıcı kararı S2 = A: onayla açılır, sayılmamış varyant "Stokta yok"). `quantity` modundan `PATCH /business/seller-profile` ile çıkış serbesttir; stok satırları saklanır (F3.11a K3; rezervasyon varken çıkış F4.4'te ele alınır).
 
 ### 4.11 `cart`
 

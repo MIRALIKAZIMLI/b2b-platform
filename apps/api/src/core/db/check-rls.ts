@@ -180,6 +180,9 @@ export const PLATFORM_WRITE_FORBIDDEN_TABLES: readonly string[] = [
   'customer_prices',
   // F3.9: kademeli indirim; platform yalnız okur.
   'tier_prices',
+  // F3.11a (R39): stok ve stok hareketleri; platform yalnız okur.
+  'stock',
+  'stock_movements',
   // F3.3a (R39): ürün tabloları; platform yalnız okur.
   'products',
   'product_variants',
